@@ -469,6 +469,7 @@ def upload():
 def health():
     return jsonify({"status": "ok", "database": "postgresql" if DATABASE_URL else "sqlite"})
 
-if __name__ == "__main__":
     init_db()
+
+if __name__ == "__main__":
     app.run(debug=False, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
