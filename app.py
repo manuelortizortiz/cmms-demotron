@@ -10,6 +10,9 @@ app.secret_key = os.environ.get('SECRET_KEY', 'demotron-cmms-pro-ui')
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
 if DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://','postgresql://',1)
+# Forzar driver psycopg v3, compatible con Python 3.13 en Railway.
+if DATABASE_URL.startswith('postgresql://') and '+psycopg' not in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace('postgresql://','postgresql+psycopg://',1)
 if DATABASE_URL:
     engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
 else:
