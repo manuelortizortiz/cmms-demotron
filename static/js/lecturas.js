@@ -1,0 +1,1 @@
+fetch('/api/lecturas').then(r=>r.json()).then(d=>{renderTable('headLecturas','bodyLecturas',d); const labels=d.slice(0,20).map((_,i)=>'#'+(i+1)); const vals=d.slice(0,20).map(r=>{let k=Object.keys(r).find(c=>/hor|odo|lect|km|kil/i.test(c)); return Number(r[k]||0)}); makeBar('lecturasChart', labels, vals, 'Lectura');});

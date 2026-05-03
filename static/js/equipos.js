@@ -1,0 +1,1 @@
+let all=[];function draw(){const q=(document.getElementById('filter').value||'').toLowerCase();document.getElementById('equiposGrid').innerHTML=all.filter(e=>JSON.stringify(e).toLowerCase().includes(q)).map(cardEquipo).join('')}fetch('/api/equipos').then(r=>r.json()).then(d=>{all=d;draw();});document.getElementById('filter').addEventListener('input',draw);
