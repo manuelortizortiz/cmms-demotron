@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block content %}<section class="card"><div class="head"><h3>{{title}}</h3><button onclick="loadTable('{{endpoint}}')">Actualizar</button></div><div id="genericTable"></div></section><script src="/static/js/table.js"></script><script>loadTable('{{endpoint}}')</script>{% endblock %}
