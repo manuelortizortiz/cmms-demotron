@@ -1,17 +1,22 @@
-CMMS DEMOTRON POSTGRES EMPRESA FINAL
+CMMS DEMOTRON FINAL LISTO
 
-No depende de Excel para funcionar. El maestro vive en PostgreSQL.
+1. Reemplaza estos archivos en GitHub:
+   app.py
+   templates/index.html
+   templates/login.html
+   requirements.txt
+   Procfile
+   railway.json
 
-Railway:
-1. Sube estos archivos a GitHub.
-2. Crea proyecto en Railway desde GitHub.
-3. Agrega PostgreSQL.
-4. En Variables de la app agrega DATABASE_URL desde PostgreSQL.
-5. Redeploy.
+2. Railway:
+   - Web > Variables:
+     DATABASE_URL = ${{Postgres.DATABASE_URL}}
+   - Deploy
 
-Usuarios:
-admin / admin123
-gerencia / gerencia123
-mantencion / mantencion123
-bodega / bodega123
-lectura / lectura123
+3. Si la base está vacía:
+   - Entra con admin / admin123
+   - Equipos > Cargar datos demo
+   - O usa DATA_POSTGRES_SEED.sql en Railway Postgres > Query
+
+4. Importar Excel:
+   - Pestaña Equipos > Importar Maestro desde Excel
