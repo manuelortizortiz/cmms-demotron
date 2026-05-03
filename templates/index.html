@@ -1,1 +1,106 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Demotron Maquinarias · CMMS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--azul:#10296b;--azul2:#1f4e9d;--fondo:#f7f9fc;--linea:#e6eaf1;--texto:#0f172a;--muted:#64748b;--rojo:#e5484d;--amarillo:#f5a524;--verde:#18a058}
+*{box-sizing:border-box}body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:var(--fondo);color:var(--texto)}
+header{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid var(--linea);padding:15px 28px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 8px 30px rgba(15,23,42,.06)}
+.logo{font-size:30px;font-weight:900;letter-spacing:7px;color:var(--azul)}
+nav{display:flex;gap:8px;flex-wrap:wrap}nav button{border:0;background:transparent;color:#334155;padding:10px 13px;border-radius:999px;font-weight:700;cursor:pointer}nav button.active,nav button:hover{background:var(--azul);color:white}
+main{padding:25px}.page{display:none}.page.active{display:block}
+.hero{display:grid;grid-template-columns:1.5fr .55fr;gap:22px;align-items:center;background:linear-gradient(135deg,#fff,#edf4ff);border:1px solid var(--linea);border-radius:28px;padding:34px;margin-bottom:20px;box-shadow:0 20px 55px rgba(16,41,107,.1)}
+.hero span,.intro span{text-transform:uppercase;letter-spacing:.15em;color:var(--azul2);font-weight:900;font-size:12px}.hero h1{font-size:40px;line-height:1.05;color:var(--azul);margin:10px 0}.hero p{color:#475569}
+.heroCard{background:var(--azul);color:white;border-radius:24px;padding:26px}.heroCard strong{font-size:54px;display:block}.heroCard small{color:#cbd5e1}
+.search input{width:100%;border:1px solid var(--linea);border-radius:18px;padding:17px 20px;font-size:16px;margin-bottom:18px;box-shadow:0 12px 32px rgba(15,23,42,.06)}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:18px}.kpis article,.panel,.card{background:#fff;border:1px solid var(--linea);border-radius:22px;box-shadow:0 14px 34px rgba(15,23,42,.06)}
+.kpis article{padding:18px}.kpis span{display:block;color:var(--muted);font-size:13px;font-weight:800}.kpis b{display:block;font-size:27px;margin:8px 0;color:var(--azul)}.kpis small{color:var(--muted)}
+.red{color:var(--rojo)!important}.yellow{color:var(--amarillo)!important}.blue{color:var(--azul2)!important}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px}.grid2{display:grid;grid-template-columns:1.35fr .65fr;gap:18px}.panel{padding:20px;overflow:auto}.panel canvas{max-height:270px}
+.title{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.title h2{font-size:20px;color:var(--azul);margin:0}.title span{font-size:12px;background:#edf4ff;color:var(--azul);font-weight:800;padding:6px 10px;border-radius:999px}
+table{width:100%;border-collapse:separate;border-spacing:0}th,td{padding:11px 10px;border-bottom:1px solid var(--linea);font-size:13px;text-align:left;vertical-align:top}th{background:var(--azul);color:white;position:sticky;top:0}
+.badge{display:inline-block;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900}.badge.red{background:#fee2e2;color:#b91c1c}.badge.orange{background:#ffedd5;color:#c2410c}.badge.yellow{background:#fef3c7;color:#a16207}.badge.green{background:#dcfce7;color:#166534}.badge.blue{background:#dbeafe;color:#1d4ed8}.badge.gray{background:#e5e7eb;color:#374151}
+.row-red td{background:#fff5f5}.row-orange td{background:#fff7ed}.row-yellow td{background:#fffbeb}
+.cards{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(285px,310px);gap:16px;overflow-x:auto;padding-bottom:18px}.card{padding:18px}.cardTop{display:flex;justify-content:space-between}.cardTop b{font-size:22px;color:var(--azul)}.card p{color:var(--muted)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stats span{background:#f8fafc;border-radius:14px;padding:10px;color:var(--muted);font-size:12px}.stats b{display:block;color:var(--texto)}
+.form{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}input,select,textarea{border:1px solid #d4dce8;border-radius:14px;padding:12px;font-family:inherit}textarea{grid-column:1/-1;min-height:85px}button{border:0;border-radius:999px;background:var(--azul);color:white;padding:12px 18px;font-weight:800;cursor:pointer}.form button{grid-column:1/-1}
+.notice{background:#dcfce7;color:#166534;padding:12px 16px;border-radius:16px;margin-bottom:16px;font-weight:800}.error{background:#fee2e2;color:#991b1b;padding:12px 16px;border-radius:16px;margin-bottom:16px}pre{background:#101826;color:#e5e7eb;padding:16px;border-radius:16px;white-space:pre-wrap;overflow:auto}
+@media(max-width:1100px){header{display:block}.hero,.grid3,.grid2{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr 1fr}.form{grid-template-columns:1fr 1fr}}
+@media(max-width:720px){main{padding:16px}.hero h1{font-size:30px}.kpis,.form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+<div class="logo">DEMOTRON</div>
+<nav>
+<button class="active" onclick="show('dashboard',this)">Dashboard</button>
+<button onclick="show('equipos',this)">Equipos</button>
+<button onclick="show('ot',this)">OT</button>
+<button onclick="show('lecturas',this)">Lecturas</button>
+<button onclick="show('compras',this)">Compras</button>
+<button onclick="show('bodega',this)">Bodega</button>
+<button onclick="show('conexion',this)">Conexión</button>
+</nav>
+</header>
+<main>
+{% with messages=get_flashed_messages() %}{% if messages %}<div class="notice">{{ messages[0] }}</div>{% endif %}{% endwith %}
+{% if meta.error %}<div class="error">{{ meta.error }}</div>{% endif %}
 
+<section id="dashboard" class="page active">
+<div class="hero">
+<div><span>CMMS DEMOTRON MAQUINARIAS</span><h1>Mantenimiento preventivo, flota y operación en PostgreSQL.</h1><p>Panel ejecutivo con OT, compras, lecturas, ubicaciones, bodega y buscador avanzado.</p></div>
+<div class="heroCard"><h3>Controlado Real</h3><strong>{{ kpis.controlado }}%</strong><small>{{ meta.actualizado }} · {{ kpis.total }} equipos</small></div>
+</div>
+<div class="search"><input id="globalSearch" oninput="powerSearch()" placeholder="Buscar por código, marca, modelo, ubicación, estado, OT, OC, repuesto..."></div>
+<div class="kpis">
+<article><span>Atrasados</span><b class="red">{{ kpis.atrasados }}</b><small>Riesgo operacional</small></article>
+<article><span>Próximos</span><b class="yellow">{{ kpis.proximos }}</b><small>Planificar ventana</small></article>
+<article><span>OT abiertas</span><b class="blue">{{ kpis.ot_abiertas }}</b><small>Trabajos activos</small></article>
+<article><span>Compras por recibir</span><b>{{ kpis.compras_por_recibir }}</b><small>Seguimiento</small></article>
+<article><span>Lecturas</span><b>{{ kpis.lecturas }}</b><small>Registros</small></article>
+<article><span>Costo PM</span><b>${{ "{:,.0f}".format(kpis.costo_total).replace(",", ".") }}</b><small>Maestro</small></article>
+</div>
+<div class="grid3">
+<div class="panel"><div class="title"><h2>Estado general</h2><span>Semáforo</span></div><canvas id="donut"></canvas></div>
+<div class="panel"><div class="title"><h2>Atrasados por ubicación</h2><span>Ranking</span></div><canvas id="barUbicacion"></canvas></div>
+<div class="panel"><div class="title"><h2>Gestión activa</h2><span>Operación</span></div><canvas id="barGestion"></canvas></div>
+</div>
+<div class="grid2">
+<div class="panel"><div class="title"><h2>Equipos críticos</h2><span>Top prioridad</span></div>
+<table data-filterable><thead><tr><th>Equipo</th><th>Ubicación</th><th>Margen</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
+{% for e in alertas[:20] %}<tr class="row-{{ e.semaforo }}"><td><b>{{ e.codigo }}</b></td><td>{{ e.ubicacion }}</td><td>{{ "{:,.0f}".format(e.margen_real).replace(",", ".") }}</td><td><span class="badge {{ e.semaforo }}">{{ e.estado_calculado }}</span></td><td>{{ e.accion_sugerida }}</td></tr>{% endfor %}
+</tbody></table></div>
+<div class="panel"><div class="title"><h2>Resumen BD</h2><span>PostgreSQL</span></div>
+<p><b>OT abiertas:</b> {{ kpis.ot_abiertas }}</p><p><b>Compras:</b> {{ kpis.compras_total }}</p><p><b>Mov. bodega:</b> {{ kpis.bodega_movimientos }}</p><p><b>Compras registradas:</b> ${{ "{:,.0f}".format(kpis.costo_compras_registradas).replace(",", ".") }}</p>
+</div>
+</div>
+</section>
+
+<section id="equipos" class="page"><div class="intro"><span>Orden MD → CD → VD → EQP → Otros</span><h1>Explorador de equipos</h1></div>
+<div class="cards">
+{% for e in data %}<article class="card card-search" data-search="{{ e.codigo }} {{ e.marca }} {{ e.modelo }} {{ e.ubicacion }} {{ e.estado_calculado }} {{ e.tipo }}"><div class="cardTop"><b>{{ e.codigo }}</b><span class="badge {{ e.semaforo }}">{{ e.estado_calculado }}</span></div><h3>{{ e.marca }} {{ e.modelo }}</h3><p>{{ e.tipo }} · {{ e.ubicacion }}</p><div class="stats"><span>Lectura <b>{{ "{:,.0f}".format(e.lectura_real).replace(",", ".") }}</b></span><span>Margen <b>{{ "{:,.0f}".format(e.margen_real).replace(",", ".") }}</b></span></div></article>{% endfor %}
+</div></section>
+
+<section id="ot" class="page"><div class="intro"><span>Operación</span><h1>Órdenes de Trabajo</h1></div>
+<div class="panel"><form method="post" action="/crear_ot" class="form"><select name="codigo" required>{% for e in data %}<option value="{{ e.codigo }}">{{ e.codigo }} · {{ e.marca }} {{ e.modelo }}</option>{% endfor %}</select><select name="tipo"><option>Preventiva</option><option>Correctiva</option><option>Inspección</option><option>Emergencia</option></select><select name="prioridad"><option>Media</option><option>Alta</option><option>Crítica</option><option>Baja</option></select><input name="responsable" placeholder="Responsable"><input name="lectura" placeholder="Lectura actual"><input name="costo_estimado" placeholder="Costo estimado CLP"><textarea name="descripcion" placeholder="Descripción técnica"></textarea><button>Crear OT</button></form></div>
+<div class="panel"><table data-filterable><thead><tr><th>OT</th><th>Equipo</th><th>Tipo</th><th>Prioridad</th><th>Estado</th></tr></thead><tbody>{% for o in ots %}<tr><td><b>{{ o.numero }}</b></td><td>{{ o.codigo }}</td><td>{{ o.tipo }}</td><td>{{ o.prioridad }}</td><td>{{ o.estado }}</td></tr>{% endfor %}</tbody></table></div></section>
+
+<section id="lecturas" class="page"><div class="intro"><span>Terreno</span><h1>Lecturas</h1></div><div class="panel"><form method="post" action="/lecturas" class="form"><select name="codigo" required>{% for e in data %}<option value="{{ e.codigo }}">{{ e.codigo }} · {{ e.marca }} {{ e.modelo }}</option>{% endfor %}</select><select name="tipo_lectura"><option>HOROMETRO</option><option>ODOMETRO</option><option>KILOMETRAJE</option></select><input name="valor" placeholder="Valor" required><input name="ubicacion" placeholder="Ubicación"><input name="responsable" placeholder="Responsable"><textarea name="observacion" placeholder="Observación"></textarea><button>Registrar lectura</button></form></div><div class="panel"><table data-filterable><thead><tr><th>Fecha</th><th>Equipo</th><th>Tipo</th><th>Valor</th><th>Ubicación</th></tr></thead><tbody>{% for l in lecturas %}<tr><td>{{ l.fecha }}</td><td>{{ l.codigo }}</td><td>{{ l.tipo_lectura }}</td><td>{{ l.valor }}</td><td>{{ l.ubicacion }}</td></tr>{% endfor %}</tbody></table></div></section>
+
+<section id="compras" class="page"><div class="intro"><span>Abastecimiento</span><h1>Compras</h1></div><div class="panel"><form method="post" action="/compras" class="form"><select name="codigo_equipo" required>{% for e in data %}<option value="{{ e.codigo }}">{{ e.codigo }} · {{ e.marca }} {{ e.modelo }}</option>{% endfor %}</select><input name="oc" placeholder="OC"><input name="proveedor" placeholder="Proveedor"><input name="item" placeholder="Ítem"><input name="cantidad" placeholder="Cantidad"><input name="costo_total" placeholder="Costo total"><select name="estado"><option>EN PROCESO</option><option>POR RECIBIR</option><option>RECIBIDO</option><option>CERRADO</option></select><textarea name="observacion" placeholder="Observación"></textarea><button>Registrar compra</button></form></div><div class="panel"><table data-filterable><thead><tr><th>Fecha</th><th>Equipo</th><th>OC</th><th>Proveedor</th><th>Ítem</th><th>Costo</th><th>Estado</th></tr></thead><tbody>{% for c in compras %}<tr><td>{{ c.fecha }}</td><td>{{ c.codigo_equipo }}</td><td>{{ c.oc }}</td><td>{{ c.proveedor }}</td><td>{{ c.item }}</td><td>${{ c.costo_total }}</td><td>{{ c.estado }}</td></tr>{% endfor %}</tbody></table></div></section>
+
+<section id="bodega" class="page"><div class="intro"><span>Inventario</span><h1>Bodega</h1></div><div class="panel"><form method="post" action="/bodega" class="form"><input name="codigo_equipo" placeholder="Código equipo"><input name="ot_numero" placeholder="OT"><input name="repuesto" placeholder="Repuesto"><input name="cantidad" placeholder="Cantidad"><input name="costo_unitario" placeholder="Costo unitario"><select name="movimiento"><option>SALIDA</option><option>ENTRADA</option></select><textarea name="observacion" placeholder="Observación"></textarea><button>Registrar movimiento</button></form></div><div class="panel"><table data-filterable><thead><tr><th>Fecha</th><th>Equipo</th><th>OT</th><th>Repuesto</th><th>Cant.</th><th>Costo</th><th>Mov.</th></tr></thead><tbody>{% for b in bodega %}<tr><td>{{ b.fecha }}</td><td>{{ b.codigo_equipo }}</td><td>{{ b.ot_numero }}</td><td>{{ b.repuesto }}</td><td>{{ b.cantidad }}</td><td>${{ b.costo_unitario }}</td><td>{{ b.movimiento }}</td></tr>{% endfor %}</tbody></table></div></section>
+
+<section id="conexion" class="page"><div class="intro"><span>Railway</span><h1>Conexión</h1></div><div class="panel"><pre>{{ meta }}</pre><p>Healthcheck: <b>/health</b></p></div></section>
+</main>
+<script>
+const kpis={{ kpis|tojson }};const ubicaciones={{ ubicaciones|tojson }};
+function show(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('header nav button').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active')}
+function powerSearch(){const q=(document.getElementById('globalSearch')?.value||'').toLowerCase().trim();document.querySelectorAll('[data-filterable] tbody tr').forEach(tr=>{tr.style.display=tr.innerText.toLowerCase().includes(q)?'':'none'});document.querySelectorAll('.card-search').forEach(card=>{card.style.display=(card.dataset.search||'').toLowerCase().includes(q)?'':'none'})}
+document.addEventListener('DOMContentLoaded',()=>{const d=document.getElementById('donut');if(d)new Chart(d,{type:'doughnut',data:{labels:['Controlado %','Atrasados','Próximos','Sin historial'],datasets:[{data:[kpis.controlado,kpis.atrasados,kpis.proximos,kpis.sin_historial],backgroundColor:['#18a058','#e5484d','#f5a524','#f97316'],borderWidth:0}]},options:{plugins:{legend:{position:'bottom'}},cutout:'70%'}});const b=document.getElementById('barUbicacion');if(b)new Chart(b,{type:'bar',data:{labels:ubicaciones.map(u=>u.ubicacion||'Sin ubicación'),datasets:[{data:ubicaciones.map(u=>u.cantidad),backgroundColor:'#1f4e9d',borderRadius:10}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});const g=document.getElementById('barGestion');if(g)new Chart(g,{type:'bar',data:{labels:['OT abiertas','OT cerradas','Compras proceso','Por recibir','Recibidas','Lecturas'],datasets:[{data:[kpis.ot_abiertas,kpis.ot_cerradas,kpis.compras_proceso,kpis.compras_por_recibir,kpis.compras_recibidas,kpis.lecturas],backgroundColor:['#1f4e9d','#18a058','#f5a524','#0090ff','#2eb67d','#808080'],borderRadius:10}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}})})
+</script>
+</body>
+</html>
