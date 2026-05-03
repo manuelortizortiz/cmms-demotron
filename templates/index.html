@@ -1,2 +1,839 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DEMOTRON CMMS · Empresa</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><style>:root{--blue:#0F3B8E;--dark:#072C61;--bg:#F4F6F8;--border:#E5E7EB;--text:#111827;--muted:#6B7280;--green:#10B981;--orange:#F59E0B;--red:#EF4444;--purple:#7D49D0;--gray:#9CA3AF}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif;font-weight:400}.shell{width:min(1680px,calc(100% - 32px));margin:18px auto;background:white;border:1px solid var(--border);border-radius:28px;box-shadow:0 16px 40px rgba(15,23,42,.08);overflow:hidden}.topbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:24px;padding:0 26px;min-height:76px;border-bottom:1px solid var(--border)}.brand{color:var(--blue);font-size:28px;font-weight:800;letter-spacing:5px}.tabs{display:flex;justify-content:center;gap:6px;overflow-x:auto}.tab{height:76px;display:inline-flex;align-items:center;gap:8px;padding:0 12px;color:#4B5563;text-decoration:none;border-bottom:3px solid transparent;white-space:nowrap;font-size:14px;cursor:pointer}.tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:700}.actions{display:flex;align-items:center;gap:12px}.search{display:flex;align-items:center;gap:10px;width:230px;height:42px;padding:0 14px;background:#F9FAFB;border:1px solid var(--border);border-radius:999px;color:var(--muted)}.search input{width:100%;border:0;outline:none;background:transparent;font:inherit}.profile{display:flex;align-items:center;gap:10px;color:#374151;font-size:14px;white-space:nowrap}.profile a{color:var(--blue);text-decoration:none}main{padding:26px}.page{display:none}.page.active{display:block}.kpis{display:grid;grid-template-columns:repeat(6,minmax(160px,1fr));gap:18px;margin-bottom:22px}.kpi{display:flex;gap:14px;min-height:128px;padding:18px;border:1px solid var(--border);border-radius:22px;background:white;box-shadow:0 8px 24px rgba(15,23,42,.06)}.icon{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto}.icon.red{background:#FEE2E2;color:var(--red)}.icon.orange{background:#FEF3C7;color:var(--orange)}.icon.green{background:#D1FAE5;color:var(--green)}.icon.blue{background:#EAF1FF;color:var(--blue)}.icon.purple{background:#F3E8FF;color:var(--purple)}.kpi-title{margin:0 0 8px;font-size:12px;text-transform:uppercase;color:#374151;font-weight:700}.kpi-value{margin:0;font-size:29px;line-height:1.05;font-weight:800}.kpi-sub{margin:8px 0 0;color:var(--muted);font-size:13px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;margin-bottom:22px}.grid2{display:grid;grid-template-columns:1.55fr .85fr;gap:22px;margin-bottom:22px}.panel{background:white;border:1px solid var(--border);border-radius:22px;padding:20px;box-shadow:0 8px 24px rgba(15,23,42,.06);overflow:auto}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.panel-title{margin:0;text-transform:uppercase;font-size:15px;font-weight:800}.btn{border:0;background:var(--blue);color:white;border-radius:999px;padding:9px 14px;font-weight:700;cursor:pointer}.chart-box{position:relative;min-height:250px}.chart-box canvas{width:100%!important;height:250px!important}.donut-center{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;text-align:center}.donut-center strong{display:block;color:var(--dark);font-size:23px;font-weight:800}table{width:100%;border-collapse:collapse;min-width:920px}th{padding:12px 10px;background:#F9FAFB;color:#4B5563;border-bottom:1px solid var(--border);text-align:left;text-transform:uppercase;font-size:12px}td{padding:13px 10px;border-bottom:1px solid var(--border);color:#374151;font-size:13px;white-space:nowrap}.right{text-align:right}.code{color:var(--dark);font-weight:800}.pill{display:inline-flex;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700}.pill.red{background:#FEE2E2;color:#B91C1C}.pill.orange{background:#FEF3C7;color:#B45309}.pill.green{background:#D1FAE5;color:#047857}.pill.blue{background:#EAF1FF;color:var(--blue)}.pill.gray{background:#F3F4F6;color:#4B5563}.text-red{color:#DC2626}.activity{display:grid;gap:16px}.activity-item{display:grid;grid-template-columns:40px 1fr;gap:12px}.activity-icon{width:40px;height:40px;border-radius:50%;display:grid;place-items:center}.activity-icon.blue{background:#EAF1FF;color:var(--blue)}.activity-icon.green{background:#D1FAE5;color:var(--green)}.activity-icon.purple{background:#F3E8FF;color:var(--purple)}.activity-title{margin:0;font-size:14px;font-weight:600}.activity-meta{margin:4px 0 0;color:var(--muted);font-size:12px}.carousel-wrap{display:grid;grid-template-columns:36px 1fr 36px;gap:12px;align-items:center}.arrow{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:white;color:var(--blue);cursor:pointer}.carousel{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(250px,1fr);gap:16px;overflow-x:auto;padding-bottom:14px}.equip-card{border:1px solid var(--border);border-radius:18px;background:white;overflow:hidden}.equip-card.red-focus{border-color:#FCA5A5;box-shadow:0 12px 32px rgba(239,68,68,.12)}.thumb{position:relative;height:98px;background:linear-gradient(135deg,#EEF2FF,#fff);display:grid;place-items:center;color:var(--blue);font-size:48px}.led{position:absolute;top:12px;right:12px;width:12px;height:12px;border-radius:50%;border:2px solid white}.led.green{background:var(--green)}.led.orange{background:var(--orange)}.led.red{background:var(--red)}.led.gray{background:var(--gray)}.equip-body{padding:15px}.equip-top{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px}.equip-id{color:var(--dark);font-weight:800}.equip-desc{min-height:36px;margin:0 0 12px;font-size:13px;color:#374151}.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{background:#F9FAFB;border-radius:12px;padding:9px}.metric span{display:block;color:var(--muted);font-size:11px}.metric strong{display:block;color:var(--text);font-size:13px;font-weight:700}.form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.form-grid input,.form-grid select{padding:10px;border:1px solid var(--border);border-radius:12px}.form-grid button{grid-column:1/-1}footer{display:grid;grid-template-columns:1fr auto 1fr;padding:18px 26px;border-top:1px solid var(--border);color:var(--dark);font-size:13px}.footer-center{text-align:center;color:#374151}.footer-right{text-align:right}.hidden{display:none!important}@media(max-width:1320px){.topbar{grid-template-columns:1fr;padding:18px}.actions{flex-wrap:wrap}.kpis{grid-template-columns:repeat(3,1fr)}.grid3,.grid2{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr 1fr}}@media(max-width:760px){.shell{width:100%;margin:0;border-radius:0}main{padding:16px}.kpis{grid-template-columns:1fr}.carousel-wrap{grid-template-columns:1fr}.arrow{display:none}footer{grid-template-columns:1fr;gap:8px}.footer-center,.footer-right{text-align:left}.form-grid{grid-template-columns:1fr}}</style></head>
-<body><div class="shell"><header class="topbar"><div class="brand">DEMOTRON</div><nav class="tabs"><a class="tab active" onclick="showPage('dashboard',this)"><i class="fa-regular fa-chart-bar"></i> Dashboard</a><a class="tab" onclick="showPage('equipos',this)"><i class="fa-solid fa-truck-front"></i> Equipos</a><a class="tab" onclick="showPage('ot',this)"><i class="fa-regular fa-clipboard"></i> OT</a><a class="tab" onclick="showPage('lecturas',this)"><i class="fa-solid fa-gauge-high"></i> Lecturas</a><a class="tab" onclick="showPage('compras',this)"><i class="fa-solid fa-cart-shopping"></i> Compras</a><a class="tab" onclick="showPage('bodega',this)"><i class="fa-solid fa-boxes-stacked"></i> Bodega</a></nav><div class="actions"><label class="search"><i class="fa-solid fa-magnifying-glass"></i><input id="globalSearch" oninput="filterAll()" placeholder="Buscar..."></label><span class="profile"><i class="fa-regular fa-user"></i> {{ current_role }} <a href="/logout">Salir</a></span></div></header><main>{% with messages=get_flashed_messages() %}{% if messages %}<div style="background:#D1FAE5;color:#047857;padding:12px;border-radius:14px;margin-bottom:16px">{{ messages[0] }}</div>{% endif %}{% endwith %}<section id="dashboard" class="page active"><div class="kpis"><article class="kpi"><div class="icon red"><i class="fa-solid fa-exclamation"></i></div><div><p class="kpi-title">Atrasados</p><p class="kpi-value">{{ kpis.atrasados }}</p><p class="kpi-sub">Riesgo operacional</p></div></article><article class="kpi"><div class="icon orange"><i class="fa-solid fa-ellipsis"></i></div><div><p class="kpi-title">Próximos</p><p class="kpi-value">{{ kpis.proximos }}</p><p class="kpi-sub">Planificación PM</p></div></article><article class="kpi"><div class="icon green"><i class="fa-solid fa-check"></i></div><div><p class="kpi-title">Controlado Real</p><p class="kpi-value">{{ kpis.controlado }}%</p><p class="kpi-sub">{{ kpis.total }} equipos</p></div></article><article class="kpi"><div class="icon blue"><i class="fa-regular fa-file-lines"></i></div><div><p class="kpi-title">OT Abiertas</p><p class="kpi-value">{{ kpis.ot_abiertas }}</p><p class="kpi-sub">Trabajos activos</p></div></article><article class="kpi"><div class="icon purple"><i class="fa-solid fa-cart-shopping"></i></div><div><p class="kpi-title">Compras Proceso</p><p class="kpi-value">{{ kpis.compras_proceso }}</p><p class="kpi-sub">$ {{ '{:,.0f}'.format(kpis.compras_monto).replace(',', '.') }}</p></div></article><article class="kpi"><div class="icon green"><i class="fa-solid fa-dollar-sign"></i></div><div><p class="kpi-title">Costo Total PM</p><p class="kpi-value">$ {{ '{:,.0f}'.format(kpis.costo_total).replace(',', '.') }}</p><p class="kpi-sub">PostgreSQL</p></div></article></div><section class="grid3"><article class="panel"><div class="panel-head"><h2 class="panel-title">Estado General de la Flota</h2></div><div class="chart-box"><canvas id="fleetDonutChart"></canvas><div class="donut-center"><div><strong>{{ kpis.total }}</strong><span>Equipos</span></div></div></div></article><article class="panel"><div class="panel-head"><h2 class="panel-title">Atrasados por Ubicación</h2></div><div class="chart-box"><canvas id="locationBarChart"></canvas></div></article><article class="panel"><div class="panel-head"><h2 class="panel-title">Gestión OT y Compras</h2></div><div class="chart-box"><canvas id="managementGroupedChart"></canvas></div></article></section><section class="grid2"><article class="panel"><div class="panel-head"><h2 class="panel-title">Equipos Atrasados (Críticos)</h2><button class="btn">Ver todos</button></div><table class="filterable"><thead><tr><th>Equipo</th><th>Descripción</th><th>Ubicación</th><th class="right">Lectura</th><th class="right">Próxima PM</th><th class="right">Margen</th><th>Estado</th><th>Acción</th></tr></thead><tbody>{% for e in criticos %}<tr><td><span class="code">{{ e.codigo }}</span></td><td>{{ e.descripcion }}</td><td>{{ e.ubicacion }}</td><td class="right">{{ '{:,.0f}'.format(e.lectura_actual).replace(',', '.') }}</td><td class="right">{{ '{:,.0f}'.format(e.proxima_pm).replace(',', '.') }}</td><td class="right text-red">{{ '{:,.0f}'.format(e.margen).replace(',', '.') }}</td><td><span class="pill {{ e.semaforo }}">{{ e.estado_calculado }}</span></td><td><button class="btn">Crear OT</button></td></tr>{% endfor %}</tbody></table></article><article class="panel"><div class="panel-head"><h2 class="panel-title">Actividad Reciente</h2><button class="btn">Ver todo</button></div><div class="activity">{% for a in actividad %}<div class="activity-item"><div class="activity-icon {{ a.color }}"><i class="{{ a.icon }}"></i></div><div><p class="activity-title">{{ a.titulo }}</p><p class="activity-meta">{{ a.detalle }} · ahora</p></div></div>{% endfor %}</div></article></section><section class="panel"><div class="panel-head"><h2 class="panel-title">Equipos (Vista Rápida)</h2></div><div class="carousel-wrap"><button class="arrow"><i class="fa-solid fa-chevron-left"></i></button><div class="carousel">{% for e in equipos %}<article class="equip-card searchable {% if e.semaforo == 'red' %}red-focus{% endif %}" data-search="{{ e.codigo }} {{ e.descripcion }} {{ e.ubicacion }} {{ e.estado_calculado }}"><div class="thumb"><i class="fa-solid fa-truck-monster"></i><span class="led {{ e.semaforo }}"></span></div><div class="equip-body"><div class="equip-top"><span class="equip-id">{{ e.codigo }}</span><span class="pill {{ e.semaforo }}">{{ e.estado_calculado }}</span></div><p class="equip-desc">{{ e.descripcion }}</p><div class="metrics"><div class="metric"><span>Ubicación</span><strong>{{ e.ubicacion }}</strong></div><div class="metric"><span>Lectura</span><strong>{{ '{:,.0f}'.format(e.lectura_actual).replace(',', '.') }}</strong></div><div class="metric"><span>Margen</span><strong>{{ '{:,.0f}'.format(e.margen).replace(',', '.') }}</strong></div><div class="metric"><span>PM</span><strong>{{ '{:,.0f}'.format(e.proxima_pm).replace(',', '.') }}</strong></div></div></div></article>{% endfor %}</div><button class="arrow"><i class="fa-solid fa-chevron-right"></i></button></div></section></section><section id="equipos" class="page hidden"><article class="panel"><div class="panel-head"><h2 class="panel-title">Equipos</h2></div><form class="form-grid" method="post" action="/equipos/nuevo"><input name="codigo" placeholder="Código" required><input name="tipo_equipo" placeholder="Tipo equipo"><input name="familia" placeholder="Familia"><input name="marca" placeholder="Marca"><input name="modelo" placeholder="Modelo"><input name="ubicacion" placeholder="Ubicación"><input name="control_base" placeholder="HORAS/KM"><input name="frecuencia_base" placeholder="Frecuencia"><input name="lectura_actual" placeholder="Lectura actual"><input name="ultima_pm" placeholder="Última PM"><input name="costo_total_pm" placeholder="Costo PM"><input name="estado_operacional" placeholder="Estado"><button class="btn">Guardar equipo</button></form></article><article class="panel" style="margin-top:18px"><div class="carousel">{% for e in equipos %}<article class="equip-card searchable" data-search="{{ e.codigo }} {{ e.descripcion }} {{ e.ubicacion }}"><div class="equip-body"><div class="equip-top"><span class="equip-id">{{ e.codigo }}</span><span class="pill {{ e.semaforo }}">{{ e.estado_calculado }}</span></div><p>{{ e.descripcion }} · {{ e.ubicacion }}</p></div></article>{% endfor %}</div></article></section><section id="ot" class="page hidden"><article class="panel"><div class="panel-head"><h2 class="panel-title">Crear OT</h2></div><form class="form-grid" method="post" action="/crear_ot"><select name="codigo">{% for e in equipos %}<option value="{{ e.codigo }}">{{ e.codigo }} · {{ e.descripcion }}</option>{% endfor %}</select><input name="tipo" placeholder="Tipo"><input name="prioridad" placeholder="Prioridad"><input name="responsable" placeholder="Responsable"><input name="lectura" placeholder="Lectura"><input name="costo_estimado" placeholder="Costo"><input name="descripcion" placeholder="Descripción"><button class="btn">Crear OT</button></form></article></section><section id="lecturas" class="page hidden"><article class="panel"><div class="panel-head"><h2 class="panel-title">Lecturas</h2></div><form class="form-grid" method="post" action="/lecturas"><select name="codigo">{% for e in equipos %}<option value="{{ e.codigo }}">{{ e.codigo }} · {{ e.descripcion }}</option>{% endfor %}</select><select name="tipo_lectura"><option>HOROMETRO</option><option>ODOMETRO</option><option>KILOMETRAJE</option></select><input name="valor" placeholder="Valor"><input name="ubicacion" placeholder="Ubicación"><input name="responsable" placeholder="Responsable"><input name="observacion" placeholder="Observación"><button class="btn">Registrar lectura</button></form></article></section><section id="compras" class="page hidden"><article class="panel"><div class="panel-head"><h2 class="panel-title">Compras</h2></div><form class="form-grid" method="post" action="/compras"><select name="codigo_equipo">{% for e in equipos %}<option value="{{ e.codigo }}">{{ e.codigo }} · {{ e.descripcion }}</option>{% endfor %}</select><input name="oc" placeholder="OC"><input name="proveedor" placeholder="Proveedor"><input name="item" placeholder="Ítem"><input name="cantidad" placeholder="Cantidad"><input name="costo_total" placeholder="Costo total"><select name="estado"><option>EN PROCESO</option><option>POR RECIBIR</option><option>RECIBIDO</option><option>CERRADO</option></select><input name="observacion" placeholder="Observación"><button class="btn">Registrar compra</button></form></article></section><section id="bodega" class="page hidden"><article class="panel"><div class="panel-head"><h2 class="panel-title">Bodega</h2></div><form class="form-grid" method="post" action="/bodega"><input name="codigo_equipo" placeholder="Código equipo"><input name="ot_numero" placeholder="OT"><input name="repuesto" placeholder="Repuesto"><input name="cantidad" placeholder="Cantidad"><input name="costo_unitario" placeholder="Costo unitario"><select name="movimiento"><option>SALIDA</option><option>ENTRADA</option></select><input name="observacion" placeholder="Observación"><button class="btn">Registrar movimiento</button></form></article></section></main><footer><div>DEMOTRON CMMS</div><div class="footer-center">© {{ anio_actual }} Demotron Maquinarias - Todos los derechos reservados</div><div class="footer-right">Versión {{ version_sistema }}</div></footer></div><script>const kpis={{ kpis|tojson }}; const ubicaciones={{ ubicaciones|tojson }};function showPage(id,tab){document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));document.getElementById(id).classList.remove('hidden');document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));tab.classList.add('active')}function filterAll(){const q=document.getElementById('globalSearch').value.toLowerCase();document.querySelectorAll('.searchable').forEach(el=>{el.style.display=(el.dataset.search||'').toLowerCase().includes(q)?'':'none'});document.querySelectorAll('.filterable tbody tr').forEach(tr=>{tr.style.display=tr.innerText.toLowerCase().includes(q)?'':'none'})}new Chart(document.getElementById('fleetDonutChart'),{type:'doughnut',data:{labels:['Controlado','Próximos','Atrasados'],datasets:[{data:[Math.max(kpis.total-kpis.atrasados-kpis.proximos,0),kpis.proximos,kpis.atrasados],backgroundColor:['#10B981','#F59E0B','#EF4444'],borderWidth:0}]},options:{cutout:'72%',plugins:{legend:{display:false}},maintainAspectRatio:false}});new Chart(document.getElementById('locationBarChart'),{type:'bar',data:{labels:ubicaciones.map(u=>u.ubicacion||'Sin ubicación'),datasets:[{data:ubicaciones.map(u=>u.cantidad),backgroundColor:'#0F3B8E',borderRadius:8}]},options:{plugins:{legend:{display:false}},maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}});new Chart(document.getElementById('managementGroupedChart'),{type:'bar',data:{labels:['Actual'],datasets:[{label:'OT',data:[kpis.ot_abiertas],backgroundColor:'#0F3B8E',borderRadius:8},{label:'Compras',data:[kpis.compras_proceso],backgroundColor:'#7D49D0',borderRadius:8}]},options:{maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}});</script></body></html>
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DEMOTRON CMMS · Empresa</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --blue:#0F3B8E; --blue-dark:#072C61; --blue-soft:#EAF1FF;
+  --bg:#F4F6F8; --border:#E5E7EB; --text:#111827; --muted:#6B7280;
+  --green:#10B981; --green-soft:#D1FAE5;
+  --orange:#F59E0B; --orange-soft:#FEF3C7;
+  --red:#EF4444; --red-soft:#FEE2E2;
+  --purple:#7D49D0; --purple-soft:#F3E8FF;
+  --gray:#9CA3AF; --gray-soft:#F3F4F6;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,Segoe UI,Arial,sans-serif;
+  font-weight:400;
+}
+
+.shell{
+  width:min(1680px,calc(100% - 28px));
+  margin:14px auto;
+  background:white;
+  border:1px solid var(--border);
+  border-radius:28px;
+  box-shadow:0 20px 50px rgba(15,23,42,.08);
+  overflow:hidden;
+}
+
+.topbar{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:24px;
+  min-height:76px;
+  padding:0 26px;
+  border-bottom:1px solid var(--border);
+  background:white;
+}
+
+.brand{
+  color:var(--blue);
+  font-size:28px;
+  font-weight:800;
+  letter-spacing:6px;
+  white-space:nowrap;
+}
+
+.tabs{
+  display:flex;
+  justify-content:center;
+  gap:4px;
+  overflow-x:auto;
+}
+
+.tab{
+  height:76px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:0 13px;
+  color:#4B5563;
+  text-decoration:none;
+  border-bottom:3px solid transparent;
+  cursor:pointer;
+  white-space:nowrap;
+  font-size:14px;
+  font-weight:500;
+}
+
+.tab.active{
+  color:var(--blue);
+  border-bottom-color:var(--blue);
+  font-weight:700;
+}
+
+.actions{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.search{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:240px;
+  height:42px;
+  padding:0 14px;
+  background:#F9FAFB;
+  border:1px solid var(--border);
+  border-radius:999px;
+  color:var(--muted);
+}
+
+.search input{
+  border:0;
+  outline:none;
+  background:transparent;
+  width:100%;
+  font:inherit;
+}
+
+.profile{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#374151;
+  font-size:14px;
+  white-space:nowrap;
+}
+
+.profile a{
+  color:var(--blue);
+  text-decoration:none;
+}
+
+main{padding:26px}
+
+.page{display:none}
+.page.active{display:block}
+
+.notice{
+  background:var(--green-soft);
+  color:#047857;
+  padding:12px 16px;
+  border-radius:14px;
+  margin-bottom:16px;
+}
+
+.section-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:18px;
+  margin-bottom:20px;
+}
+
+.section-kicker{
+  color:var(--blue);
+  font-size:12px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  font-weight:800;
+}
+
+.section-title{
+  margin:5px 0 0;
+  color:var(--blue-dark);
+  font-size:32px;
+  letter-spacing:-.8px;
+  font-weight:800;
+}
+
+.section-sub{
+  color:var(--muted);
+  margin:8px 0 0;
+}
+
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(6,minmax(160px,1fr));
+  gap:18px;
+  margin-bottom:22px;
+}
+
+.kpi{
+  display:flex;
+  gap:14px;
+  min-height:128px;
+  padding:18px;
+  border:1px solid var(--border);
+  border-radius:22px;
+  background:white;
+  box-shadow:0 8px 24px rgba(15,23,42,.06);
+}
+
+.icon{
+  width:46px;
+  height:46px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  flex:0 0 auto;
+  font-size:18px;
+}
+
+.icon.red{background:var(--red-soft);color:var(--red)}
+.icon.orange{background:var(--orange-soft);color:var(--orange)}
+.icon.green{background:var(--green-soft);color:var(--green)}
+.icon.blue{background:var(--blue-soft);color:var(--blue)}
+.icon.purple{background:var(--purple-soft);color:var(--purple)}
+
+.kpi-title{
+  margin:0 0 8px;
+  font-size:12px;
+  text-transform:uppercase;
+  color:#374151;
+  font-weight:700;
+}
+
+.kpi-value{
+  margin:0;
+  font-size:28px;
+  line-height:1.05;
+  font-weight:800;
+}
+
+.kpi-sub{
+  margin:8px 0 0;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.grid3{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:22px;
+  margin-bottom:22px;
+}
+
+.grid2{
+  display:grid;
+  grid-template-columns:1.55fr .85fr;
+  gap:22px;
+  margin-bottom:22px;
+}
+
+.panel{
+  background:white;
+  border:1px solid var(--border);
+  border-radius:22px;
+  padding:20px;
+  box-shadow:0 8px 24px rgba(15,23,42,.06);
+  overflow:auto;
+}
+
+.panel-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  margin-bottom:18px;
+}
+
+.panel-title{
+  margin:0;
+  text-transform:uppercase;
+  color:#111827;
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:.03em;
+}
+
+.btn{
+  border:0;
+  background:var(--blue);
+  color:white;
+  border-radius:999px;
+  padding:10px 15px;
+  font-weight:700;
+  cursor:pointer;
+  text-decoration:none;
+}
+
+.btn.red{background:#E53E3E}
+
+.chart-box{position:relative;min-height:250px}
+.chart-box canvas{width:100%!important;height:250px!important}
+
+.donut-center{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  pointer-events:none;
+  text-align:center;
+}
+
+.donut-center strong{
+  display:block;
+  color:var(--blue-dark);
+  font-size:23px;
+  font-weight:800;
+}
+
+.donut-center span{
+  display:block;
+  color:var(--muted);
+  font-size:12px;
+}
+
+table{
+  width:100%;
+  min-width:920px;
+  border-collapse:collapse;
+}
+
+th{
+  padding:12px 10px;
+  background:#F9FAFB;
+  color:#4B5563;
+  border-bottom:1px solid var(--border);
+  text-align:left;
+  text-transform:uppercase;
+  font-size:12px;
+  font-weight:700;
+}
+
+td{
+  padding:13px 10px;
+  border-bottom:1px solid var(--border);
+  color:#374151;
+  font-size:13px;
+  white-space:nowrap;
+}
+
+.right{text-align:right}
+.code{color:var(--blue-dark);font-weight:800}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+}
+
+.pill.red{background:var(--red-soft);color:#B91C1C}
+.pill.orange{background:var(--orange-soft);color:#B45309}
+.pill.green{background:var(--green-soft);color:#047857}
+.pill.blue{background:var(--blue-soft);color:var(--blue)}
+.pill.gray{background:var(--gray-soft);color:#4B5563}
+
+.text-red{color:#DC2626}
+
+.activity{display:grid;gap:16px}
+
+.activity-item{
+  display:grid;
+  grid-template-columns:40px 1fr;
+  gap:12px;
+  align-items:start;
+}
+
+.activity-icon{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+}
+
+.activity-icon.blue{background:var(--blue-soft);color:var(--blue)}
+.activity-icon.green{background:var(--green-soft);color:var(--green)}
+.activity-icon.purple{background:var(--purple-soft);color:var(--purple)}
+
+.activity-title{margin:0;font-size:14px;font-weight:600}
+.activity-meta{margin:4px 0 0;color:var(--muted);font-size:12px}
+
+.carousel-wrap{
+  display:grid;
+  grid-template-columns:36px 1fr 36px;
+  gap:12px;
+  align-items:center;
+}
+
+.arrow{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  border:1px solid var(--border);
+  background:white;
+  color:var(--blue);
+  cursor:pointer;
+}
+
+.carousel{
+  display:grid;
+  grid-auto-flow:column;
+  grid-auto-columns:minmax(250px,1fr);
+  gap:16px;
+  overflow-x:auto;
+  padding-bottom:14px;
+}
+
+.equip-card{
+  border:1px solid var(--border);
+  border-radius:18px;
+  background:white;
+  overflow:hidden;
+}
+
+.equip-card.red-focus{
+  border-color:#FCA5A5;
+  box-shadow:0 12px 32px rgba(239,68,68,.12);
+}
+
+.thumb{
+  position:relative;
+  height:98px;
+  background:linear-gradient(135deg,#EEF2FF,#fff);
+  display:grid;
+  place-items:center;
+  color:var(--blue);
+  font-size:48px;
+}
+
+.led{
+  position:absolute;
+  top:12px;
+  right:12px;
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  border:2px solid white;
+}
+
+.led.green{background:var(--green)}
+.led.orange{background:var(--orange)}
+.led.red{background:var(--red)}
+.led.gray{background:var(--gray)}
+
+.equip-body{padding:15px}
+
+.equip-top{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+
+.equip-id{color:var(--blue-dark);font-weight:800}
+
+.equip-desc{
+  min-height:36px;
+  margin:0 0 12px;
+  font-size:13px;
+  color:#374151;
+}
+
+.metrics{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.metric{
+  background:#F9FAFB;
+  border-radius:12px;
+  padding:9px;
+}
+
+.metric span{
+  display:block;
+  color:var(--muted);
+  font-size:11px;
+}
+
+.metric strong{
+  display:block;
+  color:var(--text);
+  font-size:13px;
+  font-weight:700;
+}
+
+.form-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+}
+
+.form-grid input,
+.form-grid select{
+  padding:11px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  font:inherit;
+}
+
+.form-grid button{grid-column:1/-1}
+
+footer{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  padding:18px 26px;
+  border-top:1px solid var(--border);
+  color:var(--blue-dark);
+  font-size:13px;
+}
+
+.footer-center{text-align:center;color:#374151}
+.footer-right{text-align:right}
+
+@media(max-width:1320px){
+  .topbar{grid-template-columns:1fr;padding:18px}
+  .actions{flex-wrap:wrap}
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  .grid3,.grid2{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr 1fr}
+}
+
+@media(max-width:760px){
+  .shell{width:100%;margin:0;border-radius:0}
+  main{padding:16px}
+  .kpis{grid-template-columns:1fr}
+  .carousel-wrap{grid-template-columns:1fr}
+  .arrow{display:none}
+  footer{grid-template-columns:1fr;gap:8px}
+  .footer-center,.footer-right{text-align:left}
+  .form-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+<div class="shell">
+
+<header class="topbar">
+  <div class="brand">DEMOTRON</div>
+
+  <nav class="tabs">
+    <a class="tab active" onclick="showPage('dashboard',this)"><i class="fa-regular fa-chart-bar"></i> Dashboard</a>
+    <a class="tab" onclick="showPage('equipos',this)"><i class="fa-solid fa-truck-front"></i> Equipos</a>
+    <a class="tab" onclick="showPage('ot',this)"><i class="fa-regular fa-clipboard"></i> OT</a>
+    <a class="tab" onclick="showPage('lecturas',this)"><i class="fa-solid fa-gauge-high"></i> Lecturas</a>
+    <a class="tab" onclick="showPage('compras',this)"><i class="fa-solid fa-cart-shopping"></i> Compras</a>
+    <a class="tab" onclick="showPage('bodega',this)"><i class="fa-solid fa-boxes-stacked"></i> Bodega</a>
+  </nav>
+
+  <div class="actions">
+    <label class="search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input id="globalSearch" oninput="filterAll()" placeholder="Buscar...">
+    </label>
+    <span class="profile">
+      <i class="fa-regular fa-user"></i> {{ current_role }}
+      <a href="/logout">Salir</a>
+    </span>
+  </div>
+</header>
+
+<main>
+{% with messages=get_flashed_messages() %}
+  {% if messages %}
+    <div class="notice">{{ messages[0] }}</div>
+  {% endif %}
+{% endwith %}
+
+<section id="dashboard" class="page active">
+  <div class="section-head">
+    <div>
+      <div class="section-kicker">CMMS DEMOTRON MAQUINARIAS</div>
+      <h1 class="section-title">Dashboard Gerencial</h1>
+      <p class="section-sub">Vista ejecutiva de mantenimiento, OT, compras, lecturas y estado de flota.</p>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <article class="kpi"><div class="icon red"><i class="fa-solid fa-exclamation"></i></div><div><p class="kpi-title">Atrasados</p><p class="kpi-value">{{ kpis.atrasados }}</p><p class="kpi-sub">Riesgo operacional</p></div></article>
+    <article class="kpi"><div class="icon orange"><i class="fa-solid fa-ellipsis"></i></div><div><p class="kpi-title">Próximos</p><p class="kpi-value">{{ kpis.proximos }}</p><p class="kpi-sub">Planificación PM</p></div></article>
+    <article class="kpi"><div class="icon green"><i class="fa-solid fa-check"></i></div><div><p class="kpi-title">Controlado Real</p><p class="kpi-value">{{ kpis.controlado }}%</p><p class="kpi-sub">{{ kpis.total }} equipos</p></div></article>
+    <article class="kpi"><div class="icon blue"><i class="fa-regular fa-file-lines"></i></div><div><p class="kpi-title">OT Abiertas</p><p class="kpi-value">{{ kpis.ot_abiertas }}</p><p class="kpi-sub">Trabajos activos</p></div></article>
+    <article class="kpi"><div class="icon purple"><i class="fa-solid fa-cart-shopping"></i></div><div><p class="kpi-title">Compras Proceso</p><p class="kpi-value">{{ kpis.compras_proceso }}</p><p class="kpi-sub">$ {{ '{:,.0f}'.format(kpis.compras_monto).replace(',', '.') }}</p></div></article>
+    <article class="kpi"><div class="icon green"><i class="fa-solid fa-dollar-sign"></i></div><div><p class="kpi-title">Costo Total PM</p><p class="kpi-value">$ {{ '{:,.0f}'.format(kpis.costo_total).replace(',', '.') }}</p><p class="kpi-sub">PostgreSQL</p></div></article>
+  </div>
+
+  <section class="grid3">
+    <article class="panel"><div class="panel-head"><h2 class="panel-title">Estado General de la Flota</h2></div><div class="chart-box"><canvas id="fleetDonutChart"></canvas><div class="donut-center"><div><strong>{{ kpis.total }}</strong><span>Equipos</span></div></div></div></article>
+    <article class="panel"><div class="panel-head"><h2 class="panel-title">Atrasados por Ubicación</h2></div><div class="chart-box"><canvas id="locationBarChart"></canvas></div></article>
+    <article class="panel"><div class="panel-head"><h2 class="panel-title">Gestión OT y Compras</h2></div><div class="chart-box"><canvas id="managementGroupedChart"></canvas></div></article>
+  </section>
+
+  <section class="grid2">
+    <article class="panel">
+      <div class="panel-head"><h2 class="panel-title">Equipos Atrasados / Críticos</h2><button class="btn" onclick="showPage('equipos', document.querySelector('[onclick*=equipos]'))">Ver todos</button></div>
+      <table class="filterable">
+        <thead><tr><th>Equipo</th><th>Descripción</th><th>Ubicación</th><th class="right">Lectura</th><th class="right">Próxima PM</th><th class="right">Margen</th><th>Estado</th><th>Acción</th></tr></thead>
+        <tbody>
+        {% for e in criticos %}
+          <tr>
+            <td><span class="code">{{ e.codigo }}</span></td>
+            <td>{{ e.descripcion }}</td>
+            <td>{{ e.ubicacion }}</td>
+            <td class="right">{{ '{:,.0f}'.format(e.lectura_actual).replace(',', '.') }}</td>
+            <td class="right">{{ '{:,.0f}'.format(e.proxima_pm).replace(',', '.') }}</td>
+            <td class="right text-red">{{ '{:,.0f}'.format(e.margen).replace(',', '.') }}</td>
+            <td><span class="pill {{ e.semaforo }}">{{ e.estado_calculado }}</span></td>
+            <td><button class="btn red" onclick="showPage('ot', document.querySelector('[onclick*=ot]'))">Crear OT</button></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </article>
+
+    <article class="panel">
+      <div class="panel-head"><h2 class="panel-title">Actividad Reciente</h2></div>
+      <div class="activity">
+        {% for a in actividad %}
+        <div class="activity-item">
+          <div class="activity-icon {{ a.color }}"><i class="{{ a.icon }}"></i></div>
+          <div><p class="activity-title">{{ a.titulo }}</p><p class="activity-meta">{{ a.detalle }} · ahora</p></div>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2 class="panel-title">Equipos · Vista Rápida</h2></div>
+    <div class="carousel-wrap">
+      <button class="arrow"><i class="fa-solid fa-chevron-left"></i></button>
+      <div class="carousel">
+        {% for e in equipos %}
+        <article class="equip-card searchable {% if e.semaforo == 'red' %}red-focus{% endif %}" data-search="{{ e.codigo }} {{ e.descripcion }} {{ e.ubicacion }} {{ e.estado_calculado }}">
+          <div class="thumb"><i class="fa-solid fa-truck-monster"></i><span class="led {{ e.semaforo }}"></span></div>
+          <div class="equip-body">
+            <div class="equip-top"><span class="equip-id">{{ e.codigo }}</span><span class="pill {{ e.semaforo }}">{{ e.estado_calculado }}</span></div>
+            <p class="equip-desc">{{ e.descripcion }}</p>
+            <div class="metrics">
+              <div class="metric"><span>Ubicación</span><strong>{{ e.ubicacion }}</strong></div>
+              <div class="metric"><span>Lectura</span><strong>{{ '{:,.0f}'.format(e.lectura_actual).replace(',', '.') }}</strong></div>
+              <div class="metric"><span>Margen</span><strong>{{ '{:,.0f}'.format(e.margen).replace(',', '.') }}</strong></div>
+              <div class="metric"><span>PM</span><strong>{{ '{:,.0f}'.format(e.proxima_pm).replace(',', '.') }}</strong></div>
+            </div>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+      <button class="arrow"><i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+  </section>
+</section>
+
+<section id="equipos" class="page">
+  <div class="section-head"><div><div class="section-kicker">Maestro PostgreSQL</div><h1 class="section-title">Equipos</h1><p class="section-sub">Agregar, buscar e importar equipos al maestro.</p></div></div>
+
+  <article class="panel">
+    <div class="panel-head"><h2 class="panel-title">Nuevo / Actualizar Equipo</h2></div>
+    <form class="form-grid" method="post" action="/equipos/nuevo">
+      <input name="codigo" placeholder="Código" required>
+      <input name="tipo_equipo" placeholder="Tipo equipo">
+      <input name="familia" placeholder="Familia">
+      <input name="marca" placeholder="Marca">
+      <input name="modelo" placeholder="Modelo">
+      <input name="ubicacion" placeholder="Ubicación">
+      <input name="control_base" placeholder="HORAS / KM">
+      <input name="frecuencia_base" placeholder="Frecuencia">
+      <input name="lectura_actual" placeholder="Lectura actual">
+      <input name="ultima_pm" placeholder="Última PM">
+      <input name="costo_total_pm" placeholder="Costo PM">
+      <input name="estado_operacional" placeholder="Estado">
+      <button class="btn">Guardar equipo</button>
+    </form>
+  </article>
+
+  <article class="panel" style="margin-top:18px">
+    <div class="panel-head"><h2 class="panel-title">Importar Maestro desde Excel</h2></div>
+    <form class="form-grid" method="post" action="/importar_excel" enctype="multipart/form-data">
+      <input type="file" name="excel" accept=".xlsx,.xlsm,.xls">
+      <button class="btn">Importar a PostgreSQL</button>
+    </form>
+  </article>
+
+  <article class="panel" style="margin-top:18px">
+    <div class="panel-head"><h2 class="panel-title">Listado de Equipos</h2></div>
+    <div class="carousel">
+      {% for e in equipos %}
+      <article class="equip-card searchable" data-search="{{ e.codigo }} {{ e.descripcion }} {{ e.ubicacion }} {{ e.estado_calculado }}">
+        <div class="equip-body"><div class="equip-top"><span class="equip-id">{{ e.codigo }}</span><span class="pill {{ e.semaforo }}">{{ e.estado_calculado }}</span></div><p>{{ e.descripcion }} · {{ e.ubicacion }}</p></div>
+      </article>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+
+<section id="ot" class="page">
+  <div class="section-head"><div><div class="section-kicker">Operación</div><h1 class="section-title">Órdenes de Trabajo</h1></div></div>
+  <article class="panel">
+    <form class="form-grid" method="post" action="/crear_ot">
+      <select name="codigo">{% for e in equipos %}<option value="{{ e.codigo }}">{{ e.codigo }} · {{ e.descripcion }}</option>{% endfor %}</select>
+      <input name="tipo" placeholder="Tipo">
+      <input name="prioridad" placeholder="Prioridad">
+      <input name="responsable" placeholder="Responsable">
+      <input name="lectura" placeholder="Lectura">
+      <input name="costo_estimado" placeholder="Costo">
+      <input name="descripcion" placeholder="Descripción">
+      <button class="btn">Crear OT</button>
+    </form>
+  </article>
+</section>
+
+<section id="lecturas" class="page">
+  <div class="section-head"><div><div class="section-kicker">Terreno</div><h1 class="section-title">Lecturas</h1></div></div>
+  <article class="panel">
+    <form class="form-grid" method="post" action="/lecturas">
+      <select name="codigo">{% for e in equipos %}<option value="{{ e.codigo }}">{{ e.codigo }} · {{ e.descripcion }}</option>{% endfor %}</select>
+      <select name="tipo_lectura"><option>HOROMETRO</option><option>ODOMETRO</option><option>KILOMETRAJE</option></select>
+      <input name="valor" placeholder="Valor">
+      <input name="ubicacion" placeholder="Ubicación">
+      <input name="responsable" placeholder="Responsable">
+      <input name="observacion" placeholder="Observación">
+      <button class="btn">Registrar lectura</button>
+    </form>
+  </article>
+</section>
+
+<section id="compras" class="page">
+  <div class="section-head"><div><div class="section-kicker">Abastecimiento</div><h1 class="section-title">Compras</h1></div></div>
+  <article class="panel">
+    <form class="form-grid" method="post" action="/compras">
+      <select name="codigo_equipo">{% for e in equipos %}<option value="{{ e.codigo }}">{{ e.codigo }} · {{ e.descripcion }}</option>{% endfor %}</select>
+      <input name="oc" placeholder="OC">
+      <input name="proveedor" placeholder="Proveedor">
+      <input name="item" placeholder="Ítem">
+      <input name="cantidad" placeholder="Cantidad">
+      <input name="costo_total" placeholder="Costo total">
+      <select name="estado"><option>EN PROCESO</option><option>POR RECIBIR</option><option>RECIBIDO</option><option>CERRADO</option></select>
+      <input name="observacion" placeholder="Observación">
+      <button class="btn">Registrar compra</button>
+    </form>
+  </article>
+</section>
+
+<section id="bodega" class="page">
+  <div class="section-head"><div><div class="section-kicker">Inventario</div><h1 class="section-title">Bodega</h1></div></div>
+  <article class="panel">
+    <form class="form-grid" method="post" action="/bodega">
+      <input name="codigo_equipo" placeholder="Código equipo">
+      <input name="ot_numero" placeholder="OT">
+      <input name="repuesto" placeholder="Repuesto">
+      <input name="cantidad" placeholder="Cantidad">
+      <input name="costo_unitario" placeholder="Costo unitario">
+      <select name="movimiento"><option>SALIDA</option><option>ENTRADA</option></select>
+      <input name="observacion" placeholder="Observación">
+      <button class="btn">Registrar movimiento</button>
+    </form>
+  </article>
+</section>
+
+</main>
+
+<footer>
+  <div>DEMOTRON CMMS</div>
+  <div class="footer-center">© {{ anio_actual }} Demotron Maquinarias - Todos los derechos reservados</div>
+  <div class="footer-right">Versión {{ version_sistema }}</div>
+</footer>
+
+</div>
+
+<script>
+const kpis = {{ kpis|tojson }};
+const ubicaciones = {{ ubicaciones|tojson }};
+
+function showPage(id, tab){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const page = document.getElementById(id);
+  if(page){ page.classList.add('active'); }
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(tab){ tab.classList.add('active'); }
+}
+
+function filterAll(){
+  const q = (document.getElementById('globalSearch')?.value || '').toLowerCase();
+  document.querySelectorAll('.searchable').forEach(el=>{
+    el.style.display = (el.dataset.search || '').toLowerCase().includes(q) ? '' : 'none';
+  });
+  document.querySelectorAll('.filterable tbody tr').forEach(tr=>{
+    tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function initCharts(){
+  const donut = document.getElementById('fleetDonutChart');
+  if(donut){
+    new Chart(donut,{
+      type:'doughnut',
+      data:{
+        labels:['Controlado','Próximos','Atrasados'],
+        datasets:[{
+          data:[Math.max(kpis.total-kpis.atrasados-kpis.proximos,0), kpis.proximos, kpis.atrasados],
+          backgroundColor:['#10B981','#F59E0B','#EF4444'],
+          borderWidth:0
+        }]
+      },
+      options:{cutout:'72%',plugins:{legend:{display:false}},maintainAspectRatio:false}
+    });
+  }
+
+  const loc = document.getElementById('locationBarChart');
+  if(loc){
+    new Chart(loc,{
+      type:'bar',
+      data:{
+        labels:ubicaciones.map(u=>u.ubicacion || 'Sin ubicación'),
+        datasets:[{data:ubicaciones.map(u=>u.cantidad), backgroundColor:'#0F3B8E', borderRadius:8}]
+      },
+      options:{plugins:{legend:{display:false}},maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}
+    });
+  }
+
+  const gest = document.getElementById('managementGroupedChart');
+  if(gest){
+    new Chart(gest,{
+      type:'bar',
+      data:{
+        labels:['Actual'],
+        datasets:[
+          {label:'OT',data:[kpis.ot_abiertas],backgroundColor:'#0F3B8E',borderRadius:8},
+          {label:'Compras',data:[kpis.compras_proceso],backgroundColor:'#7D49D0',borderRadius:8}
+        ]
+      },
+      options:{maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}
+    });
+  }
+}
+
+document.addEventListener('DOMContentLoaded', initCharts);
+</script>
+
+</body>
+</html>
