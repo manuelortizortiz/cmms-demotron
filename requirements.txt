@@ -1,7 +1,5 @@
-flask
-pandas
-openpyxl
-werkzeug
-gunicorn
-psycopg2-binary
-sqlalchemy
+Flask==3.0.3
+SQLAlchemy==2.0.32
+Werkzeug==3.0.3
+psycopg2-binary==2.9.9
+gunicorn==22.0.0

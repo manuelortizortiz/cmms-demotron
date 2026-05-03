@@ -1,1 +1,1 @@
-{"build":{"builder":"NIXPACKS"},"deploy":{"startCommand":"gunicorn app:app"}}
+{"deploy":{"startCommand":"gunicorn app:app"}}

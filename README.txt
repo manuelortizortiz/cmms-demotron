@@ -1,22 +1,34 @@
-CMMS DEMOTRON FINAL LISTO
+CMMS DEMOTRON ULTRA PRO - PostgreSQL + Web + Login
 
-1. Reemplaza estos archivos en GitHub:
-   app.py
-   templates/index.html
-   templates/login.html
-   requirements.txt
-   Procfile
-   railway.json
+LISTO PARA SUBIR A GITHUB / RAILWAY
 
-2. Railway:
-   - Web > Variables:
-     DATABASE_URL = ${{Postgres.DATABASE_URL}}
-   - Deploy
+Archivos principales:
+- app.py: Backend Flask conectado a PostgreSQL mediante DATABASE_URL.
+- templates/: Pantallas Dashboard, Equipos, OT, Lecturas, Compras, Bodega, Reportes, Configuración y Login.
+- static/img/: Iconos/imagenes SVG pequeñas para excavadora, motoniveladora, cargador, tolva, camioneta y equipo genérico.
+- requirements.txt: Dependencias.
+- Procfile / railway.json: Configuración para Railway.
 
-3. Si la base está vacía:
-   - Entra con admin / admin123
-   - Equipos > Cargar datos demo
-   - O usa DATA_POSTGRES_SEED.sql en Railway Postgres > Query
+Usuarios iniciales:
+- admin / admin123
+- gerencia / gerencia123
+- mantencion / mantencion123
+- bodega / bodega123
+- lectura / lectura123
 
-4. Importar Excel:
-   - Pestaña Equipos > Importar Maestro desde Excel
+VARIABLES EN RAILWAY:
+- DATABASE_URL: Railway la crea automáticamente si tienes PostgreSQL agregado al proyecto.
+- SECRET_KEY: recomendado crear una clave segura.
+
+PASOS PARA ACTUALIZAR TU PÁGINA:
+1. Descomprime este ZIP.
+2. Copia todos los archivos dentro de tu repositorio GitHub.
+3. Reemplaza los archivos anteriores.
+4. Haz commit y push.
+5. Railway redeployará automáticamente.
+6. Entra a /health para comprobar que diga database: postgresql y status: ok.
+
+IMPORTANTE:
+- No puedo modificar directamente tu Railway o GitHub desde aquí sin acceso al repositorio.
+- Esta versión queda conectada a PostgreSQL usando la variable DATABASE_URL del proyecto.
+- Si la base está vacía, el sistema carga datos iniciales demo y luego puedes registrar equipos, lecturas, OT, compras y bodega desde la web.
