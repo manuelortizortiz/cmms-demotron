@@ -1,3 +1,6 @@
-function fmt(n){return new Intl.NumberFormat('es-CL').format(n||0)}function card(e){return `<div class="equip-card ${e.estado_calc}"><h4><span class="dot ${e.estado_calc}"></span>${e.codigo||''}</h4><p>${e.tipo_equipo||''}</p><p>${e.familia||''}</p><img src="${e.imagen}"><p>${[e.marca,e.modelo].filter(Boolean).join(' ')}</p><p>${e.descripcion||''}</p></div>`}
-async function loadEquipos(){const r=await fetch('/api/equipos');const data=await r.json();document.getElementById('cardsEquipos').innerHTML=data.slice(0,24).map(card).join('');document.getElementById('tablaEquipos').innerHTML=data.map(e=>`<tr><td><b>${e.codigo||''}</b></td><td>${e.tipo_equipo||''}</td><td>${e.familia||''}</td><td>${e.marca||''}</td><td>${e.modelo||''}</td><td>${e.descripcion||''}</td><td><span class="badge ${e.estado_calc}">${e.estado_calc}</span></td></tr>`).join('')}
-loadEquipos();
+
+function badge(e){const s=(e||"").toUpperCase(); if(s.includes("ATRAS")||s.includes("VENC"))return"badge bad"; if(s.includes("PROX"))return"badge warn"; return"badge";}
+fetch("/api/equipos").then(r=>r.json()).then(data=>{
+ const tbody=document.getElementById("tablaEquipos");
+ tbody.innerHTML=(Array.isArray(data)?data:[]).map(e=>`<tr><td><b>${e.codigo||""}</b></td><td>${e.tipo_equipo||""}</td><td>${e.marca||""}</td><td>${e.modelo||""}</td><td>${e.ubicacion||""}</td><td><span class="${badge(e.estado)}">${e.estado||""}</span></td><td>${e.descripcion||""}</td></tr>`).join("");
+});

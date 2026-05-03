@@ -1,1 +1,5 @@
-fetch('/api/lecturas').then(r=>r.json()).then(d=>{renderTable('headLecturas','bodyLecturas',d); const labels=d.slice(0,20).map((_,i)=>'#'+(i+1)); const vals=d.slice(0,20).map(r=>{let k=Object.keys(r).find(c=>/hor|odo|lect|km|kil/i.test(c)); return Number(r[k]||0)}); makeBar('lecturasChart', labels, vals, 'Lectura');});
+
+fetch("/api/lecturas").then(r=>r.json()).then(data=>{
+ const tbody=document.getElementById("tablaLecturas");
+ tbody.innerHTML=(Array.isArray(data)?data:[]).map(e=>`<tr><td>${e.fecha||""}</td><td><b>${e.codigo||""}</b></td><td>${e.tipo_lectura||""}</td><td>${e.valor||""}</td><td>${e.ubicacion||""}</td></tr>`).join("");
+});

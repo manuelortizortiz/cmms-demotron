@@ -1,5 +1,48 @@
-let charts=[];function fmt(n){return new Intl.NumberFormat('es-CL').format(n||0)}function money(n){return '$ '+fmt(n||0)}function destroy(){charts.forEach(c=>c.destroy());charts=[]}
-async function loadDashboard(){const r=await fetch('/api/dashboard');const d=await r.json();const k=d.kpis;document.getElementById('kpi-atrasados').textContent=k.atrasados;document.getElementById('pct-atrasados').textContent=(k.total?((k.atrasados/k.total)*100).toFixed(1):0)+'% del total';document.getElementById('kpi-proximos').textContent=k.proximos;document.getElementById('kpi-controlado').textContent=k.controlado_pct+'%';document.getElementById('txt-controlado').textContent=k.controlado+' de '+k.total+' equipos';document.getElementById('kpi-ot').textContent=k.ot_abiertas;document.getElementById('kpi-compras').textContent=k.compras;document.getElementById('kpi-costo').textContent=money(k.costo_mensual);destroy();charts.push(new Chart(document.getElementById('donut'),{type:'doughnut',data:{labels:d.estado.labels,datasets:[{data:d.estado.values,backgroundColor:['#35b864','#f7b500','#ef3d45','#a7adba']}]},options:{cutout:'58%',plugins:{legend:{display:false}}}}));document.getElementById('leyenda').innerHTML=d.estado.labels.map((l,i)=>`<div><span><i class="dot ${i==0?'CONTROLADO':i==1?'PROXIMA':i==2?'ATRASADA':'FUERA'}"></i>${l}</span><b>${d.estado.values[i]}</b></div>`).join('');charts.push(new Chart(document.getElementById('barUbic'),{type:'bar',data:{labels:d.ubicaciones.labels.length?d.ubicaciones.labels:['Sin atrasos'],datasets:[{label:'Equipos atrasados',data:d.ubicaciones.values.length?d.ubicaciones.values:[0],backgroundColor:'#ef3d45'}]},options:{plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}}));charts.push(new Chart(document.getElementById('barGestion'),{type:'bar',data:{labels:d.gestion.labels,datasets:[{label:'OT / Registros',data:d.gestion.ot,backgroundColor:'#1d6ee5'},{label:'Compras',data:d.gestion.compras,backgroundColor:'#7e3fd4'}]},options:{plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}}));document.getElementById('criticos').innerHTML=d.criticos.map(e=>`<tr><td><b>${e.codigo||''}</b></td><td>${[e.familia,e.marca,e.modelo].filter(Boolean).join(' ')||e.descripcion||''}</td><td>${e.ubicacion||''}</td><td>${fmt(e.horometro)}</td><td><span class="badge ${e.estado_calc}">${e.estado_calc}</span></td><td><button class="btn-red" onclick="crearOT('${e.codigo}')">Crear OT</button></td></tr>`).join('');document.getElementById('actividad').innerHTML=d.actividad.map(a=>`<div class="item"><span class="ico">✓</span><div><b>${a.titulo}</b><small>${a.detalle}</small></div></div>`).join('');document.getElementById('quick').innerHTML=d.quick.map(card).join('')}
-function card(e){return `<div class="equip-card ${e.estado_calc}"><h4><span class="dot ${e.estado_calc}"></span>${e.codigo||''}</h4><p>${e.familia||e.tipo_equipo||''}</p><p>${[e.marca,e.modelo].filter(Boolean).join(' ')}</p><img src="${e.imagen}"><p>${e.ubicacion||''}</p><p>Lectura: ${fmt(e.horometro)}</p><p>Estado: <span class="badge ${e.estado_calc}">${e.estado_calc}</span></p></div>`}
-async function crearOT(codigo){const r=await fetch('/api/ot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({codigo})});const d=await r.json();alert(d.ok?'OT creada':'No se pudo crear OT: '+(d.error||''));if(d.ok)loadDashboard()}
-loadDashboard();setInterval(loadDashboard,60000);
+
+const fmt = n => new Intl.NumberFormat("es-CL").format(Number(n||0));
+function iconFor(e){
+  const t = ((e.tipo_equipo||"") + " " + (e.descripcion||"") + " " + (e.modelo||"")).toLowerCase();
+  if(t.includes("excav")) return "🚜";
+  if(t.includes("moto")) return "🏗️";
+  if(t.includes("tolva") || t.includes("camión") || t.includes("camion")) return "🚚";
+  if(t.includes("cargador")) return "🚜";
+  if(t.includes("veh") || t.includes("camioneta")) return "🚙";
+  return "⚙️";
+}
+function badge(e){
+  const s = (e||"").toUpperCase();
+  if(s.includes("ATRAS")||s.includes("VENC")) return "badge bad";
+  if(s.includes("PROX")) return "badge warn";
+  return "badge";
+}
+function drawChart(id,type,items){
+  const ctx=document.getElementById(id);
+  if(!ctx)return;
+  new Chart(ctx,{type,data:{labels:items.map(x=>x.label),datasets:[{data:items.map(x=>x.total),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{boxWidth:10,font:{size:10}}}},scales:type==="bar"?{y:{beginAtZero:true,ticks:{font:{size:10}}},x:{ticks:{font:{size:10}}}}:{}}});
+}
+async function loadDash(){
+  const r=await fetch("/api/dashboard");
+  const d=await r.json();
+  document.getElementById("kpi-atrasados").textContent=fmt(d.atrasados);
+  document.getElementById("kpi-proximos").textContent=fmt(d.proximos);
+  document.getElementById("kpi-controlados").textContent=fmt(d.controlados);
+  document.getElementById("kpi-total").textContent=fmt(d.total_equipos)+" equipos";
+  document.getElementById("kpi-ot").textContent=fmt(d.ot_abiertas);
+  document.getElementById("kpi-compras").textContent=fmt(d.compras_proceso);
+  document.getElementById("kpi-costo").textContent="$"+fmt(d.costo_mensual);
+  drawChart("chartEstado","doughnut",d.por_estado||[]);
+  drawChart("chartUbicacion","bar",d.por_ubicacion||[]);
+  drawChart("chartTipo","bar",d.por_tipo||[]);
+  const crit=document.getElementById("tablaCriticos");
+  const equipos=d.equipos||[];
+  crit.innerHTML=equipos.slice(0,8).map(e=>`<tr><td><b>${e.codigo||""}</b></td><td>${e.descripcion||e.tipo_equipo||""}</td><td>${e.ubicacion||""}</td><td><span class="${badge(e.estado)}">${e.estado||"CONTROLADO"}</span></td><td><button class="btn redbtn">Crear OT</button></td></tr>`).join("");
+  document.getElementById("actividad").innerHTML=[
+    ["▣","Base CMMS conectada a PostgreSQL"],
+    ["▤",`Lecturas cargadas: ${fmt(d.total_lecturas)}`],
+    ["✓",`Equipos cargados: ${fmt(d.total_equipos)}`],
+    ["🛒","Compras PM disponibles"],
+    ["⚙️","Importador Excel automático activo"]
+  ].map(a=>`<div class="act"><div class="act-ico">${a[0]}</div><div>${a[1]}<br><small>Hoy</small></div></div>`).join("");
+  document.getElementById("quickCards").innerHTML=equipos.slice(0,18).map(e=>`<div class="machine-card"><span class="dot ${badge(e.estado).includes("bad")?"red":badge(e.estado).includes("warn")?"yellow":"green"}"></span><h4>${e.codigo||""}</h4><div class="machine">${iconFor(e)}</div><p>${e.marca||""} ${e.modelo||""}</p><p>${e.ubicacion||""}</p><p>${e.estado||"CONTROLADO"}</p></div>`).join("");
+}
+loadDash();
