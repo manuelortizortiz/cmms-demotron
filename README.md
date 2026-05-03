@@ -1,21 +1,24 @@
-# CMMS DEMOTRON ULTRA PRO - Railway PostgreSQL
+# CMMS DEMOTRON ULTRA PRO - Railway/PostgreSQL
 
-Subir todo el contenido de esta carpeta a la raíz del repositorio GitHub conectado a Railway.
+## Subir a GitHub
+1. Descomprime este ZIP.
+2. Sube **todo el contenido a la raíz del repositorio**.
+3. Railway hará redeploy automático.
 
-Variables requeridas en Railway:
-- `DATABASE_URL` conexión PostgreSQL de Railway
-- `SECRET_KEY` opcional
+## Variables Railway necesarias
+- `DATABASE_URL` como referencia al servicio Postgres.
+- Opcional: `SECRET_KEY`, `ADMIN_USER`, `ADMIN_PASS`, `GERENCIA_USER`, `GERENCIA_PASS`.
 
-Login por defecto:
-- Usuario: `admin`
-- Clave: `admin123`
+## Login por defecto
+- admin / admin123
+- gerencia / gerencia123
 
-Tablas usadas:
-- `equipos`: codigo, tipo, estado, ubicacion, horometro
-- `lecturas`
-- `mantenciones`
-- `bodega`
-- `compras`
-- `pm` o `PM`
+## Tablas usadas
+- equipos: codigo, tipo, estado, ubicacion, horometro
+- lecturas
+- mantenciones
+- bodega
+- compras
+- PM / pm
 
-El sistema detecta columnas disponibles y no se cae si alguna tabla está vacía.
+El sistema detecta columnas similares si los nombres tienen mayúsculas, acentos o variaciones.

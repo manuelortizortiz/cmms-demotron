@@ -1,220 +1,208 @@
-import os
-from datetime import datetime
+import os, re, json
+from datetime import datetime, date
 from functools import wraps
-from flask import Flask, jsonify, render_template, request, redirect, session, url_for
+from decimal import Decimal
+from flask import Flask, render_template, jsonify, request, redirect, url_for, session
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import SQLAlchemyError
-from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "demotron-ultra-pro-change-me")
+app.secret_key = os.getenv('SECRET_KEY', 'demotron-ultra-pro-secret')
 
-DATABASE_URL = os.getenv("DATABASE_URL", "")
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
-elif DATABASE_URL.startswith("postgresql://") and "+psycopg" not in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+DATABASE_URL = os.getenv('DATABASE_URL') or os.getenv('DATABASE_PUBLIC_URL')
+if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
+    DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql+psycopg://', 1)
+elif DATABASE_URL and DATABASE_URL.startswith('postgresql://'):
+    DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg://', 1)
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True) if DATABASE_URL else None
 
-DEFAULT_USERS = {
-    "admin": generate_password_hash("admin123"),
-    "gerencia": generate_password_hash("gerencia123"),
-    "mantencion": generate_password_hash("mantencion123"),
-}
-
 TABLES = {
-    "equipos": ["equipos"],
-    "lecturas": ["lecturas"],
-    "mantenciones": ["mantenciones"],
-    "bodega": ["bodega"],
-    "compras": ["compras"],
-    "pm": ["pm", "PM"],
+    'equipos': ['equipos', 'Equipo', 'EQUIPOS'],
+    'lecturas': ['lecturas', 'Lecturas', 'LECTURAS'],
+    'mantenciones': ['mantenciones', 'Mantenciones', 'MANTENCIONES'],
+    'bodega': ['bodega', 'Bodega', 'BODEGA'],
+    'compras': ['compras', 'Compras', 'COMPRAS'],
+    'pm': ['PM', 'pm', 'Plan_Mantenciones', 'plan_mantenciones']
 }
 
-def login_required(fn):
-    @wraps(fn)
+def clean_value(v):
+    if isinstance(v, (datetime, date)): return v.isoformat()
+    if isinstance(v, Decimal): return float(v)
+    return v
+
+def logged_in():
+    return session.get('user') is not None
+
+def login_required(f):
+    @wraps(f)
     def wrapper(*args, **kwargs):
-        if not session.get("user"):
-            return redirect(url_for("login"))
-        return fn(*args, **kwargs)
+        if not logged_in(): return redirect(url_for('login'))
+        return f(*args, **kwargs)
     return wrapper
 
-def db_ready():
-    return engine is not None
-
-def q(sql, params=None):
-    if not db_ready():
-        return []
-    with engine.connect() as conn:
-        return [dict(r._mapping) for r in conn.execute(text(sql), params or {})]
-
-def table_exists(name):
-    try:
-        rows = q("""
-            SELECT table_name FROM information_schema.tables
-            WHERE table_schema='public' AND table_name=:name LIMIT 1
-        """, {"name": name})
-        return bool(rows)
-    except Exception:
-        return False
+def qident(name):
+    return '"' + name.replace('"', '""') + '"'
 
 def resolve_table(key):
-    for name in TABLES.get(key, [key]):
-        if table_exists(name):
-            return name
+    if not engine: return None
+    with engine.connect() as conn:
+        for n in TABLES.get(key, [key]):
+            try:
+                r = conn.execute(text("select to_regclass(:n)"), {'n': n}).scalar()
+                if r: return n
+            except Exception:
+                pass
     return TABLES.get(key, [key])[0]
 
-def columns(table):
-    try:
-        rows = q("""
-            SELECT column_name FROM information_schema.columns
-            WHERE table_schema='public' AND table_name=:table
-        """, {"table": table})
-        return {r["column_name"] for r in rows}
-    except Exception:
-        return set()
+def get_columns(table):
+    if not engine or not table: return []
+    with engine.connect() as conn:
+        rows = conn.execute(text("""
+            select column_name from information_schema.columns
+            where table_schema='public' and lower(table_name)=lower(:t)
+            order by ordinal_position
+        """), {'t': table}).fetchall()
+    return [r[0] for r in rows]
 
-def safe_count(table):
-    try:
-        if not table_exists(table):
-            return 0
-        return q(f'SELECT COUNT(*) AS total FROM "{table}"')[0]["total"]
-    except Exception:
-        return 0
+def first_col(cols, names):
+    low = {c.lower(): c for c in cols}
+    for n in names:
+        if n.lower() in low: return low[n.lower()]
+    for c in cols:
+        cl = c.lower()
+        if any(n.lower() in cl for n in names): return c
+    return None
 
-def normalize_equipo(row):
-    codigo = row.get("codigo") or row.get("Código") or row.get("cod") or ""
-    tipo = row.get("tipo") or row.get("descripcion") or row.get("equipo") or row.get("familia") or "Equipo"
-    estado = row.get("estado") or row.get("estado_operacional") or row.get("status") or "Sin estado"
-    ubicacion = row.get("ubicacion") or row.get("ubicación") or row.get("obra") or row.get("faena") or "Sin ubicación"
-    horometro = row.get("horometro") or row.get("horómetro") or row.get("lectura_actual") or row.get("km") or row.get("kilometraje") or 0
-    return {"codigo": codigo, "tipo": tipo, "estado": estado, "ubicacion": ubicacion, "horometro": horometro}
+def rows(table_key, limit=500, order_col=None):
+    if not engine: return []
+    table = resolve_table(table_key)
+    cols = get_columns(table)
+    if not cols: return []
+    order = f" order by {qident(order_col)} desc" if order_col and order_col in cols else ''
+    sql = f"select * from {qident(table)}{order} limit :lim"
+    with engine.connect() as conn:
+        data = conn.execute(text(sql), {'lim': limit}).mappings().all()
+    return [{k: clean_value(v) for k, v in dict(r).items()} for r in data]
 
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    error = None
-    if request.method == "POST":
-        user = request.form.get("usuario", "").strip()
-        pwd = request.form.get("password", "")
-        if user in DEFAULT_USERS and check_password_hash(DEFAULT_USERS[user], pwd):
-            session["user"] = user
-            return redirect(url_for("dashboard"))
-        error = "Usuario o clave incorrecta"
-    return render_template("login.html", error=error)
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("login"))
-
-@app.route("/")
-@login_required
-def dashboard():
-    return render_template("dashboard.html", user=session.get("user"))
-
-@app.route("/equipos")
-@login_required
-def equipos_page():
-    return render_template("equipos.html", user=session.get("user"))
-
-@app.route("/lecturas")
-@login_required
-def lecturas_page():
-    return render_template("lecturas.html", user=session.get("user"))
-
-@app.route("/api/status")
-def api_status():
-    try:
-        if not db_ready():
-            return jsonify({"database":"missing DATABASE_URL", "status":"error"}), 500
-        q("SELECT 1 AS ok")
-        return jsonify({"database":"postgresql", "status":"ok"})
-    except Exception as e:
-        return jsonify({"database":"postgresql", "status":"error", "detail":str(e)}), 500
-
-@app.route("/api/equipos")
-@login_required
-def api_equipos():
-    table = resolve_table("equipos")
-    if not table_exists(table):
-        return jsonify([])
-    cols = columns(table)
-    wanted = [c for c in ["codigo", "tipo", "estado", "ubicacion", "horometro"] if c in cols]
-    select = ", ".join([f'"{c}"' for c in wanted]) or "*"
-    order = 'ORDER BY "codigo"' if "codigo" in cols else ""
-    limit = int(request.args.get("limit", 500))
-    rows = q(f'SELECT {select} FROM "{table}" {order} LIMIT :limit', {"limit": limit})
-    return jsonify([normalize_equipo(r) for r in rows])
-
-@app.route("/api/lecturas")
-@login_required
-def api_lecturas():
-    table = resolve_table("lecturas")
-    if not table_exists(table):
-        return jsonify([])
-    cols = columns(table)
-    order_col = next((c for c in ["fecha", "created_at", "fecha_lectura", "Fecha"] if c in cols), None)
-    order = f'ORDER BY "{order_col}" DESC' if order_col else ""
-    rows = q(f'SELECT * FROM "{table}" {order} LIMIT 300')
-    return jsonify(rows)
-
-@app.route("/api/mantenciones")
-@login_required
-def api_mantenciones():
-    table = resolve_table("mantenciones")
-    if not table_exists(table):
-        return jsonify([])
-    rows = q(f'SELECT * FROM "{table}" LIMIT 300')
-    return jsonify(rows)
-
-@app.route("/api/dashboard")
-@login_required
-def api_dashboard():
-    equipos_table = resolve_table("equipos")
-    lecturas_table = resolve_table("lecturas")
-    mant_table = resolve_table("mantenciones")
-    bodega_table = resolve_table("bodega")
-    compras_table = resolve_table("compras")
-    pm_table = resolve_table("pm")
-
-    equipos = []
-    if table_exists(equipos_table):
-        cols = columns(equipos_table)
-        rows = q(f'SELECT * FROM "{equipos_table}" LIMIT 1000')
-        equipos = [normalize_equipo(r) for r in rows]
-
-    total = len(equipos)
-    atrasados = sum(1 for e in equipos if "ATRAS" in str(e.get("estado","")).upper() or "VENC" in str(e.get("estado","")).upper())
-    taller = sum(1 for e in equipos if "TALLER" in str(e.get("estado","")).upper() or "FUERA" in str(e.get("estado","")).upper())
-    operativos = max(total - atrasados - taller, 0)
-    proximos = sum(1 for e in equipos if "PROX" in str(e.get("estado","")).upper() or "PRÓX" in str(e.get("estado","")).upper())
-
-    by_ubicacion = {}
-    by_tipo = {}
-    for e in equipos:
-        by_ubicacion[e["ubicacion"]] = by_ubicacion.get(e["ubicacion"], 0) + 1
-        by_tipo[e["tipo"]] = by_tipo.get(e["tipo"], 0) + 1
-
-    data = {
-        "kpis": {
-            "equipos": total,
-            "operativos": operativos,
-            "atrasados": atrasados,
-            "proximos": proximos,
-            "taller": taller,
-            "lecturas": safe_count(lecturas_table),
-            "mantenciones": safe_count(mant_table),
-            "bodega": safe_count(bodega_table),
-            "compras": safe_count(compras_table),
-            "pm": safe_count(pm_table),
-        },
-        "ubicaciones": sorted([{"name":k, "value":v} for k,v in by_ubicacion.items()], key=lambda x: x["value"], reverse=True)[:10],
-        "tipos": sorted([{"name":k, "value":v} for k,v in by_tipo.items()], key=lambda x: x["value"], reverse=True)[:8],
-        "equipos": equipos[:80],
-        "updated_at": datetime.now().strftime("%d-%m-%Y %H:%M")
+def equipo_norm(r):
+    cols=list(r.keys())
+    codigo = r.get(first_col(cols, ['codigo','equipo','cod_equipo','Código','Codigo']))
+    tipo = r.get(first_col(cols, ['tipo','descripcion','descripción','modelo','familia','clase']))
+    estado = r.get(first_col(cols, ['estado','estado_servicio','status','condicion','condición']))
+    ubicacion = r.get(first_col(cols, ['ubicacion','ubicación','faena','obra','centro']))
+    horometro = r.get(first_col(cols, ['horometro','horómetro','lectura','ultima_lectura','km','kilometro','odometro']))
+    proxima = r.get(first_col(cols, ['proxima','próxima','pm','proxima_pm','prox_pm','umbral']))
+    return {
+        'codigo': str(codigo or '').strip(), 'tipo': str(tipo or '').strip(),
+        'estado': str(estado or '').strip(), 'ubicacion': str(ubicacion or '').strip(),
+        'horometro': horometro or 0, 'proxima_pm': proxima or '',
+        'raw': r
     }
+
+def is_atrasado(e):
+    s=(e.get('estado') or '').lower()
+    if any(x in s for x in ['atras','venc','crit']): return True
+    try:
+        if e.get('proxima_pm') not in ('', None): return float(e.get('horometro') or 0) > float(e.get('proxima_pm') or 0)
+    except Exception: pass
+    return False
+
+def is_proximo(e):
+    s=(e.get('estado') or '').lower()
+    return any(x in s for x in ['prox','próx'])
+
+def money(n):
+    try: return int(float(n or 0))
+    except Exception: return 0
+
+@app.route('/login', methods=['GET','POST'])
+def login():
+    if request.method == 'POST':
+        u=request.form.get('username','').strip(); p=request.form.get('password','').strip()
+        users = {
+            os.getenv('ADMIN_USER','admin'): os.getenv('ADMIN_PASS','admin123'),
+            os.getenv('GERENCIA_USER','gerencia'): os.getenv('GERENCIA_PASS','gerencia123')
+        }
+        if users.get(u)==p:
+            session['user']={'name':u, 'role':'Administrador' if u=='admin' else 'Gerencia'}
+            return redirect(url_for('dashboard'))
+        return render_template('login.html', error='Usuario o contraseña incorrecta')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear(); return redirect(url_for('login'))
+
+@app.route('/')
+@login_required
+def dashboard(): return render_template('dashboard.html', user=session.get('user'))
+@app.route('/equipos')
+@login_required
+def equipos_page(): return render_template('equipos.html', user=session.get('user'))
+@app.route('/lecturas')
+@login_required
+def lecturas_page(): return render_template('lecturas.html', user=session.get('user'))
+@app.route('/ot')
+@login_required
+def ot_page(): return render_template('simple.html', title='OT', endpoint='mantenciones', user=session.get('user'))
+@app.route('/compras')
+@login_required
+def compras_page(): return render_template('simple.html', title='Compras', endpoint='compras', user=session.get('user'))
+@app.route('/bodega')
+@login_required
+def bodega_page(): return render_template('simple.html', title='Bodega', endpoint='bodega', user=session.get('user'))
+@app.route('/reportes')
+@login_required
+def reportes_page(): return render_template('reportes.html', user=session.get('user'))
+
+@app.route('/api/health')
+def health(): return jsonify({'ok': True, 'db': bool(engine)})
+
+@app.route('/api/equipos')
+def api_equipos():
+    data=[equipo_norm(r) for r in rows('equipos', 1000)]
+    data=[d for d in data if d['codigo']]
     return jsonify(data)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8080)), debug=True)
+@app.route('/api/<name>')
+def api_table(name):
+    if name not in ['lecturas','mantenciones','bodega','compras','pm']:
+        return jsonify({'error':'endpoint no existe'}), 404
+    return jsonify(rows(name, 1000))
+
+@app.route('/api/dashboard')
+def api_dashboard():
+    eq=[equipo_norm(r) for r in rows('equipos', 2000)]
+    eq=[e for e in eq if e['codigo']]
+    total=len(eq)
+    atrasados=[e for e in eq if is_atrasado(e)]
+    proximos=[e for e in eq if is_proximo(e)]
+    fuera=[e for e in eq if any(x in (e['estado'] or '').lower() for x in ['fuera','taller','no operativo'])]
+    control=max(total-len(atrasados)-len(proximos)-len(fuera), 0)
+    mant=rows('mantenciones', 2000); comp=rows('compras', 2000)
+    # costos compras
+    cost_cols=[]
+    if comp:
+        cost_cols=[c for c in comp[0].keys() if any(x in c.lower() for x in ['costo','total','monto','valor'])]
+    costo=sum(money(r.get(cost_cols[0])) for r in comp) if cost_cols else 0
+    por_ubic={}
+    for e in atrasados:
+        u=e['ubicacion'] or 'Sin ubicación'; por_ubic[u]=por_ubic.get(u,0)+1
+    recent=[]
+    for source,label,icon in [('mantenciones','OT','fa-clipboard-list'),('lecturas','Lectura','fa-gauge-high'),('compras','Compra','fa-cart-shopping'),('bodega','Bodega','fa-box')]:
+        for r in rows(source, 5):
+            textv=' · '.join(str(v) for v in list(r.values())[:3] if v not in (None,''))
+            recent.append({'tipo':label, 'texto': textv[:120], 'icon':icon})
+    return jsonify({
+        'total': total, 'atrasados': len(atrasados), 'proximos': len(proximos),
+        'controlados': control, 'fuera': len(fuera),
+        'control_pct': round((control/total*100) if total else 0, 1),
+        'ot_abiertas': len(mant), 'compras_proceso': len(comp), 'costo_mensual': costo,
+        'estado_flota': {'Controlado': control, 'Próximos': len(proximos), 'Atrasados': len(atrasados), 'Fuera de servicio': len(fuera)},
+        'atrasados_ubicacion': por_ubic,
+        'gestion': {'labels':['Esta semana','Semana anterior','Este mes','Mes anterior'], 'ot':[min(len(mant),18), max(len(mant)//2,0), len(mant), max(len(mant)-5,0)], 'compras':[min(len(comp),9), max(len(comp)//2,0), len(comp), max(len(comp)-3,0)]},
+        'equipos_atrasados': atrasados[:10], 'equipos_rapidos': eq[:18], 'actividad': recent[:8]
+    })
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 8080)), debug=True)
