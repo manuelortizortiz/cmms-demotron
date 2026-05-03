@@ -1,10 +1,19 @@
-PASOS:
+CMMS DEMOTRON WEB COMPLETO FINAL
 
-1. Subir este proyecto a GitHub
-2. Railway redeploy
-3. Ir a consola Railway → Deployments → Logs / Shell
-4. Ejecutar:
+Subir TODO el contenido a la raíz del repo GitHub.
 
-python import_cmms.py
+Usuarios:
+admin / admin123
+gerencia / gerencia123
+mantencion / mantencion123
 
-Esto cargará automáticamente TODOS los datos del Excel a PostgreSQL.
+Rutas:
+/
+/equipos
+/lecturas
+/admin/importar-cmms
+/api/status
+/api/equipos
+/api/dashboard
+
+El sistema importa automáticamente data/cmms.xlsx a PostgreSQL cuando detecta la base vacía o con pocos datos.
