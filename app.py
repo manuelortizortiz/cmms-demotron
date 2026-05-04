@@ -20,11 +20,36 @@ def norm_col(v):
     v="".join(c for c in unicodedata.normalize("NFKD",v) if not unicodedata.combining(c))
     return re.sub(r"_+","_",re.sub(r"[^a-z0-9]+","_",v)).strip("_") or "columna"
 def norm_ubic(v):
-    if v is None: return ""
-    raw=str(v).strip()
-    if raw.lower() in ["","nan","none","nat"]: return ""
-    mapa={"palmucho":"Palmucho","q_61":"Palmucho","q61":"Palmucho","q_459":"Q-459","q459":"Q-459","quirihue":"Quirihue","cobquecura":"Cobquecura","curico":"Curicó","san_carlos":"San Carlos","oficina_central":"Oficina Central","san_nicolas":"San Nicolas","taller":"Taller","villaseca":"Villaseca","pelluhue":"Pelluhue","ninhue":"Ninhue","retiro":"Retiro","colbun":"Colbun","taltal":"Taltal","talca":"Talca","santiago":"Santiago"}
-    return mapa.get(norm_col(raw),raw.title())
+    if v is None:
+        return ""
+    raw_original = str(v).strip()
+    if raw_original.lower() in ["", "nan", "none", "nat"]:
+        return ""
+
+    raw = raw_original.lower()
+    raw = "".join(c for c in unicodedata.normalize("NFKD", raw) if not unicodedata.combining(c))
+    raw = re.sub(r"[^a-z0-9]+", " ", raw).strip()
+
+    mapa = {
+        "palmucho": "Palmucho",
+        "q 61": "Palmucho",
+        "q61": "Palmucho",
+        "quirihue": "Quirihue",
+        "curico": "Curico",
+        "taller": "Taller Central",
+        "taller central": "Taller Central",
+        "villa seca": "Villa Seca",
+        "villaseca": "Villa Seca",
+        "cobquecura": "Cobquecura",
+        "pelluhue": "Pelluhue",
+        "san carlos": "San Carlos",
+        "san nicolas": "San Nicolas",
+        "linares": "Linares",
+        "talca": "Talca",
+        "taller externo": "Taller Externo",
+    }
+    return mapa.get(raw, raw_original.title())
+
 def safe(v):
     if v is None: return ""
     if isinstance(v,(datetime,date)): return v.strftime("%Y-%m-%d")
@@ -134,6 +159,58 @@ def get_equipos():
 def get_equipo(codigo):
     c=(codigo or "").strip().upper()
     return next((e for e in get_equipos() if str(e.get("codigo")).strip().upper()==c),None)
+def ubicacion_select(name="ubicacion", current=""):
+    current_norm = norm_ubic(current)
+    opts = "".join(
+        f"<option value='{u}' {'selected' if u == current_norm else ''}>{u}</option>"
+        for u in UBICACIONES
+    )
+    return f"<select name='{name}' id='{name}' required>{opts}</select>"
+
+def registrar_movimiento(codigo, nueva_ubicacion, origen="Manual", responsable="", observacion=""):
+    codigo = (codigo or "").strip().upper()
+    nueva_ubicacion = norm_ubic(nueva_ubicacion)
+    if not codigo or not nueva_ubicacion:
+        return
+
+    anterior = ""
+    try:
+        row = q("SELECT ubicacion FROM maestro_equipos WHERE UPPER(codigo)=UPPER(:codigo) LIMIT 1", {"codigo": codigo})
+        if row:
+            anterior = norm_ubic(row[0].get("ubicacion"))
+    except Exception:
+        anterior = ""
+
+    if anterior == nueva_ubicacion:
+        return
+
+    try:
+        q("""INSERT INTO ubicaciones_historial
+             (fecha,codigo,ubicacion_anterior,ubicacion_nueva,origen,responsable,observacion)
+             VALUES (NOW(),:codigo,:anterior,:nueva,:origen,:responsable,:observacion)""",
+          {
+              "codigo": codigo,
+              "anterior": anterior,
+              "nueva": nueva_ubicacion,
+              "origen": clean_text(origen) or "Manual",
+              "responsable": clean_text(responsable) or "",
+              "observacion": clean_text(observacion) or "",
+          }, fetch=False)
+    except Exception:
+        pass
+
+def ubicaciones_resumen():
+    try:
+        return q("""
+            SELECT COALESCE(ubicacion,'Sin ubicación') AS ubicacion, COUNT(*) AS total
+            FROM maestro_equipos
+            GROUP BY ubicacion
+            ORDER BY total DESC
+        """)
+    except Exception:
+        return []
+
+
 def historial_data(codigo):
     out=[]; c=(codigo or "").strip().upper()
     sources=[
@@ -162,7 +239,7 @@ def login_required(fn):
         return fn(*a,**k)
     return w
 def topbar():
-    return """<div class="topbar"><div class="brandmark">D</div><div class="logo">DEMOTRON</div><nav class="nav"><a href="/">Dashboard</a><a href="/equipos">Equipos</a><a href="/ficha">Ficha Equipo</a><a href="/historial">Historial</a><a href="/planificacion">Planificación</a><a href="/proyeccion">Proyección</a><a href="/lecturas">Lecturas</a><a href="/mantenciones">Mantenciones</a><a href="/ot">OT</a><a href="/compras">Compras</a><a href="/bodega">Bodega</a></nav><a class="btn" href="/admin/importar-cmms">Importar CMMS</a><a class="btn ghost" href="/logout">Salir</a></div>"""
+    return """<div class="topbar"><div class="brandmark">D</div><div class="logo">DEMOTRON</div><nav class="nav"><a href="/">Dashboard</a><a href="/equipos">Equipos</a><a href="/ficha">Ficha Equipo</a><a href="/historial">Historial</a><a href="/planificacion">Planificación</a><a href="/calendario">Calendario</a><a href="/backlog">Backlog</a><a href="/proyeccion">Proyección</a><a href="/tracking">Tracking</a><a href="/lecturas">Lecturas</a><a href="/mantenciones">Mantenciones</a><a href="/ot">OT</a><a href="/compras">Compras</a><a href="/bodega">Bodega</a></nav><a class="btn" href="/admin/importar-cmms">Importar CMMS</a><a class="btn ghost" href="/logout">Salir</a></div>"""
 def page(title,body,extra=""):
     return render_template_string(f"""<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}</title><link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">{CSS}</head><body>{topbar()}{body}{JS}{extra}</body></html>""")
 def badge(estado):
@@ -260,7 +337,7 @@ def equipos():
         return redirect(url_for("equipos"))
     eq=get_equipos()
     rows="".join(f"<tr><td><a href='/equipo/{e['codigo']}'><b>{e['codigo']}</b></a></td><td>{e['tipo_equipo']}</td><td>{e['familia']}</td><td>{e['marca']}</td><td>{e['modelo']}</td><td>{e['ano']}</td><td>{e['ubicacion']}</td><td>{e['responsable']}</td><td>{e['lectura_actual']}</td><td>{e['unidad']}</td><td>{e['proxima_pm']}</td><td>{badge(e['estado'])}</td></tr>" for e in eq)
-    form=f"""<form class="form-card" method="post">{equipo_datalist()}{form_input("codigo","Código / Equipo",datalist=True)}{form_input("tipo_equipo","Tipo de Equipo")}{form_input("familia","Familia")}{form_input("marca","Marca")}{form_input("modelo","Modelo")}{form_input("ano","Año")}{form_input("ubicacion","Ubicación")}{form_input("responsable","Responsable")}{form_input("lectura_actual","Lectura Actual")}<label>Unidad</label><select name="unidad"><option>HORAS</option><option>KM</option></select>{form_input("proxima_pm","Próxima PM")}<label>Estado</label>{estado_select()}<button>Guardar / Actualizar Equipo</button></form>"""
+    form=f"""<form class="form-card" method="post">{equipo_datalist()}{form_input("codigo","Código / Equipo",datalist=True)}{form_input("tipo_equipo","Tipo de Equipo")}{form_input("familia","Familia")}{form_input("marca","Marca")}{form_input("modelo","Modelo")}{form_input("ano","Año")}<label>Ubicación</label>{ubicacion_select()}{form_input("responsable","Responsable")}{form_input("lectura_actual","Lectura Actual")}<label>Unidad</label><select name="unidad"><option>HORAS</option><option>KM</option></select>{form_input("proxima_pm","Próxima PM")}<label>Estado</label>{estado_select()}<button>Guardar / Actualizar Equipo</button></form>"""
     extra=f"<script>window.EQUIPOS={json.dumps(eq,ensure_ascii=False)};</script>"
     return page("Equipos",f"<main class='data-page'><div class='data-head'><h2>Equipos ({len(eq)})</h2><a class='btn' href='/admin/importar-cmms'>Importar CMMS</a></div><p class='hint'>Al escribir un código precargado, se completan los datos automáticamente.</p>{form}<div class='table-card'><table><thead><tr><th>Código</th><th>Tipo</th><th>Familia</th><th>Marca</th><th>Modelo</th><th>Año</th><th>Ubicación</th><th>Responsable</th><th>Lectura</th><th>Unidad</th><th>Próx PM</th><th>Estado</th></tr></thead><tbody>{rows}</tbody></table></div></main>",extra)
 
@@ -284,25 +361,361 @@ def historial():
     rows="".join(f"<tr><td>{h['fecha']}</td><td>{h['origen']}</td><td>{h['detalle']}</td><td>{h['lectura']}</td><td>{h['estado']}</td></tr>" for h in (historial_data(c) if c else []))
     return page("Historial",f"<main class='data-page'><h2>Historial de Equipo</h2><form class='search-card'><input name='codigo' list='equiposList' value='{c}' placeholder='Buscar equipo...'><button>Buscar</button>{equipo_datalist()}</form><div class='table-card'><table><thead><tr><th>Fecha</th><th>Origen</th><th>Detalle</th><th>Lectura/Costo/Folio</th><th>Estado</th></tr></thead><tbody>{rows}</tbody></table></div></main>")
 
+
+def plan_rows():
+    ensure_schema()
+    if table_exists("plan_mantenciones"):
+        try:
+            data = q("SELECT * FROM plan_mantenciones LIMIT 2000")
+        except Exception:
+            data = []
+    else:
+        data = []
+
+    # Normalizar columnas para UI
+    out = []
+    for r in data:
+        codigo = safe(r.get("codigo"))
+        if not codigo:
+            continue
+        eq = get_equipo(codigo) or {}
+        estado = safe(r.get("estado_operativo") or eq.get("estado"))
+        dias = num(r.get("dias_estimados"))
+        fecha = safe(r.get("fecha_estimada"))
+        prioridad = safe(r.get("prioridad"))
+
+        if not estado:
+            if dias < 0:
+                estado = "ATRASADA"
+            elif dias <= 15:
+                estado = "PRÓXIMA"
+            else:
+                estado = "AL DÍA"
+
+        out.append({
+            "codigo": codigo,
+            "tipo_equipo": safe(r.get("tipo_equipo") or eq.get("tipo_equipo")),
+            "familia": safe(r.get("familia") or eq.get("familia")),
+            "ubicacion": safe(eq.get("ubicacion")),
+            "control": safe(r.get("control") or eq.get("unidad")),
+            "lectura_actual": safe(r.get("lectura_actual") or eq.get("lectura_actual")),
+            "proxima": safe(r.get("proxima_lectura_objetivo") or eq.get("proxima_pm")),
+            "promedio": safe(r.get("promedio_diario")),
+            "dias": dias,
+            "fecha": fecha,
+            "estado": estado,
+            "costo": safe(r.get("costo_total_pm")),
+            "prioridad": prioridad,
+            "accion": safe(r.get("accion_sugerida")),
+        })
+
+    if not out:
+        # fallback desde maestro_equipos
+        for e in get_equipos():
+            estado = safe(e.get("estado"))
+            dias = 0
+            if "ATRAS" in str(estado).upper():
+                dias = -1
+            elif "PROX" in str(estado).upper() or "RECIBIR" in str(estado).upper() or "PROCESO" in str(estado).upper():
+                dias = 10
+            else:
+                dias = 60
+            out.append({
+                "codigo": e.get("codigo"),
+                "tipo_equipo": e.get("tipo_equipo"),
+                "familia": e.get("familia"),
+                "ubicacion": e.get("ubicacion"),
+                "control": e.get("unidad"),
+                "lectura_actual": e.get("lectura_actual"),
+                "proxima": e.get("proxima_pm"),
+                "promedio": "",
+                "dias": dias,
+                "fecha": "",
+                "estado": estado,
+                "costo": "",
+                "prioridad": "",
+                "accion": "Revisar planificación desde Maestro_Equipos",
+            })
+
+    return sorted(out, key=lambda x: (x["dias"] if x["dias"] is not None else 9999, str(x["codigo"])))
+
+
+def plan_status_class(estado, dias=0):
+    s = str(estado or "").upper()
+    if "ATRAS" in s or "VENC" in s or dias < 0:
+        return "bad"
+    if "PROX" in s or "RECIBIR" in s or "PROCESO" in s or dias <= 15:
+        return "warn"
+    if "TALLER" in s or "FUERA" in s:
+        return "off"
+    return "ok"
+
+
+def calendar_matrix(items):
+    """Agrupa por fecha_estimada YYYY-MM-DD."""
+    by_date = {}
+    no_date = []
+    for it in items:
+        f = str(it.get("fecha") or "").strip()
+        if f and len(f) >= 10:
+            key = f[:10]
+            by_date.setdefault(key, []).append(it)
+        else:
+            no_date.append(it)
+    return by_date, no_date
+
 @app.route("/planificacion")
 @login_required
 def planificacion():
-    data=q("SELECT * FROM plan_mantenciones LIMIT 1000") if table_exists("plan_mantenciones") else []
-    lanes=""
+    data = plan_rows()
+
+    atrasadas = sum(1 for r in data if plan_status_class(r["estado"], r["dias"]) == "bad")
+    proximas = sum(1 for r in data if plan_status_class(r["estado"], r["dias"]) == "warn")
+    al_dia = sum(1 for r in data if plan_status_class(r["estado"], r["dias"]) == "ok")
+    taller = sum(1 for r in data if plan_status_class(r["estado"], r["dias"]) == "off")
+
+    gantt = ""
+    for r in data[:120]:
+        cls = plan_status_class(r["estado"], r["dias"])
+        dias = r["dias"] if r["dias"] is not None else 999
+        if dias < 0:
+            width = 96
+        elif dias <= 7:
+            width = 90
+        elif dias <= 15:
+            width = 78
+        elif dias <= 30:
+            width = 60
+        elif dias <= 60:
+            width = 42
+        else:
+            width = 24
+        gantt += f"""
+        <a class="gantt-row gantt-{cls}" href="/equipo/{r['codigo']}">
+          <div class="gantt-code">{r['codigo']}</div>
+          <div class="gantt-meta">{r['tipo_equipo']}<br><small>{r['ubicacion']}</small></div>
+          <div class="gantt-info">
+            <strong>Lectura:</strong> {r['lectura_actual']} {r['control']}<br>
+            <strong>Próxima:</strong> {r['proxima']}<br>
+            <strong>Acción:</strong> {r['accion']}
+          </div>
+          <div class="gantt-track"><span class="{cls}" style="width:{width}%"></span></div>
+          <div class="gantt-date">{r['fecha'] or 'Sin fecha'}<br><small>{int(dias) if dias is not None else ''} días</small></div>
+          <div>{badge(r['estado'])}</div>
+        </a>
+        """
+
+    rows = ""
     for r in data:
-        dias=num(r.get("dias_estimados")); width=95 if dias<=0 else 90 if dias<=7 else 70 if dias<=30 else 45 if dias<=60 else 25
-        c=safe(r.get("codigo")); est=safe(r.get("estado_operativo") or r.get("estado") or r.get("prioridad"))
-        lanes+=f"""<a class="gantt-row" href="/equipo/{c}"><div class="gantt-code">{c}</div><div class="gantt-meta">{safe(r.get('tipo_equipo'))}<br><small>{safe(r.get('familia'))}</small></div><div class="gantt-info"><strong>Lectura:</strong> {safe(r.get('lectura_actual'))}<br><strong>Próxima:</strong> {safe(r.get('proxima_lectura_objetivo'))}<br><strong>Acción:</strong> {safe(r.get('accion_sugerida'))}</div><div class="gantt-track"><span style="width:{width}%"></span></div><div class="gantt-date">{safe(r.get('fecha_estimada'))}<br><small>{safe(r.get('dias_estimados'))} días</small></div><div>{badge(est)}</div></a>"""
-    return page("Planificación",f"<main class='data-page'><div class='data-head'><h2>Planificación PM tipo Gantt</h2><a class='btn' href='/proyeccion'>Ver tabla de proyección</a></div><p class='hint'>Carta clickeable por equipo.</p><section class='gantt'>{lanes or '<div class=\"card\">No hay datos de planificación.</div>'}</section></main>")
+        rows += f"""
+        <tr>
+          <td><a href="/equipo/{r['codigo']}"><b>{r['codigo']}</b></a></td>
+          <td>{r['tipo_equipo']}</td>
+          <td>{r['ubicacion']}</td>
+          <td>{r['control']}</td>
+          <td>{r['lectura_actual']}</td>
+          <td>{r['proxima']}</td>
+          <td>{r['promedio']}</td>
+          <td>{int(r['dias']) if r['dias'] is not None else ''}</td>
+          <td>{r['fecha']}</td>
+          <td>{badge(r['estado'])}</td>
+          <td>{r['prioridad']}</td>
+          <td>{r['accion']}</td>
+        </tr>
+        """
+
+    body = f"""
+    <main class='data-page'>
+      <div class='data-head'><h2>Planificación PM tipo Gantt</h2><div><a class='btn' href='/calendario'>Calendario</a> <a class='btn' href='/backlog'>Backlog</a> <a class='btn' href='/proyeccion'>Tabla</a></div></div>
+      <section class="grid-kpi">
+        <div class="card kpi yellowb"><small>Próximas mantenciones</small><b>{proximas}</b></div>
+        <div class="card kpi redb"><small>Atrasadas</small><b>{atrasadas}</b></div>
+        <div class="card kpi greenb"><small>Al día</small><b>{al_dia}</b></div>
+        <div class="card kpi offb"><small>Taller / fuera servicio</small><b>{taller}</b></div>
+      </section>
+      <section class='card'>
+        <h3>Gantt operativo</h3>
+        <p class='hint'>Cada carta es clickeable y abre la ficha del equipo. Colores: rojo atrasada, amarillo próxima, verde al día, gris no operativo.</p>
+        <div class='gantt'>{gantt}</div>
+      </section>
+      <section class='card'>
+        <h3>Tabla detallada de planificación</h3>
+        <div class='table-card'><table>
+          <thead><tr><th>Código</th><th>Tipo</th><th>Ubicación</th><th>Control</th><th>Lectura</th><th>Próxima</th><th>Promedio</th><th>Días</th><th>Fecha</th><th>Estado</th><th>Prioridad</th><th>Acción</th></tr></thead>
+          <tbody>{rows}</tbody>
+        </table></div>
+      </section>
+    </main>
+    """
+    return page("Planificación PM", body)
+
 @app.route("/proyeccion")
 @login_required
 def proyeccion():
-    data=q("SELECT * FROM plan_mantenciones LIMIT 1000") if table_exists("plan_mantenciones") else []
-    rows="".join(f"<tr><td><a href='/equipo/{safe(r.get('codigo'))}'><b>{safe(r.get('codigo'))}</b></a></td><td>{safe(r.get('tipo_equipo'))}</td><td>{safe(r.get('familia'))}</td><td>{safe(r.get('control'))}</td><td>{safe(r.get('lectura_actual'))}</td><td>{safe(r.get('proxima_lectura_objetivo'))}</td><td>{safe(r.get('promedio_diario'))}</td><td>{safe(r.get('dias_estimados'))}</td><td>{safe(r.get('fecha_estimada'))}</td><td>{badge(r.get('estado_operativo'))}</td><td>{safe(r.get('prioridad'))}</td><td>{safe(r.get('accion_sugerida'))}</td></tr>" for r in data)
-    return page("Proyección",f"<main class='data-page'><div class='data-head'><h2>Proyección de Mantenciones</h2><a class='btn' href='/planificacion'>Ver Gantt</a></div><div class='table-card'><table><thead><tr><th>Código</th><th>Tipo</th><th>Familia</th><th>Control</th><th>Lectura</th><th>Próxima</th><th>Promedio</th><th>Días</th><th>Fecha</th><th>Estado</th><th>Prioridad</th><th>Acción</th></tr></thead><tbody>{rows}</tbody></table></div></main>")
+    data = plan_rows()
+    rows = ""
+    for r in data:
+        rows += f"""
+        <tr>
+          <td><a href="/equipo/{r['codigo']}"><b>{r['codigo']}</b></a></td>
+          <td>{r['tipo_equipo']}</td>
+          <td>{r['familia']}</td>
+          <td>{r['ubicacion']}</td>
+          <td>{r['control']}</td>
+          <td>{r['lectura_actual']}</td>
+          <td>{r['proxima']}</td>
+          <td>{r['promedio']}</td>
+          <td>{int(r['dias']) if r['dias'] is not None else ''}</td>
+          <td>{r['fecha']}</td>
+          <td>{badge(r['estado'])}</td>
+          <td>{r['prioridad']}</td>
+          <td>{r['accion']}</td>
+        </tr>
+        """
+    body = f"""
+    <main class='data-page'>
+      <div class='data-head'><h2>Proyección de Mantenciones</h2><div><a class='btn' href='/planificacion'>Gantt</a> <a class='btn' href='/calendario'>Calendario</a> <a class='btn' href='/backlog'>Backlog</a></div></div>
+      <div class='table-card'><table>
+        <thead><tr><th>Código</th><th>Tipo</th><th>Familia</th><th>Ubicación</th><th>Control</th><th>Lectura</th><th>Próxima</th><th>Promedio</th><th>Días</th><th>Fecha</th><th>Estado</th><th>Prioridad</th><th>Acción</th></tr></thead>
+        <tbody>{rows}</tbody>
+      </table></div>
+    </main>
+    """
+    return page("Proyección", body)
 
-def crud_form(route, fields, button):
-    return f"<form class='form-card' method='post' action='/{route}'>"+"".join(fields)+f"<button>{button}</button></form>"
+
+
+@app.route("/calendario")
+@login_required
+def calendario():
+    data = plan_rows()
+    by_date, no_date = calendar_matrix(data)
+
+    cards = ""
+    for fecha, items in sorted(by_date.items())[:90]:
+        inner = "".join(
+            f"<a href='/equipo/{it['codigo']}' class='calendar-item {plan_status_class(it['estado'], it['dias'])}'><b>{it['codigo']}</b> · {it['tipo_equipo']}<br><small>{it['ubicacion']} · {badge(it['estado'])}</small></a>"
+            for it in items[:8]
+        )
+        more = f"<small>+{len(items)-8} más</small>" if len(items) > 8 else ""
+        cards += f"<div class='calendar-day'><h4>{fecha}</h4>{inner}{more}</div>"
+
+    if not cards:
+        cards = "<div class='card'>No hay fechas estimadas. Revisa Plan_Mantenciones o ejecuta /admin/importar-cmms.</div>"
+
+    no_date_rows = "".join(
+        f"<tr><td><a href='/equipo/{r['codigo']}'><b>{r['codigo']}</b></a></td><td>{r['tipo_equipo']}</td><td>{r['ubicacion']}</td><td>{r['proxima']}</td><td>{badge(r['estado'])}</td></tr>"
+        for r in no_date[:80]
+    )
+
+    body = f"""
+    <main class='data-page'>
+      <div class='data-head'><h2>Calendario de Mantenciones</h2><div><a class='btn' href='/planificacion'>Gantt</a> <a class='btn' href='/backlog'>Backlog</a></div></div>
+      <p class='hint'>Vista tipo calendario por fecha estimada. Click en el equipo abre su ficha.</p>
+      <section class='calendar-grid'>{cards}</section>
+      <section class='card'><h3>Sin fecha estimada</h3><div class='table-card'><table><thead><tr><th>Equipo</th><th>Tipo</th><th>Ubicación</th><th>Próxima</th><th>Estado</th></tr></thead><tbody>{no_date_rows}</tbody></table></div></section>
+    </main>
+    """
+    return page("Calendario PM", body)
+
+
+@app.route("/backlog")
+@login_required
+def backlog():
+    data = plan_rows()
+    backlog_items = [r for r in data if plan_status_class(r["estado"], r["dias"]) in ["bad", "warn"]]
+    atrasadas = [r for r in data if plan_status_class(r["estado"], r["dias"]) == "bad"]
+    proximas = [r for r in data if plan_status_class(r["estado"], r["dias"]) == "warn"]
+
+    rows = ""
+    for r in backlog_items:
+        cls = plan_status_class(r["estado"], r["dias"])
+        prioridad = r["prioridad"] or ("Alta" if cls == "bad" else "Media")
+        rows += f"""
+        <tr>
+          <td><a href="/equipo/{r['codigo']}"><b>{r['codigo']}</b></a></td>
+          <td>{r['tipo_equipo']}</td>
+          <td>{r['ubicacion']}</td>
+          <td>{int(r['dias']) if r['dias'] is not None else ''}</td>
+          <td>{r['fecha']}</td>
+          <td>{badge(r['estado'])}</td>
+          <td>{prioridad}</td>
+          <td>{r['accion'] or 'Programar mantención'}</td>
+        </tr>
+        """
+
+    body = f"""
+    <main class='data-page'>
+      <div class='data-head'><h2>Backlog de Mantenciones</h2><div><a class='btn' href='/planificacion'>Gantt</a> <a class='btn' href='/calendario'>Calendario</a></div></div>
+      <section class="grid-kpi">
+        <div class="card kpi redb"><small>Atrasadas</small><b>{len(atrasadas)}</b></div>
+        <div class="card kpi yellowb"><small>Próximas / proceso</small><b>{len(proximas)}</b></div>
+        <div class="card kpi blueb"><small>Total backlog</small><b>{len(backlog_items)}</b></div>
+      </section>
+      <section class='card'>
+        <h3>Lista priorizada</h3>
+        <div class='table-card'><table>
+          <thead><tr><th>Equipo</th><th>Tipo</th><th>Ubicación</th><th>Días</th><th>Fecha</th><th>Estado</th><th>Prioridad</th><th>Acción sugerida</th></tr></thead>
+          <tbody>{rows}</tbody>
+        </table></div>
+      </section>
+    </main>
+    """
+    return page("Backlog PM", body)
+
+@app.route("/tracking")
+@login_required
+def tracking():
+    ensure_schema()
+    movimientos = q("SELECT * FROM ubicaciones_historial ORDER BY fecha DESC NULLS LAST LIMIT 1000") if table_exists("ubicaciones_historial") else []
+    resumen = ubicaciones_resumen()
+
+    resumen_rows = "".join(
+        f"<tr><td>{safe(r.get('ubicacion')) or 'Sin ubicación'}</td><td>{safe(r.get('total'))}</td></tr>"
+        for r in resumen
+    )
+
+    max_total = max([int(r.get("total") or 0) for r in resumen], default=1)
+    barras = "".join(
+        f"<div class='bar-row'><span>{safe(r.get('ubicacion')) or 'Sin ubicación'}</span>"
+        f"<div><b style='width:{max(4, min(100, int(r.get('total') or 0)*100/max_total))}%'></b></div>"
+        f"<em>{safe(r.get('total'))}</em></div>"
+        for r in resumen
+    )
+
+    mov_rows = "".join(
+        f"<tr><td>{safe(r.get('fecha'))}</td>"
+        f"<td><a href='/equipo/{safe(r.get('codigo'))}'><b>{safe(r.get('codigo'))}</b></a></td>"
+        f"<td>{safe(r.get('ubicacion_anterior'))}</td>"
+        f"<td>{safe(r.get('ubicacion_nueva'))}</td>"
+        f"<td>{safe(r.get('origen'))}</td>"
+        f"<td>{safe(r.get('responsable'))}</td>"
+        f"<td>{safe(r.get('observacion'))}</td></tr>"
+        for r in movimientos
+    )
+
+    if not mov_rows:
+        mov_rows = "<tr><td colspan='7'>Aún no hay movimientos registrados. Se crearán automáticamente al cambiar ubicación desde Equipos o Lecturas.</td></tr>"
+
+    body = f"""
+    <main class='data-page'>
+      <div class='data-head'><h2>Tracking de Equipos DEMOTRON PRO</h2><a class='btn' href='/lecturas'>Registrar lectura / movimiento</a></div>
+      <p class='hint'>La ubicación del equipo se actualiza desde la última lectura o edición del equipo. Cada cambio queda trazado.</p>
+      <section class='middle'>
+        <div class='card'><h3>Equipos por ubicación</h3><div class='bar-chart'>{barras}</div></div>
+        <div class='card'><h3>Resumen</h3><table><thead><tr><th>Ubicación</th><th>Total equipos</th></tr></thead><tbody>{resumen_rows}</tbody></table></div>
+      </section>
+      <section class='card'>
+        <h3>Historial de movimientos</h3>
+        <div class='table-card'><table>
+          <thead><tr><th>Fecha</th><th>Equipo</th><th>Ubicación anterior</th><th>Ubicación nueva</th><th>Origen</th><th>Responsable</th><th>Observación</th></tr></thead>
+          <tbody>{mov_rows}</tbody>
+        </table></div>
+      </section>
+    </main>
+    """
+    return page("Tracking DEMOTRON PRO", body)
+
 @app.route("/lecturas",methods=["GET","POST"])
 @login_required
 def lecturas():
@@ -315,7 +728,7 @@ def lecturas():
     data=q("SELECT * FROM lecturas ORDER BY fecha DESC NULLS LAST LIMIT 1000") if table_exists("lecturas") else []
     rows="".join(f"<tr><td>{safe(r.get('fecha'))}</td><td><a href='/equipo/{safe(r.get('codigo'))}'><b>{safe(r.get('codigo'))}</b></a></td><td>{safe(r.get('horometro'))}</td><td>{safe(r.get('kilometraje'))}</td><td>{norm_ubic(r.get('obra_ubicacion'))}</td><td>{safe(r.get('responsable'))}</td><td>{safe(r.get('observacion'))}</td></tr>" for r in data)
     c=request.args.get("codigo","")
-    form=crud_form("lecturas",[f"<input name='codigo' list='equiposList' placeholder='Código' value='{c}'>{equipo_datalist()}","<input type='date' name='fecha'>","<input type='number' step='any' name='horometro' placeholder='Horómetro'>","<input type='number' step='any' name='kilometraje' placeholder='Kilometraje'>","<input name='obra_ubicacion' placeholder='Ubicación'>","<input name='responsable' placeholder='Responsable'>","<input name='observacion' placeholder='Observación'>"],"Guardar lectura")
+    form=crud_form("lecturas",[f"<input name='codigo' list='equiposList' placeholder='Código' value='{c}'>{equipo_datalist()}","<input type='date' name='fecha'>","<input type='number' step='any' name='horometro' placeholder='Horómetro'>","<input type='number' step='any' name='kilometraje' placeholder='Kilometraje'>","<select name='obra_ubicacion'><option>Palmucho</option><option>Quirihue</option><option>Curico</option><option>Taller Central</option><option>Villa Seca</option><option>Cobquecura</option><option>Pelluhue</option><option>San Carlos</option><option>San Nicolas</option><option>Linares</option><option>Talca</option><option>Taller Externo</option></select>","<input name='responsable' placeholder='Responsable'>","<input name='observacion' placeholder='Observación'>"],"Guardar lectura")
     return page("Lecturas",f"<main class='data-page'><h2>Lecturas</h2>{form}<div class='table-card'><table><thead><tr><th>Fecha</th><th>Código</th><th>Horómetro</th><th>Kilometraje</th><th>Ubicación</th><th>Responsable</th><th>Obs</th></tr></thead><tbody>{rows}</tbody></table></div></main>")
 @app.route("/mantenciones",methods=["GET","POST"])
 @login_required
@@ -363,7 +776,7 @@ def bodega():
         return redirect(url_for("bodega"))
     data=q("SELECT * FROM bodega ORDER BY fecha DESC NULLS LAST LIMIT 1000") if table_exists("bodega") else []
     rows="".join(f"<tr><td><b>{safe(r.get('folio'))}</b></td><td>{safe(r.get('fecha'))}</td><td>{safe(r.get('equipo'))}</td><td>{safe(r.get('envio'))}</td><td>{safe(r.get('persona_que_retiro'))}</td><td>{safe(r.get('destino'))}</td><td>{safe(r.get('comentario'))}</td><td><a href='/equipo/{safe(r.get('codigo'))}'>{safe(r.get('codigo'))}</a></td></tr>" for r in data)
-    form=f"<form class='form-card' method='post'><input name='folio' placeholder='Folio'><input type='date' name='fecha'><input name='equipo' placeholder='Equipo'><input name='envio' placeholder='Envío'><input name='persona_que_retiro' placeholder='Persona que retiró'><input name='destino' placeholder='Destino'><input name='comentario' placeholder='Comentario'><input name='codigo' list='equiposList' placeholder='Código'>{equipo_datalist()}<button>Guardar bodega</button></form>"
+    form=f"<form class='form-card' method='post'><input name='folio' placeholder='Folio'><input type='date' name='fecha'><input name='equipo' placeholder='Equipo'><input name='envio' placeholder='Envío'><input name='persona_que_retiro' placeholder='Persona que retiró'><select name='destino'><option>Palmucho</option><option>Quirihue</option><option>Curico</option><option>Taller Central</option><option>Villa Seca</option><option>Cobquecura</option><option>Pelluhue</option><option>San Carlos</option><option>San Nicolas</option><option>Linares</option><option>Talca</option><option>Taller Externo</option></select><input name='comentario' placeholder='Comentario'><input name='codigo' list='equiposList' placeholder='Código'>{equipo_datalist()}<button>Guardar bodega</button></form>"
     return page("Bodega",f"<main class='data-page'><h2>Bodega</h2>{form}<div class='table-card'><table><thead><tr><th>Folio</th><th>Fecha</th><th>Equipo</th><th>Envío</th><th>Retira</th><th>Destino</th><th>Comentario</th><th>Código</th></tr></thead><tbody>{rows}</tbody></table></div></main>")
 
 if __name__=="__main__":
