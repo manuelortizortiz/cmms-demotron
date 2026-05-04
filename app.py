@@ -140,6 +140,245 @@ def login_required(fn):
         return fn(*a,**k)
     return w
 
+
+def find_key(d, *names):
+    keys = list(d.keys())
+    for n in names:
+        for k in keys:
+            if k.lower() == n.lower():
+                return k
+    for n in names:
+        for k in keys:
+            if n.lower() in k.lower():
+                return k
+    return None
+
+def val_from(d, *names):
+    k = find_key(d, *names)
+    if not k:
+        return ""
+    return safe(d.get(k))
+
+def get_equipos_data():
+    ensure_data()
+    try:
+        raw = rows("SELECT * FROM maestro_equipos")
+    except Exception:
+        raw = rows("SELECT * FROM equipos")
+
+    data = []
+    for r in raw:
+        codigo = val_from(r, "codigo")
+        tipo = val_from(r, "tipo_equipo", "tipo_de_equipo", "tipo")
+        familia = val_from(r, "familia")
+        marca = val_from(r, "marca")
+        modelo = val_from(r, "modelo")
+        anio = val_from(r, "ano", "anio", "a_o")
+        ubicacion = norm_ubic(val_from(r, "ubicacion", "obra_ubicacion", "faena", "destino"))
+        responsable = val_from(r, "responsable")
+        lectura = val_from(r, "lectura_actual", "ultimo_horometro", "ultimo_kilometraje", "horometro", "kilometraje", "valor")
+        unidad = val_from(r, "unidad", "control", "control_base")
+        proxima = val_from(r, "proxima_pm", "proxima_lectura_objetivo", "fecha_estimada", "proxima_mantencion")
+        estado = val_from(r, "estado", "estado_operativo", "estado_base", "control_base")
+
+        data.append({
+            "codigo": codigo,
+            "tipo_equipo": tipo,
+            "familia": familia,
+            "marca": marca,
+            "modelo": modelo,
+            "anio": anio,
+            "ubicacion": ubicacion,
+            "responsable": responsable,
+            "lectura_actual": lectura,
+            "unidad": unidad,
+            "proxima_pm": proxima,
+            "estado": estado,
+            "descripcion": f"{marca} {modelo}".strip()
+        })
+
+    return sorted(data, key=lambda x: str(x.get("codigo") or ""))
+
+def estado_badge(estado):
+    s = str(estado or "").upper()
+    cls = "badge"
+    if "ATRAS" in s or "VENC" in s:
+        cls = "badge bad"
+    elif "PROX" in s or "RECIBIR" in s or "PROCESO" in s:
+        cls = "badge warn"
+    return f"<span class='{cls}'>{estado or ''}</span>"
+
+def html_topbar(user="admin"):
+    return f"""
+    <div class="topbar">
+      <div class="logo">DEMOTRON</div>
+      <nav class="nav">
+        <a href="/">▦ Dashboard</a>
+        <a href="/equipos">⚙ Equipos</a>
+        <a href="/ot">🛠 OT</a>
+        <a href="/lecturas">▤ Lecturas</a>
+        <a href="/mantenciones">🧰 Mantenciones</a>
+        <a href="/compras">🛒 Compras</a>
+        <a href="/bodega">▣ Bodega</a>
+        <a href="/proyeccion">📈 Proyección</a>
+      </nav>
+      <input class="search" placeholder="Buscar...">
+      <div>{user}</div>
+      <a class="btn" href="/logout">Salir</a>
+    </div>
+    """
+
+def base_html(title, body, user="admin"):
+    return f"""<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{title}</title>
+<link rel="stylesheet" href="/static/css/styles.css">
+<style>
+.table-card {{ overflow:auto; }}
+table {{ min-width:1200px; }}
+</style>
+</head>
+<body>
+{html_topbar(user)}
+{body}
+</body>
+</html>"""
+
+def render_equipos_server():
+    equipos = get_equipos_data()
+    trs = ""
+    for e in equipos:
+        trs += f"""
+        <tr>
+          <td><b>{e.get('codigo','')}</b></td>
+          <td>{e.get('tipo_equipo','')}</td>
+          <td>{e.get('familia','')}</td>
+          <td>{e.get('marca','')}</td>
+          <td>{e.get('modelo','')}</td>
+          <td>{e.get('anio','')}</td>
+          <td>{e.get('ubicacion','')}</td>
+          <td>{e.get('responsable','')}</td>
+          <td>{e.get('lectura_actual','')}</td>
+          <td>{e.get('unidad','')}</td>
+          <td>{e.get('proxima_pm','')}</td>
+          <td>{estado_badge(e.get('estado'))}</td>
+        </tr>
+        """
+
+    body = f"""
+    <main class="data-page">
+      <div class="data-head">
+        <h2>Maestro de Equipos ({len(equipos)})</h2>
+        <a class="btn" href="/admin/importar-cmms">Reimportar CMMS</a>
+      </div>
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Tipo de Equipo</th>
+              <th>Familia</th>
+              <th>Marca</th>
+              <th>Modelo</th>
+              <th>Año</th>
+              <th>Ubicación</th>
+              <th>Responsable</th>
+              <th>Lectura Actual</th>
+              <th>Unidad</th>
+              <th>Próxima PM</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>{trs}</tbody>
+        </table>
+      </div>
+    </main>
+    """
+    return base_html("Equipos DEMOTRON", body, session.get("user", "admin"))
+
+def render_dashboard_server():
+    equipos = get_equipos_data()
+    total = len(equipos)
+    atrasados = sum(1 for e in equipos if "ATRAS" in str(e.get("estado","")).upper() or "VENC" in str(e.get("estado","")).upper())
+    al_dia = sum(1 for e in equipos if "AL D" in str(e.get("estado","")).upper())
+    proximos = sum(1 for e in equipos if any(x in str(e.get("estado","")).upper() for x in ["PROX", "RECIBIR", "PROCESO"]))
+    fuera = sum(1 for e in equipos if "FUERA" in str(e.get("estado","")).upper())
+
+    ubic = {}
+    tipo = {}
+    for e in equipos:
+        ubic[e.get("ubicacion") or "Sin ubicación"] = ubic.get(e.get("ubicacion") or "Sin ubicación", 0) + 1
+        tipo[e.get("tipo_equipo") or "Sin tipo"] = tipo.get(e.get("tipo_equipo") or "Sin tipo", 0) + 1
+
+    top_ubic = "".join([f"<tr><td>{k}</td><td>{v}</td></tr>" for k,v in sorted(ubic.items(), key=lambda x:x[1], reverse=True)[:10]])
+    top_tipo = "".join([f"<tr><td>{k}</td><td>{v}</td></tr>" for k,v in sorted(tipo.items(), key=lambda x:x[1], reverse=True)[:10]])
+
+    criticos = ""
+    for e in equipos:
+        if any(x in str(e.get("estado","")).upper() for x in ["ATRAS", "RECIBIR", "PROCESO", "FUERA"]):
+            criticos += f"<tr><td><b>{e.get('codigo','')}</b></td><td>{e.get('tipo_equipo','')}</td><td>{e.get('ubicacion','')}</td><td>{e.get('lectura_actual','')}</td><td>{estado_badge(e.get('estado'))}</td></tr>"
+        if criticos.count("<tr>") >= 12:
+            break
+
+    cards = ""
+    for e in equipos[:30]:
+        t = (str(e.get("tipo_equipo","")) + " " + str(e.get("familia","")) + " " + str(e.get("marca",""))).lower()
+        icon = "⚙️"
+        if "camion" in t or "camión" in t or "tolva" in t or "man" in t: icon = "🚚"
+        elif "excav" in t: icon = "🚜"
+        elif "moto" in t: icon = "🏗️"
+        elif "veh" in t or "camioneta" in t or "maxus" in t: icon = "🚙"
+        cards += f"<div class='machine-card'><h4>{e.get('codigo','')}</h4><div class='machine-img'>{icon}</div><p>{e.get('marca','')} {e.get('modelo','')}</p><p>{e.get('ubicacion','')}</p><p>{estado_badge(e.get('estado'))}</p></div>"
+
+    body = f"""
+    <main class="page">
+      <section class="grid-kpi">
+        <div class="card kpi"><div class="ico red">!</div><div><div class="kpi-title">Atrasados</div><div class="kpi-value">{atrasados}</div><div class="kpi-sub">PM vencida</div></div></div>
+        <div class="card kpi"><div class="ico yellow">◷</div><div><div class="kpi-title">Próximos/Proceso</div><div class="kpi-value">{proximos}</div><div class="kpi-sub">Por recibir / proceso</div></div></div>
+        <div class="card kpi"><div class="ico green">✓</div><div><div class="kpi-title">Al día</div><div class="kpi-value">{al_dia}</div><div class="kpi-sub">{total} equipos</div></div></div>
+        <div class="card kpi"><div class="ico blue">▣</div><div><div class="kpi-title">Fuera servicio</div><div class="kpi-value">{fuera}</div><div class="kpi-sub">No operativos</div></div></div>
+      </section>
+
+      <section class="middle">
+        <div class="card table-panel">
+          <h3>Equipos críticos</h3>
+          <table><thead><tr><th>Equipo</th><th>Tipo</th><th>Ubicación</th><th>Lectura</th><th>Estado</th></tr></thead><tbody>{criticos}</tbody></table>
+        </div>
+        <div class="card table-panel">
+          <h3>Equipos por ubicación</h3>
+          <table><thead><tr><th>Ubicación</th><th>Total</th></tr></thead><tbody>{top_ubic}</tbody></table>
+        </div>
+      </section>
+
+      <section class="middle">
+        <div class="card table-panel">
+          <h3>Equipos por tipo</h3>
+          <table><thead><tr><th>Tipo</th><th>Total</th></tr></thead><tbody>{top_tipo}</tbody></table>
+        </div>
+        <div class="card table-panel">
+          <h3>Resumen</h3>
+          <table><tbody>
+            <tr><td>Total equipos</td><td>{total}</td></tr>
+            <tr><td>Al día</td><td>{al_dia}</td></tr>
+            <tr><td>Próximos / proceso / por recibir</td><td>{proximos}</td></tr>
+            <tr><td>Atrasados</td><td>{atrasados}</td></tr>
+            <tr><td>Fuera de servicio</td><td>{fuera}</td></tr>
+          </tbody></table>
+        </div>
+      </section>
+
+      <section class="card" style="margin-top:12px">
+        <h3>Equipos vista rápida</h3>
+        <div class="cards-row">{cards}</div>
+      </section>
+    </main>
+    <footer class="footer"><b>DEMOTRON CMMS</b><span>Dashboard servidor</span></footer>
+    """
+    return base_html("Dashboard DEMOTRON", body, session.get("user", "admin"))
+
 @app.route("/login", methods=["GET","POST"])
 def login():
     err=None
@@ -161,13 +400,13 @@ def logout():
 @login_required
 def index():
     ensure_data()
-    return render_template("index.html", user=session.get("user"))
+    return render_dashboard_server()
 
 @app.route("/equipos")
 @login_required
 def equipos_page():
     ensure_data()
-    return render_template("equipos.html", user=session.get("user"))
+    return render_equipos_server()
 
 @app.route("/lecturas")
 @login_required
@@ -219,101 +458,12 @@ def api_status():
     except Exception as e:
         return jsonify({"status":"error","message":str(e)}),500
 
-
 @app.route("/api/equipos")
 def api_equipos():
-    ensure_data()
     try:
-        inspector = inspect(engine)
-        columns = [c["name"] for c in inspector.get_columns("maestro_equipos")]
-        if not columns:
-            return jsonify([])
-
-        def find(*names):
-            for n in names:
-                for c in columns:
-                    if c.lower() == n.lower():
-                        return c
-            for n in names:
-                for c in columns:
-                    if n.lower() in c.lower():
-                        return c
-            return None
-
-        def alias(alias_name, col):
-            if col:
-                return f'"{col}" AS {alias_name}'
-            return f"NULL AS {alias_name}"
-
-        c_codigo = find("codigo")
-        c_tipo = find("tipo_equipo", "tipo_de_equipo", "tipo")
-        c_familia = find("familia")
-        c_marca = find("marca")
-        c_modelo = find("modelo")
-        c_anio = find("ano", "anio", "a_o")
-        c_ubicacion = find("ubicacion", "obra_ubicacion", "faena", "destino")
-        c_responsable = find("responsable")
-        c_lectura = find("lectura_actual", "ultimo_horometro", "ultimo_kilometraje", "horometro", "kilometraje")
-        c_unidad = find("unidad", "control", "control_base")
-        c_proxima = find("proxima_pm", "proxima_lectura_objetivo", "fecha_estimada", "proxima_mantencion")
-        c_estado = find("estado", "estado_servicio", "estado_operativo", "control_base")
-
-        if not c_codigo:
-            return jsonify({"error": "No se encontró columna codigo en maestro_equipos", "columns": columns}), 500
-
-        select_sql = ", ".join([
-            alias("codigo", c_codigo),
-            alias("tipo_equipo", c_tipo),
-            alias("familia", c_familia),
-            alias("marca", c_marca),
-            alias("modelo", c_modelo),
-            alias("anio", c_anio),
-            alias("ubicacion", c_ubicacion),
-            alias("responsable", c_responsable),
-            alias("lectura_actual", c_lectura),
-            alias("unidad", c_unidad),
-            alias("proxima_pm", c_proxima),
-            alias("estado", c_estado),
-        ])
-
-        q = f"""
-            SELECT {select_sql}
-            FROM maestro_equipos
-            ORDER BY "{c_codigo}"
-        """
-
-        with engine.connect() as conn:
-            result = conn.execute(text(q)).mappings().all()
-
-        data = []
-        for r in result:
-            marca = safe(r.get("marca"))
-            modelo = safe(r.get("modelo"))
-            data.append({
-                "codigo": safe(r.get("codigo")),
-                "tipo_equipo": safe(r.get("tipo_equipo")),
-                "familia": safe(r.get("familia")),
-                "marca": marca,
-                "modelo": modelo,
-                "anio": safe(r.get("anio")),
-                "ubicacion": norm_ubic(r.get("ubicacion")),
-                "responsable": safe(r.get("responsable")),
-                "lectura_actual": safe(r.get("lectura_actual")),
-                "unidad": safe(r.get("unidad")),
-                "proxima_pm": safe(r.get("proxima_pm")),
-                "estado": safe(r.get("estado")),
-                "descripcion": f"{marca} {modelo}".strip()
-            })
-
-        return jsonify(data)
-
+        return jsonify(get_equipos_data())
     except Exception as e:
-        try:
-            inspector = inspect(engine)
-            columns = [c["name"] for c in inspector.get_columns("maestro_equipos")]
-        except Exception:
-            columns = []
-        return jsonify({"error": str(e), "columns": columns}), 500
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/lecturas")
 def api_lecturas():
@@ -549,25 +699,6 @@ def api_dashboard():
         "equipos":equipos[:120],
         "proyeccion":proy[:120] if isinstance(proy,list) else []
     })
-
-
-@app.route("/api/debug/maestro-columnas")
-def api_debug_maestro_columnas():
-    try:
-        inspector = inspect(engine)
-        columns = [c["name"] for c in inspector.get_columns("maestro_equipos")]
-        total = rows("SELECT COUNT(*) AS total FROM maestro_equipos")[0]["total"]
-        return jsonify({"total": total, "columns": columns})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/debug/tablas")
-def api_debug_tablas():
-    try:
-        inspector = inspect(engine)
-        return jsonify({"tables": inspector.get_table_names()})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 if __name__=="__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT",8080)))
