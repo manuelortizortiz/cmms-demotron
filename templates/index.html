@@ -1,21 +1,16 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DEMOTRON CMMS</title><link rel="stylesheet" href="/static/css/styles.css"><script src="https://cdn.jsdelivr.net/npm/chart.js"></script></head><body><div class="topbar"><div class="logo">DEMOTRON</div><nav class="nav"><a class="active" href="/">▦ Dashboard</a><a href="/equipos">⚙ Equipos</a><a href="#">🛠 OT</a><a href="/lecturas">▤ Lecturas</a><a href="#">🛒 Compras</a><a href="#">▣ Bodega</a><a href="#">▥ Reportes</a></nav><input class="search" placeholder="Buscar..."><div class="user">{{user}} ▾</div><a class="btn" href="/logout">Salir</a></div>
-<main class="page">
-<section class="grid-kpi">
-<div class="card kpi"><div class="ico red">!</div><div><div class="kpi-title">Atrasados</div><div class="kpi-value" id="kpi-atrasados">0</div><div class="kpi-sub">Control PM</div></div></div>
-<div class="card kpi"><div class="ico yellow">◷</div><div><div class="kpi-title">Próximos</div><div class="kpi-value" id="kpi-proximos">0</div><div class="kpi-sub">Planificados</div></div></div>
-<div class="card kpi"><div class="ico green">✓</div><div><div class="kpi-title">Controlado real</div><div class="kpi-value" id="kpi-controlados">0</div><div class="kpi-sub" id="kpi-total">0 equipos</div></div></div>
-<div class="card kpi"><div class="ico blue">▤</div><div><div class="kpi-title">OT abiertas</div><div class="kpi-value" id="kpi-ot">0</div><div class="kpi-sub">Sistema</div></div></div>
-<div class="card kpi"><div class="ico purple">🛒</div><div><div class="kpi-title">Compras en proceso</div><div class="kpi-value" id="kpi-compras">0</div><div class="kpi-sub">PM</div></div></div>
-<div class="card kpi"><div class="ico teal">$</div><div><div class="kpi-title">Costo mensual</div><div class="kpi-value" id="kpi-costo">$0</div><div class="kpi-sub">CLP</div></div></div>
+<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>DEMOTRON CMMS</title><link rel='stylesheet' href='/static/css/styles.css'><script src='https://cdn.jsdelivr.net/npm/chart.js'></script></head><body><div class="topbar"><div class="logo">DEMOTRON</div><nav class="nav">
+<a href="/">▦ Dashboard</a><a href="/equipos">⚙ Equipos</a><a href="/ot">🛠 OT</a><a href="/lecturas">▤ Lecturas</a><a href="/mantenciones">🧰 Mantenciones</a><a href="/compras">🛒 Compras</a><a href="/bodega">▣ Bodega</a><a href="/proyeccion">📈 Proyección</a></nav>
+<input class="search" placeholder="Buscar..."><div>{{user}}</div><a class="btn" href="/logout">Salir</a></div><main class='page'>
+<section class='grid-kpi'>
+<div class='card kpi'><div class='ico red'>!</div><div><div class='kpi-title'>Atrasados</div><div class='kpi-value' id='kpi-atrasados'>0</div><div class='kpi-sub'>PM</div></div></div>
+<div class='card kpi'><div class='ico yellow'>◷</div><div><div class='kpi-title'>Próximos</div><div class='kpi-value' id='kpi-proximos'>0</div><div class='kpi-sub'>Proceso/Recibir</div></div></div>
+<div class='card kpi'><div class='ico green'>✓</div><div><div class='kpi-title'>Al día</div><div class='kpi-value' id='kpi-controlados'>0</div><div class='kpi-sub' id='kpi-total'>0 equipos</div></div></div>
+<div class='card kpi'><div class='ico blue'>🧰</div><div><div class='kpi-title'>Mantenciones</div><div class='kpi-value' id='kpi-mantenciones'>0</div><div class='kpi-sub'>Historial</div></div></div>
+<div class='card kpi'><div class='ico purple'>🛒</div><div><div class='kpi-title'>Compras</div><div class='kpi-value' id='kpi-compras'>$0</div><div class='kpi-sub'>Total PM</div></div></div>
+<div class='card kpi'><div class='ico teal'>▤</div><div><div class='kpi-title'>Lecturas</div><div class='kpi-value' id='kpi-lecturas'>0</div><div class='kpi-sub'>Horas/KM</div></div></div>
 </section>
-<section class="charts">
-<div class="card panel"><h3>Estado general de la flota</h3><canvas id="chartEstado"></canvas></div>
-<div class="card panel"><h3>Equipos por ubicación</h3><canvas id="chartUbicacion"></canvas></div>
-<div class="card panel"><h3>Equipos por tipo</h3><canvas id="chartTipo"></canvas></div>
-</section>
-<section class="middle">
-<div class="card table-panel"><div class="panel-head"><h3>Equipos críticos / vista real</h3><a class="btn" href="/equipos">Ver todos</a></div><table><thead><tr><th>Equipo</th><th>Descripción</th><th>Ubicación</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="tablaCriticos"></tbody></table></div>
-<div class="card table-panel"><div class="panel-head"><h3>Actividad reciente</h3><button class="btn">Ver todo</button></div><div class="activity" id="actividad"></div></div>
-</section>
-<section class="card quick"><h3>Equipos (vista rápida)</h3><div class="cards-row" id="quickCards"></div></section>
-</main><footer class="footer"><b>DEMOTRON CMMS</b><span>© 2026 Demotron Maquinarias</span><span>Versión 1.0.0</span></footer><script src="/static/js/dashboard.js"></script></body></html>
+<section class='charts'><div class='card panel'><h3>Estado flota</h3><canvas id='chartEstado'></canvas></div><div class='card panel'><h3>Más horas/KM mes</h3><canvas id='chartUso'></canvas></div><div class='card panel'><h3>Costos altos</h3><canvas id='chartCostos'></canvas></div></section>
+<section class='charts'><div class='card panel'><h3>Ubicación</h3><canvas id='chartUbicacion'></canvas></div><div class='card panel'><h3>Tipo</h3><canvas id='chartTipo'></canvas></div><div class='card panel'><h3>Marca</h3><canvas id='chartMarca'></canvas></div></section>
+<section class='middle'><div class='card table-panel'><h3>Proyección / críticos</h3><table><thead><tr><th>Equipo</th><th>Lectura</th><th>Fecha</th><th>Estado</th></tr></thead><tbody id='tablaCriticos'></tbody></table></div><div class='card table-panel'><h3>Compras recientes</h3><table><thead><tr><th>Fecha</th><th>Equipo</th><th>OC</th><th>Monto</th></tr></thead><tbody id='tablaCompras'></tbody></table></div></section>
+<section class='card' style='margin-top:12px'><h3>Equipos vista rápida</h3><div class='cards-row' id='quickCards'></div></section>
+</main><footer class='footer'><b>DEMOTRON CMMS</b><span>Versión 3.0</span></footer><script src='/static/js/dashboard.js'></script></body></html>
