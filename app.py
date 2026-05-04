@@ -1,5 +1,5 @@
 
-import os, re, unicodedata, json
+import os, re, unicodedata, json, math
 from datetime import datetime, date
 from functools import wraps
 
@@ -50,48 +50,29 @@ def safe(v):
     return v
 
 def num(v):
+    if v is None:
+        return 0
+    if isinstance(v, (int, float)):
+        try:
+            if isinstance(v, float) and math.isnan(v):
+                return 0
+        except Exception:
+            pass
+        return float(v)
+    s = str(v).strip()
+    if s == "" or s.lower() in ["nan", "none", "nat"]:
+        return 0
+    s = s.replace("$", "").replace("CLP", "").replace("clp", "").replace(" ", "")
+    if "," in s:
+        s = s.replace(".", "").replace(",", ".")
+    else:
+        if s.count(".") > 1:
+            s = s.replace(".", "")
+        # si tiene un punto único, es decimal y se conserva
     try:
-        if v is None or str(v).strip()=="": return 0
-        s = str(v).replace("$","").replace(" ","").replace(".","").replace(",",".")
         return float(s)
     except Exception:
         return 0
-
-
-def clean_text(v):
-    if v is None:
-        return None
-    s = str(v).strip()
-    if s == "" or s.lower() in ["none", "nan", "nat"]:
-        return None
-    return s
-
-def clean_upper(v):
-    s = clean_text(v)
-    return s.upper() if s else None
-
-def clean_date(v):
-    s = clean_text(v)
-    if not s:
-        return None
-    return s
-
-def clean_number(v):
-    s = clean_text(v)
-    if not s:
-        return None
-    try:
-        s = s.replace("$", "").replace(" ", "").replace(".", "").replace(",", ".")
-        return float(s)
-    except Exception:
-        return None
-
-def clean_money_text(v):
-    s = clean_text(v)
-    if not s:
-        return None
-    return s.replace("$", "").strip()
-
 
 def q(sql, params=None, fetch=True):
     if engine is None:
@@ -266,12 +247,36 @@ def machine_icon(e):
     if "rodillo" in txt: return "🛞"
     return "⚙️"
 
+
+def clp(v):
+    return "$ " + format(int(round(num(v))), ",").replace(",", ".")
+
+def estado_from_row(r):
+    # Buscar primero columnas reales de estado; nunca usar control_base porque contiene HORAS/KM.
+    priority = [
+        "estado", "estado_cmms", "estado_servicio", "estado_operativo",
+        "estado_base", "situacion", "condicion", "condición"
+    ]
+    for k in priority:
+        val = r.get(k)
+        if val is not None and str(val).strip() and str(val).lower() not in ["nan", "none", "nat"]:
+            return safe(val)
+
+    # Fallback: revisar cualquier columna que contenga estado, excluyendo control/unidad.
+    for k, val in r.items():
+        lk = str(k).lower()
+        if "estado" in lk and "control" not in lk:
+            if val is not None and str(val).strip() and str(val).lower() not in ["nan", "none", "nat"]:
+                return safe(val)
+
+    return ""
+
 def machine_image(e):
     txt = (str(e.get("tipo_equipo","")) + " " + str(e.get("familia","")) + " " + str(e.get("marca","")) + " " + str(e.get("modelo",""))).lower()
-    if "tolva" in txt or ("camion" in txt and "pluma" not in txt and "aljibe" not in txt and "liviano" not in txt):
-        return "/static/img/equipos/camion_man_tolva.png"
     if "tracto" in txt:
         return "/static/img/equipos/tractocamion.png"
+    if "tolva" in txt or ("camion" in txt and "pluma" not in txt and "aljibe" not in txt and "liviano" not in txt):
+        return "/static/img/equipos/camion_man_tolva.png"
     if "excav" in txt:
         return "/static/img/equipos/excavadora.png"
     if "cargador" in txt:
@@ -302,61 +307,9 @@ def machine_image(e):
         return "/static/img/equipos/furgon_partner.png"
     return "/static/img/equipos/excavadora.png"
 
-def clp(v):
-    return "$ " + format(int(round(num(v))), ",").replace(",", ".")
-
 def dashboard_excel_metrics():
-    """Lee valores desde la hoja Dashboard importada, si existe.
-    Si no calza, el dashboard usa cálculos desde maestro_equipos.
-    """
-    metrics = {}
-    if not table_exists("dashboard_excel"):
-        return metrics
-    try:
-        rows_dash = q("SELECT * FROM dashboard_excel LIMIT 80")
-        wanted = {
-            "total equipos": "total_equipos",
-            "operativos": "operativos",
-            "fuera de servicio": "fuera_servicio",
-            "atrasados": "atrasados",
-            "próximas": "proximas",
-            "proximas": "proximas",
-            "por recibir": "por_recibir",
-            "en proceso": "en_proceso",
-            "al día": "al_dia",
-            "al dia": "al_dia",
-            "en taller": "en_taller",
-            "pendiente de reporte": "pendiente_reporte",
-            "costo total pm": "costo_total_pm",
-            "% disponibilidad real": "disponibilidad_real",
-            "% cumplimiento real": "cumplimiento_real",
-            "% controlado": "controlado",
-            "sin historial pm": "sin_historial_pm",
-            "backlog compra": "backlog_compra",
-            "tiempo de compra": "tiempo_compra",
-            "actualizado": "actualizado"
-        }
-        prev_label = None
-        for r in rows_dash:
-            vals = [safe(v) for v in r.values()]
-            for v in vals:
-                sv = str(v).strip()
-                if not sv:
-                    continue
-                low = sv.lower()
-                # detect labels
-                for label, key in wanted.items():
-                    if label == low:
-                        prev_label = key
-                        break
-                else:
-                    # if previous cell/row was a label, next numeric/date value is the metric
-                    if prev_label and sv not in wanted:
-                        metrics[prev_label] = sv
-                        prev_label = None
-    except Exception:
-        pass
-    return metrics
+    # La app ya calcula desde BD. Esta función queda como fallback simple.
+    return {}
 
 
 def get_equipos():
@@ -381,7 +334,7 @@ def get_equipos():
             "lectura_actual": safe(r.get("lectura_actual")),
             "unidad": safe(r.get("unidad")),
             "proxima_pm": safe(r.get("proxima_pm")),
-            "estado": safe(r.get("estado") or r.get("control_base") or r.get("estado_operativo")),
+            "estado": estado_from_row(r),
         })
     return data
 
@@ -453,11 +406,9 @@ def api_equipo(codigo):
 @login_required
 def dashboard():
     equipos = get_equipos()
-    metrics = dashboard_excel_metrics()
 
     total = len(equipos)
-    # Estado CMMS desde maestro_equipos[columna estado]
-    atrasados = sum(1 for e in equipos if "ATRAS" in str(e["estado"]).upper())
+    atrasados = sum(1 for e in equipos if "ATRAS" in str(e["estado"]).upper() or "VENC" in str(e["estado"]).upper())
     aldia = sum(1 for e in equipos if "AL D" in str(e["estado"]).upper())
     en_taller = sum(1 for e in equipos if "TALLER" in str(e["estado"]).upper())
     fuera = sum(1 for e in equipos if "FUERA" in str(e["estado"]).upper())
@@ -465,23 +416,12 @@ def dashboard():
     en_proceso = sum(1 for e in equipos if "PROCESO" in str(e["estado"]).upper())
     proximas = sum(1 for e in equipos if "PROX" in str(e["estado"]).upper())
 
-    # Métricas del Dashboard Excel cuando existan, con fallback a cálculo real
-    total_show = metrics.get("total_equipos", total)
-    operativos_show = metrics.get("operativos", max(total - fuera, 0))
-    fuera_show = metrics.get("fuera_servicio", fuera)
-    atrasados_show = metrics.get("atrasados", atrasados)
-    proximas_show = metrics.get("proximas", proximas)
-    por_recibir_show = metrics.get("por_recibir", por_recibir)
-    en_proceso_show = metrics.get("en_proceso", en_proceso)
-    aldia_show = metrics.get("al_dia", aldia)
-    taller_show = metrics.get("en_taller", en_taller)
-    pendiente_show = metrics.get("pendiente_reporte", "")
-    costo_pm_show = metrics.get("costo_total_pm", "")
+    operativos = max(total - fuera, 0)
 
     mantenciones = q("SELECT COUNT(*) AS n FROM mantenciones")[0]["n"] if table_exists("mantenciones") else 0
     lecturas = q("SELECT COUNT(*) AS n FROM lecturas")[0]["n"] if table_exists("lecturas") else 0
     compras_rows = q("SELECT * FROM compras LIMIT 5000") if table_exists("compras") else []
-    compras_total = sum(num(r.get("costo_pm_clp") or r.get("monto") or r.get("total")) for r in compras_rows)
+    compras_total = sum(num(r.get("costo_pm_clp") or r.get("monto") or r.get("total") or r.get("valor")) for r in compras_rows)
 
     ubic, tipo, estado_counts = {}, {}, {}
     for e in equipos:
@@ -489,7 +429,6 @@ def dashboard():
         tipo[e["tipo_equipo"] or "Sin tipo"] = tipo.get(e["tipo_equipo"] or "Sin tipo",0)+1
         estado_counts[e["estado"] or "Sin estado"] = estado_counts.get(e["estado"] or "Sin estado",0)+1
 
-    ubic_rows = "".join(f"<tr><td>{k}</td><td>{v}</td></tr>" for k,v in sorted(ubic.items(), key=lambda x:x[1], reverse=True)[:10])
     tipo_rows = "".join(f"<tr><td>{k}</td><td>{v}</td></tr>" for k,v in sorted(tipo.items(), key=lambda x:x[1], reverse=True)[:10])
     estado_rows = "".join(f"<tr><td>{badge(k)}</td><td>{v}</td></tr>" for k,v in sorted(estado_counts.items(), key=lambda x:x[1], reverse=True))
 
@@ -505,20 +444,22 @@ def dashboard():
         for e in equipos[:32]
     )
 
-    # data para gráficos simples sin librerías
+    max_ubic = max(ubic.values()) if ubic else 1
     ubic_bars = "".join(
-        f"<div class='bar-row'><span>{k}</span><div><b style='width:{min(100, v*100/max(ubic.values() or [1]))}%'></b></div><em>{v}</em></div>"
+        f"<div class='bar-row'><span>{k}</span><div><b style='width:{max(4, min(100, v*100/max_ubic))}%'></b></div><em>{v}</em></div>"
         for k,v in sorted(ubic.items(), key=lambda x:x[1], reverse=True)[:10]
     )
+
+    max_estado = max(estado_counts.values()) if estado_counts else 1
     estado_bars = "".join(
-        f"<div class='bar-row'><span>{k}</span><div><b style='width:{min(100, v*100/max(estado_counts.values() or [1]))}%'></b></div><em>{v}</em></div>"
+        f"<div class='bar-row'><span>{k}</span><div><b style='width:{max(4, min(100, v*100/max_estado))}%'></b></div><em>{v}</em></div>"
         for k,v in sorted(estado_counts.items(), key=lambda x:x[1], reverse=True)
     )
 
     body = f"""
     <main class="page">
       <section class="hero">
-        <div><h1>Dashboard CMMS DEMOTRON</h1><p>Datos desde Maestro_Equipos, Dashboard Excel, compras, lecturas y mantenciones.</p></div>
+        <div><h1>Dashboard CMMS DEMOTRON</h1><p>Datos reales desde Maestro_Equipos, compras, lecturas y mantenciones.</p></div>
         <form action="/ficha" method="get" class="search-card">
           <input name="codigo" list="equiposList" placeholder="Buscar equipo, ej: MD-100, CD-102...">
           <button>Ver ficha</button>{equipo_datalist()}
@@ -526,21 +467,21 @@ def dashboard():
       </section>
 
       <section class="grid-kpi">
-        <div class="card kpi blueb"><small>Total equipos</small><b>{total_show}</b></div>
-        <div class="card kpi greenb"><small>Operativos</small><b>{operativos_show}</b></div>
-        <div class="card kpi offb"><small>Fuera servicio</small><b>{fuera_show}</b></div>
-        <div class="card kpi redb"><small>Atrasados</small><b>{atrasados_show}</b></div>
-        <div class="card kpi yellowb"><small>Próximas</small><b>{proximas_show}</b></div>
-        <div class="card kpi purpleb"><small>Costo total PM</small><b>{clp(costo_pm_show or compras_total)}</b></div>
+        <div class="card kpi blueb"><small>Total equipos</small><b>{total}</b></div>
+        <div class="card kpi greenb"><small>Operativos</small><b>{operativos}</b></div>
+        <div class="card kpi offb"><small>Fuera servicio</small><b>{fuera}</b></div>
+        <div class="card kpi redb"><small>Atrasados</small><b>{atrasados}</b></div>
+        <div class="card kpi yellowb"><small>Próximas</small><b>{proximas}</b></div>
+        <div class="card kpi purpleb"><small>Costo total PM</small><b>{clp(compras_total)}</b></div>
       </section>
 
       <section class="grid-kpi">
-        <div class="card kpi blueb"><small>Por recibir</small><b>{por_recibir_show}</b></div>
-        <div class="card kpi yellowb"><small>En proceso</small><b>{en_proceso_show}</b></div>
-        <div class="card kpi greenb"><small>Al día</small><b>{aldia_show}</b></div>
-        <div class="card kpi offb"><small>En taller</small><b>{taller_show}</b></div>
-        <div class="card kpi tealb"><small>Pendiente reporte</small><b>{pendiente_show}</b></div>
-        <div class="card kpi blueb"><small>Lecturas</small><b>{lecturas}</b></div>
+        <div class="card kpi blueb"><small>Por recibir</small><b>{por_recibir}</b></div>
+        <div class="card kpi yellowb"><small>En proceso</small><b>{en_proceso}</b></div>
+        <div class="card kpi greenb"><small>Al día</small><b>{aldia}</b></div>
+        <div class="card kpi offb"><small>En taller</small><b>{en_taller}</b></div>
+        <div class="card kpi tealb"><small>Lecturas</small><b>{lecturas}</b></div>
+        <div class="card kpi purpleb"><small>Mantenciones</small><b>{mantenciones}</b></div>
       </section>
 
       <section class="middle">
@@ -555,7 +496,7 @@ def dashboard():
 
       <section class="middle">
         <div class="card"><h3>Equipos por tipo</h3><table><thead><tr><th>Tipo</th><th>Total</th></tr></thead><tbody>{tipo_rows}</tbody></table></div>
-        <div class="card"><h3>Indicadores operacionales</h3><table><tbody><tr><td>Mantenciones</td><td>{mantenciones}</td></tr><tr><td>Compras PM calculadas</td><td>{clp(compras_total)}</td></tr></tbody></table></div>
+        <div class="card"><h3>Accesos</h3><p><a class="btn" href="/planificacion">Planificación Gantt</a> <a class="btn" href="/proyeccion">Proyección tabla</a></p></div>
       </section>
 
       <section class="card"><h3>Vista rápida de equipos</h3><div class="cards-row">{cards}</div></section>
@@ -566,64 +507,17 @@ def dashboard():
 @app.route("/equipos", methods=["GET","POST"])
 @login_required
 def equipos():
-    ensure_schema()
-    ensure_data()
-
     if request.method == "POST":
-        data = {k: request.form.get(k) for k in [
-            "codigo","tipo_equipo","familia","marca","modelo","ano",
-            "ubicacion","responsable","lectura_actual","unidad","proxima_pm","estado"
-        ]}
-
-        data["codigo"] = (data.get("codigo") or "").strip().upper()
+        data = {k: request.form.get(k) for k in ["codigo","tipo_equipo","familia","marca","modelo","ano","ubicacion","responsable","lectura_actual","unidad","proxima_pm","estado"]}
         data["ubicacion"] = norm_ubic(data.get("ubicacion"))
-
-        if not data["codigo"]:
-            return page("Error Equipo", "<main class='data-page'><div class='card'><h2>Error</h2><p>El código del equipo es obligatorio.</p><a class='btn' href='/equipos'>Volver</a></div></main>")
-
-        # FIX: no usar ON CONFLICT porque al importar Excel con pandas/to_sql replace
-        # se pierde la primary key/unique constraint de codigo.
-        # Método seguro: borrar código existente e insertar de nuevo.
-        try:
-            q("DELETE FROM maestro_equipos WHERE UPPER(codigo)=UPPER(:codigo)", {"codigo": data["codigo"]}, fetch=False)
-        except Exception:
-            pass
-
-        try:
-            q("""
-            INSERT INTO maestro_equipos (
-                codigo,tipo_equipo,familia,marca,modelo,ano,ubicacion,
-                responsable,lectura_actual,unidad,proxima_pm,estado
-            )
-            VALUES (
-                :codigo,:tipo_equipo,:familia,:marca,:modelo,:ano,:ubicacion,
-                :responsable,:lectura_actual,:unidad,:proxima_pm,:estado
-            )
-            """, data, fetch=False)
-        except Exception as e:
-            return page("Error guardando equipo", f"<main class='data-page'><div class='card'><h2>No se pudo guardar el equipo</h2><p>{safe(e)}</p><a class='btn' href='/equipos'>Volver</a></div></main>")
-
+        q("""INSERT INTO maestro_equipos (codigo,tipo_equipo,familia,marca,modelo,ano,ubicacion,responsable,lectura_actual,unidad,proxima_pm,estado)
+             VALUES (:codigo,:tipo_equipo,:familia,:marca,:modelo,:ano,:ubicacion,:responsable,:lectura_actual,:unidad,:proxima_pm,:estado)
+             ON CONFLICT (codigo) DO UPDATE SET tipo_equipo=EXCLUDED.tipo_equipo,familia=EXCLUDED.familia,marca=EXCLUDED.marca,modelo=EXCLUDED.modelo,
+             ano=EXCLUDED.ano,ubicacion=EXCLUDED.ubicacion,responsable=EXCLUDED.responsable,lectura_actual=EXCLUDED.lectura_actual,
+             unidad=EXCLUDED.unidad,proxima_pm=EXCLUDED.proxima_pm,estado=EXCLUDED.estado""", data, fetch=False)
         return redirect(url_for("equipos"))
-
     equipos_data = get_equipos()
-    rows = "".join(
-        f"<tr>"
-        f"<td><a href='/equipo/{e['codigo']}'><b>{e['codigo']}</b></a></td>"
-        f"<td>{e['tipo_equipo']}</td>"
-        f"<td>{e['familia']}</td>"
-        f"<td>{e['marca']}</td>"
-        f"<td>{e['modelo']}</td>"
-        f"<td>{e['ano']}</td>"
-        f"<td>{e['ubicacion']}</td>"
-        f"<td>{e['responsable']}</td>"
-        f"<td>{e['lectura_actual']}</td>"
-        f"<td>{e['unidad']}</td>"
-        f"<td>{e['proxima_pm']}</td>"
-        f"<td>{badge(e['estado'])}</td>"
-        f"</tr>"
-        for e in equipos_data
-    )
-
+    rows = "".join(f"<tr><td><a href='/equipo/{e['codigo']}'><b>{e['codigo']}</b></a></td><td>{e['tipo_equipo']}</td><td>{e['familia']}</td><td>{e['marca']}</td><td>{e['modelo']}</td><td>{e['ano']}</td><td>{e['ubicacion']}</td><td>{e['responsable']}</td><td>{e['lectura_actual']}</td><td>{e['unidad']}</td><td>{e['proxima_pm']}</td><td>{badge(e['estado'])}</td></tr>" for e in equipos_data)
     form = f"""
     <form class="form-card" method="post" action="/equipos">
       {equipo_datalist()}
@@ -642,19 +536,7 @@ def equipos():
       <button>Guardar / Actualizar Equipo</button>
     </form>
     """
-
-    body = (
-        f"<main class='data-page'>"
-        f"<div class='data-head'><h2>Equipos ({len(equipos_data)})</h2>"
-        f"<a class='btn' href='/admin/importar-cmms'>Importar CMMS</a></div>"
-        f"<p class='hint'>Al escribir un código precargado, se completan tipo, familia, marca, modelo, año y estado automáticamente.</p>"
-        f"{form}"
-        f"<div class='table-card'><table><thead><tr>"
-        f"<th>Código</th><th>Tipo</th><th>Familia</th><th>Marca</th><th>Modelo</th><th>Año</th>"
-        f"<th>Ubicación</th><th>Responsable</th><th>Lectura</th><th>Unidad</th><th>Próx PM</th><th>Estado</th>"
-        f"</tr></thead><tbody>{rows}</tbody></table></div></main>"
-    )
-
+    body = f"<main class='data-page'><div class='data-head'><h2>Equipos ({len(equipos_data)})</h2><a class='btn' href='/admin/importar-cmms'>Importar CMMS</a></div><p class='hint'>Al escribir un código precargado, se completan tipo, familia, marca, modelo, año y estado automáticamente.</p>{form}<div class='table-card'><table><thead><tr><th>Código</th><th>Tipo</th><th>Familia</th><th>Marca</th><th>Modelo</th><th>Año</th><th>Ubicación</th><th>Responsable</th><th>Lectura</th><th>Unidad</th><th>Próx PM</th><th>Estado</th></tr></thead><tbody>{rows}</tbody></table></div></main>"
     extra = f"<script>window.EQUIPOS={json.dumps(equipos_data, ensure_ascii=False)};</script>"
     return page("Equipos", body, extra)
 
@@ -759,11 +641,7 @@ def planificacion():
         <a class="gantt-row" href="/equipo/{codigo}">
           <div class="gantt-code">{codigo}</div>
           <div class="gantt-meta">{safe(r.get('tipo_equipo'))}<br><small>{safe(r.get('familia'))}</small></div>
-          <div class="gantt-info">
-            <strong>Lectura actual:</strong> {safe(r.get('lectura_actual'))}<br>
-            <strong>Próxima:</strong> {safe(r.get('proxima_lectura_objetivo'))}<br>
-            <strong>Acción:</strong> {safe(r.get('accion_sugerida'))}
-          </div>
+          <div class="gantt-info"><strong>Lectura:</strong> {safe(r.get('lectura_actual'))}<br><strong>Próxima:</strong> {safe(r.get('proxima_lectura_objetivo'))}<br><strong>Acción:</strong> {safe(r.get('accion_sugerida'))}</div>
           <div class="gantt-track"><span style="width:{width}%"></span></div>
           <div class="gantt-date">{safe(r.get('fecha_estimada'))}<br><small>{safe(r.get('dias_estimados'))} días</small></div>
           <div>{badge(est)}</div>
@@ -771,13 +649,7 @@ def planificacion():
         """
     if not lanes:
         lanes = "<div class='card'>No hay datos de planificación. Reimporta el CMMS.</div>"
-    body = f"""
-    <main class='data-page'>
-      <div class='data-head'><h2>Planificación PM tipo Gantt</h2><a class='btn' href='/proyeccion'>Ver tabla de proyección</a></div>
-      <p class='hint'>Carta clickeable por equipo. Basado en hoja Plan_Mantenciones / próximas mantenciones del Excel.</p>
-      <section class='gantt'>{lanes}</section>
-    </main>
-    """
+    body = f"<main class='data-page'><div class='data-head'><h2>Planificación PM tipo Gantt</h2><a class='btn' href='/proyeccion'>Ver tabla de proyección</a></div><p class='hint'>Carta clickeable por equipo. Basado en hoja Plan_Mantenciones.</p><section class='gantt'>{lanes}</section></main>"
     return page("Planificación", body)
 
 @app.route("/proyeccion")
@@ -786,192 +658,66 @@ def proyeccion():
     data = q("SELECT * FROM plan_mantenciones LIMIT 1000") if table_exists("plan_mantenciones") else []
     rows = ""
     for r in data:
-        rows += f"""
-        <tr>
-          <td><a href="/equipo/{safe(r.get('codigo'))}"><b>{safe(r.get('codigo'))}</b></a></td>
-          <td>{safe(r.get('tipo_equipo'))}</td>
-          <td>{safe(r.get('familia'))}</td>
-          <td>{safe(r.get('control'))}</td>
-          <td>{safe(r.get('lectura_actual'))}</td>
-          <td>{safe(r.get('proxima_lectura_objetivo'))}</td>
-          <td>{safe(r.get('promedio_diario'))}</td>
-          <td>{safe(r.get('dias_estimados'))}</td>
-          <td>{safe(r.get('fecha_estimada'))}</td>
-          <td>{badge(r.get('estado_operativo'))}</td>
-          <td>{safe(r.get('prioridad'))}</td>
-          <td>{safe(r.get('accion_sugerida'))}</td>
-        </tr>
-        """
-    body = f"""
-    <main class='data-page'>
-      <div class='data-head'><h2>Proyección de Mantenciones</h2><a class='btn' href='/planificacion'>Ver Gantt</a></div>
-      <div class='table-card'><table>
-        <thead><tr><th>Código</th><th>Tipo</th><th>Familia</th><th>Control</th><th>Lectura</th><th>Próxima</th><th>Promedio</th><th>Días</th><th>Fecha</th><th>Estado</th><th>Prioridad</th><th>Acción</th></tr></thead>
-        <tbody>{rows}</tbody>
-      </table></div>
-    </main>
-    """
+        rows += f"<tr><td><a href='/equipo/{safe(r.get('codigo'))}'><b>{safe(r.get('codigo'))}</b></a></td><td>{safe(r.get('tipo_equipo'))}</td><td>{safe(r.get('familia'))}</td><td>{safe(r.get('control'))}</td><td>{safe(r.get('lectura_actual'))}</td><td>{safe(r.get('proxima_lectura_objetivo'))}</td><td>{safe(r.get('promedio_diario'))}</td><td>{safe(r.get('dias_estimados'))}</td><td>{safe(r.get('fecha_estimada'))}</td><td>{badge(r.get('estado_operativo'))}</td><td>{safe(r.get('prioridad'))}</td><td>{safe(r.get('accion_sugerida'))}</td></tr>"
+    body = f"<main class='data-page'><div class='data-head'><h2>Proyección de Mantenciones</h2><a class='btn' href='/planificacion'>Ver Gantt</a></div><div class='table-card'><table><thead><tr><th>Código</th><th>Tipo</th><th>Familia</th><th>Control</th><th>Lectura</th><th>Próxima</th><th>Promedio</th><th>Días</th><th>Fecha</th><th>Estado</th><th>Prioridad</th><th>Acción</th></tr></thead><tbody>{rows}</tbody></table></div></main>"
     return page("Proyección", body)
 
 # CRUD OPERATIVO
 @app.route("/lecturas", methods=["GET","POST"])
 @login_required
 def lecturas():
-    ensure_schema()
-    ensure_data()
-
     if request.method == "POST":
-        data = {
-            "fecha": clean_date(request.form.get("fecha")),
-            "codigo": clean_upper(request.form.get("codigo")),
-            "horometro": clean_number(request.form.get("horometro")),
-            "kilometraje": clean_number(request.form.get("kilometraje")),
-            "obra_ubicacion": norm_ubic(request.form.get("obra_ubicacion")),
-            "responsable": clean_text(request.form.get("responsable")),
-            "observacion": clean_text(request.form.get("observacion")),
-        }
-
-        if not data["codigo"]:
-            return page("Error lectura", "<main class='data-page'><div class='card'><h2>Error</h2><p>Debes ingresar código de equipo.</p><a class='btn' href='/lecturas'>Volver</a></div></main>")
-
-        try:
-            q("""INSERT INTO lecturas (fecha,codigo,horometro,kilometraje,obra_ubicacion,responsable,observacion)
-                 VALUES (:fecha,:codigo,:horometro,:kilometraje,:obra_ubicacion,:responsable,:observacion)""", data, fetch=False)
-        except Exception as e:
-            return page("Error guardando lectura", f"<main class='data-page'><div class='card'><h2>No se pudo guardar la lectura</h2><p>{safe(e)}</p><a class='btn' href='/lecturas'>Volver</a></div></main>")
-
-        # Actualiza lectura actual del equipo si existe
-        try:
-            valor = data["horometro"] if data["horometro"] is not None else data["kilometraje"]
-            unidad = "HORAS" if data["horometro"] is not None else "KM"
-            if valor is not None:
-                q("""UPDATE maestro_equipos 
-                     SET lectura_actual=:valor, unidad=:unidad, ubicacion=COALESCE(:ubicacion, ubicacion)
-                     WHERE UPPER(codigo)=UPPER(:codigo)""",
-                  {"valor": str(valor), "unidad": unidad, "ubicacion": data["obra_ubicacion"], "codigo": data["codigo"]}, fetch=False)
-        except Exception:
-            pass
-
+        data = {k: request.form.get(k) for k in ["fecha","codigo","horometro","kilometraje","obra_ubicacion","responsable","observacion"]}
+        data["obra_ubicacion"] = norm_ubic(data.get("obra_ubicacion"))
+        q("""INSERT INTO lecturas (fecha,codigo,horometro,kilometraje,obra_ubicacion,responsable,observacion)
+             VALUES (:fecha,:codigo,:horometro,:kilometraje,:obra_ubicacion,:responsable,:observacion)""", data, fetch=False)
         return redirect(url_for("lecturas"))
-
     codigo = request.args.get("codigo","")
     data = q("SELECT * FROM lecturas ORDER BY fecha DESC NULLS LAST LIMIT 1000") if table_exists("lecturas") else []
     rows = "".join(f"<tr><td>{safe(r.get('fecha'))}</td><td><a href='/equipo/{safe(r.get('codigo'))}'><b>{safe(r.get('codigo'))}</b></a></td><td>{safe(r.get('horometro'))}</td><td>{safe(r.get('kilometraje'))}</td><td>{norm_ubic(r.get('obra_ubicacion'))}</td><td>{safe(r.get('responsable'))}</td><td>{safe(r.get('observacion'))}</td></tr>" for r in data)
-    form = f"<form class='form-card' method='post'><input name='codigo' list='equiposList' placeholder='Código' value='{codigo}'>{equipo_datalist()}<input type='date' name='fecha'><input type='number' step='any' name='horometro' placeholder='Horómetro'><input type='number' step='any' name='kilometraje' placeholder='Kilometraje'><input name='obra_ubicacion' placeholder='Ubicación'><input name='responsable' placeholder='Responsable'><input name='observacion' placeholder='Observación'><button>Guardar lectura</button></form>"
+    form = f"<form class='form-card' method='post'><input name='codigo' list='equiposList' placeholder='Código' value='{codigo}'>{equipo_datalist()}<input type='date' name='fecha'><input type='number' name='horometro' placeholder='Horómetro'><input type='number' name='kilometraje' placeholder='Kilometraje'><input name='obra_ubicacion' placeholder='Ubicación'><input name='responsable' placeholder='Responsable'><input name='observacion' placeholder='Observación'><button>Guardar lectura</button></form>"
     return page("Lecturas", f"<main class='data-page'><h2>Lecturas</h2>{form}<div class='table-card'><table><thead><tr><th>Fecha</th><th>Código</th><th>Horómetro</th><th>Kilometraje</th><th>Ubicación</th><th>Responsable</th><th>Obs</th></tr></thead><tbody>{rows}</tbody></table></div></main>")
 
 @app.route("/mantenciones", methods=["GET","POST"])
 @login_required
 def mantenciones():
-    ensure_schema()
-    ensure_data()
-
     if request.method == "POST":
-        data = {
-            "fecha": clean_date(request.form.get("fecha")),
-            "codigo": clean_upper(request.form.get("codigo")),
-            "tipo_mantencion": clean_text(request.form.get("tipo_mantencion")),
-            "lectura": clean_number(request.form.get("lectura")),
-            "espm": clean_text(request.form.get("espm")),
-            "folio": clean_text(request.form.get("folio")),
-            "lugar": norm_ubic(request.form.get("lugar")),
-            "proveedor": clean_text(request.form.get("proveedor")),
-            "costo_mantencion_clp": clean_money_text(request.form.get("costo_mantencion_clp")),
-            "estado": clean_text(request.form.get("estado")),
-        }
-
-        if not data["codigo"]:
-            return page("Error mantención", "<main class='data-page'><div class='card'><h2>Error</h2><p>Debes ingresar código de equipo.</p><a class='btn' href='/mantenciones'>Volver</a></div></main>")
-
-        try:
-            q("""INSERT INTO mantenciones (fecha,codigo,tipo_mantencion,lectura,espm,folio,lugar,proveedor,costo_mantencion_clp,estado)
-                 VALUES (:fecha,:codigo,:tipo_mantencion,:lectura,:espm,:folio,:lugar,:proveedor,:costo_mantencion_clp,:estado)""", data, fetch=False)
-        except Exception as e:
-            return page("Error guardando mantención", f"<main class='data-page'><div class='card'><h2>No se pudo guardar la mantención</h2><p>{safe(e)}</p><a class='btn' href='/mantenciones'>Volver</a></div></main>")
-
-        try:
-            q("""INSERT INTO ot (fecha,ot,codigo,tipo,lectura,descripcion,responsable,estado,costo)
-                 VALUES (:fecha,:folio,:codigo,:tipo_mantencion,:lectura,:espm,:proveedor,:estado,:costo_mantencion_clp)""", data, fetch=False)
-        except Exception:
-            pass
-
+        data = {k: request.form.get(k) for k in ["fecha","codigo","tipo_mantencion","lectura","espm","folio","lugar","proveedor","costo_mantencion_clp","estado"]}
+        data["lugar"] = norm_ubic(data.get("lugar"))
+        q("""INSERT INTO mantenciones (fecha,codigo,tipo_mantencion,lectura,espm,folio,lugar,proveedor,costo_mantencion_clp,estado)
+             VALUES (:fecha,:codigo,:tipo_mantencion,:lectura,:espm,:folio,:lugar,:proveedor,:costo_mantencion_clp,:estado)""", data, fetch=False)
+        q("""INSERT INTO ot (fecha,ot,codigo,tipo,lectura,descripcion,responsable,estado,costo)
+             VALUES (:fecha,:folio,:codigo,:tipo_mantencion,:lectura,:espm,:proveedor,:estado,:costo_mantencion_clp)""", data, fetch=False)
         return redirect(url_for("mantenciones"))
-
     codigo = request.args.get("codigo","")
     data = q("SELECT * FROM mantenciones ORDER BY fecha DESC NULLS LAST LIMIT 1000") if table_exists("mantenciones") else []
     rows = "".join(f"<tr><td>{safe(r.get('fecha'))}</td><td><a href='/equipo/{safe(r.get('codigo'))}'><b>{safe(r.get('codigo'))}</b></a></td><td>{safe(r.get('tipo_mantencion'))}</td><td>{safe(r.get('lectura'))}</td><td>{safe(r.get('folio'))}</td><td>{safe(r.get('proveedor'))}</td><td>{safe(r.get('costo_mantencion_clp'))}</td><td>{badge(r.get('estado'))}</td></tr>" for r in data)
-    form = f"<form class='form-card' method='post'><input name='codigo' list='equiposList' value='{codigo}' placeholder='Código'>{equipo_datalist()}<input type='date' name='fecha'><input name='tipo_mantencion' placeholder='Tipo mantención'><input type='number' step='any' name='lectura' placeholder='Lectura'><input name='espm' placeholder='Descripción/ESPM'><input name='folio' placeholder='Folio/OT'><input name='lugar' placeholder='Lugar'><input name='proveedor' placeholder='Proveedor'><input name='costo_mantencion_clp' placeholder='Costo'><select name='estado'>{''.join(f'<option>{x}</option>' for x in ESTADOS)}</select><button>Guardar mantención y generar OT</button></form>"
+    form = f"<form class='form-card' method='post'><input name='codigo' list='equiposList' value='{codigo}' placeholder='Código'>{equipo_datalist()}<input type='date' name='fecha'><input name='tipo_mantencion' placeholder='Tipo mantención'><input type='number' name='lectura' placeholder='Lectura'><input name='espm' placeholder='Descripción/ESPM'><input name='folio' placeholder='Folio/OT'><input name='lugar' placeholder='Lugar'><input name='proveedor' placeholder='Proveedor'><input name='costo_mantencion_clp' placeholder='Costo'><select name='estado'>{''.join(f'<option>{x}</option>' for x in ESTADOS)}</select><button>Guardar mantención y generar OT</button></form>"
     return page("Mantenciones", f"<main class='data-page'><h2>Mantenciones</h2>{form}<div class='table-card'><table><thead><tr><th>Fecha</th><th>Código</th><th>Tipo</th><th>Lectura</th><th>Folio/OT</th><th>Proveedor</th><th>Costo</th><th>Estado</th></tr></thead><tbody>{rows}</tbody></table></div></main>")
 
 @app.route("/ot", methods=["GET","POST"])
 @login_required
 def ot():
-    ensure_schema()
-    ensure_data()
-
     if request.method == "POST":
-        data = {
-            "fecha": clean_date(request.form.get("fecha")),
-            "ot": clean_text(request.form.get("ot")),
-            "codigo": clean_upper(request.form.get("codigo")),
-            "tipo": clean_text(request.form.get("tipo")),
-            "lectura": clean_text(request.form.get("lectura")),
-            "descripcion": clean_text(request.form.get("descripcion")),
-            "responsable": clean_text(request.form.get("responsable")),
-            "estado": clean_text(request.form.get("estado")),
-            "costo": clean_money_text(request.form.get("costo")),
-        }
-
-        if not data["codigo"]:
-            return page("Error OT", "<main class='data-page'><div class='card'><h2>Error</h2><p>Debes ingresar código de equipo.</p><a class='btn' href='/ot'>Volver</a></div></main>")
-
-        if not data["ot"]:
-            data["ot"] = f"OT-WEB-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-
-        try:
-            q("""INSERT INTO ot (fecha,ot,codigo,tipo,lectura,descripcion,responsable,estado,costo)
-                 VALUES (:fecha,:ot,:codigo,:tipo,:lectura,:descripcion,:responsable,:estado,:costo)""", data, fetch=False)
-        except Exception as e:
-            return page("Error guardando OT", f"<main class='data-page'><div class='card'><h2>No se pudo guardar la OT</h2><p>{safe(e)}</p><a class='btn' href='/ot'>Volver</a></div></main>")
-
+        data = {k: request.form.get(k) for k in ["fecha","ot","codigo","tipo","lectura","descripcion","responsable","estado","costo"]}
+        q("""INSERT INTO ot (fecha,ot,codigo,tipo,lectura,descripcion,responsable,estado,costo)
+             VALUES (:fecha,:ot,:codigo,:tipo,:lectura,:descripcion,:responsable,:estado,:costo)""", data, fetch=False)
         return redirect(url_for("ot"))
-
     data = q("SELECT * FROM ot ORDER BY fecha DESC NULLS LAST LIMIT 1000") if table_exists("ot") else []
     if not data and table_exists("mantenciones"):
         data = [{"fecha":r.get("fecha"),"ot":r.get("folio"),"codigo":r.get("codigo"),"tipo":r.get("tipo_mantencion"),"lectura":r.get("lectura"),"descripcion":r.get("espm"),"responsable":r.get("proveedor"),"estado":r.get("estado"),"costo":r.get("costo_mantencion_clp")} for r in q("SELECT * FROM mantenciones ORDER BY fecha DESC NULLS LAST LIMIT 1000")]
     rows = "".join(f"<tr><td>{safe(r.get('fecha'))}</td><td><b>{safe(r.get('ot'))}</b></td><td><a href='/equipo/{safe(r.get('codigo'))}'>{safe(r.get('codigo'))}</a></td><td>{safe(r.get('tipo'))}</td><td>{safe(r.get('descripcion'))}</td><td>{safe(r.get('responsable'))}</td><td>{badge(r.get('estado'))}</td><td>{safe(r.get('costo'))}</td></tr>" for r in data)
-    form = f"<form class='form-card' method='post'><input type='date' name='fecha'><input name='ot' placeholder='OT/Folio (opcional)'><input name='codigo' list='equiposList' placeholder='Código'>{equipo_datalist()}<input name='tipo' placeholder='Tipo'><input name='lectura' placeholder='Lectura'><input name='descripcion' placeholder='Descripción'><input name='responsable' placeholder='Responsable'><select name='estado'>{''.join(f'<option>{x}</option>' for x in ESTADOS)}</select><input name='costo' placeholder='Costo'><button>Guardar OT</button></form>"
+    form = f"<form class='form-card' method='post'><input type='date' name='fecha'><input name='ot' placeholder='OT/Folio'><input name='codigo' list='equiposList' placeholder='Código'>{equipo_datalist()}<input name='tipo' placeholder='Tipo'><input name='lectura' placeholder='Lectura'><input name='descripcion' placeholder='Descripción'><input name='responsable' placeholder='Responsable'><select name='estado'>{''.join(f'<option>{x}</option>' for x in ESTADOS)}</select><input name='costo' placeholder='Costo'><button>Guardar OT</button></form>"
     return page("OT", f"<main class='data-page'><h2>Órdenes de Trabajo</h2>{form}<div class='table-card'><table><thead><tr><th>Fecha</th><th>OT</th><th>Código</th><th>Tipo</th><th>Descripción</th><th>Responsable</th><th>Estado</th><th>Costo</th></tr></thead><tbody>{rows}</tbody></table></div></main>")
 
 @app.route("/compras", methods=["GET","POST"])
 @login_required
 def compras():
-    ensure_schema()
-    ensure_data()
-
     if request.method == "POST":
-        data = {
-            "fecha": clean_date(request.form.get("fecha")),
-            "oc": clean_text(request.form.get("oc")),
-            "codigo": clean_upper(request.form.get("codigo")),
-            "descripcion": clean_text(request.form.get("descripcion")),
-            "proveedor": clean_text(request.form.get("proveedor")),
-            "costo_pm_clp": clean_money_text(request.form.get("costo_pm_clp")),
-            "regla": clean_text(request.form.get("regla")),
-            "estado_oc": clean_text(request.form.get("estado_oc")),
-        }
-
-        if not data["codigo"]:
-            return page("Error compra", "<main class='data-page'><div class='card'><h2>Error</h2><p>Debes ingresar código de equipo.</p><a class='btn' href='/compras'>Volver</a></div></main>")
-
-        try:
-            q("""INSERT INTO compras (fecha,oc,codigo,descripcion,proveedor,costo_pm_clp,regla,estado_oc)
-                 VALUES (:fecha,:oc,:codigo,:descripcion,:proveedor,:costo_pm_clp,:regla,:estado_oc)""", data, fetch=False)
-        except Exception as e:
-            return page("Error guardando compra", f"<main class='data-page'><div class='card'><h2>No se pudo guardar la compra</h2><p>{safe(e)}</p><a class='btn' href='/compras'>Volver</a></div></main>")
-
+        data = {k: request.form.get(k) for k in ["fecha","oc","codigo","descripcion","proveedor","costo_pm_clp","regla","estado_oc"]}
+        q("""INSERT INTO compras (fecha,oc,codigo,descripcion,proveedor,costo_pm_clp,regla,estado_oc)
+             VALUES (:fecha,:oc,:codigo,:descripcion,:proveedor,:costo_pm_clp,:regla,:estado_oc)""", data, fetch=False)
         return redirect(url_for("compras"))
-
     data = q("SELECT * FROM compras ORDER BY fecha DESC NULLS LAST LIMIT 1000") if table_exists("compras") else []
     rows = "".join(f"<tr><td>{safe(r.get('fecha'))}</td><td><b>{safe(r.get('oc'))}</b></td><td><a href='/equipo/{safe(r.get('codigo'))}'>{safe(r.get('codigo'))}</a></td><td>{safe(r.get('descripcion'))}</td><td>{safe(r.get('proveedor'))}</td><td>{clp(r.get('costo_pm_clp'))}</td><td>{badge(r.get('estado_oc'))}</td></tr>" for r in data)
     form = f"<form class='form-card' method='post'><input type='date' name='fecha'><input name='oc' placeholder='OC'><input name='codigo' list='equiposList' placeholder='Código'>{equipo_datalist()}<input name='descripcion' placeholder='Descripción'><input name='proveedor' placeholder='Proveedor'><input name='costo_pm_clp' placeholder='Monto'><input name='regla' placeholder='Regla'><select name='estado_oc'>{''.join(f'<option>{x}</option>' for x in ESTADOS)}</select><button>Guardar compra</button></form>"
@@ -980,32 +726,12 @@ def compras():
 @app.route("/bodega", methods=["GET","POST"])
 @login_required
 def bodega():
-    ensure_schema()
-    ensure_data()
-
     if request.method == "POST":
-        data = {
-            "folio": clean_text(request.form.get("folio")),
-            "fecha": clean_date(request.form.get("fecha")),
-            "equipo": clean_text(request.form.get("equipo")),
-            "envio": clean_text(request.form.get("envio")),
-            "persona_que_retiro": clean_text(request.form.get("persona_que_retiro")),
-            "destino": norm_ubic(request.form.get("destino")),
-            "comentario": clean_text(request.form.get("comentario")),
-            "codigo": clean_upper(request.form.get("codigo")),
-        }
-
-        if not data["codigo"] and not data["equipo"]:
-            return page("Error bodega", "<main class='data-page'><div class='card'><h2>Error</h2><p>Debes ingresar código o equipo.</p><a class='btn' href='/bodega'>Volver</a></div></main>")
-
-        try:
-            q("""INSERT INTO bodega (folio,fecha,equipo,envio,persona_que_retiro,destino,comentario,codigo)
-                 VALUES (:folio,:fecha,:equipo,:envio,:persona_que_retiro,:destino,:comentario,:codigo)""", data, fetch=False)
-        except Exception as e:
-            return page("Error guardando bodega", f"<main class='data-page'><div class='card'><h2>No se pudo guardar bodega</h2><p>{safe(e)}</p><a class='btn' href='/bodega'>Volver</a></div></main>")
-
+        data = {k: request.form.get(k) for k in ["folio","fecha","equipo","envio","persona_que_retiro","destino","comentario","codigo"]}
+        data["destino"] = norm_ubic(data.get("destino"))
+        q("""INSERT INTO bodega (folio,fecha,equipo,envio,persona_que_retiro,destino,comentario,codigo)
+             VALUES (:folio,:fecha,:equipo,:envio,:persona_que_retiro,:destino,:comentario,:codigo)""", data, fetch=False)
         return redirect(url_for("bodega"))
-
     data = q("SELECT * FROM bodega ORDER BY fecha DESC NULLS LAST LIMIT 1000") if table_exists("bodega") else []
     rows = "".join(f"<tr><td><b>{safe(r.get('folio'))}</b></td><td>{safe(r.get('fecha'))}</td><td>{safe(r.get('equipo'))}</td><td>{safe(r.get('envio'))}</td><td>{safe(r.get('persona_que_retiro'))}</td><td>{safe(r.get('destino'))}</td><td>{safe(r.get('comentario'))}</td><td><a href='/equipo/{safe(r.get('codigo'))}'>{safe(r.get('codigo'))}</a></td></tr>" for r in data)
     form = f"<form class='form-card' method='post'><input name='folio' placeholder='Folio'><input type='date' name='fecha'><input name='equipo' placeholder='Equipo'><input name='envio' placeholder='Envío'><input name='persona_que_retiro' placeholder='Persona que retiró'><input name='destino' placeholder='Destino'><input name='comentario' placeholder='Comentario'><input name='codigo' list='equiposList' placeholder='Código'>{equipo_datalist()}<button>Guardar bodega</button></form>"
