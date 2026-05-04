@@ -69,13 +69,15 @@ def normalize_col(value):
     value = re.sub(r"_+", "_", value).strip("_")
     return value or "columna"
 
+# FIX 2026-05-03: encabezado real solo por Codigo/Fecha, no por 'equipo' en titulo
+
 def clean_sheet(file_path, sheet):
     raw = pd.read_excel(file_path, sheet_name=sheet, header=None)
     header_row = 0
 
     for i in range(min(len(raw), 25)):
         vals = " ".join([str(v).lower() for v in raw.iloc[i].tolist() if pd.notna(v)])
-        if "codigo" in vals or "fecha" in vals or "equipo" in vals:
+        if "codigo" in vals or "fecha" in vals:
             header_row = i
             break
 
