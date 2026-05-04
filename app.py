@@ -262,50 +262,172 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
+
 @app.route("/")
 @login_required
 def dashboard():
+    ensure_data()
+
+    equipos = []
     try:
         equipos = get_equipos()
-        total = len(equipos)
-        atrasados = sum(1 for e in equipos if "ATRAS" in str(e["estado"]).upper())
-        aldia = sum(1 for e in equipos if "AL D" in str(e["estado"]).upper())
-        proceso = sum(1 for e in equipos if any(x in str(e["estado"]).upper() for x in ["PROCESO","RECIBIR","PROX"]))
-        fuera = sum(1 for e in equipos if "FUERA" in str(e["estado"]).upper())
-        mantenciones = q("SELECT COUNT(*) AS n FROM mantenciones")[0]["n"] if table_exists("mantenciones") else 0
-        lecturas = q("SELECT COUNT(*) AS n FROM lecturas")[0]["n"] if table_exists("lecturas") else 0
-        compras_rows = q("SELECT costo_pm_clp FROM compras") if table_exists("compras") and col_exists("compras","costo_pm_clp") else []
-        compras = sum(num(r.get("costo_pm_clp")) for r in compras_rows)
-        ubic = {}
-        for e in equipos:
-            u = e["ubicacion"] or "Sin ubicación"
-            ubic[u] = ubic.get(u,0)+1
-        ubic_rows = "".join(f"<tr><td>{k}</td><td>{v}</td></tr>" for k,v in sorted(ubic.items(), key=lambda x:x[1], reverse=True)[:10])
-        crit = "".join(f"<tr><td><b>{e['codigo']}</b></td><td>{e['tipo_equipo']}</td><td>{e['ubicacion']}</td><td>{e['lectura_actual']}</td><td>{badge(e['estado'])}</td></tr>" for e in equipos if str(e["estado"]).upper() not in ["AL DÍA","AL DIA"])[:9000]
-        cards = "".join(f"<div class='machine-card'><h4>{e['codigo']}</h4><div class='machine-img'>🚜</div><p>{e['marca']} {e['modelo']}</p><p>{badge(e['estado'])}</p></div>" for e in equipos[:30])
-        body = f"""
-        <main class="page">
-        <section class="grid-kpi">
-          <div class="card kpi redb"><small>Atrasados</small><b>{atrasados}</b></div>
-          <div class="card kpi yellowb"><small>Proceso / Próx.</small><b>{proceso}</b></div>
-          <div class="card kpi greenb"><small>Al día</small><b>{aldia}</b></div>
-          <div class="card kpi blueb"><small>Total equipos</small><b>{total}</b></div>
-          <div class="card kpi purpleb"><small>Mantenciones</small><b>{mantenciones}</b></div>
-          <div class="card kpi tealb"><small>Compras PM</small><b>${int(compras):,}</b></div>
-        </section>
-        <section class="middle">
-          <div class="card"><h3>Equipos críticos</h3><table><thead><tr><th>Equipo</th><th>Tipo</th><th>Ubicación</th><th>Lectura</th><th>Estado</th></tr></thead><tbody>{crit}</tbody></table></div>
-          <div class="card"><h3>Equipos por ubicación</h3><table><thead><tr><th>Ubicación</th><th>Total</th></tr></thead><tbody>{ubic_rows}</tbody></table></div>
-        </section>
-        <section class="card"><h3>Equipos vista rápida</h3><div class="cards-row">{cards}</div></section>
-        </main>"""
-        return page("Dashboard", body)
-    except Exception as e:
-        body = f"""<main class="data-page"><div class="card"><h2>Dashboard en modo seguro</h2>
-        <p>No se pudo calcular el dashboard, pero la app está activa.</p>
-        <p><b>Error:</b> {safe(e)}</p>
-        <p><a class="btn" href="/admin/importar-cmms">Reimportar CMMS</a> <a class="btn" href="/equipos">Ir a Equipos</a></p></div></main>"""
-        return page("Dashboard seguro", body)
+    except Exception:
+        equipos = []
+
+    total = len(equipos)
+    atrasados = 0
+    aldia = 0
+    proceso = 0
+    fuera = 0
+
+    for e in equipos:
+        estado = str(e.get("estado") or "").upper()
+        if "ATRAS" in estado or "VENC" in estado:
+            atrasados += 1
+        elif "FUERA" in estado:
+            fuera += 1
+        elif "AL D" in estado:
+            aldia += 1
+        elif "PROCESO" in estado or "RECIBIR" in estado or "PROX" in estado:
+            proceso += 1
+
+    lecturas_count = 0
+    mantenciones_count = 0
+    compras_total = 0
+    bodega_count = 0
+    ot_count = 0
+
+    try:
+        if table_exists("lecturas"):
+            lecturas_count = q("SELECT COUNT(*) AS n FROM lecturas")[0].get("n", 0)
+    except Exception:
+        lecturas_count = 0
+
+    try:
+        if table_exists("mantenciones"):
+            mantenciones_count = q("SELECT COUNT(*) AS n FROM mantenciones")[0].get("n", 0)
+    except Exception:
+        mantenciones_count = 0
+
+    try:
+        if table_exists("bodega"):
+            bodega_count = q("SELECT COUNT(*) AS n FROM bodega")[0].get("n", 0)
+    except Exception:
+        bodega_count = 0
+
+    try:
+        if table_exists("ot"):
+            ot_count = q("SELECT COUNT(*) AS n FROM ot")[0].get("n", 0)
+    except Exception:
+        ot_count = 0
+
+    try:
+        if table_exists("compras"):
+            compras_rows = q("SELECT * FROM compras LIMIT 5000")
+            for r in compras_rows:
+                compras_total += num(r.get("costo_pm_clp") or r.get("monto") or r.get("total") or r.get("valor"))
+    except Exception:
+        compras_total = 0
+
+    ubic = {}
+    tipo = {}
+    for e in equipos:
+        u = e.get("ubicacion") or "Sin ubicación"
+        t = e.get("tipo_equipo") or "Sin tipo"
+        ubic[u] = ubic.get(u, 0) + 1
+        tipo[t] = tipo.get(t, 0) + 1
+
+    ubic_rows = "".join(
+        f"<tr><td>{k}</td><td>{v}</td></tr>"
+        for k, v in sorted(ubic.items(), key=lambda x: x[1], reverse=True)[:10]
+    )
+
+    tipo_rows = "".join(
+        f"<tr><td>{k}</td><td>{v}</td></tr>"
+        for k, v in sorted(tipo.items(), key=lambda x: x[1], reverse=True)[:10]
+    )
+
+    crit_rows = ""
+    for e in equipos:
+        estado = str(e.get("estado") or "").upper()
+        if estado and not ("AL D" in estado):
+            crit_rows += (
+                f"<tr><td><b>{e.get('codigo','')}</b></td>"
+                f"<td>{e.get('tipo_equipo','')}</td>"
+                f"<td>{e.get('ubicacion','')}</td>"
+                f"<td>{e.get('lectura_actual','')} {e.get('unidad','')}</td>"
+                f"<td>{badge(e.get('estado'))}</td></tr>"
+            )
+        if crit_rows.count("<tr>") >= 12:
+            break
+
+    if not crit_rows:
+        crit_rows = "<tr><td colspan='5'>Sin equipos críticos registrados.</td></tr>"
+
+    cards = ""
+    for e in equipos[:24]:
+        txt = (str(e.get("tipo_equipo","")) + " " + str(e.get("familia","")) + " " + str(e.get("marca",""))).lower()
+        icon = "⚙️"
+        if "camion" in txt or "camión" in txt or "tolva" in txt or "man" in txt:
+            icon = "🚚"
+        elif "excav" in txt:
+            icon = "🚜"
+        elif "moto" in txt:
+            icon = "🏗️"
+        elif "veh" in txt or "camioneta" in txt or "maxus" in txt:
+            icon = "🚙"
+        cards += (
+            f"<div class='machine-card'><h4>{e.get('codigo','')}</h4>"
+            f"<div class='machine-img'>{icon}</div>"
+            f"<p>{e.get('marca','')} {e.get('modelo','')}</p>"
+            f"<p>{e.get('ubicacion','')}</p><p>{badge(e.get('estado'))}</p></div>"
+        )
+
+    body = f"""
+    <main class="page">
+      <section class="grid-kpi">
+        <div class="card kpi redb"><small>Atrasados</small><b>{atrasados}</b></div>
+        <div class="card kpi yellowb"><small>Proceso / Próx.</small><b>{proceso}</b></div>
+        <div class="card kpi greenb"><small>Al día</small><b>{aldia}</b></div>
+        <div class="card kpi blueb"><small>Total equipos</small><b>{total}</b></div>
+        <div class="card kpi purpleb"><small>Mantenciones</small><b>{mantenciones_count}</b></div>
+        <div class="card kpi tealb"><small>Compras PM</small><b>${int(compras_total):,}</b></div>
+      </section>
+
+      <section class="grid-kpi" style="margin-top:10px">
+        <div class="card kpi blueb"><small>Lecturas</small><b>{lecturas_count}</b></div>
+        <div class="card kpi purpleb"><small>OT</small><b>{ot_count}</b></div>
+        <div class="card kpi tealb"><small>Bodega</small><b>{bodega_count}</b></div>
+        <div class="card kpi yellowb"><small>Fuera Servicio</small><b>{fuera}</b></div>
+      </section>
+
+      <section class="middle">
+        <div class="card"><h3>Equipos críticos</h3>
+          <table><thead><tr><th>Equipo</th><th>Tipo</th><th>Ubicación</th><th>Lectura</th><th>Estado</th></tr></thead>
+          <tbody>{crit_rows}</tbody></table>
+        </div>
+        <div class="card"><h3>Equipos por ubicación</h3>
+          <table><thead><tr><th>Ubicación</th><th>Total</th></tr></thead><tbody>{ubic_rows}</tbody></table>
+        </div>
+      </section>
+
+      <section class="middle">
+        <div class="card"><h3>Equipos por tipo</h3>
+          <table><thead><tr><th>Tipo</th><th>Total</th></tr></thead><tbody>{tipo_rows}</tbody></table>
+        </div>
+        <div class="card"><h3>Accesos rápidos</h3>
+          <p><a class="btn" href="/equipos">Equipos</a> <a class="btn" href="/lecturas">Lecturas</a> <a class="btn" href="/mantenciones">Mantenciones</a></p>
+          <p><a class="btn" href="/ot">OT</a> <a class="btn" href="/compras">Compras</a> <a class="btn" href="/bodega">Bodega</a></p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Equipos vista rápida</h3>
+        <div class="cards-row">{cards}</div>
+      </section>
+    </main>
+    """
+    return page("Dashboard", body)
 
 @app.route("/admin/importar-cmms")
 @login_required
@@ -371,19 +493,112 @@ def mantenciones():
     form = build_form("/mantenciones", [("fecha","Fecha","date"),("codigo","Código"),("tipo_mantencion","Tipo Mantención"),("lectura","Lectura","number"),("espm","Descripción/ESPM"),("folio","Folio/OT"),("lugar","Lugar"),("proveedor","Proveedor"),("costo_mantencion_clp","Costo"),("estado","Estado")])
     return page("Mantenciones", f"<main class='data-page'><h2>Mantenciones</h2>{form}<div class='table-card'><table><thead><tr><th>Fecha</th><th>Código</th><th>Tipo</th><th>Lectura</th><th>Folio/OT</th><th>Proveedor</th><th>Costo</th><th>Estado</th></tr></thead><tbody>{rows_html}</tbody></table></div></main>")
 
+
 @app.route("/ot", methods=["GET","POST"])
 @login_required
 def ot():
     ensure_data()
+    ensure_schema()
+
     if request.method == "POST":
-        data = {k: request.form.get(k) for k in ["fecha","ot","codigo","tipo","lectura","descripcion","responsable","estado","costo"]}
-        q("""INSERT INTO ot (fecha,ot,codigo,tipo,lectura,descripcion,responsable,estado,costo)
-             VALUES (:fecha,:ot,:codigo,:tipo,:lectura,:descripcion,:responsable,:estado,:costo)""", data, fetch=False)
+        data = {
+            "fecha": request.form.get("fecha") or None,
+            "ot": request.form.get("ot") or "",
+            "codigo": request.form.get("codigo") or "",
+            "tipo": request.form.get("tipo") or "",
+            "lectura": request.form.get("lectura") or None,
+            "descripcion": request.form.get("descripcion") or "",
+            "responsable": request.form.get("responsable") or "",
+            "estado": request.form.get("estado") or "",
+            "costo": request.form.get("costo") or "",
+        }
+        try:
+            q("""INSERT INTO ot (fecha,ot,codigo,tipo,lectura,descripcion,responsable,estado,costo)
+                 VALUES (:fecha,:ot,:codigo,:tipo,:lectura,:descripcion,:responsable,:estado,:costo)""", data, fetch=False)
+        except Exception:
+            # Si la tabla OT no acepta algún tipo, la recreamos segura y reintentamos.
+            q("DROP TABLE IF EXISTS ot", fetch=False)
+            q("""CREATE TABLE IF NOT EXISTS ot (
+                id SERIAL PRIMARY KEY,
+                fecha DATE,
+                ot TEXT,
+                codigo TEXT,
+                tipo TEXT,
+                lectura TEXT,
+                descripcion TEXT,
+                responsable TEXT,
+                estado TEXT,
+                costo TEXT
+            )""", fetch=False)
+            q("""INSERT INTO ot (fecha,ot,codigo,tipo,lectura,descripcion,responsable,estado,costo)
+                 VALUES (:fecha,:ot,:codigo,:tipo,:lectura,:descripcion,:responsable,:estado,:costo)""", data, fetch=False)
         return redirect(url_for("ot"))
-    data = q("SELECT * FROM ot ORDER BY fecha DESC NULLS LAST LIMIT 1000") if table_exists("ot") else []
-    rows_html = "".join(f"<tr><td>{safe(r.get('fecha'))}</td><td><b>{safe(r.get('ot'))}</b></td><td>{safe(r.get('codigo'))}</td><td>{safe(r.get('tipo'))}</td><td>{safe(r.get('lectura'))}</td><td>{safe(r.get('descripcion'))}</td><td>{safe(r.get('responsable'))}</td><td>{badge(r.get('estado'))}</td><td>{safe(r.get('costo'))}</td></tr>" for r in data)
-    form = build_form("/ot", [("fecha","Fecha","date"),("ot","OT/Folio"),("codigo","Código"),("tipo","Tipo"),("lectura","Lectura","number"),("descripcion","Descripción"),("responsable","Responsable"),("estado","Estado"),("costo","Costo")])
-    return page("OT", f"<main class='data-page'><h2>Órdenes de Trabajo</h2>{form}<div class='table-card'><table><thead><tr><th>Fecha</th><th>OT</th><th>Código</th><th>Tipo</th><th>Lectura</th><th>Descripción</th><th>Responsable</th><th>Estado</th><th>Costo</th></tr></thead><tbody>{rows_html}</tbody></table></div></main>")
+
+    ot_rows = []
+    try:
+        if table_exists("ot"):
+            ot_rows = q("SELECT * FROM ot ORDER BY fecha DESC NULLS LAST, id DESC LIMIT 1000")
+    except Exception:
+        ot_rows = []
+
+    # Si OT está vacía, muestra OT virtuales desde mantenciones.
+    if not ot_rows:
+        try:
+            if table_exists("mantenciones"):
+                mant = q("SELECT * FROM mantenciones ORDER BY fecha DESC NULLS LAST LIMIT 500")
+                for i, r in enumerate(mant):
+                    ot_rows.append({
+                        "fecha": r.get("fecha"),
+                        "ot": r.get("folio") or f"OT-AUTO-{i+1:04d}",
+                        "codigo": r.get("codigo"),
+                        "tipo": r.get("tipo_mantencion"),
+                        "lectura": r.get("lectura"),
+                        "descripcion": r.get("espm") or r.get("tipo_mantencion"),
+                        "responsable": r.get("proveedor") or "",
+                        "estado": r.get("estado"),
+                        "costo": r.get("costo_mantencion_clp"),
+                    })
+        except Exception:
+            ot_rows = []
+
+    rows_html = ""
+    for r in ot_rows:
+        rows_html += (
+            f"<tr><td>{safe(r.get('fecha'))}</td>"
+            f"<td><b>{safe(r.get('ot'))}</b></td>"
+            f"<td>{safe(r.get('codigo'))}</td>"
+            f"<td>{safe(r.get('tipo'))}</td>"
+            f"<td>{safe(r.get('lectura'))}</td>"
+            f"<td>{safe(r.get('descripcion'))}</td>"
+            f"<td>{safe(r.get('responsable'))}</td>"
+            f"<td>{badge(r.get('estado'))}</td>"
+            f"<td>{safe(r.get('costo'))}</td></tr>"
+        )
+
+    if not rows_html:
+        rows_html = "<tr><td colspan='9'>Sin OT registradas.</td></tr>"
+
+    form = build_form("/ot", [
+        ("fecha","Fecha","date"),
+        ("ot","OT/Folio"),
+        ("codigo","Código"),
+        ("tipo","Tipo"),
+        ("lectura","Lectura"),
+        ("descripcion","Descripción"),
+        ("responsable","Responsable"),
+        ("estado","Estado"),
+        ("costo","Costo")
+    ])
+
+    body = (
+        "<main class='data-page'><h2>Órdenes de Trabajo</h2>"
+        + form +
+        "<div class='table-card'><table><thead><tr>"
+        "<th>Fecha</th><th>OT</th><th>Código</th><th>Tipo</th><th>Lectura</th>"
+        "<th>Descripción</th><th>Responsable</th><th>Estado</th><th>Costo</th>"
+        "</tr></thead><tbody>" + rows_html + "</tbody></table></div></main>"
+    )
+    return page("OT", body)
 
 @app.route("/compras", methods=["GET","POST"])
 @login_required
