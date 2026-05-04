@@ -219,36 +219,101 @@ def api_status():
     except Exception as e:
         return jsonify({"status":"error","message":str(e)}),500
 
+
 @app.route("/api/equipos")
 def api_equipos():
     ensure_data()
     try:
-        q = """
-        SELECT codigo,tipo_equipo,familia,marca,modelo,ano,ubicacion,responsable,
-               lectura_actual,unidad,proxima_pm,estado
-        FROM maestro_equipos
-        ORDER BY codigo
+        inspector = inspect(engine)
+        columns = [c["name"] for c in inspector.get_columns("maestro_equipos")]
+        if not columns:
+            return jsonify([])
+
+        def find(*names):
+            for n in names:
+                for c in columns:
+                    if c.lower() == n.lower():
+                        return c
+            for n in names:
+                for c in columns:
+                    if n.lower() in c.lower():
+                        return c
+            return None
+
+        def alias(alias_name, col):
+            if col:
+                return f'"{col}" AS {alias_name}'
+            return f"NULL AS {alias_name}"
+
+        c_codigo = find("codigo")
+        c_tipo = find("tipo_equipo", "tipo_de_equipo", "tipo")
+        c_familia = find("familia")
+        c_marca = find("marca")
+        c_modelo = find("modelo")
+        c_anio = find("ano", "anio", "a_o")
+        c_ubicacion = find("ubicacion", "obra_ubicacion", "faena", "destino")
+        c_responsable = find("responsable")
+        c_lectura = find("lectura_actual", "ultimo_horometro", "ultimo_kilometraje", "horometro", "kilometraje")
+        c_unidad = find("unidad", "control", "control_base")
+        c_proxima = find("proxima_pm", "proxima_lectura_objetivo", "fecha_estimada", "proxima_mantencion")
+        c_estado = find("estado", "estado_servicio", "estado_operativo", "control_base")
+
+        if not c_codigo:
+            return jsonify({"error": "No se encontró columna codigo en maestro_equipos", "columns": columns}), 500
+
+        select_sql = ", ".join([
+            alias("codigo", c_codigo),
+            alias("tipo_equipo", c_tipo),
+            alias("familia", c_familia),
+            alias("marca", c_marca),
+            alias("modelo", c_modelo),
+            alias("anio", c_anio),
+            alias("ubicacion", c_ubicacion),
+            alias("responsable", c_responsable),
+            alias("lectura_actual", c_lectura),
+            alias("unidad", c_unidad),
+            alias("proxima_pm", c_proxima),
+            alias("estado", c_estado),
+        ])
+
+        q = f"""
+            SELECT {select_sql}
+            FROM maestro_equipos
+            ORDER BY "{c_codigo}"
         """
-        data=[]
-        for r in rows(q):
+
+        with engine.connect() as conn:
+            result = conn.execute(text(q)).mappings().all()
+
+        data = []
+        for r in result:
+            marca = safe(r.get("marca"))
+            modelo = safe(r.get("modelo"))
             data.append({
-                "codigo":safe(r.get("codigo")),
-                "tipo_equipo":safe(r.get("tipo_equipo")),
-                "familia":safe(r.get("familia")),
-                "marca":safe(r.get("marca")),
-                "modelo":safe(r.get("modelo")),
-                "anio":safe(r.get("ano")),
-                "ubicacion":norm_ubic(r.get("ubicacion")),
-                "responsable":safe(r.get("responsable")),
-                "lectura_actual":safe(r.get("lectura_actual")),
-                "unidad":safe(r.get("unidad")),
-                "proxima_pm":safe(r.get("proxima_pm")),
-                "estado":safe(r.get("estado")),
-                "descripcion":f"{safe(r.get('marca'))} {safe(r.get('modelo'))}".strip()
+                "codigo": safe(r.get("codigo")),
+                "tipo_equipo": safe(r.get("tipo_equipo")),
+                "familia": safe(r.get("familia")),
+                "marca": marca,
+                "modelo": modelo,
+                "anio": safe(r.get("anio")),
+                "ubicacion": norm_ubic(r.get("ubicacion")),
+                "responsable": safe(r.get("responsable")),
+                "lectura_actual": safe(r.get("lectura_actual")),
+                "unidad": safe(r.get("unidad")),
+                "proxima_pm": safe(r.get("proxima_pm")),
+                "estado": safe(r.get("estado")),
+                "descripcion": f"{marca} {modelo}".strip()
             })
+
         return jsonify(data)
+
     except Exception as e:
-        return jsonify({"error":str(e)}),500
+        try:
+            inspector = inspect(engine)
+            columns = [c["name"] for c in inspector.get_columns("maestro_equipos")]
+        except Exception:
+            columns = []
+        return jsonify({"error": str(e), "columns": columns}), 500
 
 @app.route("/api/lecturas")
 def api_lecturas():
@@ -484,6 +549,25 @@ def api_dashboard():
         "equipos":equipos[:120],
         "proyeccion":proy[:120] if isinstance(proy,list) else []
     })
+
+
+@app.route("/api/debug/maestro-columnas")
+def api_debug_maestro_columnas():
+    try:
+        inspector = inspect(engine)
+        columns = [c["name"] for c in inspector.get_columns("maestro_equipos")]
+        total = rows("SELECT COUNT(*) AS total FROM maestro_equipos")[0]["total"]
+        return jsonify({"total": total, "columns": columns})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/debug/tablas")
+def api_debug_tablas():
+    try:
+        inspector = inspect(engine)
+        return jsonify({"tables": inspector.get_table_names()})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__=="__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT",8080)))

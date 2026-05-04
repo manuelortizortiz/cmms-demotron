@@ -1,19 +1,17 @@
-FIX IMPORTADOR MAESTRO_EQUIPOS
+FIX EQUIPOS + DASHBOARD
 
-Problema corregido:
-El importador tomaba la fila "Maestro de Equipos" como encabezado, porque detectaba la palabra "equipo".
-Ahora solo detecta encabezados cuando la fila contiene "Codigo" o "Fecha".
+Problema:
+Dashboard depende de /api/equipos. /api/equipos fallaba si faltaba una columna exacta como proxima_pm.
+
+Solución:
+Este app.py detecta columnas reales en maestro_equipos y arma el SELECT automáticamente.
 
 Pasos:
-1. Sube este app.py a la raíz de GitHub reemplazando el anterior.
-2. Espera el redeploy de Railway.
-3. Entra logueado como admin.
-4. Abre:
-   https://web-production-75233.up.railway.app/admin/importar-cmms
-
-Debe volver a importar:
-maestro_equipos: 245
-
-Luego abre:
-https://web-production-75233.up.railway.app/api/equipos
-https://web-production-75233.up.railway.app/equipos
+1. Reemplaza app.py en la raíz de GitHub.
+2. Espera redeploy Railway.
+3. Entra a /admin/importar-cmms.
+4. Revisa:
+   /api/debug/maestro-columnas
+   /api/equipos
+   /equipos
+   /
