@@ -1,19 +1,18 @@
-CMMS DEMOTRON WEB COMPLETO FINAL
+CMMS DEMOTRON FINAL - MAESTRO + DASHBOARD
 
-Subir TODO el contenido a la raíz del repo GitHub.
+Base principal:
+- Maestro_Equipos
+- Dashboard
 
-Usuarios:
-admin / admin123
-gerencia / gerencia123
-mantencion / mantencion123
+Módulos web:
+- Lecturas
+- Mantenciones
+- Historial
+- Proyección horas/km
+- Compras recientes
+- Costos altos
+- Equipos atrasados / al día
+- Uso mensual por equipo
 
-Rutas:
-/
-/equipos
-/lecturas
-/admin/importar-cmms
-/api/status
-/api/equipos
-/api/dashboard
-
-El sistema importa automáticamente data/cmms.xlsx a PostgreSQL cuando detecta la base vacía o con pocos datos.
+Subir todo a la raíz de GitHub.
+Luego entrar a /admin/importar-cmms para reimportar el Excel.
