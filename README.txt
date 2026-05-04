@@ -1,12 +1,15 @@
-FIX SERVER-SIDE EQUIPOS + DASHBOARD
+CMMS DEMOTRON CRUD OPERATIVO
 
-Este archivo evita el problema del frontend/JS/template.
-- /equipos se renderiza directo desde PostgreSQL
-- / se renderiza directo desde PostgreSQL
-- /api/equipos usa SELECT * y mapeo flexible
+Ahora todas las páginas permiten agregar datos:
+- Equipos
+- Lecturas
+- Mantenciones
+- OT
+- Compras
+- Bodega
 
-Pasos:
-1. Reemplaza app.py en GitHub.
-2. Espera redeploy.
-3. Ejecuta /admin/importar-cmms.
-4. Abre /equipos y /
+Sube todo a GitHub reemplazando el repo.
+Luego entra:
+1) /login
+2) /admin/importar-cmms
+3) usa los formularios de cada módulo.
