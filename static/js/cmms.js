@@ -1,0 +1,21 @@
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (!window.EQUIPOS) return;
+  const byCode = {};
+  window.EQUIPOS.forEach(e => { byCode[String(e.codigo || "").toUpperCase()] = e; });
+  const codigoInput = document.querySelector("input[name='codigo']");
+  if (!codigoInput) return;
+  codigoInput.addEventListener("change", () => {
+    const e = byCode[String(codigoInput.value || "").toUpperCase()];
+    if (!e) return;
+    const map = {
+      tipo_equipo:"tipo_equipo", familia:"familia", marca:"marca", modelo:"modelo", ano:"ano",
+      ubicacion:"ubicacion", responsable:"responsable", lectura_actual:"lectura_actual",
+      unidad:"unidad", proxima_pm:"proxima_pm", estado:"estado"
+    };
+    Object.keys(map).forEach(name => {
+      const el = document.querySelector(`[name='${name}']`);
+      if (el && e[map[name]] !== undefined) el.value = e[map[name]] || "";
+    });
+  });
+});
