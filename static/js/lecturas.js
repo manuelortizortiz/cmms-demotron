@@ -1,5 +1,1 @@
-
-fetch("/api/lecturas").then(r=>r.json()).then(data=>{
- const tbody=document.getElementById("tablaLecturas");
- tbody.innerHTML=(Array.isArray(data)?data:[]).map(e=>`<tr><td>${e.fecha||""}</td><td><b>${e.codigo||""}</b></td><td>${e.tipo_lectura||""}</td><td>${e.valor||""}</td><td>${e.ubicacion||""}</td></tr>`).join("");
-});
+fetch('/api/lecturas').then(r=>r.json()).then(d=>{document.getElementById('tablaLecturas').innerHTML=(Array.isArray(d)?d:[]).map(e=>`<tr><td>${e.fecha||''}</td><td><b>${e.codigo||''}</b></td><td>${e.horometro||''}</td><td>${e.kilometraje||''}</td><td>${e.ubicacion||''}</td><td>${e.responsable||''}</td><td>${e.observacion||''}</td></tr>`).join('')})

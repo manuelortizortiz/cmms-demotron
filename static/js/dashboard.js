@@ -1,48 +1,6 @@
 
-const fmt = n => new Intl.NumberFormat("es-CL").format(Number(n||0));
-function iconFor(e){
-  const t = ((e.tipo_equipo||"") + " " + (e.descripcion||"") + " " + (e.modelo||"")).toLowerCase();
-  if(t.includes("excav")) return "🚜";
-  if(t.includes("moto")) return "🏗️";
-  if(t.includes("tolva") || t.includes("camión") || t.includes("camion")) return "🚚";
-  if(t.includes("cargador")) return "🚜";
-  if(t.includes("veh") || t.includes("camioneta")) return "🚙";
-  return "⚙️";
-}
-function badge(e){
-  const s = (e||"").toUpperCase();
-  if(s.includes("ATRAS")||s.includes("VENC")) return "badge bad";
-  if(s.includes("PROX")) return "badge warn";
-  return "badge";
-}
-function drawChart(id,type,items){
-  const ctx=document.getElementById(id);
-  if(!ctx)return;
-  new Chart(ctx,{type,data:{labels:items.map(x=>x.label),datasets:[{data:items.map(x=>x.total),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{boxWidth:10,font:{size:10}}}},scales:type==="bar"?{y:{beginAtZero:true,ticks:{font:{size:10}}},x:{ticks:{font:{size:10}}}}:{}}});
-}
-async function loadDash(){
-  const r=await fetch("/api/dashboard");
-  const d=await r.json();
-  document.getElementById("kpi-atrasados").textContent=fmt(d.atrasados);
-  document.getElementById("kpi-proximos").textContent=fmt(d.proximos);
-  document.getElementById("kpi-controlados").textContent=fmt(d.controlados);
-  document.getElementById("kpi-total").textContent=fmt(d.total_equipos)+" equipos";
-  document.getElementById("kpi-ot").textContent=fmt(d.ot_abiertas);
-  document.getElementById("kpi-compras").textContent=fmt(d.compras_proceso);
-  document.getElementById("kpi-costo").textContent="$"+fmt(d.costo_mensual);
-  drawChart("chartEstado","doughnut",d.por_estado||[]);
-  drawChart("chartUbicacion","bar",d.por_ubicacion||[]);
-  drawChart("chartTipo","bar",d.por_tipo||[]);
-  const crit=document.getElementById("tablaCriticos");
-  const equipos=d.equipos||[];
-  crit.innerHTML=equipos.slice(0,8).map(e=>`<tr><td><b>${e.codigo||""}</b></td><td>${e.descripcion||e.tipo_equipo||""}</td><td>${e.ubicacion||""}</td><td><span class="${badge(e.estado)}">${e.estado||"CONTROLADO"}</span></td><td><button class="btn redbtn">Crear OT</button></td></tr>`).join("");
-  document.getElementById("actividad").innerHTML=[
-    ["▣","Base CMMS conectada a PostgreSQL"],
-    ["▤",`Lecturas cargadas: ${fmt(d.total_lecturas)}`],
-    ["✓",`Equipos cargados: ${fmt(d.total_equipos)}`],
-    ["🛒","Compras PM disponibles"],
-    ["⚙️","Importador Excel automático activo"]
-  ].map(a=>`<div class="act"><div class="act-ico">${a[0]}</div><div>${a[1]}<br><small>Hoy</small></div></div>`).join("");
-  document.getElementById("quickCards").innerHTML=equipos.slice(0,18).map(e=>`<div class="machine-card"><span class="dot ${badge(e.estado).includes("bad")?"red":badge(e.estado).includes("warn")?"yellow":"green"}"></span><h4>${e.codigo||""}</h4><div class="machine">${iconFor(e)}</div><p>${e.marca||""} ${e.modelo||""}</p><p>${e.ubicacion||""}</p><p>${e.estado||"CONTROLADO"}</p></div>`).join("");
-}
-loadDash();
+const fmt=n=>new Intl.NumberFormat('es-CL').format(Number(n||0));const money=n=>'$'+fmt(Math.round(Number(n||0)));
+function badge(s){s=(s||'').toUpperCase();if(s.includes('ATRAS')||s.includes('VENC'))return'badge bad';if(s.includes('PROX')||s.includes('RECIBIR')||s.includes('PROCESO'))return'badge warn';return'badge'}
+function img(e){let t=((e.tipo_equipo||'')+' '+(e.familia||'')+' '+(e.marca||'')).toLowerCase();if(t.includes('camion')||t.includes('camión')||t.includes('tolva')||t.includes('man'))return'🚚';if(t.includes('excav'))return'🚜';if(t.includes('moto'))return'🏗️';if(t.includes('camioneta')||t.includes('veh'))return'🚙';return'⚙️'}
+function chart(id,type,items){let el=document.getElementById(id);if(!el)return;new Chart(el,{type,data:{labels:(items||[]).map(x=>x.label),datasets:[{data:(items||[]).map(x=>x.total),borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:type==='doughnut'?'right':'top',labels:{font:{size:10}}}},scales:type==='bar'?{y:{beginAtZero:true},x:{ticks:{font:{size:10}}}}:{}}})}
+fetch('/api/dashboard').then(r=>r.json()).then(d=>{document.getElementById('kpi-atrasados').textContent=fmt(d.atrasados);document.getElementById('kpi-proximos').textContent=fmt(d.proximos);document.getElementById('kpi-controlados').textContent=fmt(d.controlados);document.getElementById('kpi-total').textContent=fmt(d.total_equipos)+' equipos';document.getElementById('kpi-mantenciones').textContent=fmt(d.total_mantenciones);document.getElementById('kpi-compras').textContent=money(d.total_compras);document.getElementById('kpi-lecturas').textContent=fmt(d.total_lecturas);chart('chartEstado','doughnut',d.por_estado);chart('chartUso','bar',d.uso_mensual);chart('chartCostos','bar',d.costos_altos);chart('chartUbicacion','bar',d.por_ubicacion);chart('chartTipo','bar',d.por_tipo);chart('chartMarca','bar',d.por_marca);document.getElementById('tablaCriticos').innerHTML=(d.proyeccion||[]).slice(0,10).map(e=>`<tr><td><b>${e.codigo||''}</b></td><td>${e.lectura_actual||''}</td><td>${e.fecha_estimada||''}</td><td><span class="${badge(e.estado)}">${e.estado||''}</span></td></tr>`).join('');document.getElementById('tablaCompras').innerHTML=(d.compras_recientes||[]).slice(0,8).map(c=>`<tr><td>${c.fecha||''}</td><td>${c.codigo||''}</td><td>${c.oc||''}</td><td>${money(c.monto)}</td></tr>`).join('');document.getElementById('quickCards').innerHTML=(d.equipos||[]).slice(0,22).map(e=>`<div class='machine-card'><h4>${e.codigo||''}</h4><div class='machine-img'>${img(e)}</div><p>${e.marca||''} ${e.modelo||''}</p><p>${e.ubicacion||''}</p><p><span class='${badge(e.estado)}'>${e.estado||''}</span></p></div>`).join('')});

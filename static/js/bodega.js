@@ -1,0 +1,1 @@
+fetch('/api/bodega').then(r=>r.json()).then(d=>{document.getElementById('tablaBodega').innerHTML=(Array.isArray(d)?d:[]).map(e=>`<tr><td><b>${e.folio||''}</b></td><td>${e.fecha||''}</td><td>${e.equipo||''}</td><td>${e.envio||''}</td><td>${e.persona||''}</td><td>${e.destino||''}</td><td>${e.comentario||''}</td><td>${e.codigo||''}</td></tr>`).join('')})
