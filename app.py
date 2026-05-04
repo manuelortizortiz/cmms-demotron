@@ -1,10 +1,15 @@
 
 import os,re,math,unicodedata,json
+from io import BytesIO
 from datetime import datetime,date
 from functools import wraps
 import pandas as pd
-from flask import Flask,request,redirect,url_for,session,render_template_string,jsonify
+from flask import Flask,request,redirect,url_for,session,render_template_string,jsonify,send_file
 from sqlalchemy import create_engine,text,inspect
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.lib import colors
 
 app=Flask(__name__)
 app.secret_key=os.getenv("SECRET_KEY","demotron-secret")
@@ -14,6 +19,8 @@ elif DATABASE_URL.startswith("postgresql://"): DATABASE_URL=DATABASE_URL.replace
 engine=create_engine(DATABASE_URL,pool_pre_ping=True,future=True) if DATABASE_URL else None
 USERS={"admin":"admin123","gerencia":"gerencia123","mantencion":"mantencion123"}
 ESTADOS=["AL DÍA","PRÓXIMA","ATRASADA","EN PROCESO","POR RECIBIR","EN TALLER","FUERA DE SERVICIO"]
+TIPOS_PM=["PM1","PM2","PM3","PM4","PM5","CORRECTIVA","INSPECCIÓN","OTRA"]
+UBICACIONES=["Palmucho","Quirihue","Curico","Taller Central","Villa Seca","Cobquecura","Pelluhue","San Carlos","San Nicolas","Linares","Talca","Taller Externo"]
 
 def norm_col(v):
     v="" if v is None else str(v).strip().lower()
@@ -21,10 +28,13 @@ def norm_col(v):
     return re.sub(r"_+","_",re.sub(r"[^a-z0-9]+","_",v)).strip("_") or "columna"
 def norm_ubic(v):
     if v is None: return ""
-    raw=str(v).strip()
-    if raw.lower() in ["","nan","none","nat"]: return ""
-    mapa={"palmucho":"Palmucho","q_61":"Palmucho","q61":"Palmucho","q_459":"Q-459","q459":"Q-459","quirihue":"Quirihue","cobquecura":"Cobquecura","curico":"Curicó","san_carlos":"San Carlos","oficina_central":"Oficina Central","san_nicolas":"San Nicolas","taller":"Taller","villaseca":"Villaseca","pelluhue":"Pelluhue","ninhue":"Ninhue","retiro":"Retiro","colbun":"Colbun","taltal":"Taltal","talca":"Talca","santiago":"Santiago"}
-    return mapa.get(norm_col(raw),raw.title())
+    raw_original=str(v).strip()
+    if raw_original.lower() in ["","nan","none","nat"]: return ""
+    raw=raw_original.lower()
+    raw="".join(c for c in unicodedata.normalize("NFKD",raw) if not unicodedata.combining(c))
+    raw=re.sub(r"[^a-z0-9]+"," ",raw).strip()
+    mapa={"palmucho":"Palmucho","q 61":"Palmucho","q61":"Palmucho","quirihue":"Quirihue","curico":"Curico","curico":"Curico","taller":"Taller Central","taller central":"Taller Central","villa seca":"Villa Seca","villaseca":"Villa Seca","cobquecura":"Cobquecura","pelluhue":"Pelluhue","san carlos":"San Carlos","san nicolas":"San Nicolas","linares":"Linares","talca":"Talca","taller externo":"Taller Externo"}
+    return mapa.get(raw, raw_original.title())
 def safe(v):
     if v is None: return ""
     if isinstance(v,(datetime,date)): return v.strftime("%Y-%m-%d")
@@ -190,6 +200,43 @@ def machine_image(e):
     if "retro" in txt: return "/static/img/equipos/retroexcavadora.png"
     if "furgon" in txt or "furgón" in txt or "peugeot" in txt or "partner" in txt: return "/static/img/equipos/furgon_partner.png"
     return "/static/img/equipos/excavadora.png"
+
+def all_ubicaciones():
+    vals=list(UBICACIONES)
+    try:
+        if table_exists("ubicaciones_extra"):
+            for r in q("SELECT ubicacion FROM ubicaciones_extra ORDER BY ubicacion"):
+                u=norm_ubic(r.get("ubicacion"))
+                if u and u not in vals: vals.append(u)
+    except Exception: pass
+    return vals
+
+def ubicacion_select(name="ubicacion", current=""):
+    cur=norm_ubic(current)
+    opts="".join(f"<option value='{u}' {'selected' if u==cur else ''}>{u}</option>" for u in all_ubicaciones())
+    return f"<select name='{name}' id='{name}'>{opts}</select>"
+
+def tipo_pm_select(name="tipo_pm", current=""):
+    cur=(current or "").upper()
+    opts="".join(f"<option value='{t}' {'selected' if t==cur else ''}>{t}</option>" for t in TIPOS_PM)
+    return f"<select name='{name}' id='{name}'>{opts}</select>"
+
+def estado_options(current=""):
+    return "".join(f"<option value='{e}' {'selected' if e==current else ''}>{e}</option>" for e in ESTADOS)
+
+def get_next_ot_number():
+    try:
+        row=q("SELECT COUNT(*) AS n FROM ot")[0]
+        return f"OT-{int(row.get('n') or 0)+1:05d}"
+    except Exception:
+        return f"OT-WEB-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+def get_ot_by_id(ot_id):
+    try:
+        rows=q("SELECT * FROM ot WHERE id=:id LIMIT 1", {"id": ot_id})
+        return rows[0] if rows else None
+    except Exception: return None
+
 def equipo_datalist():
     return "<datalist id='equiposList'>"+"".join(f"<option value='{e['codigo']}'>{e['codigo']} - {e['tipo_equipo']} - {e['marca']} {e['modelo']}</option>" for e in get_equipos())+"</datalist>"
 def estado_select(name="estado",current=""):
@@ -260,7 +307,7 @@ def equipos():
         return redirect(url_for("equipos"))
     eq=get_equipos()
     rows="".join(f"<tr><td><a href='/equipo/{e['codigo']}'><b>{e['codigo']}</b></a></td><td>{e['tipo_equipo']}</td><td>{e['familia']}</td><td>{e['marca']}</td><td>{e['modelo']}</td><td>{e['ano']}</td><td>{e['ubicacion']}</td><td>{e['responsable']}</td><td>{e['lectura_actual']}</td><td>{e['unidad']}</td><td>{e['proxima_pm']}</td><td>{badge(e['estado'])}</td></tr>" for e in eq)
-    form=f"""<form class="form-card" method="post">{equipo_datalist()}{form_input("codigo","Código / Equipo",datalist=True)}{form_input("tipo_equipo","Tipo de Equipo")}{form_input("familia","Familia")}{form_input("marca","Marca")}{form_input("modelo","Modelo")}{form_input("ano","Año")}{form_input("ubicacion","Ubicación")}{form_input("responsable","Responsable")}{form_input("lectura_actual","Lectura Actual")}<label>Unidad</label><select name="unidad"><option>HORAS</option><option>KM</option></select>{form_input("proxima_pm","Próxima PM")}<label>Estado</label>{estado_select()}<button>Guardar / Actualizar Equipo</button></form>"""
+    form=f"""<form class="form-card" method="post">{equipo_datalist()}{form_input("codigo","Código / Equipo",datalist=True)}{form_input("tipo_equipo","Tipo de Equipo")}{form_input("familia","Familia")}{form_input("marca","Marca")}{form_input("modelo","Modelo")}{form_input("ano","Año")}<label>Ubicación</label>{ubicacion_select("ubicacion")}{form_input("responsable","Responsable")}{form_input("lectura_actual","Lectura Actual")}<label>Unidad</label><select name="unidad"><option>HORAS</option><option>KM</option></select>{form_input("proxima_pm","Próxima PM")}<label>Estado</label>{estado_select()}<button>Guardar / Actualizar Equipo</button></form>"""
     extra=f"<script>window.EQUIPOS={json.dumps(eq,ensure_ascii=False)};</script>"
     return page("Equipos",f"<main class='data-page'><div class='data-head'><h2>Equipos ({len(eq)})</h2><a class='btn' href='/admin/importar-cmms'>Importar CMMS</a></div><p class='hint'>Al escribir un código precargado, se completan los datos automáticamente.</p>{form}<div class='table-card'><table><thead><tr><th>Código</th><th>Tipo</th><th>Familia</th><th>Marca</th><th>Modelo</th><th>Año</th><th>Ubicación</th><th>Responsable</th><th>Lectura</th><th>Unidad</th><th>Próx PM</th><th>Estado</th></tr></thead><tbody>{rows}</tbody></table></div></main>",extra)
 
@@ -269,14 +316,26 @@ def equipos():
 def ficha_redirect():
     c=request.args.get("codigo","").strip()
     return redirect(url_for("equipo_ficha",codigo=c)) if c else redirect(url_for("dashboard"))
-@app.route("/equipo/<codigo>")
+@app.route("/equipo/<codigo>",methods=["GET","POST"])
 @login_required
 def equipo_ficha(codigo):
     e=get_equipo(codigo)
     if not e: return page("Equipo no encontrado",f"<main class='data-page'><div class='card'><h2>Equipo no encontrado</h2><p>{codigo}</p></div></main>")
+    if request.method=="POST":
+        nueva=norm_ubic(request.form.get("ubicacion") or request.form.get("nueva_ubicacion"))
+        if nueva:
+            if nueva not in all_ubicaciones():
+                try: q("INSERT INTO ubicaciones_extra(ubicacion) VALUES(:u) ON CONFLICT DO NOTHING", {"u": nueva}, fetch=False)
+                except Exception: pass
+            q("UPDATE maestro_equipos SET ubicacion=:u WHERE UPPER(codigo)=UPPER(:c)", {"u": nueva, "c": codigo}, fetch=False)
+        return redirect(url_for("equipo_ficha", codigo=codigo))
     rows="".join(f"<tr><td>{h['fecha']}</td><td>{h['origen']}</td><td>{h['detalle']}</td><td>{h['lectura']}</td><td>{h['estado']}</td></tr>" for h in historial_data(codigo)[:100])
-    body=f"""<main class="data-page"><div class="equipment-hero"><div class="photo-ref"><img src="{machine_image(e)}"></div><div><h1>{e['codigo']} · {e['tipo_equipo']}</h1><p>{e['marca']} {e['modelo']} · Año {e['ano']}</p>{badge(e['estado'])}</div></div><section class="grid-2"><div class="card"><h3>Ficha técnica</h3><table><tbody><tr><td>Código</td><td>{e['codigo']}</td></tr><tr><td>Tipo</td><td>{e['tipo_equipo']}</td></tr><tr><td>Familia</td><td>{e['familia']}</td></tr><tr><td>Marca / Modelo</td><td>{e['marca']} {e['modelo']}</td></tr><tr><td>Ubicación</td><td>{e['ubicacion']}</td></tr><tr><td>Responsable</td><td>{e['responsable']}</td></tr><tr><td>Lectura actual</td><td>{e['lectura_actual']} {e['unidad']}</td></tr><tr><td>Próxima PM</td><td>{e['proxima_pm']}</td></tr></tbody></table></div><div class="card"><h3>Acciones rápidas</h3><p><a class="btn" href="/lecturas?codigo={e['codigo']}">Agregar lectura</a></p><p><a class="btn" href="/mantenciones?codigo={e['codigo']}">Agregar mantención</a></p><p><a class="btn" href="/ot?codigo={e['codigo']}">Crear OT</a></p><p><a class="btn" href="/historial?codigo={e['codigo']}">Ver historial</a></p></div></section><section class="card"><h3>Historial técnico</h3><table><thead><tr><th>Fecha</th><th>Origen</th><th>Detalle</th><th>Lectura/Costo/Folio</th><th>Estado</th></tr></thead><tbody>{rows}</tbody></table></section></main>"""
+    body=f"""<main class="data-page"><div class="equipment-hero"><div class="photo-ref"><img src="{machine_image(e)}"></div><div><h1>{e['codigo']} · {e['tipo_equipo']}</h1><p>{e['marca']} {e['modelo']} · Año {e['ano']}</p>{badge(e['estado'])}</div></div>
+    <section class="grid-2"><div class="card"><h3>Ficha técnica</h3><table><tbody><tr><td>Código</td><td>{e['codigo']}</td></tr><tr><td>Tipo</td><td>{e['tipo_equipo']}</td></tr><tr><td>Familia</td><td>{e['familia']}</td></tr><tr><td>Marca / Modelo</td><td>{e['marca']} {e['modelo']}</td></tr><tr><td>Ubicación</td><td><b>{e['ubicacion']}</b></td></tr><tr><td>Responsable</td><td>{e['responsable']}</td></tr><tr><td>Lectura actual</td><td>{e['lectura_actual']} {e['unidad']}</td></tr><tr><td>Próxima PM</td><td>{e['proxima_pm']}</td></tr></tbody></table></div>
+    <div class="card"><h3>Acciones rápidas</h3><p><a class="btn" href="/lecturas?codigo={e['codigo']}">Agregar lectura</a></p><p><a class="btn" href="/ot/nueva?codigo={e['codigo']}">Crear OT</a></p><p><a class="btn" href="/calendario?codigo={e['codigo']}">Agregar a calendario</a></p><p><a class="btn" href="/historial?codigo={e['codigo']}">Ver historial</a></p><hr><h4>Actualizar ubicación</h4><form method="post" class="mini-form"><label>Ubicación precargada</label>{ubicacion_select('ubicacion', e['ubicacion'])}<label>Nueva ubicación (opcional)</label><input name="nueva_ubicacion" placeholder="Nueva ubicación"><button class="btn">Guardar ubicación</button></form></div></section>
+    <section class="card"><h3>Historial técnico</h3><table><thead><tr><th>Fecha</th><th>Origen</th><th>Detalle</th><th>Lectura/Costo/Folio</th><th>Estado</th></tr></thead><tbody>{rows}</tbody></table></section></main>"""
     return page(f"Ficha {codigo}",body)
+
 @app.route("/historial")
 @login_required
 def historial():
@@ -284,105 +343,50 @@ def historial():
     rows="".join(f"<tr><td>{h['fecha']}</td><td>{h['origen']}</td><td>{h['detalle']}</td><td>{h['lectura']}</td><td>{h['estado']}</td></tr>" for h in (historial_data(c) if c else []))
     return page("Historial",f"<main class='data-page'><h2>Historial de Equipo</h2><form class='search-card'><input name='codigo' list='equiposList' value='{c}' placeholder='Buscar equipo...'><button>Buscar</button>{equipo_datalist()}</form><div class='table-card'><table><thead><tr><th>Fecha</th><th>Origen</th><th>Detalle</th><th>Lectura/Costo/Folio</th><th>Estado</th></tr></thead><tbody>{rows}</tbody></table></div></main>")
 
-
-
-def plan_rows_safe():
-    data=[]
-    if table_exists("plan_mantenciones"):
-        try:
-            data=q("SELECT * FROM plan_mantenciones LIMIT 2000")
-        except Exception:
-            data=[]
-    out=[]
-    for r in data:
-        codigo=safe(r.get("codigo"))
-        if not codigo: continue
-        eq=get_equipo(codigo) or {}
-        dias=num(r.get("dias_estimados"))
-        estado=safe(r.get("estado_operativo") or eq.get("estado"))
-        if not estado:
-            estado="ATRASADA" if dias<0 else "PRÓXIMA" if dias<=15 else "AL DÍA"
-        out.append({
-            "codigo":codigo,
-            "tipo_equipo":safe(r.get("tipo_equipo") or eq.get("tipo_equipo")),
-            "familia":safe(r.get("familia") or eq.get("familia")),
-            "ubicacion":safe(eq.get("ubicacion")),
-            "control":safe(r.get("control") or eq.get("unidad")),
-            "lectura_actual":safe(r.get("lectura_actual") or eq.get("lectura_actual")),
-            "proxima":safe(r.get("proxima_lectura_objetivo") or eq.get("proxima_pm")),
-            "promedio":safe(r.get("promedio_diario")),
-            "dias":dias,
-            "fecha":safe(r.get("fecha_estimada")),
-            "estado":estado,
-            "costo":safe(r.get("costo_total_pm")),
-            "prioridad":safe(r.get("prioridad")),
-            "accion":safe(r.get("accion_sugerida")),
-        })
-    if not out:
-        for e in get_equipos():
-            estado=safe(e.get("estado")); su=str(estado).upper()
-            dias=-1 if "ATRAS" in su or "VENC" in su else 10 if any(x in su for x in ["PROX","RECIBIR","PROCESO"]) else 60
-            out.append({"codigo":e.get("codigo"),"tipo_equipo":e.get("tipo_equipo"),"familia":e.get("familia"),"ubicacion":e.get("ubicacion"),"control":e.get("unidad"),"lectura_actual":e.get("lectura_actual"),"proxima":e.get("proxima_pm"),"promedio":"","dias":dias,"fecha":"","estado":estado,"costo":"","prioridad":"","accion":"Revisar planificación desde Maestro_Equipos"})
-    return sorted(out,key=lambda x:(x.get("dias") if x.get("dias") is not None else 9999,str(x.get("codigo"))))
-
-def plan_class(estado,dias=0):
-    s=str(estado or "").upper()
-    if "ATRAS" in s or "VENC" in s or dias<0: return "bad"
-    if "PROX" in s or "RECIBIR" in s or "PROCESO" in s or dias<=15: return "warn"
-    if "TALLER" in s or "FUERA" in s: return "off"
-    return "ok"
 @app.route("/planificacion")
 @login_required
 def planificacion():
-    data=plan_rows_safe()
-    atrasadas=sum(1 for r in data if plan_class(r["estado"],r["dias"])=="bad")
-    proximas=sum(1 for r in data if plan_class(r["estado"],r["dias"])=="warn")
-    al_dia=sum(1 for r in data if plan_class(r["estado"],r["dias"])=="ok")
-    no_op=sum(1 for r in data if plan_class(r["estado"],r["dias"])=="off")
-    gantt=""
-    for r in data[:120]:
-        cls=plan_class(r["estado"],r["dias"]); dias=r["dias"] if r["dias"] is not None else 999
-        width=96 if dias<0 else 90 if dias<=7 else 78 if dias<=15 else 60 if dias<=30 else 42 if dias<=60 else 24
-        gantt+=f"""<a class='gantt-row gantt-{cls}' href='/equipo/{r['codigo']}'><div class='gantt-code'>{r['codigo']}</div><div class='gantt-meta'>{r['tipo_equipo']}<br><small>{r['ubicacion']}</small></div><div class='gantt-info'><strong>Lectura:</strong> {r['lectura_actual']} {r['control']}<br><strong>Próxima:</strong> {r['proxima']}<br><strong>Acción:</strong> {r['accion']}</div><div class='gantt-track'><span class='{cls}' style='width:{width}%'></span></div><div class='gantt-date'>{r['fecha'] or 'Sin fecha'}<br><small>{int(dias) if dias is not None else ''} días</small></div><div>{badge(r['estado'])}</div></a>"""
-    rows="".join(f"""<tr><td><a href='/equipo/{r['codigo']}'><b>{r['codigo']}</b></a></td><td>{r['tipo_equipo']}</td><td>{r['ubicacion']}</td><td>{r['control']}</td><td>{r['lectura_actual']}</td><td>{r['proxima']}</td><td>{r['promedio']}</td><td>{int(r['dias']) if r['dias'] is not None else ''}</td><td>{r['fecha']}</td><td>{badge(r['estado'])}</td><td>{r['prioridad']}</td><td>{r['accion']}</td></tr>""" for r in data)
-    body=f"""<main class='data-page'><div class='data-head'><h2>Planificación PM tipo Gantt</h2><div><a class='btn' href='/calendario'>Calendario</a> <a class='btn' href='/backlog'>Backlog</a> <a class='btn' href='/proyeccion'>Tabla</a></div></div><section class='grid-kpi'><div class='card kpi yellowb'><small>Próximas mantenciones</small><b>{proximas}</b></div><div class='card kpi redb'><small>Atrasadas</small><b>{atrasadas}</b></div><div class='card kpi greenb'><small>Al día</small><b>{al_dia}</b></div><div class='card kpi offb'><small>Taller / fuera servicio</small><b>{no_op}</b></div></section><section class='card'><h3>Gantt operativo</h3><p class='hint'>Cada carta abre la ficha del equipo.</p><div class='gantt'>{gantt}</div></section><section class='card'><h3>Tabla detallada</h3><div class='table-card'><table><thead><tr><th>Código</th><th>Tipo</th><th>Ubicación</th><th>Control</th><th>Lectura</th><th>Próxima</th><th>Promedio</th><th>Días</th><th>Fecha</th><th>Estado</th><th>Prioridad</th><th>Acción</th></tr></thead><tbody>{rows}</tbody></table></div></section></main>"""
-    return page("Planificación PM",body)
-
+    data=q("SELECT * FROM plan_mantenciones LIMIT 1000") if table_exists("plan_mantenciones") else []
+    lanes=""
+    for r in data:
+        dias=num(r.get("dias_estimados")); width=95 if dias<=0 else 90 if dias<=7 else 70 if dias<=30 else 45 if dias<=60 else 25
+        c=safe(r.get("codigo")); est=safe(r.get("estado_operativo") or r.get("estado") or r.get("prioridad"))
+        lanes+=f"""<a class="gantt-row" href="/equipo/{c}"><div class="gantt-code">{c}</div><div class="gantt-meta">{safe(r.get('tipo_equipo'))}<br><small>{safe(r.get('familia'))}</small></div><div class="gantt-info"><strong>Lectura:</strong> {safe(r.get('lectura_actual'))}<br><strong>Próxima:</strong> {safe(r.get('proxima_lectura_objetivo'))}<br><strong>Acción:</strong> {safe(r.get('accion_sugerida'))}</div><div class="gantt-track"><span style="width:{width}%"></span></div><div class="gantt-date">{safe(r.get('fecha_estimada'))}<br><small>{safe(r.get('dias_estimados'))} días</small></div><div>{badge(est)}</div></a>"""
+    return page("Planificación",f"<main class='data-page'><div class='data-head'><h2>Planificación PM tipo Gantt</h2><a class='btn' href='/proyeccion'>Ver tabla de proyección</a></div><p class='hint'>Carta clickeable por equipo.</p><section class='gantt'>{lanes or '<div class=\"card\">No hay datos de planificación.</div>'}</section></main>")
 @app.route("/proyeccion")
 @login_required
 def proyeccion():
-    data=plan_rows_safe()
-    rows="".join(f"""<tr><td><a href='/equipo/{r['codigo']}'><b>{r['codigo']}</b></a></td><td>{r['tipo_equipo']}</td><td>{r['familia']}</td><td>{r['ubicacion']}</td><td>{r['control']}</td><td>{r['lectura_actual']}</td><td>{r['proxima']}</td><td>{r['promedio']}</td><td>{int(r['dias']) if r['dias'] is not None else ''}</td><td>{r['fecha']}</td><td>{badge(r['estado'])}</td><td>{r['prioridad']}</td><td>{r['accion']}</td></tr>""" for r in data)
-    return page("Proyección",f"""<main class='data-page'><div class='data-head'><h2>Proyección de Mantenciones</h2><div><a class='btn' href='/planificacion'>Gantt</a> <a class='btn' href='/calendario'>Calendario</a> <a class='btn' href='/backlog'>Backlog</a></div></div><div class='table-card'><table><thead><tr><th>Código</th><th>Tipo</th><th>Familia</th><th>Ubicación</th><th>Control</th><th>Lectura</th><th>Próxima</th><th>Promedio</th><th>Días</th><th>Fecha</th><th>Estado</th><th>Prioridad</th><th>Acción</th></tr></thead><tbody>{rows}</tbody></table></div></main>""")
+    data=q("SELECT * FROM plan_mantenciones LIMIT 1000") if table_exists("plan_mantenciones") else []
+    rows="".join(f"<tr><td><a href='/equipo/{safe(r.get('codigo'))}'><b>{safe(r.get('codigo'))}</b></a></td><td>{safe(r.get('tipo_equipo'))}</td><td>{safe(r.get('familia'))}</td><td>{safe(r.get('control'))}</td><td>{safe(r.get('lectura_actual'))}</td><td>{safe(r.get('proxima_lectura_objetivo'))}</td><td>{safe(r.get('promedio_diario'))}</td><td>{safe(r.get('dias_estimados'))}</td><td>{safe(r.get('fecha_estimada'))}</td><td>{badge(r.get('estado_operativo'))}</td><td>{safe(r.get('prioridad'))}</td><td>{safe(r.get('accion_sugerida'))}</td></tr>" for r in data)
+    return page("Proyección",f"<main class='data-page'><div class='data-head'><h2>Proyección de Mantenciones</h2><a class='btn' href='/planificacion'>Ver Gantt</a></div><div class='table-card'><table><thead><tr><th>Código</th><th>Tipo</th><th>Familia</th><th>Control</th><th>Lectura</th><th>Próxima</th><th>Promedio</th><th>Días</th><th>Fecha</th><th>Estado</th><th>Prioridad</th><th>Acción</th></tr></thead><tbody>{rows}</tbody></table></div></main>")
 
-@app.route("/calendario")
+def crud_form(route, fields, button):
+    return f"<form class='form-card' method='post' action='/{route}'>"+"".join(fields)+f"<button>{button}</button></form>"
+@app.route("/calendario", methods=["GET","POST"])
 @login_required
 def calendario():
-    data=plan_rows_safe(); by={}; no=[]
-    for r in data:
-        f=str(r.get('fecha') or '').strip()
-        if f and len(f)>=10: by.setdefault(f[:10],[]).append(r)
-        else: no.append(r)
-    cards=""
-    for fecha,items in sorted(by.items())[:90]:
-        inner="".join(f"<a href='/equipo/{it['codigo']}' class='calendar-item {plan_class(it['estado'],it['dias'])}'><b>{it['codigo']}</b> · {it['tipo_equipo']}<br><small>{it['ubicacion']} · {badge(it['estado'])}</small></a>" for it in items[:8])
-        more=f"<small>+{len(items)-8} más</small>" if len(items)>8 else ""
-        cards+=f"<div class='calendar-day'><h4>{fecha}</h4>{inner}{more}</div>"
-    if not cards: cards="<div class='card'>No hay fechas estimadas. Revisa Plan_Mantenciones.</div>"
-    rows="".join(f"<tr><td><a href='/equipo/{r['codigo']}'><b>{r['codigo']}</b></a></td><td>{r['tipo_equipo']}</td><td>{r['ubicacion']}</td><td>{r['proxima']}</td><td>{badge(r['estado'])}</td></tr>" for r in no[:80])
-    return page("Calendario PM",f"""<main class='data-page'><div class='data-head'><h2>Calendario de Mantenciones</h2><div><a class='btn' href='/planificacion'>Gantt</a> <a class='btn' href='/backlog'>Backlog</a></div></div><section class='calendar-grid'>{cards}</section><section class='card'><h3>Sin fecha estimada</h3><div class='table-card'><table><thead><tr><th>Equipo</th><th>Tipo</th><th>Ubicación</th><th>Próxima</th><th>Estado</th></tr></thead><tbody>{rows}</tbody></table></div></section></main>""")
+    ensure_schema()
+    codigo=request.args.get('codigo','')
+    if request.method=='POST':
+        d={"semana":clean_text(request.form.get('semana')),"fecha":clean_date(request.form.get('fecha')),"codigo":clean_upper(request.form.get('codigo')),"tipo_pm":clean_text(request.form.get('tipo_pm')),"ubicacion":norm_ubic(request.form.get('ubicacion')),"responsable":clean_text(request.form.get('responsable')),"observacion":clean_text(request.form.get('observacion')),"estado":clean_text(request.form.get('estado')) or 'PROGRAMADO'}
+        if d['codigo']:
+            q("INSERT INTO calendario_pm(semana,fecha,codigo,tipo_pm,ubicacion,responsable,observacion,estado) VALUES(:semana,:fecha,:codigo,:tipo_pm,:ubicacion,:responsable,:observacion,:estado)", d, fetch=False)
+        return redirect(url_for('calendario'))
+    rows_data=q("SELECT * FROM calendario_pm ORDER BY fecha ASC NULLS LAST, id DESC LIMIT 1000") if table_exists('calendario_pm') else []
+    cards="".join(f"<div class='calendar-day'><h4>{safe(r.get('fecha')) or safe(r.get('semana')) or 'Sin fecha'}</h4><a class='calendar-item warn' href='/equipo/{safe(r.get('codigo'))}'><b>{safe(r.get('codigo'))}</b> · {safe(r.get('tipo_pm'))}<br><small>{safe(r.get('ubicacion'))} · {badge(r.get('estado'))}</small></a><p>{safe(r.get('observacion'))}</p></div>" for r in rows_data)
+    form=f"""<form class='form-card' method='post'><input name='codigo' list='equiposList' value='{codigo}' placeholder='Equipo'>{equipo_datalist()}<input type='date' name='fecha'><input name='semana' placeholder='Semana ej: 2026-W20'><label>Tipo PM</label>{tipo_pm_select('tipo_pm')}<label>Ubicación</label>{ubicacion_select('ubicacion')}<input name='responsable' placeholder='Responsable'><input name='observacion' placeholder='Trabajo / observación'><select name='estado'><option>PROGRAMADO</option><option>EN PROCESO</option><option>EJECUTADO</option></select><button>Agregar al calendario</button></form>"""
+    body=f"<main class='data-page'><div class='data-head'><h2>Calendario PM Manual</h2><a class='btn' href='/planificacion'>Planificación</a></div><p class='hint'>El calendario parte vacío. Agrega manualmente los equipos que tocan esta semana desde la barra superior.</p>{form}<section class='calendar-grid'>{cards or '<div class="card">Calendario vacío. Agrega un equipo arriba.</div>'}</section></main>"
+    return page('Calendario PM',body)
 
 @app.route("/backlog")
 @login_required
 def backlog():
-    data=plan_rows_safe(); items=[r for r in data if plan_class(r['estado'],r['dias']) in ['bad','warn']]
-    rows="".join(f"""<tr><td><a href='/equipo/{r['codigo']}'><b>{r['codigo']}</b></a></td><td>{r['tipo_equipo']}</td><td>{r['ubicacion']}</td><td>{int(r['dias']) if r['dias'] is not None else ''}</td><td>{r['fecha']}</td><td>{badge(r['estado'])}</td><td>{r['prioridad'] or ('Alta' if plan_class(r['estado'],r['dias'])=='bad' else 'Media')}</td><td>{r['accion'] or 'Programar mantención'}</td></tr>""" for r in items)
-    atras=sum(1 for r in items if plan_class(r['estado'],r['dias'])=='bad'); prox=sum(1 for r in items if plan_class(r['estado'],r['dias'])=='warn')
-    return page("Backlog PM",f"""<main class='data-page'><div class='data-head'><h2>Backlog de Mantenciones</h2><div><a class='btn' href='/planificacion'>Gantt</a> <a class='btn' href='/calendario'>Calendario</a></div></div><section class='grid-kpi'><div class='card kpi redb'><small>Atrasadas</small><b>{atras}</b></div><div class='card kpi yellowb'><small>Próximas / proceso</small><b>{prox}</b></div><div class='card kpi blueb'><small>Total backlog</small><b>{len(items)}</b></div></section><section class='card'><h3>Lista priorizada</h3><div class='table-card'><table><thead><tr><th>Equipo</th><th>Tipo</th><th>Ubicación</th><th>Días</th><th>Fecha</th><th>Estado</th><th>Prioridad</th><th>Acción sugerida</th></tr></thead><tbody>{rows}</tbody></table></div></section></main>""")
+    rows_data=[]
+    if table_exists('ot'):
+        rows_data=q("SELECT * FROM ot WHERE COALESCE(estado,'') NOT ILIKE '%EJECUT%' ORDER BY fecha DESC NULLS LAST LIMIT 1000")
+    rows="".join(f"<tr><td><a href='/ot/{safe(r.get('id'))}'><b>{safe(r.get('ot'))}</b></a></td><td><a href='/equipo/{safe(r.get('codigo'))}'>{safe(r.get('codigo'))}</a></td><td>{safe(r.get('tipo_pm') or r.get('tipo'))}</td><td>{safe(r.get('ubicacion'))}</td><td>{badge(r.get('estado'))}</td><td>{safe(r.get('prioridad'))}</td></tr>" for r in rows_data)
+    return page('Backlog',f"<main class='data-page'><h2>Backlog OT / PM</h2><div class='table-card'><table><thead><tr><th>OT</th><th>Equipo</th><th>Tipo</th><th>Ubicación</th><th>Estado</th><th>Prioridad</th></tr></thead><tbody>{rows}</tbody></table></div></main>")
 
-
-def crud_form(route, fields, button):
-    return f"<form class='form-card' method='post' action='/{route}'>"+"".join(fields)+f"<button>{button}</button></form>"
 @app.route("/lecturas",methods=["GET","POST"])
 @login_required
 def lecturas():
@@ -395,7 +399,7 @@ def lecturas():
     data=q("SELECT * FROM lecturas ORDER BY fecha DESC NULLS LAST LIMIT 1000") if table_exists("lecturas") else []
     rows="".join(f"<tr><td>{safe(r.get('fecha'))}</td><td><a href='/equipo/{safe(r.get('codigo'))}'><b>{safe(r.get('codigo'))}</b></a></td><td>{safe(r.get('horometro'))}</td><td>{safe(r.get('kilometraje'))}</td><td>{norm_ubic(r.get('obra_ubicacion'))}</td><td>{safe(r.get('responsable'))}</td><td>{safe(r.get('observacion'))}</td></tr>" for r in data)
     c=request.args.get("codigo","")
-    form=crud_form("lecturas",[f"<input name='codigo' list='equiposList' placeholder='Código' value='{c}'>{equipo_datalist()}","<input type='date' name='fecha'>","<input type='number' step='any' name='horometro' placeholder='Horómetro'>","<input type='number' step='any' name='kilometraje' placeholder='Kilometraje'>","<input name='obra_ubicacion' placeholder='Ubicación'>","<input name='responsable' placeholder='Responsable'>","<input name='observacion' placeholder='Observación'>"],"Guardar lectura")
+    form=crud_form("lecturas",[f"<input name='codigo' list='equiposList' placeholder='Código' value='{c}'>{equipo_datalist()}","<input type='date' name='fecha'>","<input type='number' step='any' name='horometro' placeholder='Horómetro'>","<input type='number' step='any' name='kilometraje' placeholder='Kilometraje'>","<select name='obra_ubicacion'><option>Palmucho</option><option>Quirihue</option><option>Curico</option><option>Taller Central</option><option>Villa Seca</option><option>Cobquecura</option><option>Pelluhue</option><option>San Carlos</option><option>San Nicolas</option><option>Linares</option><option>Talca</option><option>Taller Externo</option></select>","<input name='responsable' placeholder='Responsable'>","<input name='observacion' placeholder='Observación'>"],"Guardar lectura")
     return page("Lecturas",f"<main class='data-page'><h2>Lecturas</h2>{form}<div class='table-card'><table><thead><tr><th>Fecha</th><th>Código</th><th>Horómetro</th><th>Kilometraje</th><th>Ubicación</th><th>Responsable</th><th>Obs</th></tr></thead><tbody>{rows}</tbody></table></div></main>")
 @app.route("/mantenciones",methods=["GET","POST"])
 @login_required
@@ -411,18 +415,110 @@ def mantenciones():
     c=request.args.get("codigo","")
     form=f"<form class='form-card' method='post'><input name='codigo' list='equiposList' value='{c}' placeholder='Código'>{equipo_datalist()}<input type='date' name='fecha'><input name='tipo_mantencion' placeholder='Tipo mantención'><input type='number' step='any' name='lectura' placeholder='Lectura'><input name='espm' placeholder='Descripción/ESPM'><input name='folio' placeholder='Folio/OT'><input name='lugar' placeholder='Lugar'><input name='proveedor' placeholder='Proveedor'><input name='costo_mantencion_clp' placeholder='Costo'><select name='estado'>{''.join(f'<option>{x}</option>' for x in ESTADOS)}</select><button>Guardar mantención y generar OT</button></form>"
     return page("Mantenciones",f"<main class='data-page'><h2>Mantenciones</h2>{form}<div class='table-card'><table><thead><tr><th>Fecha</th><th>Código</th><th>Tipo</th><th>Lectura</th><th>Folio/OT</th><th>Proveedor</th><th>Costo</th><th>Estado</th></tr></thead><tbody>{rows}</tbody></table></div></main>")
-@app.route("/ot",methods=["GET","POST"])
+@app.route("/ot")
 @login_required
 def ot():
+    ensure_schema()
+    data=q("SELECT * FROM ot ORDER BY fecha DESC NULLS LAST, id DESC LIMIT 1000") if table_exists("ot") else []
+    rows="".join(f"<tr><td>{safe(r.get('fecha'))}</td><td><a href='/ot/{safe(r.get('id'))}'><b>{safe(r.get('ot'))}</b></a></td><td><a href='/equipo/{safe(r.get('codigo'))}'>{safe(r.get('codigo'))}</a></td><td>{safe(r.get('tipo_pm') or r.get('tipo'))}</td><td>{safe(r.get('ubicacion'))}</td><td>{safe(r.get('descripcion'))}</td><td>{badge(r.get('estado'))}</td><td><a class='btn' href='/ot/{safe(r.get('id'))}/pdf'>PDF</a></td></tr>" for r in data)
+    body=f"<main class='data-page'><div class='data-head'><h2>Órdenes de Trabajo</h2><a class='btn' href='/ot/nueva'>Nueva OT</a></div><div class='table-card'><table><thead><tr><th>Fecha</th><th>OT</th><th>Equipo</th><th>Tipo</th><th>Ubicación</th><th>Descripción</th><th>Estado</th><th>PDF</th></tr></thead><tbody>{rows}</tbody></table></div></main>"
+    return page("OT", body)
+
+@app.route("/ot/nueva", methods=["GET","POST"])
+@login_required
+def ot_nueva():
+    ensure_schema()
+    codigo=request.args.get("codigo","")
+    e=get_equipo(codigo) if codigo else None
     if request.method=="POST":
-        d={k:clean_text(request.form.get(k)) for k in ["ot","tipo","lectura","descripcion","responsable","estado","costo"]}; d["fecha"]=clean_date(request.form.get("fecha")); d["codigo"]=clean_upper(request.form.get("codigo")); d["ot"]=d["ot"] or f"OT-WEB-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        if d["codigo"]: q("INSERT INTO ot(fecha,ot,codigo,tipo,lectura,descripcion,responsable,estado,costo) VALUES(:fecha,:ot,:codigo,:tipo,:lectura,:descripcion,:responsable,:estado,:costo)",d,fetch=False)
+        codigo=clean_upper(request.form.get("codigo"))
+        eq=get_equipo(codigo) or {}
+        d={
+            "fecha":clean_date(request.form.get("fecha")) or datetime.now().strftime("%Y-%m-%d"),
+            "ot":clean_text(request.form.get("ot")) or get_next_ot_number(),
+            "codigo":codigo,
+            "tipo":clean_text(request.form.get("tipo_pm")),
+            "tipo_pm":clean_text(request.form.get("tipo_pm")),
+            "lectura":clean_text(request.form.get("lectura")) or safe(eq.get("lectura_actual")),
+            "descripcion":clean_text(request.form.get("descripcion")),
+            "responsable":clean_text(request.form.get("responsable")),
+            "estado":clean_text(request.form.get("estado")) or "EN PROCESO",
+            "costo":None,
+            "ubicacion":norm_ubic(request.form.get("ubicacion") or eq.get("ubicacion")),
+            "solicitante":clean_text(request.form.get("solicitante")),
+            "prioridad":clean_text(request.form.get("prioridad")) or "Normal",
+        }
+        if not d["codigo"]:
+            return page("Error OT","<main class='data-page'><div class='card'><h2>Error</h2><p>Debes ingresar código de equipo.</p><a class='btn' href='/ot/nueva'>Volver</a></div></main>")
+        q("""INSERT INTO ot(fecha,ot,codigo,tipo,lectura,descripcion,responsable,estado,costo,tipo_pm,ubicacion,solicitante,prioridad)
+             VALUES(:fecha,:ot,:codigo,:tipo,:lectura,:descripcion,:responsable,:estado,:costo,:tipo_pm,:ubicacion,:solicitante,:prioridad)""", d, fetch=False)
         return redirect(url_for("ot"))
-    data=q("SELECT * FROM ot ORDER BY fecha DESC NULLS LAST LIMIT 1000") if table_exists("ot") else []
-    rows="".join(f"<tr><td>{safe(r.get('fecha'))}</td><td><b>{safe(r.get('ot'))}</b></td><td><a href='/equipo/{safe(r.get('codigo'))}'>{safe(r.get('codigo'))}</a></td><td>{safe(r.get('tipo'))}</td><td>{safe(r.get('descripcion'))}</td><td>{safe(r.get('responsable'))}</td><td>{badge(r.get('estado'))}</td><td>{clp(r.get('costo'))}</td></tr>" for r in data)
-    c=request.args.get("codigo","")
-    form=f"<form class='form-card' method='post'><input type='date' name='fecha'><input name='ot' placeholder='OT/Folio (opcional)'><input name='codigo' list='equiposList' value='{c}' placeholder='Código'>{equipo_datalist()}<input name='tipo' placeholder='Tipo'><input name='lectura' placeholder='Lectura'><input name='descripcion' placeholder='Descripción'><input name='responsable' placeholder='Responsable'><select name='estado'>{''.join(f'<option>{x}</option>' for x in ESTADOS)}</select><input name='costo' placeholder='Costo'><button>Guardar OT</button></form>"
-    return page("OT",f"<main class='data-page'><h2>Órdenes de Trabajo</h2>{form}<div class='table-card'><table><thead><tr><th>Fecha</th><th>OT</th><th>Código</th><th>Tipo</th><th>Descripción</th><th>Responsable</th><th>Estado</th><th>Costo</th></tr></thead><tbody>{rows}</tbody></table></div></main>")
+    ot_num=get_next_ot_number(); today=datetime.now().strftime("%Y-%m-%d")
+    form=f"""<form class='form-card' method='post'>
+      <input type='date' name='fecha' value='{today}'><input name='ot' value='{ot_num}' placeholder='OT/Folio'>
+      <input name='codigo' list='equiposList' value='{codigo}' placeholder='Código'>{equipo_datalist()}
+      <label>Tipo PM</label>{tipo_pm_select('tipo_pm')}
+      <input name='lectura' value='{safe(e.get('lectura_actual')) if e else ''}' placeholder='Lectura'>
+      <label>Ubicación</label>{ubicacion_select('ubicacion', safe(e.get('ubicacion')) if e else '')}
+      <input name='solicitante' placeholder='Solicitante'><input name='responsable' placeholder='Responsable'>
+      <select name='prioridad'><option>Normal</option><option>Alta</option><option>Crítica</option></select>
+      <select name='estado'>{estado_options('EN PROCESO')}</select>
+      <input name='descripcion' placeholder='Descripción del trabajo / pauta PM'>
+      <button>Generar OT</button>
+    </form>"""
+    return page("Nueva OT", f"<main class='data-page'><h2>Nueva Orden de Trabajo</h2><p class='hint'>Tipo de mantención: PM1, PM2, PM3, PM4, PM5 o Correctiva. No incluye costo ni firma.</p>{form}</main>")
+
+@app.route("/ot/<int:ot_id>")
+@login_required
+def ot_detalle(ot_id):
+    r=get_ot_by_id(ot_id)
+    if not r: return page("OT no encontrada","<main class='data-page'><div class='card'><h2>OT no encontrada</h2></div></main>")
+    eq=get_equipo(r.get('codigo')) or {}
+    body=f"""<main class='data-page'><div class='data-head'><h2>OT {safe(r.get('ot'))}</h2><a class='btn' href='/ot/{ot_id}/pdf'>Descargar PDF</a></div><section class='grid-2'><div class='card'><h3>Datos OT</h3><table><tbody><tr><td>Fecha</td><td>{safe(r.get('fecha'))}</td></tr><tr><td>Equipo</td><td>{safe(r.get('codigo'))}</td></tr><tr><td>Tipo</td><td>{safe(r.get('tipo_pm') or r.get('tipo'))}</td></tr><tr><td>Ubicación</td><td>{safe(r.get('ubicacion') or eq.get('ubicacion'))}</td></tr><tr><td>Estado</td><td>{badge(r.get('estado'))}</td></tr><tr><td>Responsable</td><td>{safe(r.get('responsable'))}</td></tr></tbody></table></div><div class='card'><h3>Trabajo</h3><p>{safe(r.get('descripcion'))}</p></div></section></main>"""
+    return page("Detalle OT", body)
+
+@app.route("/ot/<int:ot_id>/pdf")
+@login_required
+def ot_pdf(ot_id):
+    r=get_ot_by_id(ot_id)
+    if not r: return "OT no encontrada",404
+    eq=get_equipo(r.get('codigo')) or {}
+    buf=BytesIO(); c=canvas.Canvas(buf,pagesize=A4); w,h=A4
+    blue=colors.HexColor('#073a7a')
+    c.setFillColor(blue); c.rect(0,h-32*mm,w,32*mm,fill=1,stroke=0)
+    c.setFillColor(colors.white); c.setFont('Helvetica-Bold',20); c.drawString(18*mm,h-19*mm,'DEMOTRON')
+    c.setFont('Helvetica-Bold',13); c.drawRightString(w-18*mm,h-19*mm,'ORDEN DE TRABAJO')
+    c.setFillColor(colors.black); c.setFont('Helvetica-Bold',12); c.drawString(18*mm,h-42*mm,f"OT: {safe(r.get('ot'))}")
+    c.setFont('Helvetica',10); c.drawRightString(w-18*mm,h-42*mm,f"Fecha: {safe(r.get('fecha'))}")
+    y=h-55*mm
+    def box(title, lines, y):
+        c.setStrokeColor(blue); c.setLineWidth(1); c.roundRect(18*mm,y-42*mm,w-36*mm,38*mm,4*mm,stroke=1,fill=0)
+        c.setFillColor(blue); c.setFont('Helvetica-Bold',10); c.drawString(22*mm,y-10*mm,title)
+        c.setFillColor(colors.black); c.setFont('Helvetica',9); yy=y-18*mm
+        for label,val in lines:
+            c.setFont('Helvetica-Bold',9); c.drawString(22*mm,yy,label+':')
+            c.setFont('Helvetica',9); c.drawString(55*mm,yy,str(safe(val)))
+            yy-=6*mm
+        return y-47*mm
+    y=box('DATOS DEL EQUIPO', [('Código',r.get('codigo')),('Tipo',eq.get('tipo_equipo')),('Marca / Modelo',str(eq.get('marca',''))+' '+str(eq.get('modelo',''))),('Ubicación',r.get('ubicacion') or eq.get('ubicacion')),('Lectura',r.get('lectura'))], y)
+    y=box('DATOS DE MANTENCIÓN', [('Tipo PM',r.get('tipo_pm') or r.get('tipo')),('Prioridad',r.get('prioridad')),('Estado',r.get('estado')),('Solicitante',r.get('solicitante')),('Responsable',r.get('responsable'))], y)
+    c.setStrokeColor(blue); c.roundRect(18*mm,y-55*mm,w-36*mm,50*mm,4*mm,stroke=1,fill=0)
+    c.setFillColor(blue); c.setFont('Helvetica-Bold',10); c.drawString(22*mm,y-12*mm,'DESCRIPCIÓN DEL TRABAJO')
+    c.setFillColor(colors.black); c.setFont('Helvetica',9)
+    desc=str(safe(r.get('descripcion')) or '')
+    yy=y-22*mm
+    for line in [desc[i:i+95] for i in range(0,len(desc),95)] or ['']:
+        c.drawString(22*mm,yy,line); yy-=5*mm
+    y-=63*mm
+    c.setStrokeColor(blue); c.roundRect(18*mm,y-58*mm,w-36*mm,54*mm,4*mm,stroke=1,fill=0)
+    c.setFillColor(blue); c.setFont('Helvetica-Bold',10); c.drawString(22*mm,y-12*mm,'CHECKLIST / PAUTA')
+    c.setFillColor(colors.black); c.setFont('Helvetica',9)
+    for i,item in enumerate(['Inspección visual general','Revisión niveles y fugas','Cambio/inspección filtros según PM','Prueba operacional','Registro lectura final']):
+        c.rect(24*mm,y-(22+i*7)*mm,4*mm,4*mm,stroke=1,fill=0); c.drawString(32*mm,y-(21+i*7)*mm,item)
+    c.setFont('Helvetica-Oblique',8); c.drawString(18*mm,12*mm,'Documento generado automáticamente por CMMS DEMOTRON ULTRA PRO V2')
+    c.showPage(); c.save(); buf.seek(0)
+    return send_file(buf, mimetype='application/pdf', as_attachment=True, download_name=f"{safe(r.get('ot'))}.pdf")
+
 @app.route("/compras",methods=["GET","POST"])
 @login_required
 def compras():
