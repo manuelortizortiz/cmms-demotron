@@ -1,7 +1,5 @@
 
-import os
-import re
-import unicodedata
+import os, re, unicodedata
 from datetime import date, datetime
 from functools import wraps
 
@@ -20,174 +18,139 @@ if DATABASE_URL:
         DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True) if DATABASE_URL else None
+USERS = {"admin":"admin123","gerencia":"gerencia123","mantencion":"mantencion123"}
 
-USERS = {
-    "admin": "admin123",
-    "gerencia": "gerencia123",
-    "mantencion": "mantencion123",
-}
+def norm_col(v):
+    v = "" if v is None else str(v)
+    v = v.strip().lower()
+    v = "".join(c for c in unicodedata.normalize("NFKD", v) if not unicodedata.combining(c))
+    v = re.sub(r"[^a-z0-9]+","_",v)
+    return re.sub(r"_+","_",v).strip("_") or "columna"
 
-def text_key(value):
-    if value is None:
-        return ""
-    value = str(value).strip().lower()
-    value = "".join(c for c in unicodedata.normalize("NFKD", value) if not unicodedata.combining(c))
-    value = re.sub(r"[^a-z0-9]+", "_", value).strip("_")
-    return value
+def key(v):
+    if v is None: return ""
+    v = str(v).strip().lower()
+    v = "".join(c for c in unicodedata.normalize("NFKD", v) if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]+","_",v).strip("_")
 
-def normalize_ubicacion(value):
-    if value is None:
-        return ""
-    raw = str(value).strip()
-    if raw == "" or raw.lower() in ["nan", "none", "nat"]:
-        return ""
-    key = text_key(raw)
-    mapa = {
-        "palmucho": "Palmucho",
-        "q_61": "Palmucho",
-        "q61": "Palmucho",
-        "q_459": "Q-459",
-        "q459": "Q-459",
-        "quirihue": "Quirihue",
-        "cobquecura": "Cobquecura",
-        "curico": "Curicó",
-        "san_carlos": "San Carlos",
-        "oficina_central": "Oficina Central",
-        "san_nicolas": "San Nicolas",
-        "taller": "Taller",
-        "villaseca": "Villaseca",
-        "pelluhue": "Pelluhue",
-        "ninhue": "Ninhue",
-        "retiro": "Retiro",
-        "colbun": "Colbun",
+def norm_ubic(v):
+    if v is None: return ""
+    raw = str(v).strip()
+    if raw == "" or raw.lower() in ["nan","none","nat"]: return ""
+    m = {
+        "palmucho":"Palmucho","q_61":"Palmucho","q61":"Palmucho",
+        "q_459":"Q-459","q459":"Q-459","quirihue":"Quirihue",
+        "cobquecura":"Cobquecura","curico":"Curicó","san_carlos":"San Carlos",
+        "oficina_central":"Oficina Central","san_nicolas":"San Nicolas",
+        "taller":"Taller","villaseca":"Villaseca","pelluhue":"Pelluhue",
+        "ninhue":"Ninhue","retiro":"Retiro","colbun":"Colbun",
+        "taltal":"Taltal","talca":"Talca","santiago":"Santiago"
     }
-    return mapa.get(key, raw.title())
+    return m.get(key(raw), raw.title())
 
-def normalize_col(value):
-    value = "" if value is None else str(value)
-    value = value.strip().lower()
-    value = "".join(c for c in unicodedata.normalize("NFKD", value) if not unicodedata.combining(c))
-    value = re.sub(r"[^a-z0-9]+", "_", value)
-    value = re.sub(r"_+", "_", value).strip("_")
-    return value or "columna"
+def safe(v):
+    if v is None: return ""
+    if isinstance(v,(datetime,date)): return v.strftime("%Y-%m-%d")
+    s = str(v)
+    if s.lower() in ["nan","none","nat"]: return ""
+    return v
+
+def num(v):
+    try:
+        if v is None or str(v).strip()=="": return 0
+        return float(str(v).replace("$","").replace(" ","").replace(".","").replace(",","."))
+    except Exception:
+        try: return float(v)
+        except Exception: return 0
+
+def detect_header(file_path, sheet):
+    raw = pd.read_excel(file_path, sheet_name=sheet, header=None)
+    for i in range(min(len(raw), 30)):
+        vals = [str(x).strip().lower() for x in raw.iloc[i].tolist() if pd.notna(x)]
+        if "codigo" in vals or "fecha" in vals or "folio" in vals:
+            return i
+    return 0
 
 def clean_sheet(file_path, sheet):
-    raw = pd.read_excel(file_path, sheet_name=sheet, header=None)
-
-    # IMPORTANTE:
-    # El encabezado real del Maestro_Equipos es la fila donde existe una celda EXACTA "Codigo".
-    # No usar la palabra "equipo", porque la fila 1 dice "Maestro de Equipos" y rompe columnas.
-    header_row = 0
-    for i in range(min(len(raw), 30)):
-        vals = [str(v).strip().lower() for v in raw.iloc[i].tolist() if pd.notna(v)]
-        if "codigo" in vals or "fecha" in vals:
-            header_row = i
-            break
-
-    df = pd.read_excel(file_path, sheet_name=sheet, header=header_row)
-    df = df.dropna(how="all")
-    df = df.dropna(axis=1, how="all")
-    df.columns = [normalize_col(c) for c in df.columns]
-
-    seen = {}
-    final_cols = []
+    hr = detect_header(file_path, sheet)
+    df = pd.read_excel(file_path, sheet_name=sheet, header=hr)
+    df = df.dropna(how="all").dropna(axis=1, how="all")
+    df.columns = [norm_col(c) for c in df.columns]
+    seen, cols = {}, []
     for c in df.columns:
         if c not in seen:
-            seen[c] = 0
-            final_cols.append(c)
+            seen[c]=0; cols.append(c)
         else:
-            seen[c] += 1
-            final_cols.append(f"{c}_{seen[c]}")
-    df.columns = final_cols
-
+            seen[c]+=1; cols.append(f"{c}_{seen[c]}")
+    df.columns = cols
     for c in df.columns:
         if "fecha" in c:
             df[c] = pd.to_datetime(df[c], errors="coerce").dt.date
-        if c in ["ubicacion", "faena", "obra"]:
-            df[c] = df[c].apply(normalize_ubicacion)
-
+        if c in ["ubicacion","obra_ubicacion","destino","lugar"]:
+            df[c] = df[c].apply(norm_ubic)
     return df
 
 def import_excel():
     if engine is None:
-        return {"ok": False, "error": "DATABASE_URL no configurada"}
-
-    file_path = os.path.join(os.path.dirname(__file__), "data", "cmms.xlsx")
-    if not os.path.exists(file_path):
-        return {"ok": False, "error": "No existe data/cmms.xlsx"}
+        return {"ok":False,"error":"DATABASE_URL no configurada"}
+    fp = os.path.join(os.path.dirname(__file__), "data", "cmms.xlsx")
+    if not os.path.exists(fp):
+        return {"ok":False,"error":"No existe data/cmms.xlsx"}
 
     sheets = {
-        "Maestro_Equipos": "maestro_equipos",
-        "Dashboard": "dashboard_excel",
-        "Equipos": "equipos",
-        "Lecturas": "lecturas",
-        "Mantenciones": "mantenciones",
-        "Compras PM": "compras",
-        "Bodega": "bodega",
-        "Plan_Mantenciones": "plan_mantenciones",
-        "Plan_90_Dias": "plan_90_dias",
-        "Planner_Semanal": "planner_semanal",
+        "Maestro_Equipos":"maestro_equipos",
+        "Equipos":"equipos",
+        "Lecturas":"lecturas",
+        "Mantenciones":"mantenciones",
+        "Compras PM":"compras",
+        "Bodega":"bodega",
+        "Plan_Mantenciones":"plan_mantenciones",
+        "Plan_90_Dias":"plan_90_dias",
+        "Planner_Semanal":"planner_semanal",
+        "Dashboard":"dashboard_excel"
     }
-
-    imported = {}
-    for sheet, table in sheets.items():
+    out={}
+    for sh,tb in sheets.items():
         try:
-            df = clean_sheet(file_path, sheet)
-            df.to_sql(table, engine, if_exists="replace", index=False)
-            imported[table] = len(df)
+            df = clean_sheet(fp, sh)
+            df.to_sql(tb, engine, if_exists="replace", index=False)
+            out[tb]=len(df)
         except Exception as e:
-            imported[table] = f"ERROR: {e}"
-
-    return {"ok": True, "imported": imported}
+            out[tb]=f"ERROR: {e}"
+    return {"ok":True,"imported":out}
 
 def ensure_data():
-    if engine is None:
-        return
+    if engine is None: return
     try:
-        tables = inspect(engine).get_table_names()
-        if "maestro_equipos" not in tables:
+        insp = inspect(engine)
+        if "maestro_equipos" not in insp.get_table_names():
             import_excel()
     except Exception:
         pass
 
+def rows(sql, params=None):
+    with engine.connect() as conn:
+        return [dict(r) for r in conn.execute(text(sql), params or {}).mappings().all()]
+
 def login_required(fn):
     @wraps(fn)
-    def wrapper(*args, **kwargs):
+    def w(*a,**k):
         if not session.get("user"):
             return redirect(url_for("login"))
-        return fn(*args, **kwargs)
-    return wrapper
+        return fn(*a,**k)
+    return w
 
-def safe(v):
-    if v is None:
-        return ""
-    if isinstance(v, (datetime, date)):
-        return v.strftime("%Y-%m-%d")
-    s = str(v)
-    if s.lower() in ["nan", "nat", "none"]:
-        return ""
-    return v
-
-def parse_num(v):
-    try:
-        if v is None or str(v).strip() == "":
-            return None
-        s = str(v).replace(".", "").replace(",", ".")
-        return float(s)
-    except Exception:
-        return None
-
-@app.route("/login", methods=["GET", "POST"])
+@app.route("/login", methods=["GET","POST"])
 def login():
-    error = None
-    if request.method == "POST":
-        user = request.form.get("usuario", "")
-        password = request.form.get("password", "")
-        if USERS.get(user) == password:
-            session["user"] = user
+    err=None
+    if request.method=="POST":
+        u=request.form.get("usuario","")
+        p=request.form.get("password","")
+        if USERS.get(u)==p:
+            session["user"]=u
             return redirect(url_for("index"))
-        error = "Usuario o contraseña incorrectos"
-    return render_template("login.html", error=error)
+        err="Usuario o contraseña incorrectos"
+    return render_template("login.html", error=err)
 
 @app.route("/logout")
 def logout():
@@ -218,11 +181,23 @@ def mantenciones_page():
     ensure_data()
     return render_template("mantenciones.html", user=session.get("user"))
 
-@app.route("/historial")
+@app.route("/ot")
 @login_required
-def historial_page():
+def ot_page():
     ensure_data()
-    return render_template("historial.html", user=session.get("user"))
+    return render_template("ot.html", user=session.get("user"))
+
+@app.route("/compras")
+@login_required
+def compras_page():
+    ensure_data()
+    return render_template("compras.html", user=session.get("user"))
+
+@app.route("/bodega")
+@login_required
+def bodega_page():
+    ensure_data()
+    return render_template("bodega.html", user=session.get("user"))
 
 @app.route("/proyeccion")
 @login_required
@@ -238,263 +213,277 @@ def importar():
 @app.route("/api/status")
 def api_status():
     try:
-        if engine is None:
-            return jsonify({"status": "error", "message": "DATABASE_URL no configurada"}), 500
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        return jsonify({"status": "ok", "database": "postgresql"})
+        if not engine: return jsonify({"status":"error","message":"DATABASE_URL no configurada"}),500
+        with engine.connect() as conn: conn.execute(text("SELECT 1"))
+        return jsonify({"status":"ok","database":"postgresql"})
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status":"error","message":str(e)}),500
 
 @app.route("/api/equipos")
 def api_equipos():
     ensure_data()
     try:
-        with engine.connect() as conn:
-            rows = conn.execute(text("""
-                SELECT
-                    codigo,
-                    tipo_equipo,
-                    familia,
-                    marca,
-                    modelo,
-                    ano,
-                    ubicacion,
-                    responsable,
-                    lectura_actual,
-                    unidad,
-                    proxima_pm,
-                    estado
-                FROM maestro_equipos
-                ORDER BY codigo
-            """)).mappings().all()
-
-        data = []
-        for r in rows:
+        q = """
+        SELECT codigo,tipo_equipo,familia,marca,modelo,ano,ubicacion,responsable,
+               lectura_actual,unidad,proxima_pm,estado
+        FROM maestro_equipos
+        ORDER BY codigo
+        """
+        data=[]
+        for r in rows(q):
             data.append({
-                "codigo": safe(r.get("codigo")),
-                "tipo_equipo": safe(r.get("tipo_equipo")),
-                "familia": safe(r.get("familia")),
-                "marca": safe(r.get("marca")),
-                "modelo": safe(r.get("modelo")),
-                "anio": safe(r.get("ano")),
-                "ubicacion": normalize_ubicacion(r.get("ubicacion")),
-                "responsable": safe(r.get("responsable")),
-                "lectura_actual": safe(r.get("lectura_actual")),
-                "unidad": safe(r.get("unidad")),
-                "proxima_pm": safe(r.get("proxima_pm")),
-                "estado": safe(r.get("estado")),
-                "descripcion": f"{safe(r.get('marca'))} {safe(r.get('modelo'))}".strip()
+                "codigo":safe(r.get("codigo")),
+                "tipo_equipo":safe(r.get("tipo_equipo")),
+                "familia":safe(r.get("familia")),
+                "marca":safe(r.get("marca")),
+                "modelo":safe(r.get("modelo")),
+                "anio":safe(r.get("ano")),
+                "ubicacion":norm_ubic(r.get("ubicacion")),
+                "responsable":safe(r.get("responsable")),
+                "lectura_actual":safe(r.get("lectura_actual")),
+                "unidad":safe(r.get("unidad")),
+                "proxima_pm":safe(r.get("proxima_pm")),
+                "estado":safe(r.get("estado")),
+                "descripcion":f"{safe(r.get('marca'))} {safe(r.get('modelo'))}".strip()
             })
-
         return jsonify(data)
-
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error":str(e)}),500
 
 @app.route("/api/lecturas")
 def api_lecturas():
     ensure_data()
     try:
-        with engine.connect() as conn:
-            rows = conn.execute(text("""
-                SELECT
-                    fecha,
-                    codigo,
-                    tipo_lectura,
-                    valor,
-                    ubicacion,
-                    responsable,
-                    observacion
-                FROM lecturas
-                ORDER BY fecha DESC NULLS LAST
-                LIMIT 3000
-            """)).mappings().all()
-
-        data = []
-        for r in rows:
+        q = """
+        SELECT fecha,codigo,horometro,kilometraje,obra_ubicacion,responsable,observacion
+        FROM lecturas
+        ORDER BY fecha DESC NULLS LAST
+        LIMIT 5000
+        """
+        data=[]
+        for r in rows(q):
+            hor=safe(r.get("horometro"))
+            km=safe(r.get("kilometraje"))
             data.append({
-                "fecha": safe(r.get("fecha")),
-                "codigo": safe(r.get("codigo")),
-                "tipo_lectura": safe(r.get("tipo_lectura")),
-                "valor": safe(r.get("valor")),
-                "ubicacion": normalize_ubicacion(r.get("ubicacion")),
-                "responsable": safe(r.get("responsable")),
-                "observacion": safe(r.get("observacion")),
+                "fecha":safe(r.get("fecha")),
+                "codigo":safe(r.get("codigo")),
+                "horometro":hor,
+                "kilometraje":km,
+                "tipo_lectura":"HORAS" if hor not in ["",None] else "KM",
+                "valor": hor if hor not in ["",None] else km,
+                "ubicacion":norm_ubic(r.get("obra_ubicacion")),
+                "responsable":safe(r.get("responsable")),
+                "observacion":safe(r.get("observacion"))
             })
         return jsonify(data)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error":str(e)}),500
 
 @app.route("/api/mantenciones")
 def api_mantenciones():
     ensure_data()
     try:
-        with engine.connect() as conn:
-            rows = conn.execute(text("""
-                SELECT *
-                FROM mantenciones
-                ORDER BY fecha DESC NULLS LAST
-                LIMIT 3000
-            """)).mappings().all()
-
-        data = []
-        for r in rows:
-            d = {k: safe(v) for k, v in dict(r).items()}
+        q = """
+        SELECT fecha,codigo,tipo_mantencion,lectura,espm,folio,lugar,proveedor,
+               costo_mantencion_clp,estado
+        FROM mantenciones
+        ORDER BY fecha DESC NULLS LAST
+        LIMIT 5000
+        """
+        data=[]
+        for r in rows(q):
             data.append({
-                "fecha": d.get("fecha", ""),
-                "codigo": d.get("codigo", ""),
-                "tipo": d.get("tipo", d.get("tipo_mantencion", "")),
-                "estado": d.get("estado", ""),
-                "lectura": d.get("lectura", ""),
-                "descripcion": d.get("descripcion", d.get("observacion", "")),
-                "costo": d.get("costo_mantencion_clp", d.get("costo", "")),
-                "oc": d.get("oc", ""),
-                "responsable": d.get("responsable", ""),
+                "fecha":safe(r.get("fecha")),
+                "codigo":safe(r.get("codigo")),
+                "tipo":safe(r.get("tipo_mantencion")),
+                "lectura":safe(r.get("lectura")),
+                "espm":safe(r.get("espm")),
+                "folio":safe(r.get("folio")),
+                "lugar":norm_ubic(r.get("lugar")),
+                "proveedor":safe(r.get("proveedor")),
+                "costo":safe(r.get("costo_mantencion_clp")),
+                "estado":safe(r.get("estado")),
+                "descripcion":safe(r.get("tipo_mantencion"))
             })
         return jsonify(data)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error":str(e)}),500
+
+@app.route("/api/ot")
+def api_ot():
+    # OT se arma desde mantenciones reales: folio = OT/folio
+    ensure_data()
+    try:
+        mant = api_mantenciones().get_json()
+        if not isinstance(mant,list): return jsonify([])
+        data=[]
+        for i,m in enumerate(mant):
+            data.append({
+                "ot": m.get("folio") or f"OT-AUTO-{i+1:04d}",
+                "fecha": m.get("fecha"),
+                "codigo": m.get("codigo"),
+                "tipo": m.get("tipo"),
+                "lectura": m.get("lectura"),
+                "estado": m.get("estado"),
+                "costo": m.get("costo"),
+                "proveedor": m.get("proveedor")
+            })
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"error":str(e)}),500
 
 @app.route("/api/compras")
 def api_compras():
     ensure_data()
     try:
-        with engine.connect() as conn:
-            rows = conn.execute(text("""
-                SELECT *
-                FROM compras
-                LIMIT 1000
-            """)).mappings().all()
-
-        data = []
-        for r in rows:
-            d = {k: safe(v) for k, v in dict(r).items()}
+        q = """
+        SELECT fecha,oc,codigo,descripcion,proveedor,costo_pm_clp,regla,estado_oc
+        FROM compras
+        ORDER BY fecha DESC NULLS LAST
+        LIMIT 5000
+        """
+        data=[]
+        for r in rows(q):
             data.append({
-                "fecha": d.get("fecha", ""),
-                "codigo": d.get("codigo", ""),
-                "oc": d.get("oc", d.get("orden_compra", "")),
-                "proveedor": d.get("proveedor", ""),
-                "descripcion": d.get("descripcion", ""),
-                "estado": d.get("estado", ""),
-                "monto": d.get("monto", d.get("total", d.get("valor", ""))),
+                "fecha":safe(r.get("fecha")),
+                "oc":safe(r.get("oc")),
+                "codigo":safe(r.get("codigo")),
+                "descripcion":safe(r.get("descripcion")),
+                "proveedor":safe(r.get("proveedor")),
+                "monto":safe(r.get("costo_pm_clp")),
+                "regla":safe(r.get("regla")),
+                "estado":safe(r.get("estado_oc"))
             })
         return jsonify(data)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error":str(e)}),500
+
+@app.route("/api/bodega")
+def api_bodega():
+    ensure_data()
+    try:
+        q = """
+        SELECT folio,fecha,equipo,envio,persona_que_retiro,destino,comentario,codigo
+        FROM bodega
+        ORDER BY fecha DESC NULLS LAST
+        LIMIT 5000
+        """
+        data=[]
+        for r in rows(q):
+            data.append({
+                "folio":safe(r.get("folio")),
+                "fecha":safe(r.get("fecha")),
+                "equipo":safe(r.get("equipo")),
+                "envio":safe(r.get("envio")),
+                "persona":safe(r.get("persona_que_retiro")),
+                "destino":norm_ubic(r.get("destino")),
+                "comentario":safe(r.get("comentario")),
+                "codigo":safe(r.get("codigo")),
+            })
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"error":str(e)}),500
 
 @app.route("/api/proyeccion")
 def api_proyeccion():
     ensure_data()
     try:
-        equipos = api_equipos().get_json()
-        out = []
-        for e in equipos:
-            lectura = parse_num(e.get("lectura_actual"))
-            # proxima_pm en tu maestro a veces viene como fecha; por eso no la fuerzo si no es número.
-            proxima = parse_num(e.get("proxima_pm"))
-            margen = ""
-            dias = ""
-            estado_calc = e.get("estado") or ""
-            if lectura is not None and proxima is not None:
-                margen = round(proxima - lectura, 1)
-                if margen < 0:
-                    estado_calc = "ATRASADA"
-                elif margen <= 100:
-                    estado_calc = "PRÓXIMA"
-                else:
-                    estado_calc = "AL DÍA"
-            out.append({
-                **e,
-                "margen": margen,
-                "dias_estimados": dias,
-                "estado_calculado": estado_calc,
+        q = """
+        SELECT codigo,tipo_equipo,familia,control,lectura_actual,proxima_lectura_objetivo,
+               promedio_diario,dias_estimados,fecha_estimada,estado_operativo,
+               costo_total_pm,prioridad,accion_sugerida
+        FROM plan_mantenciones
+        ORDER BY prioridad ASC NULLS LAST, dias_estimados ASC NULLS LAST
+        LIMIT 5000
+        """
+        data=[]
+        for r in rows(q):
+            data.append({
+                "codigo":safe(r.get("codigo")),
+                "tipo_equipo":safe(r.get("tipo_equipo")),
+                "familia":safe(r.get("familia")),
+                "control":safe(r.get("control")),
+                "lectura_actual":safe(r.get("lectura_actual")),
+                "proxima_pm":safe(r.get("proxima_lectura_objetivo")),
+                "promedio_diario":safe(r.get("promedio_diario")),
+                "dias_estimados":safe(r.get("dias_estimados")),
+                "fecha_estimada":safe(r.get("fecha_estimada")),
+                "estado":safe(r.get("estado_operativo")),
+                "costo_total_pm":safe(r.get("costo_total_pm")),
+                "prioridad":safe(r.get("prioridad")),
+                "accion":safe(r.get("accion_sugerida")),
             })
-        return jsonify(out)
+        return jsonify(data)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error":str(e)}),500
 
 @app.route("/api/dashboard")
 def api_dashboard():
     ensure_data()
     equipos = api_equipos().get_json()
     lecturas = api_lecturas().get_json()
-    mantenciones = api_mantenciones().get_json()
+    mant = api_mantenciones().get_json()
     compras = api_compras().get_json()
-    proyeccion = api_proyeccion().get_json()
+    bodega = api_bodega().get_json()
+    proy = api_proyeccion().get_json()
+    if not isinstance(equipos,list): return jsonify(equipos),500
 
-    if not isinstance(equipos, list):
-        return jsonify(equipos), 500
+    atrasados=sum(1 for e in equipos if "ATRAS" in str(e.get("estado","")).upper())
+    al_dia=sum(1 for e in equipos if "AL D" in str(e.get("estado","")).upper())
+    prox=sum(1 for e in equipos if any(x in str(e.get("estado","")).upper() for x in ["PROX","RECIBIR","PROCESO"]))
+    fuera=sum(1 for e in equipos if "FUERA" in str(e.get("estado","")).upper())
 
-    total = len(equipos)
-    atrasados = sum(1 for e in equipos if "ATRAS" in str(e.get("estado", "")).upper())
-    proximos = sum(1 for e in equipos if "PROX" in str(e.get("estado", "")).upper() or "POR RECIBIR" in str(e.get("estado", "")).upper())
-    fuera = sum(1 for e in equipos if "FUERA" in str(e.get("estado", "")).upper())
-    controlados = sum(1 for e in equipos if "AL D" in str(e.get("estado", "")).upper())
-
-    ubic = {}
-    tipo = {}
-    marca = {}
+    ubic,tipo,marca={}, {}, {}
     for e in equipos:
-        u = normalize_ubicacion(e.get("ubicacion")) or "Sin ubicación"
-        t = str(e.get("tipo_equipo") or "Sin tipo")
-        m = str(e.get("marca") or "Sin marca")
-        ubic[u] = ubic.get(u, 0) + 1
-        tipo[t] = tipo.get(t, 0) + 1
-        marca[m] = marca.get(m, 0) + 1
+        for dic,val in [(ubic,e.get("ubicacion") or "Sin ubicación"),(tipo,e.get("tipo_equipo") or "Sin tipo"),(marca,e.get("marca") or "Sin marca")]:
+            dic[val]=dic.get(val,0)+1
 
-    usage = {}
-    if isinstance(lecturas, list):
-        by_code = {}
+    use={}
+    by={}
+    if isinstance(lecturas,list):
         for r in lecturas:
-            code = str(r.get("codigo") or "").strip()
-            val = parse_num(r.get("valor"))
-            if code and val is not None:
-                by_code.setdefault(code, []).append(val)
-        for code, vals in by_code.items():
-            if len(vals) >= 2:
-                usage[code] = max(vals) - min(vals)
+            code=str(r.get("codigo") or "")
+            val=num(r.get("valor"))
+            if code and val: by.setdefault(code,[]).append(val)
+        for c,vals in by.items():
+            if len(vals)>=2: use[c]=max(vals)-min(vals)
 
-    cost_by_code = {}
-    total_compras = 0
-    if isinstance(compras, list):
+    costs={}
+    total_compras=0
+    if isinstance(compras,list):
         for c in compras:
-            amount = parse_num(c.get("monto")) or 0
-            total_compras += amount
-            code = str(c.get("codigo") or "SIN CODIGO")
-            cost_by_code[code] = cost_by_code.get(code, 0) + amount
+            m=num(c.get("monto")); total_compras+=m
+            code=str(c.get("codigo") or "Sin código")
+            costs[code]=costs.get(code,0)+m
+    if isinstance(mant,list):
+        for m in mant:
+            cost=num(m.get("costo"))
+            code=str(m.get("codigo") or "Sin código")
+            costs[code]=costs.get(code,0)+cost
 
-    if isinstance(mantenciones, list):
-        for m in mantenciones:
-            amount = parse_num(m.get("costo")) or 0
-            code = str(m.get("codigo") or "SIN CODIGO")
-            cost_by_code[code] = cost_by_code.get(code, 0) + amount
+    def top(d,n=10): return [{"label":k,"total":v} for k,v in sorted(d.items(),key=lambda x:x[1],reverse=True)[:n]]
 
     return jsonify({
-        "total_equipos": total,
-        "total_lecturas": len(lecturas) if isinstance(lecturas, list) else 0,
-        "total_mantenciones": len(mantenciones) if isinstance(mantenciones, list) else 0,
-        "total_compras": total_compras,
-        "atrasados": atrasados,
-        "proximos": proximos,
-        "controlados": controlados,
-        "fuera_servicio": fuera,
-        "por_estado": [
-            {"label": "Al día", "total": controlados},
-            {"label": "Próximos / por recibir", "total": proximos},
-            {"label": "Atrasados", "total": atrasados},
-            {"label": "Fuera de servicio", "total": fuera},
-        ],
-        "por_ubicacion": [{"label": k, "total": v} for k, v in sorted(ubic.items(), key=lambda x: x[1], reverse=True)[:10]],
-        "por_tipo": [{"label": k, "total": v} for k, v in sorted(tipo.items(), key=lambda x: x[1], reverse=True)[:10]],
-        "por_marca": [{"label": k, "total": v} for k, v in sorted(marca.items(), key=lambda x: x[1], reverse=True)[:10]],
-        "uso_mensual": [{"label": k, "total": round(v, 1)} for k, v in sorted(usage.items(), key=lambda x: x[1], reverse=True)[:10]],
-        "costos_altos": [{"label": k, "total": round(v, 0)} for k, v in sorted(cost_by_code.items(), key=lambda x: x[1], reverse=True)[:10]],
-        "compras_recientes": compras[:10] if isinstance(compras, list) else [],
-        "mantenciones": mantenciones[:10] if isinstance(mantenciones, list) else [],
-        "equipos": equipos[:120],
-        "proyeccion": proyeccion[:120] if isinstance(proyeccion, list) else [],
+        "total_equipos":len(equipos),
+        "total_lecturas":len(lecturas) if isinstance(lecturas,list) else 0,
+        "total_mantenciones":len(mant) if isinstance(mant,list) else 0,
+        "total_compras":total_compras,
+        "total_bodega":len(bodega) if isinstance(bodega,list) else 0,
+        "atrasados":atrasados,
+        "proximos":prox,
+        "controlados":al_dia,
+        "fuera_servicio":fuera,
+        "por_estado":[{"label":"Al día","total":al_dia},{"label":"Próx/Proceso/Recibir","total":prox},{"label":"Atrasados","total":atrasados},{"label":"Fuera de servicio","total":fuera}],
+        "por_ubicacion":top(ubic),
+        "por_tipo":top(tipo),
+        "por_marca":top(marca),
+        "uso_mensual":top(use),
+        "costos_altos":top(costs),
+        "compras_recientes":compras[:10] if isinstance(compras,list) else [],
+        "mantenciones":mant[:10] if isinstance(mant,list) else [],
+        "equipos":equipos[:120],
+        "proyeccion":proy[:120] if isinstance(proy,list) else []
     })
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
+if __name__=="__main__":
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT",8080)))
