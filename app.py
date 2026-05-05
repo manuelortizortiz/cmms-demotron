@@ -10,7 +10,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "demotron-secret")
 
-DEPLOY_VERSION = "DEMOTRON_APP_ESTABLE_SIN_404_NO500_V1"
+DEPLOY_VERSION = "DEMOTRON_PRO_LECTURAS_DASHBOARD_V1"
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 if DATABASE_URL.startswith("postgres://"):
@@ -450,22 +450,172 @@ def logout():
     return redirect(url_for("login"))
 
 
+
+def to_number(value):
+    if value is None:
+        return None
+    try:
+        if isinstance(value, (int, float)):
+            return float(value)
+        txt = str(value).strip()
+        if txt == "" or txt.lower() in ["nan", "none", "nat"]:
+            return None
+        txt = txt.replace("$", "").replace("CLP", "").replace("clp", "").replace(" ", "")
+        if "," in txt:
+            txt = txt.replace(".", "").replace(",", ".")
+        elif txt.count(".") > 1:
+            txt = txt.replace(".", "")
+        return float(txt)
+    except Exception:
+        return None
+
+
+def fmt_num(value):
+    n = to_number(value)
+    if n is None:
+        return ""
+    if abs(n - int(n)) < 0.00001:
+        return f"{int(n):,}".replace(",", ".")
+    return f"{n:,.1f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def fmt_clp_pro(value):
+    n = to_number(value) or 0
+    return "$ " + format(int(n), ",").replace(",", ".")
+
+
+def lectura_real_equipo(codigo):
+    codigo = safe(codigo).strip().upper()
+    result = {"horas": None, "km": None, "lectura": "", "unidad": "", "origen": ""}
+
+    if table_exists("lecturas"):
+        for r in get_rows("lecturas", 50000):
+            c = find_col(r, ["codigo", "equipo", "cod_equipo"]).strip().upper()
+            if c != codigo:
+                continue
+            h = to_number(find_col(r, ["horometro", "horometros", "horas"]))
+            k = to_number(find_col(r, ["kilometraje", "kilometro", "odometro", "km"]))
+            if h is not None:
+                result["horas"] = h if result["horas"] is None else max(result["horas"], h)
+            if k is not None:
+                result["km"] = k if result["km"] is None else max(result["km"], k)
+
+    if table_exists("mantenciones"):
+        for r in get_rows("mantenciones", 50000):
+            c = find_col(r, ["codigo", "equipo", "cod_equipo"]).strip().upper()
+            if c != codigo:
+                continue
+            lectura = to_number(find_col(r, ["lectura", "horometro", "kilometraje", "km"]))
+            if lectura is None:
+                continue
+            hint = (find_col(r, ["unidad", "control"]) + " " + find_col(r, ["tipo_mantencion", "tipo"]) + " " + find_col(r, ["espm", "descripcion", "detalle"])).upper()
+            if "KM" in hint or "KIL" in hint or lectura > 50000:
+                result["km"] = lectura if result["km"] is None else max(result["km"], lectura)
+            else:
+                result["horas"] = lectura if result["horas"] is None else max(result["horas"], lectura)
+
+    for r in get_rows("maestro_equipos", 50000):
+        if find_col(r, ["codigo", "equipo"]).strip().upper() != codigo:
+            continue
+        base = to_number(find_col(r, ["lectura_actual", "horometro", "kilometraje", "odometro"]))
+        unidad_base = find_col(r, ["unidad", "control"]).upper()
+        if base is not None:
+            if "KM" in unidad_base or "KIL" in unidad_base or base > 50000:
+                result["km"] = base if result["km"] is None else max(result["km"], base)
+            else:
+                result["horas"] = base if result["horas"] is None else max(result["horas"], base)
+        break
+
+    if result["km"] is not None:
+        result["lectura"] = fmt_num(result["km"])
+        result["unidad"] = "KM"
+        result["origen"] = "Máxima lectura KM"
+    elif result["horas"] is not None:
+        result["lectura"] = fmt_num(result["horas"])
+        result["unidad"] = "HORAS"
+        result["origen"] = "Máxima lectura HORAS"
+    return result
+
+
+def proxima_objetivo_equipo(row):
+    for key in ["proxima_pm", "proxima_lectura_objetivo", "proxima", "umbral_proximo_servicio"]:
+        n = to_number(find_col(row, [key]))
+        if n is not None:
+            return n
+    return None
+
+
+def estado_calculado(row):
+    est = estado(row)
+    s = est.upper()
+    if "ATRAS" in s or "VENC" in s or "PROX" in s or "AL D" in s or "TALLER" in s or "FUERA" in s:
+        return est
+    codigo = find_col(row, ["codigo", "equipo"])
+    lectura = lectura_real_equipo(codigo)
+    actual = lectura.get("km") if lectura.get("km") is not None else lectura.get("horas")
+    prox = proxima_objetivo_equipo(row)
+    if actual is None or prox is None:
+        return est or "Sin estado"
+    margen = prox - actual
+    if margen < 0:
+        return "ATRASADA"
+    if margen <= 250 or margen <= prox * 0.05:
+        return "PRÓXIMA"
+    return "AL DÍA"
+
+
+def is_atrasado_calc(row):
+    s = estado_calculado(row).upper()
+    return "ATRAS" in s or "VENC" in s
+
+
+def is_proximo_calc(row):
+    s = estado_calculado(row).upper()
+    return "PROX" in s or "PROCESO" in s or "RECIBIR" in s
+
+
+def is_aldia_calc(row):
+    return "AL D" in estado_calculado(row).upper()
+
+
+def money_sum_pro():
+    total = 0
+    for table in ["compras", "mantenciones"]:
+        if not table_exists(table):
+            continue
+        for r in get_rows(table, 50000):
+            for key in ["costo_pm_clp", "costo_mantencion_clp", "monto", "valor", "total", "costo"]:
+                n = to_number(find_col(r, [key]))
+                if n is not None:
+                    total += n
+                    break
+    return total
+
+
+@app.route("/api/lectura-real/<codigo>")
+def api_lectura_real(codigo):
+    return jsonify(lectura_real_equipo(codigo))
+
+
+
 @app.route("/")
 @login_required
 def dashboard():
-    equipos = get_rows("maestro_equipos", 10000)
+    equipos = get_rows("maestro_equipos", 50000)
     total = len(equipos)
-    atrasados_rows = [r for r in equipos if is_atrasado(r)]
+
+    atrasados_rows = [r for r in equipos if is_atrasado_calc(r)]
     atrasados = len(atrasados_rows)
-    proximos = sum(1 for r in equipos if is_proximo(r))
-    al_dia = sum(1 for r in equipos if is_aldia(r))
+    proximos = sum(1 for r in equipos if is_proximo_calc(r))
+    al_dia = sum(1 for r in equipos if is_aldia_calc(r))
+    en_taller = sum(1 for r in equipos if "TALLER" in estado_calculado(r).upper() or "FUERA" in estado_calculado(r).upper())
     control = round((al_dia / max(total, 1)) * 100)
 
     by_ubic = {}
     for r in atrasados_rows:
         u = find_col(r, ["ubicacion", "obra", "faena", "destino"]) or "Sin ubicación"
         by_ubic[u] = by_ubic.get(u, 0) + 1
-    ubic_items = sorted(by_ubic.items(), key=lambda x: x[1], reverse=True)[:6]
+    ubic_items = sorted(by_ubic.items(), key=lambda x: x[1], reverse=True)[:8]
 
     gestion_items = [
         ("OT", count_table("ot")),
@@ -476,9 +626,13 @@ def dashboard():
 
     rows = ""
     for r in atrasados_rows[:10]:
-        rows += f"<tr><td>{find_col(r, ['codigo', 'equipo'])}</td><td>{find_col(r, ['tipo_equipo', 'tipo', 'familia'])}</td><td>{find_col(r, ['ubicacion', 'obra', 'faena'])}</td><td>{find_col(r, ['lectura_actual', 'horometro', 'kilometraje'])}</td><td>{badge(estado(r))}</td></tr>"
+        codigo = find_col(r, ["codigo", "equipo"])
+        lectura = lectura_real_equipo(codigo)
+        prox = proxima_objetivo_equipo(r)
+        prox_txt = fmt_num(prox) if prox is not None else find_col(r, ["proxima_pm", "proxima"])
+        rows += f"<tr><td>{codigo}</td><td>{find_col(r, ['tipo_equipo', 'tipo', 'familia'])}</td><td>{find_col(r, ['ubicacion', 'obra', 'faena'])}</td><td>{lectura['lectura']} {lectura['unidad']}</td><td>{prox_txt}</td><td>{badge(estado_calculado(r))}</td></tr>"
     if not rows:
-        rows = "<tr><td colspan='5'>No hay equipos atrasados.</td></tr>"
+        rows = "<tr><td colspan='6'>No hay equipos atrasados.</td></tr>"
 
     body = f"""
     <main class="page">
@@ -486,19 +640,20 @@ def dashboard():
         {kpi("red", "!", "ATRASADOS", atrasados, "Equipos críticos")}
         {kpi("yellow", "◷", "PRÓXIMOS", proximos, "Proceso / próximos")}
         {kpi("green", "✓", "CONTROLADO REAL", f"{control}%", f"{al_dia} de {total}")}
-        {kpi("blue", "▣", "OT ABIERTAS", count_table("ot"), "Órdenes")}
-        {kpi("purple", "🛒", "COMPRAS", count_table("compras"), "Registros")}
-        {kpi("teal", "$", "BODEGA", count_table("bodega"), "Registros")}
+        {kpi("blue", "▣", "EN TALLER / FS", en_taller, "No operativos")}
+        {kpi("purple", "🛒", "COMPRAS", count_table("compras"), fmt_clp_pro(money_sum_pro()))}
+        {kpi("teal", "$", "OT", count_table("ot"), "Órdenes")}
       </section>
       <section class="dashboard-grid">
-        <div class="panel"><h3>Estado general de la flota</h3>{vertical_bars([('Al día', al_dia), ('Próx.', proximos), ('Atras.', atrasados)])}</div>
+        <div class="panel"><h3>Estado general de la flota</h3>{vertical_bars([('Al día', al_dia), ('Próx.', proximos), ('Atras.', atrasados), ('Taller', en_taller)])}</div>
         <div class="panel"><h3>Atrasados por ubicación</h3>{vertical_bars(ubic_items)}</div>
         <div class="panel"><h3>Gestión operacional</h3>{vertical_bars(gestion_items)}</div>
       </section>
-      <section class="panel"><h3>Equipos atrasados</h3><table><thead><tr><th>Equipo</th><th>Tipo</th><th>Ubicación</th><th>Lectura</th><th>Estado</th></tr></thead><tbody>{rows}</tbody></table></section>
+      <section class="panel"><h3>Top 10 equipos atrasados</h3><table><thead><tr><th>Equipo</th><th>Tipo</th><th>Ubicación</th><th>Lectura real</th><th>Próxima PM</th><th>Estado</th></tr></thead><tbody>{rows}</tbody></table></section>
     </main>
     """
-    return page("Dashboard", body)
+    return page("Dashboard PRO", body)
+
 
 
 def generic_table(title, table):
