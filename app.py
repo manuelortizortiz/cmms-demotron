@@ -10,7 +10,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "demotron-secret")
 
-DEPLOY_VERSION = "DEMOTRON_PRO_LECTURAS_DASHBOARD_V1"
+DEPLOY_VERSION = "DEMOTRON_PRO_OT_FICHA_GANTT_V2"
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 if DATABASE_URL.startswith("postgres://"):
@@ -656,14 +656,119 @@ def dashboard():
 
 
 
+def equipo_by_codigo(codigo):
+    codigo = safe(codigo).strip().upper()
+    for r in get_rows("maestro_equipos", 50000):
+        if find_col(r, ["codigo", "equipo", "cod_equipo"]).strip().upper() == codigo:
+            return r
+    return None
+
+
+def equipo_historial(codigo):
+    codigo = safe(codigo).strip().upper()
+    eventos = []
+    for tabla, origen in [("lecturas","Lectura"),("mantenciones","Mantención"),("ot","OT"),("compras","Compra"),("bodega","Bodega")]:
+        if not table_exists(tabla):
+            continue
+        for r in get_rows(tabla, 50000):
+            if find_col(r, ["codigo", "equipo", "cod_equipo"]).strip().upper() != codigo:
+                continue
+            eventos.append({
+                "fecha": find_col(r, ["fecha", "fecha_de_combustible", "creado"]),
+                "origen": origen,
+                "detalle": find_col(r, ["descripcion", "detalle", "espm", "comentario", "tipo_mantencion", "tipo", "proveedor", "destino"]),
+                "folio": find_col(r, ["ot", "folio", "orden", "oc", "lectura", "horometro", "kilometraje"]),
+                "estado": find_col(r, ["estado", "estado_oc"])
+            })
+    return sorted(eventos, key=lambda x: safe(x.get("fecha")), reverse=True)
+
+
+def equipo_icon(row):
+    txt = (find_col(row, ["tipo_equipo", "tipo", "familia"]) + " " + find_col(row, ["marca"]) + " " + find_col(row, ["modelo"])).lower()
+    if "camioneta" in txt or "maxus" in txt:
+        return "🛻"
+    if "camion" in txt or "tolva" in txt or "tracto" in txt:
+        return "🚚"
+    if "excav" in txt:
+        return "🚜"
+    if "cargador" in txt:
+        return "🚧"
+    if "moto" in txt or "niveladora" in txt:
+        return "🏗️"
+    return "⚙️"
+
+
+def next_ot_code():
+    return f"OT-{datetime.now().strftime('%Y%m%d')}-{count_table('ot')+1:04d}"
+
+
+def ensure_ot_columns():
+    ensure_schema()
+    for col, ddl in [("fecha","DATE"),("ot","TEXT"),("codigo","TEXT"),("tipo","TEXT"),("lectura","TEXT"),("descripcion","TEXT"),("responsable","TEXT"),("estado","TEXT"),("costo","TEXT")]:
+        add_col("ot", col, ddl)
+
+
+def plan_rows_pro():
+    table = "plan_mantenciones" if table_exists("plan_mantenciones") else "maestro_equipos"
+    data = []
+    for r in get_rows(table, 50000):
+        codigo = find_col(r, ["codigo", "equipo", "cod_equipo"])
+        if not codigo:
+            continue
+        eq = equipo_by_codigo(codigo) or r
+        lectura = lectura_real_equipo(codigo)
+        dias = to_number(find_col(r, ["dias_estimados", "dias", "dias_restantes"]))
+        if dias is None:
+            est = estado_calculado(eq).upper()
+            dias = -5 if ("ATRAS" in est or "VENC" in est) else 10 if "PROX" in est else 45
+        data.append({
+            "codigo": codigo,
+            "tipo": find_col(eq, ["tipo_equipo", "tipo", "familia"]),
+            "ubicacion": find_col(eq, ["ubicacion", "obra", "faena"]),
+            "lectura": f"{lectura.get('lectura','')} {lectura.get('unidad','')}",
+            "proxima": find_col(r, ["proxima_lectura_objetivo", "proxima_pm", "proxima"]),
+            "dias": int(dias),
+            "fecha": find_col(r, ["fecha_estimada", "fecha", "fecha_planificada"]),
+            "estado": find_col(r, ["estado_operativo", "estado"]) or estado_calculado(eq),
+            "accion": find_col(r, ["accion_sugerida", "accion", "descripcion"]) or "Programar PM"
+        })
+    return sorted(data, key=lambda x: (x["dias"], x["codigo"]))
+
+
+def gantt_class(dias, estado):
+    s = safe(estado).upper()
+    if dias < 0 or "ATRAS" in s or "VENC" in s:
+        return "bad"
+    if dias <= 15 or "PROX" in s or "PROCESO" in s:
+        return "warn"
+    if "TALLER" in s or "FUERA" in s:
+        return "off"
+    return "ok"
+
+
+
+
 def generic_table(title, table):
     rows = get_rows(table, 800)
     if not rows:
         return page(title, f"<main class='page'><section class='panel'><h2>{title}</h2><p>Sin datos en {table}.</p></section></main>")
     cols = list(rows[0].keys())
     head = "".join(f"<th>{c}</th>" for c in cols)
-    body = "".join("<tr>" + "".join(f"<td>{safe(r.get(c))}</td>" for c in cols) + "</tr>" for r in rows)
-    return page(title, f"<main class='page'><section class='panel'><h2>{title}</h2><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></section></main>")
+    if table == "ot":
+        head += "<th>PDF</th>"
+    body = ""
+    for r in rows:
+        body += "<tr>"
+        for c in cols:
+            v = safe(r.get(c))
+            if table == "maestro_equipos" and c.lower() in ["codigo", "equipo"]:
+                v = f"<a href='/equipo/{v}'><b>{v}</b></a>"
+            body += f"<td>{v}</td>"
+        if table == "ot":
+            body += f"<td><a class='pillbtn' href='/ot/{r.get('id')}/pdf'>PDF</a></td>"
+        body += "</tr>"
+    button = "<a class='btn' href='/ot/nueva'>Nueva OT</a>" if table == "ot" else ""
+    return page(title, f"<main class='page'><section class='panel'><div class='section-head'><h2>{title}</h2>{button}</div><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></section></main>")
 
 
 @app.route("/equipos")
@@ -728,6 +833,96 @@ def admin():
     </main>
     """
     return page("Admin", body)
+
+
+@app.route("/equipo/<codigo>")
+@login_required
+def ficha_equipo(codigo):
+    eq = equipo_by_codigo(codigo)
+    if not eq:
+        return page("Equipo no encontrado", f"<main class='page'><section class='panel'><h2>Equipo {safe(codigo)}</h2><p>No se encontró.</p></section></main>")
+    lectura = lectura_real_equipo(codigo)
+    hist_rows = ""
+    for h in equipo_historial(codigo)[:80]:
+        hist_rows += f"<tr><td>{safe(h['fecha'])}</td><td>{safe(h['origen'])}</td><td>{safe(h['detalle'])}</td><td>{safe(h['folio'])}</td><td>{badge(h['estado']) if h['estado'] else ''}</td></tr>"
+    if not hist_rows:
+        hist_rows = "<tr><td colspan='5'>Sin historial registrado.</td></tr>"
+    body = f"""
+    <main class="page">
+      <section class="ficha-hero"><div class="equipo-photo">{equipo_icon(eq)}</div><div><h1>{find_col(eq, ['codigo','equipo'])}</h1><p>{find_col(eq, ['tipo_equipo','tipo','familia'])} · {find_col(eq, ['marca'])} {find_col(eq, ['modelo'])}</p><p>{find_col(eq, ['ubicacion','obra','faena'])} · {badge(estado_calculado(eq))}</p></div><div class="ficha-actions"><a class="btn" href="/ot/nueva?codigo={safe(codigo)}">Crear OT</a><a class="btn" href="/lecturas">Agregar lectura</a></div></section>
+      <section class="dashboard-grid"><div class="panel"><h3>Lectura real</h3><div class="big-number">{lectura.get('lectura','')}</div><p>{lectura.get('unidad','')} · {lectura.get('origen','')}</p></div><div class="panel"><h3>Próxima PM</h3><div class="big-number">{find_col(eq, ['proxima_pm','proxima']) or '-'}</div><p>Objetivo mantenimiento</p></div><div class="panel"><h3>Estado</h3><div class="big-number small">{estado_calculado(eq)}</div><p>Calculado por CMMS</p></div></section>
+      <section class="panel"><h3>Historial del equipo</h3><table><thead><tr><th>Fecha</th><th>Origen</th><th>Detalle</th><th>Folio/Lectura</th><th>Estado</th></tr></thead><tbody>{hist_rows}</tbody></table></section>
+    </main>"""
+    return page(f"Ficha {safe(codigo)}", body)
+
+
+@app.route("/ot/nueva", methods=["GET", "POST"])
+@login_required
+def ot_nueva():
+    ensure_ot_columns()
+    codigo = request.args.get("codigo", "")
+    if request.method == "POST":
+        data = {"fecha": request.form.get("fecha") or datetime.now().date().isoformat(), "ot": request.form.get("ot") or next_ot_code(), "codigo": (request.form.get("codigo") or "").upper(), "tipo": request.form.get("tipo") or "PM", "lectura": request.form.get("lectura") or "", "descripcion": request.form.get("descripcion") or "", "responsable": request.form.get("responsable") or session.get("user","admin"), "estado": request.form.get("estado") or "EN PROCESO", "costo": request.form.get("costo") or ""}
+        q("INSERT INTO ot (fecha,ot,codigo,tipo,lectura,descripcion,responsable,estado,costo) VALUES (:fecha,:ot,:codigo,:tipo,:lectura,:descripcion,:responsable,:estado,:costo)", data, fetch=False)
+        return redirect(url_for("ot"))
+    lectura = lectura_real_equipo(codigo) if codigo else {"lectura":"", "unidad":""}
+    body = f"""<main class="page"><section class="panel"><h2>Nueva Orden de Trabajo</h2><form class="form-grid" method="post"><input type="date" name="fecha" value="{datetime.now().date().isoformat()}"><input name="ot" value="{next_ot_code()}" placeholder="N° OT"><input name="codigo" value="{safe(codigo)}" placeholder="Código equipo"><select name="tipo"><option>PM1</option><option>PM2</option><option>PM3</option><option>PM4</option><option>PM5</option><option>CORRECTIVA</option></select><input name="lectura" value="{lectura.get('lectura','')} {lectura.get('unidad','')}" placeholder="Lectura"><input name="responsable" placeholder="Responsable" value="{session.get('user','admin')}"><select name="estado"><option>EN PROCESO</option><option>PROGRAMADO</option><option>EJECUTADA</option><option>PENDIENTE</option></select><input name="costo" placeholder="Costo CLP"><textarea name="descripcion" placeholder="Descripción del trabajo solicitado"></textarea><button>Crear OT</button></form></section></main>"""
+    return page("Nueva OT", body)
+
+
+@app.route("/ot/<int:ot_id>/pdf")
+@login_required
+def ot_pdf(ot_id):
+    rows = q("SELECT * FROM ot WHERE id=:id LIMIT 1", {"id": ot_id}) if table_exists("ot") else []
+    if not rows:
+        return "OT no encontrada", 404
+    r = rows[0]
+    eq = equipo_by_codigo(find_col(r, ["codigo"])) or {}
+    path = f"/tmp/OT_{ot_id}.pdf"
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.pdfgen import canvas
+    c = canvas.Canvas(path, pagesize=letter)
+    w, h = letter
+    c.setFillColor(colors.HexColor("#073a7a")); c.rect(0, h-2.2*cm, w, 2.2*cm, stroke=0, fill=1)
+    c.setFillColor(colors.white); c.setFont("Helvetica-Bold", 18); c.drawString(1.2*cm, h-1.35*cm, "DEMOTRON - ORDEN DE TRABAJO")
+    c.setFont("Helvetica", 10); c.drawRightString(w-1.2*cm, h-1.35*cm, find_col(r, ["ot"]) or f"OT-{ot_id}")
+    y = h - 3.2*cm; c.setFillColor(colors.black); c.setFont("Helvetica-Bold", 12); c.drawString(1.2*cm, y, "Datos del Equipo / Trabajo")
+    fields = [("Fecha", find_col(r, ["fecha"])), ("Equipo", find_col(r, ["codigo"])), ("Tipo OT", find_col(r, ["tipo"])), ("Marca/Modelo", (find_col(eq, ["marca"])+" "+find_col(eq, ["modelo"])).strip()), ("Ubicación", find_col(eq, ["ubicacion","obra","faena"])), ("Lectura", find_col(r, ["lectura"])), ("Responsable", find_col(r, ["responsable"])), ("Estado", find_col(r, ["estado"]))]
+    y -= 0.65*cm
+    for i, (label, value) in enumerate(fields):
+        x = 1.2*cm if i % 2 == 0 else 10.4*cm
+        if i % 2 == 0 and i > 0: y -= 0.55*cm
+        c.setFont("Helvetica-Bold", 9); c.drawString(x, y, f"{label}:")
+        c.setFont("Helvetica", 9); c.drawString(x+2.5*cm, y, safe(value)[:45])
+    y -= 1.1*cm; c.setFont("Helvetica-Bold", 12); c.drawString(1.2*cm, y, "Descripción del trabajo")
+    y -= 0.45*cm; c.rect(1.2*cm, y-3.0*cm, w-2.4*cm, 3.0*cm)
+    text = c.beginText(1.5*cm, y-0.5*cm); text.setFont("Helvetica", 10)
+    desc = find_col(r, ["descripcion"]) or ""
+    for line in [desc[i:i+95] for i in range(0, len(desc), 95)] or [""]:
+        text.textLine(line)
+    c.drawText(text)
+    y -= 4.0*cm; c.setFont("Helvetica-Bold", 12); c.drawString(1.2*cm, y, "Checklist de ejecución")
+    for chk in ["Bloqueo y seguridad", "Inspección visual", "Revisión niveles", "Revisión filtros", "Prueba operacional", "Registro lectura final"]:
+        y -= 0.5*cm; c.rect(1.2*cm, y-0.1*cm, 0.25*cm, 0.25*cm); c.setFont("Helvetica", 10); c.drawString(1.6*cm, y-0.05*cm, chk)
+    c.save()
+    return send_file(path, as_attachment=True, download_name=f"OT_{find_col(r, ['ot']) or ot_id}.pdf")
+
+
+@app.route("/planificacion/gantt")
+@app.route("/gantt")
+@login_required
+def planificacion_gantt():
+    data = plan_rows_pro()
+    quick = "<form class='form-grid' method='get' action='/ot/nueva'><input name='codigo' placeholder='Equipo'><input type='date' name='fecha'><select name='tipo'><option>PM1</option><option>PM2</option><option>PM3</option><option>PM4</option><option>PM5</option></select><button>Crear OT rápida</button></form>"
+    gantt = ""; rows = ""
+    for r in data[:200]:
+        cls = gantt_class(r["dias"], r["estado"]); width = 95 if cls == "bad" else 75 if cls == "warn" else 45
+        gantt += f"<a class='gantt-row gantt-{cls}' href='/equipo/{r['codigo']}'><div><b>{r['codigo']}</b><small>{r['tipo']}</small></div><div>{r['ubicacion']}</div><div>{r['accion']}</div><div class='gantt-track'><span class='{cls}' style='width:{width}%'></span></div><div>{r['fecha'] or 'Sin fecha'}<br><small>{r['dias']} días</small></div><div>{badge(r['estado'])}</div></a>"
+        rows += f"<tr><td>{r['codigo']}</td><td>{r['tipo']}</td><td>{r['ubicacion']}</td><td>{r['lectura']}</td><td>{r['proxima']}</td><td>{r['dias']}</td><td>{r['fecha']}</td><td>{badge(r['estado'])}</td></tr>"
+    body = f"<main class='page'><section class='panel'><h2>Planificación PM tipo Gantt</h2>{quick}</section><section class='panel'><h3>Carta Gantt</h3><div class='gantt'>{gantt}</div></section><section class='panel'><h3>Tabla detallada</h3><table><thead><tr><th>Equipo</th><th>Tipo</th><th>Ubicación</th><th>Lectura</th><th>Próxima</th><th>Días</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>{rows}</tbody></table></section></main>"
+    return page("Planificación Gantt", body)
 
 
 if __name__ == "__main__":
