@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "demotron-secret")
-DEPLOY_VERSION = "DEMOTRON_VISUAL_ESTABLE_2026_05_05_V1"
+DEPLOY_VERSION = "DEMOTRON_VISUAL_ESTABLE_NO500_V2"
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 if DATABASE_URL.startswith("postgres://"):
@@ -16,6 +16,30 @@ if DATABASE_URL.startswith("postgres://"):
 elif DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True) if DATABASE_URL else None
+
+@app.errorhandler(Exception)
+def handle_any_error(e):
+    try:
+        msg = str(e)
+    except Exception:
+        msg = "Error desconocido"
+    return render_template_string("""<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DEMOTRON Error Controlado</title>
+<link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+<header class="topbar"><a class="logo" href="/">DEMOTRON</a><nav><a href="/test-deploy-demotron">Test</a><a href="/api/status">API Status</a><a href="/logout">Salir</a></nav></header>
+<main class="page"><section class="panel">
+<h2>Error controlado DEMOTRON</h2>
+<p>La aplicación está desplegada, pero una consulta o dato de PostgreSQL produjo error.</p>
+<pre style="white-space:pre-wrap;background:#f8fafd;padding:12px;border-radius:8px;border:1px solid #dce4ef;">{{msg}}</pre>
+<p><a class="btn" href="/api/status">Ver estado DB</a> <a class="btn" href="/debug-dashboard">Debug Dashboard</a></p>
+</section></main>
+</body></html>""", msg=msg), 200
+
 
 def q(sql, params=None, fetch=True):
     if engine is None:
@@ -210,75 +234,112 @@ def page(title, body):
 @app.route("/")
 @login_required
 def dashboard():
-    equipos_rows = get_equipo_rows()
-    total = len(equipos_rows)
-    estados = [estado_equipo(e) for e in equipos_rows]
-    atrasados_rows = [e for e in equipos_rows if is_bad_estado(estado_equipo(e))]
-    atrasados = len(atrasados_rows)
-    proximos = sum(1 for e in equipos_rows if is_warn_estado(estado_equipo(e)))
-    al_dia = sum(1 for e in equipos_rows if is_ok_estado(estado_equipo(e)))
-    fuera = sum(1 for e in equipos_rows if is_off_estado(estado_equipo(e)))
-    control = round((al_dia / total) * 100) if total else 0
+    try:
+        equipos_rows = get_equipo_rows()
+    except Exception:
+        equipos_rows = []
 
-    ot = count_table("ot")
-    compras = count_table("compras")
-    bodega = count_table("bodega")
-    mantenciones = count_table("mantenciones")
-    total_compras = money_sum_compras()
+    try:
+        total = len(equipos_rows)
+        atrasados_rows = []
+        proximos = al_dia = fuera = 0
 
-    by_ubic = {}
-    for e in atrasados_rows:
-        u = ubicacion_equipo(e) or "Sin ubicación"
-        by_ubic[u] = by_ubic.get(u, 0) + 1
-    ubic_data = sorted(by_ubic.items(), key=lambda x: x[1], reverse=True)[:6] or [("Sin atrasos", 0)]
+        for e in equipos_rows:
+            try:
+                est = estado_equipo(e)
+                if is_bad_estado(est):
+                    atrasados_rows.append(e)
+                if is_warn_estado(est):
+                    proximos += 1
+                if is_ok_estado(est):
+                    al_dia += 1
+                if is_off_estado(est):
+                    fuera += 1
+            except Exception:
+                continue
 
-    gestion_data = [("OT", int(ot or 0)), ("Compras", int(compras or 0)), ("Bodega", int(bodega or 0)), ("Mant.", int(mantenciones or 0))]
+        atrasados = len(atrasados_rows)
+        control = round((al_dia / total) * 100) if total else 0
 
-    p_ok = int((al_dia / max(total,1)) * 100)
-    p_warn = int((proximos / max(total,1)) * 100)
-    p_bad = int((atrasados / max(total,1)) * 100)
-    donut = f"background: conic-gradient(#2fbd66 0 {p_ok}%, #f6b712 {p_ok}% {p_ok+p_warn}%, #ef3d48 {p_ok+p_warn}% {p_ok+p_warn+p_bad}%, #9aa3b2 {p_ok+p_warn+p_bad}% 100%)"
+        def safe_count(t):
+            try:
+                return count_table(t)
+            except Exception:
+                return 0
 
-    atrasados_html = "".join(
-        f"<tr><td><a href='/equipos'><b>{codigo_equipo(e)}</b></a></td><td>{tipo_equipo(e)}</td><td>{ubicacion_equipo(e)}</td><td>{lectura_equipo(e)}</td><td>{badge_html(estado_equipo(e))}</td><td><a class='pillbtn' href='/ot'>Crear OT</a></td></tr>"
-        for e in atrasados_rows[:10]
-    ) or "<tr><td colspan='6'>No hay equipos atrasados.</td></tr>"
+        ot = safe_count("ot")
+        compras = safe_count("compras")
+        bodega = safe_count("bodega")
+        mantenciones = safe_count("mantenciones")
+        lecturas = safe_count("lecturas")
+        total_compras = money_sum_compras()
 
-    cards = "".join(
-        f"<a class='equip-card {'danger' if is_bad_estado(estado_equipo(e)) else ''}' href='/equipos'><span class='dot {'red' if is_bad_estado(estado_equipo(e)) else 'green' if is_ok_estado(estado_equipo(e)) else 'yellow'}'></span><div class='machine'>🚜</div><h4>{codigo_equipo(e)}</h4><p>{tipo_equipo(e)}<br>{marca_modelo(e)}</p><small>{lectura_equipo(e)}</small></a>"
-        for e in atrasados_rows[:12]
-    ) or "<p>No hay equipos atrasados para mostrar.</p>"
+        by_ubic = {}
+        for e in atrasados_rows:
+            try:
+                u = ubicacion_equipo(e) or "Sin ubicación"
+                by_ubic[u] = by_ubic.get(u, 0) + 1
+            except Exception:
+                pass
+        ubic_data = sorted(by_ubic.items(), key=lambda x: x[1], reverse=True)[:6] or [("Sin atrasos", 0)]
+        gestion_data = [("OT", int(ot or 0)), ("Compras", int(compras or 0)), ("Bodega", int(bodega or 0)), ("Mant.", int(mantenciones or 0))]
 
-    body = f"""
-    <main class="page">
-      <section class="kpis">
-        {kpi_card("red", "!", "ATRASADOS", atrasados, f"{round((atrasados/max(total,1))*100,1)}% del total")}
-        {kpi_card("yellow", "◷", "PRÓXIMOS", proximos, "En proceso / próximos")}
-        {kpi_card("green", "✓", "CONTROLADO REAL", f"{control}%", f"{al_dia} de {total} equipos")}
-        {kpi_card("blue", "▣", "OT ABIERTAS", ot, "Órdenes de trabajo")}
-        {kpi_card("purple", "🛒", "COMPRAS", compras, fmt_clp(total_compras))}
-        {kpi_card("teal", "$", "BODEGA", bodega, "Registros")}
-      </section>
+        p_ok = int((al_dia / max(total,1)) * 100)
+        p_warn = int((proximos / max(total,1)) * 100)
+        p_bad = int((atrasados / max(total,1)) * 100)
+        donut = f"background: conic-gradient(#2fbd66 0 {p_ok}%, #f6b712 {p_ok}% {p_ok+p_warn}%, #ef3d48 {p_ok+p_warn}% {p_ok+p_warn+p_bad}%, #9aa3b2 {p_ok+p_warn+p_bad}% 100%)"
 
-      <section class="dashboard-grid">
-        <div class="panel">
-          <h3>ESTADO GENERAL DE LA FLOTA</h3>
-          <div class="donut-wrap"><div class="donut" style="{donut}"><span>{total}<small>Equipos</small></span></div>
-          <div class="legend"><p><i class="ok"></i>Controlados <b>{al_dia}</b></p><p><i class="warn"></i>Próximos <b>{proximos}</b></p><p><i class="bad"></i>Atrasados <b>{atrasados}</b></p><p><i class="off"></i>Fuera/Taller <b>{fuera}</b></p></div></div>
-        </div>
-        <div class="panel"><h3>ATRASADOS POR UBICACIÓN</h3>{vertical_bars(ubic_data)}</div>
-        <div class="panel"><h3>GESTIÓN OPERACIONAL</h3>{vertical_bars(gestion_data)}</div>
-      </section>
+        atrasados_html = ""
+        for e in atrasados_rows[:10]:
+            try:
+                atrasados_html += f"<tr><td><b>{codigo_equipo(e)}</b></td><td>{tipo_equipo(e)}</td><td>{ubicacion_equipo(e)}</td><td>{lectura_equipo(e)}</td><td>{badge_html(estado_equipo(e))}</td><td><a class='pillbtn' href='/ot'>Crear OT</a></td></tr>"
+            except Exception:
+                continue
+        if not atrasados_html:
+            atrasados_html = "<tr><td colspan='6'>No hay equipos atrasados.</td></tr>"
 
-      <section class="lower-grid">
-        <div class="panel wide"><div class="section-head"><h3>EQUIPOS ATRASADOS</h3><a href="/equipos">Ver todos</a></div><table><thead><tr><th>Equipo</th><th>Tipo</th><th>Ubicación</th><th>Lectura</th><th>Estado</th><th>Acción</th></tr></thead><tbody>{atrasados_html}</tbody></table></div>
-        <div class="panel"><h3>ACTIVIDAD RECIENTE</h3><div class="activity"><p>🟩 Mantenciones: {mantenciones}</p><p>🟦 Lecturas: {count_table("lecturas")}</p><p>🛒 Compras: {compras}</p><p>📦 Bodega: {bodega}</p></div></div>
-      </section>
+        cards = ""
+        for e in atrasados_rows[:12]:
+            try:
+                cards += f"<a class='equip-card danger' href='/equipos'><span class='dot red'></span><div class='machine'>🚜</div><h4>{codigo_equipo(e)}</h4><p>{tipo_equipo(e)}<br>{marca_modelo(e)}</p><small>{lectura_equipo(e)}</small></a>"
+            except Exception:
+                continue
+        if not cards:
+            cards = "<p>No hay equipos atrasados para mostrar.</p>"
 
-      <section class="panel"><h3>VISTA RÁPIDA ATRASADOS</h3><div class="cards-scroll">{cards}</div></section>
-    </main>
-    """
-    return page("Dashboard", body)
+        body = f"""
+        <main class="page">
+          <section class="kpis">
+            {kpi_card("red", "!", "ATRASADOS", atrasados, f"{round((atrasados/max(total,1))*100,1)}% del total")}
+            {kpi_card("yellow", "◷", "PRÓXIMOS", proximos, "En proceso / próximos")}
+            {kpi_card("green", "✓", "CONTROLADO REAL", f"{control}%", f"{al_dia} de {total} equipos")}
+            {kpi_card("blue", "▣", "OT ABIERTAS", ot, "Órdenes de trabajo")}
+            {kpi_card("purple", "🛒", "COMPRAS", compras, fmt_clp(total_compras))}
+            {kpi_card("teal", "$", "BODEGA", bodega, "Registros")}
+          </section>
+
+          <section class="dashboard-grid">
+            <div class="panel">
+              <h3>ESTADO GENERAL DE LA FLOTA</h3>
+              <div class="donut-wrap"><div class="donut" style="{donut}"><span>{total}<small>Equipos</small></span></div>
+              <div class="legend"><p><i class="ok"></i>Controlados <b>{al_dia}</b></p><p><i class="warn"></i>Próximos <b>{proximos}</b></p><p><i class="bad"></i>Atrasados <b>{atrasados}</b></p><p><i class="off"></i>Fuera/Taller <b>{fuera}</b></p></div></div>
+            </div>
+            <div class="panel"><h3>ATRASADOS POR UBICACIÓN</h3>{vertical_bars(ubic_data)}</div>
+            <div class="panel"><h3>GESTIÓN OPERACIONAL</h3>{vertical_bars(gestion_data)}</div>
+          </section>
+
+          <section class="lower-grid">
+            <div class="panel wide"><div class="section-head"><h3>EQUIPOS ATRASADOS</h3><a href="/equipos">Ver todos</a></div><table><thead><tr><th>Equipo</th><th>Tipo</th><th>Ubicación</th><th>Lectura</th><th>Estado</th><th>Acción</th></tr></thead><tbody>{atrasados_html}</tbody></table></div>
+            <div class="panel"><h3>ACTIVIDAD RECIENTE</h3><div class="activity"><p>🟩 Mantenciones: {mantenciones}</p><p>🟦 Lecturas: {lecturas}</p><p>🛒 Compras: {compras}</p><p>📦 Bodega: {bodega}</p></div></div>
+          </section>
+
+          <section class="panel"><h3>VISTA RÁPIDA ATRASADOS</h3><div class="cards-scroll">{cards}</div></section>
+        </main>
+        """
+        return page("Dashboard", body)
+    except Exception as e:
+        body = f"<main class='page'><section class='panel'><h2>Dashboard protegido</h2><p>Error interno evitado:</p><pre>{safe(e)}</pre><p><a class='btn' href='/debug-dashboard'>Ver debug</a></p></section></main>"
+        return page("Dashboard protegido", body)
 
 
 def generic_table(title, table):
