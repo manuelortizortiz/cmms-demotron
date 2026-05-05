@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "demotron-secret")
-DEPLOY_VERSION = "DEMOTRON_DEPLOY_GARANTIZADO_2026_05_05_V3_USERNAME_FIX"
+DEPLOY_VERSION = "DEMOTRON_VISUAL_ESTABLE_2026_05_05_V1"
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 if DATABASE_URL.startswith("postgres://"):
@@ -200,45 +200,92 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
+
 def topbar():
-    return """<header class="topbar"><a class="logo" href="/">DEMOTRON</a><nav><a href="/">Dashboard</a><a href="/equipos">Equipos</a><a href="/lecturas">Lecturas</a><a href="/mantenciones">Mantención</a><a href="/ot">OT</a><a href="/compras">Compras</a><a href="/bodega">Bodega</a><a href="/planificacion">Plan Mantenciones</a><a href="/plan-90-dias">Plan 90 días</a><a href="/admin">Admin</a></nav><a class="logout" href="/logout">Salir</a></header>"""
+    return nav_html()
 
 def page(title, body):
-    return render_template_string(f"""<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}</title><link rel="stylesheet" href="/static/css/styles.css"></head><body>{topbar()}{body}<footer>DEMOTRON CMMS · {DEPLOY_VERSION}</footer></body></html>""")
+    return render_template_string(f"""<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}</title><link rel="stylesheet" href="/static/css/styles.css"></head><body>{topbar()}{body}<footer><b>DEMOTRON</b> CMMS ERP · {DEPLOY_VERSION}</footer></body></html>""")
 
 @app.route("/")
 @login_required
 def dashboard():
-    equipos = count_table("maestro_equipos")
-    lecturas = count_table("lecturas")
-    mantenciones = count_table("mantenciones")
+    equipos_rows = get_equipo_rows()
+    total = len(equipos_rows)
+    estados = [estado_equipo(e) for e in equipos_rows]
+    atrasados_rows = [e for e in equipos_rows if is_bad_estado(estado_equipo(e))]
+    atrasados = len(atrasados_rows)
+    proximos = sum(1 for e in equipos_rows if is_warn_estado(estado_equipo(e)))
+    al_dia = sum(1 for e in equipos_rows if is_ok_estado(estado_equipo(e)))
+    fuera = sum(1 for e in equipos_rows if is_off_estado(estado_equipo(e)))
+    control = round((al_dia / total) * 100) if total else 0
+
     ot = count_table("ot")
     compras = count_table("compras")
     bodega = count_table("bodega")
-    plan = count_table("plan_mantenciones")
-    plan90 = count_table("plan_90_dias")
+    mantenciones = count_table("mantenciones")
+    total_compras = money_sum_compras()
+
+    by_ubic = {}
+    for e in atrasados_rows:
+        u = ubicacion_equipo(e) or "Sin ubicación"
+        by_ubic[u] = by_ubic.get(u, 0) + 1
+    ubic_data = sorted(by_ubic.items(), key=lambda x: x[1], reverse=True)[:6] or [("Sin atrasos", 0)]
+
+    gestion_data = [("OT", int(ot or 0)), ("Compras", int(compras or 0)), ("Bodega", int(bodega or 0)), ("Mant.", int(mantenciones or 0))]
+
+    p_ok = int((al_dia / max(total,1)) * 100)
+    p_warn = int((proximos / max(total,1)) * 100)
+    p_bad = int((atrasados / max(total,1)) * 100)
+    donut = f"background: conic-gradient(#2fbd66 0 {p_ok}%, #f6b712 {p_ok}% {p_ok+p_warn}%, #ef3d48 {p_ok+p_warn}% {p_ok+p_warn+p_bad}%, #9aa3b2 {p_ok+p_warn+p_bad}% 100%)"
+
+    atrasados_html = "".join(
+        f"<tr><td><a href='/equipos'><b>{codigo_equipo(e)}</b></a></td><td>{tipo_equipo(e)}</td><td>{ubicacion_equipo(e)}</td><td>{lectura_equipo(e)}</td><td>{badge_html(estado_equipo(e))}</td><td><a class='pillbtn' href='/ot'>Crear OT</a></td></tr>"
+        for e in atrasados_rows[:10]
+    ) or "<tr><td colspan='6'>No hay equipos atrasados.</td></tr>"
+
+    cards = "".join(
+        f"<a class='equip-card {'danger' if is_bad_estado(estado_equipo(e)) else ''}' href='/equipos'><span class='dot {'red' if is_bad_estado(estado_equipo(e)) else 'green' if is_ok_estado(estado_equipo(e)) else 'yellow'}'></span><div class='machine'>🚜</div><h4>{codigo_equipo(e)}</h4><p>{tipo_equipo(e)}<br>{marca_modelo(e)}</p><small>{lectura_equipo(e)}</small></a>"
+        for e in atrasados_rows[:12]
+    ) or "<p>No hay equipos atrasados para mostrar.</p>"
+
     body = f"""
     <main class="page">
       <section class="kpis">
-        <div class="kpi red"><span>!</span><small>Equipos</small><b>{equipos}</b></div>
-        <div class="kpi yellow"><span>◷</span><small>Lecturas</small><b>{lecturas}</b></div>
-        <div class="kpi green"><span>✓</span><small>Mantenciones</small><b>{mantenciones}</b></div>
-        <div class="kpi blue"><span>▣</span><small>OT</small><b>{ot}</b></div>
-        <div class="kpi purple"><span>🛒</span><small>Compras</small><b>{compras}</b></div>
-        <div class="kpi teal"><span>⌂</span><small>Bodega</small><b>{bodega}</b></div>
+        {kpi_card("red", "!", "ATRASADOS", atrasados, f"{round((atrasados/max(total,1))*100,1)}% del total")}
+        {kpi_card("yellow", "◷", "PRÓXIMOS", proximos, "En proceso / próximos")}
+        {kpi_card("green", "✓", "CONTROLADO REAL", f"{control}%", f"{al_dia} de {total} equipos")}
+        {kpi_card("blue", "▣", "OT ABIERTAS", ot, "Órdenes de trabajo")}
+        {kpi_card("purple", "🛒", "COMPRAS", compras, fmt_clp(total_compras))}
+        {kpi_card("teal", "$", "BODEGA", bodega, "Registros")}
       </section>
-      <section class="grid">
-        <div class="panel"><h3>PLANES</h3><div class="bars"><div><b style="height:{max(20, int(plan or 0))}px"></b><small>Plan Mant.</small><strong>{plan}</strong></div><div><b style="height:{max(20, int(plan90 or 0))}px"></b><small>Plan 90</small><strong>{plan90}</strong></div></div></div>
-        <div class="panel"><h3>ESTADO</h3><p>Versión activa:</p><code>{DEPLOY_VERSION}</code><p>Si ves esta versión, Railway sí tomó el código nuevo.</p></div>
+
+      <section class="dashboard-grid">
+        <div class="panel">
+          <h3>ESTADO GENERAL DE LA FLOTA</h3>
+          <div class="donut-wrap"><div class="donut" style="{donut}"><span>{total}<small>Equipos</small></span></div>
+          <div class="legend"><p><i class="ok"></i>Controlados <b>{al_dia}</b></p><p><i class="warn"></i>Próximos <b>{proximos}</b></p><p><i class="bad"></i>Atrasados <b>{atrasados}</b></p><p><i class="off"></i>Fuera/Taller <b>{fuera}</b></p></div></div>
+        </div>
+        <div class="panel"><h3>ATRASADOS POR UBICACIÓN</h3>{vertical_bars(ubic_data)}</div>
+        <div class="panel"><h3>GESTIÓN OPERACIONAL</h3>{vertical_bars(gestion_data)}</div>
       </section>
-    </main>"""
+
+      <section class="lower-grid">
+        <div class="panel wide"><div class="section-head"><h3>EQUIPOS ATRASADOS</h3><a href="/equipos">Ver todos</a></div><table><thead><tr><th>Equipo</th><th>Tipo</th><th>Ubicación</th><th>Lectura</th><th>Estado</th><th>Acción</th></tr></thead><tbody>{atrasados_html}</tbody></table></div>
+        <div class="panel"><h3>ACTIVIDAD RECIENTE</h3><div class="activity"><p>🟩 Mantenciones: {mantenciones}</p><p>🟦 Lecturas: {count_table("lecturas")}</p><p>🛒 Compras: {compras}</p><p>📦 Bodega: {bodega}</p></div></div>
+      </section>
+
+      <section class="panel"><h3>VISTA RÁPIDA ATRASADOS</h3><div class="cards-scroll">{cards}</div></section>
+    </main>
+    """
     return page("Dashboard", body)
+
 
 def generic_table(title, table):
     rows = []
     if table_exists(table):
         try:
-            rows = q(f"SELECT * FROM {table} LIMIT 500")
+            rows = q(f"SELECT * FROM {table} LIMIT 800")
         except Exception:
             rows = []
     if not rows:
@@ -246,7 +293,7 @@ def generic_table(title, table):
     cols = list(rows[0].keys())
     head = "".join(f"<th>{c}</th>" for c in cols)
     body = "".join("<tr>" + "".join(f"<td>{safe(r.get(c))}</td>" for c in cols) + "</tr>" for r in rows)
-    return page(title, f"<main class='page'><section class='panel'><h2>{title}</h2><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></section></main>")
+    return page(title, f"<main class='page'><section class='panel'><div class='section-head'><h2>{title}</h2><a href='/'>Dashboard</a></div><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></section></main>")
 
 @app.route("/equipos")
 @login_required
@@ -291,8 +338,33 @@ def plan90():
 @app.route("/admin")
 @login_required
 def admin():
-    body = '<main class="page"><section class="panel"><h2>Administración</h2><p>Para reparar usuario administrador:</p><a class="btn" href="/admin/reparar-usuarios">Reparar admin</a><p>Usuario: <b>admin</b> · Contraseña: <b>admin123</b></p></section></main>'
+    body = """
+    <main class="page">
+      <section class="panel">
+        <h2>Administración DEMOTRON</h2>
+        <div class="admin-grid">
+          <div class="admin-card">
+            <h3>Usuarios</h3>
+            <p>Reparar o crear usuario administrador.</p>
+            <a class="pillbtn" href="/admin/reparar-usuarios">Reparar admin</a>
+            <p><b>Usuario:</b> admin<br><b>Contraseña:</b> admin123</p>
+          </div>
+          <div class="admin-card">
+            <h3>Subir Excel</h3>
+            <p>Preparado para módulo de carga. La base actual ya está conectada a PostgreSQL.</p>
+            <button disabled>Subir Excel próximamente</button>
+          </div>
+          <div class="admin-card">
+            <h3>Estado del deploy</h3>
+            <p><a href="/test-deploy-demotron">Probar deploy</a></p>
+            <p><a href="/api/status">Ver tablas</a></p>
+          </div>
+        </div>
+      </section>
+    </main>
+    """
     return page("Admin", body)
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
