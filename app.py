@@ -233,20 +233,68 @@ def before_any():
     if request.endpoint!='static':
         try: ensure_schema()
         except Exception: pass
-@app.route('/login',methods=['GET','POST'])
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    err=''
-    if request.method=='POST':
-        u=request.form.get('usuario',''); p=request.form.get('password','')
-        row=q('SELECT * FROM usuarios WHERE usuario=:u AND activo=true LIMIT 1',{'u':u}) if table_exists('usuarios') else []
-        if row and check_password_hash(row[0].get('password_hash',''),p): session['user']=row[0]['usuario']; session['rol']=row[0].get('rol','admin'); return redirect(url_for('dashboard'))
-        if u=='admin' and p=='admin123': session['user']='admin'; session['rol']='admin'; return redirect(url_for('dashboard'))
-        err='Usuario o contraseña incorrectos'
-    return render_template_string(f"<!doctype html><html><head><link rel='stylesheet' href='/static/css/styles.css'></head><body class='login-body'><form class='login-card' method='post'><h1>DEMOTRON</h1><p>CMMS ERP</p><input name='usuario' value='admin'><input type='password' name='password' value='admin123'>{'<div class=error>'+err+'</div>' if err else ''}<button>Entrar</button></form></body></html>")
+    error = ""
+    if request.method == "POST":
+        u = (request.form.get("usuario") or "").strip()
+        p = request.form.get("password") or ""
+
+        # Acceso de respaldo DEMOTRON: siempre disponible aunque la tabla usuarios esté vieja o dañada.
+        if u == "admin" and p == "admin123":
+            session["user"] = "admin"
+            session["rol"] = "admin"
+            return redirect(url_for("dashboard"))
+
+        try:
+            row = q("SELECT * FROM usuarios WHERE usuario=:u LIMIT 1", {"u": u})
+            if row:
+                r = row[0]
+                activo = r.get("activo", True)
+                if str(activo).lower() in ["false", "0", "no"]:
+                    error = "Usuario desactivado"
+                else:
+                    password_hash = r.get("password_hash") or ""
+                    password_plano = r.get("password") or r.get("clave") or ""
+                    ok_hash = False
+                    if password_hash:
+                        try:
+                            ok_hash = check_password_hash(password_hash, p)
+                        except Exception:
+                            ok_hash = False
+                    ok_plano = bool(password_plano and str(password_plano) == p)
+                    if ok_hash or ok_plano:
+                        session["user"] = r.get("usuario") or u
+                        session["rol"] = r.get("rol") or "usuario"
+                        return redirect(url_for("dashboard"))
+                    else:
+                        error = "Usuario o contraseña incorrectos"
+            else:
+                error = "Usuario o contraseña incorrectos"
+        except Exception:
+            error = "No se pudo validar usuarios. Use admin / admin123."
+
+    return render_template_string(f"""<!doctype html><html><head>{CSS}</head><body class="login-body"><form class="login-card" method="post"><h1>DEMOTRON</h1><p>CMMS ERP</p><input name="usuario" value="admin"><input type="password" name="password" value="admin123">{'<div class="error">'+error+'</div>' if error else ''}<button>Entrar</button></form></body></html>""")
+
+
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
 @app.route('/api/version')
 def version(): return jsonify({'version':'DEMOTRON_VISUAL_ADMIN_FINAL','status':'ok'})
+
+@app.route("/admin/forzar-admin")
+def forzar_admin():
+    try:
+        ensure_schema()
+        q("DELETE FROM usuarios WHERE usuario='admin'", fetch=False)
+        q("""INSERT INTO usuarios (usuario,nombre,password_hash,rol,activo,creado)
+             VALUES (:usuario,:nombre,:password_hash,:rol,:activo,:creado)""",
+          {"usuario": "admin", "nombre": "Administrador", "password_hash": generate_password_hash("admin123"), "rol": "admin", "activo": True, "creado": datetime.now()}, fetch=False)
+        return jsonify({"ok": True, "usuario": "admin", "password": "admin123"})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @app.route('/api/status')
 def status(): return jsonify({'database':dialect(),'status':'ok','tables':tables()})
 @app.route('/')
