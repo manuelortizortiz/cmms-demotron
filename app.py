@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "demotron-secret")
-DEPLOY_VERSION = "DEMOTRON_DEPLOY_GARANTIZADO_2026_05_05_V1"
+DEPLOY_VERSION = "DEMOTRON_DEPLOY_GARANTIZADO_2026_05_05_V2_ACTIVO_FIX"
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 if DATABASE_URL.startswith("postgres://"):
@@ -53,7 +53,7 @@ def ensure_schema():
     add_col("usuarios", "nombre", "TEXT")
     add_col("usuarios", "password_hash", "TEXT")
     add_col("usuarios", "rol", "TEXT")
-    add_col("usuarios", "activo", "BOOLEAN DEFAULT TRUE")
+    add_col("usuarios", "activo", "INTEGER DEFAULT 1")
     add_col("usuarios", "creado", "TIMESTAMP")
     q("""CREATE TABLE IF NOT EXISTS maestro_equipos (
         codigo TEXT PRIMARY KEY, tipo_equipo TEXT, familia TEXT, marca TEXT,
@@ -141,7 +141,7 @@ def reparar_usuarios():
         q("DELETE FROM usuarios WHERE usuario = :u", {"u": "admin"}, fetch=False)
         q("""INSERT INTO usuarios (usuario,nombre,password_hash,rol,activo,creado)
              VALUES (:usuario,:nombre,:password_hash,:rol,:activo,:creado)""",
-          {"usuario": "admin", "nombre": "Administrador", "password_hash": generate_password_hash("admin123"), "rol": "admin", "activo": True, "creado": datetime.now()}, fetch=False)
+          {"usuario": "admin", "nombre": "Administrador", "password_hash": generate_password_hash("admin123"), "rol": "admin", "activo": 1, "creado": datetime.now()}, fetch=False)
         return jsonify({"ok": True, "version": DEPLOY_VERSION, "usuario": "admin", "password": "admin123"})
     except Exception as e:
         return jsonify({"ok": False, "version": DEPLOY_VERSION, "error": str(e)}), 500
