@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "demotron-secret")
-DEPLOY_VERSION = "DEMOTRON_DEPLOY_GARANTIZADO_2026_05_05_V2_ACTIVO_FIX"
+DEPLOY_VERSION = "DEMOTRON_DEPLOY_GARANTIZADO_2026_05_05_V3_USERNAME_FIX"
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 if DATABASE_URL.startswith("postgres://"):
@@ -50,6 +50,7 @@ def ensure_schema():
         return
     q("CREATE TABLE IF NOT EXISTS usuarios (id SERIAL PRIMARY KEY)", fetch=False)
     add_col("usuarios", "usuario", "TEXT")
+    add_col("usuarios", "username", "TEXT")
     add_col("usuarios", "nombre", "TEXT")
     add_col("usuarios", "password_hash", "TEXT")
     add_col("usuarios", "rol", "TEXT")
@@ -138,13 +139,40 @@ def api_status():
 def reparar_usuarios():
     try:
         ensure_schema()
-        q("DELETE FROM usuarios WHERE usuario = :u", {"u": "admin"}, fetch=False)
-        q("""INSERT INTO usuarios (usuario,nombre,password_hash,rol,activo,creado)
-             VALUES (:usuario,:nombre,:password_hash,:rol,:activo,:creado)""",
-          {"usuario": "admin", "nombre": "Administrador", "password_hash": generate_password_hash("admin123"), "rol": "admin", "activo": 1, "creado": datetime.now()}, fetch=False)
-        return jsonify({"ok": True, "version": DEPLOY_VERSION, "usuario": "admin", "password": "admin123"})
+
+        # La tabla existente puede venir con username NOT NULL.
+        # Por eso escribimos ambos campos: usuario y username.
+        add_col("usuarios", "usuario", "TEXT")
+        add_col("usuarios", "username", "TEXT")
+        add_col("usuarios", "nombre", "TEXT")
+        add_col("usuarios", "password_hash", "TEXT")
+        add_col("usuarios", "rol", "TEXT")
+        add_col("usuarios", "activo", "INTEGER DEFAULT 1")
+        add_col("usuarios", "creado", "TIMESTAMP")
+
+        try:
+            q("DELETE FROM usuarios WHERE usuario = :u OR username = :u", {"u": "admin"}, fetch=False)
+        except Exception:
+            try:
+                q("DELETE FROM usuarios WHERE username = :u", {"u": "admin"}, fetch=False)
+            except Exception:
+                pass
+
+        q("""INSERT INTO usuarios (usuario,username,nombre,password_hash,rol,activo,creado)
+             VALUES (:usuario,:username,:nombre,:password_hash,:rol,:activo,:creado)""",
+          {
+              "usuario": "admin",
+              "username": "admin",
+              "nombre": "Administrador",
+              "password_hash": generate_password_hash("admin123"),
+              "rol": "admin",
+              "activo": 1,
+              "creado": datetime.now()
+          }, fetch=False)
+        return jsonify({"ok": True, "version": DEPLOY_VERSION, "usuario": "admin", "username": "admin", "password": "admin123"})
     except Exception as e:
         return jsonify({"ok": False, "version": DEPLOY_VERSION, "error": str(e)}), 500
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -157,9 +185,9 @@ def login():
             session["rol"] = "admin"
             return redirect(url_for("dashboard"))
         try:
-            row = q("SELECT * FROM usuarios WHERE usuario=:u LIMIT 1", {"u": usuario})
+            row = q("SELECT * FROM usuarios WHERE usuario=:u OR username=:u LIMIT 1", {"u": usuario})
             if row and row[0].get("password_hash") and check_password_hash(row[0]["password_hash"], password):
-                session["user"] = row[0].get("usuario") or usuario
+                session["user"] = row[0].get("usuario") or row[0].get("username") or usuario
                 session["rol"] = row[0].get("rol") or "usuario"
                 return redirect(url_for("dashboard"))
             error = "Usuario o contraseña incorrectos"
