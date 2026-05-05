@@ -10,7 +10,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "demotron-secret")
 
-DEPLOY_VERSION = "DEMOTRON_PRO_OT_FICHA_GANTT_V2"
+DEPLOY_VERSION = "DEMOTRON_PRO_ESTABLE_OT_HTML_GANTT_V3"
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 if DATABASE_URL.startswith("postgres://"):
@@ -747,7 +747,6 @@ def gantt_class(dias, estado):
 
 
 
-
 def generic_table(title, table):
     rows = get_rows(table, 800)
     if not rows:
@@ -755,7 +754,7 @@ def generic_table(title, table):
     cols = list(rows[0].keys())
     head = "".join(f"<th>{c}</th>" for c in cols)
     if table == "ot":
-        head += "<th>PDF</th>"
+        head += "<th>Imprimir</th>"
     body = ""
     for r in rows:
         body += "<tr>"
@@ -765,7 +764,7 @@ def generic_table(title, table):
                 v = f"<a href='/equipo/{v}'><b>{v}</b></a>"
             body += f"<td>{v}</td>"
         if table == "ot":
-            body += f"<td><a class='pillbtn' href='/ot/{r.get('id')}/pdf'>PDF</a></td>"
+            body += f"<td><a class='pillbtn' href='/ot/{r.get('id')}/imprimir'>Imprimir</a></td>"
         body += "</tr>"
     button = "<a class='btn' href='/ot/nueva'>Nueva OT</a>" if table == "ot" else ""
     return page(title, f"<main class='page'><section class='panel'><div class='section-head'><h2>{title}</h2>{button}</div><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></section></main>")
@@ -870,44 +869,41 @@ def ot_nueva():
     return page("Nueva OT", body)
 
 
-@app.route("/ot/<int:ot_id>/pdf")
+@app.route("/ot/<int:ot_id>/imprimir")
 @login_required
-def ot_pdf(ot_id):
+def ot_imprimir(ot_id):
     rows = q("SELECT * FROM ot WHERE id=:id LIMIT 1", {"id": ot_id}) if table_exists("ot") else []
     if not rows:
-        return "OT no encontrada", 404
+        return page("OT no encontrada", "<main class='page'><section class='panel'><h2>OT no encontrada</h2></section></main>")
     r = rows[0]
     eq = equipo_by_codigo(find_col(r, ["codigo"])) or {}
-    path = f"/tmp/OT_{ot_id}.pdf"
-    from reportlab.lib.pagesizes import letter
-    from reportlab.lib import colors
-    from reportlab.lib.units import cm
-    from reportlab.pdfgen import canvas
-    c = canvas.Canvas(path, pagesize=letter)
-    w, h = letter
-    c.setFillColor(colors.HexColor("#073a7a")); c.rect(0, h-2.2*cm, w, 2.2*cm, stroke=0, fill=1)
-    c.setFillColor(colors.white); c.setFont("Helvetica-Bold", 18); c.drawString(1.2*cm, h-1.35*cm, "DEMOTRON - ORDEN DE TRABAJO")
-    c.setFont("Helvetica", 10); c.drawRightString(w-1.2*cm, h-1.35*cm, find_col(r, ["ot"]) or f"OT-{ot_id}")
-    y = h - 3.2*cm; c.setFillColor(colors.black); c.setFont("Helvetica-Bold", 12); c.drawString(1.2*cm, y, "Datos del Equipo / Trabajo")
-    fields = [("Fecha", find_col(r, ["fecha"])), ("Equipo", find_col(r, ["codigo"])), ("Tipo OT", find_col(r, ["tipo"])), ("Marca/Modelo", (find_col(eq, ["marca"])+" "+find_col(eq, ["modelo"])).strip()), ("Ubicación", find_col(eq, ["ubicacion","obra","faena"])), ("Lectura", find_col(r, ["lectura"])), ("Responsable", find_col(r, ["responsable"])), ("Estado", find_col(r, ["estado"]))]
-    y -= 0.65*cm
-    for i, (label, value) in enumerate(fields):
-        x = 1.2*cm if i % 2 == 0 else 10.4*cm
-        if i % 2 == 0 and i > 0: y -= 0.55*cm
-        c.setFont("Helvetica-Bold", 9); c.drawString(x, y, f"{label}:")
-        c.setFont("Helvetica", 9); c.drawString(x+2.5*cm, y, safe(value)[:45])
-    y -= 1.1*cm; c.setFont("Helvetica-Bold", 12); c.drawString(1.2*cm, y, "Descripción del trabajo")
-    y -= 0.45*cm; c.rect(1.2*cm, y-3.0*cm, w-2.4*cm, 3.0*cm)
-    text = c.beginText(1.5*cm, y-0.5*cm); text.setFont("Helvetica", 10)
-    desc = find_col(r, ["descripcion"]) or ""
-    for line in [desc[i:i+95] for i in range(0, len(desc), 95)] or [""]:
-        text.textLine(line)
-    c.drawText(text)
-    y -= 4.0*cm; c.setFont("Helvetica-Bold", 12); c.drawString(1.2*cm, y, "Checklist de ejecución")
-    for chk in ["Bloqueo y seguridad", "Inspección visual", "Revisión niveles", "Revisión filtros", "Prueba operacional", "Registro lectura final"]:
-        y -= 0.5*cm; c.rect(1.2*cm, y-0.1*cm, 0.25*cm, 0.25*cm); c.setFont("Helvetica", 10); c.drawString(1.6*cm, y-0.05*cm, chk)
-    c.save()
-    return send_file(path, as_attachment=True, download_name=f"OT_{find_col(r, ['ot']) or ot_id}.pdf")
+    body = f"""
+    <main class="print-page">
+      <section class="ot-print">
+        <div class="ot-head"><div><h1>DEMOTRON</h1><p>Orden de Trabajo</p></div><div><b>{find_col(r, ['ot']) or 'OT'}</b><br>{find_col(r, ['fecha'])}</div></div>
+        <h2>Datos del equipo</h2>
+        <div class="ot-grid">
+          <p><b>Equipo:</b> {find_col(r, ['codigo'])}</p>
+          <p><b>Tipo OT:</b> {find_col(r, ['tipo'])}</p>
+          <p><b>Marca/Modelo:</b> {find_col(eq, ['marca'])} {find_col(eq, ['modelo'])}</p>
+          <p><b>Ubicación:</b> {find_col(eq, ['ubicacion','obra','faena'])}</p>
+          <p><b>Lectura:</b> {find_col(r, ['lectura'])}</p>
+          <p><b>Responsable:</b> {find_col(r, ['responsable'])}</p>
+          <p><b>Estado:</b> {find_col(r, ['estado'])}</p>
+          <p><b>Costo:</b> {find_col(r, ['costo'])}</p>
+        </div>
+        <h2>Descripción del trabajo</h2>
+        <div class="ot-box">{find_col(r, ['descripcion'])}</div>
+        <h2>Checklist de ejecución</h2>
+        <div class="checklist">
+          <p>☐ Bloqueo y seguridad del equipo</p><p>☐ Inspección visual general</p><p>☐ Revisión de niveles</p><p>☐ Revisión de filtros</p><p>☐ Prueba operacional</p><p>☐ Registro lectura final</p>
+        </div>
+        <div class="firmas"><div>Ejecutor</div><div>Supervisor</div></div>
+        <button class="print-btn" onclick="window.print()">Imprimir / Guardar PDF</button>
+      </section>
+    </main>
+    """
+    return page("Imprimir OT", body)
 
 
 @app.route("/planificacion/gantt")
