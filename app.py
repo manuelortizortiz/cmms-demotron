@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON VISUAL V3 DATOS REALES ACTIVO"
+APP_VERSION = "DEMOTRON_ERP_CMMS_V6_RUTAS_ADMIN_DATOS_REALES"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
@@ -299,6 +299,32 @@ def lecturas_post():
 
 
 
+
+
+def rebuild_schema_for_real_data():
+    """Reconstruye las tablas ERP para evitar errores de columnas antiguas en Railway.
+    Se usa solo en rutas admin de carga final: elimina data vieja y crea esquema completo.
+    """
+    if is_pg():
+        q("DROP TABLE IF EXISTS lecturas, compras, ot, bodega, actividad, equipos, importaciones CASCADE")
+    else:
+        for t in ['lecturas','compras','ot','bodega','actividad','equipos','importaciones']:
+            q(f"DROP TABLE IF EXISTS {t}")
+    # Crea el esquema actualizado completo, conserva usuarios.
+    q(f"""CREATE TABLE IF NOT EXISTS equipos(
+        id {pk()}, codigo TEXT UNIQUE, tipo_equipo TEXT, familia TEXT, marca TEXT, modelo TEXT, descripcion TEXT,
+        ano TEXT, patente TEXT, vin TEXT, motor TEXT, chofer TEXT, ubicacion TEXT, responsable TEXT,
+        control_base TEXT, frecuencia_base {num()} DEFAULT 0, lectura_actual {num()} DEFAULT 0, ultima_pm {num()} DEFAULT 0,
+        proxima_pm {num()} DEFAULT 0, margen {num()} DEFAULT 0, costo_total_pm {num()} DEFAULT 0,
+        estado_operacional TEXT DEFAULT 'OPERATIVO', estado_calculado TEXT, semaforo TEXT, imagen_url TEXT, fecha_actualizacion TEXT)
+    """)
+    q(f"CREATE TABLE IF NOT EXISTS lecturas(id {pk()}, fecha TEXT, codigo TEXT, tipo_lectura TEXT, valor {num()}, ubicacion TEXT, responsable TEXT, observacion TEXT)")
+    q(f"CREATE TABLE IF NOT EXISTS compras(id {pk()}, fecha TEXT, codigo_equipo TEXT, oc TEXT, proveedor TEXT, item TEXT, cantidad {num()}, costo_total {num()}, estado TEXT, observacion TEXT)")
+    q(f"CREATE TABLE IF NOT EXISTS ot(id {pk()}, numero TEXT UNIQUE, codigo TEXT, tipo TEXT, prioridad TEXT, estado TEXT, fecha_creacion TEXT, fecha_cierre TEXT, lectura {num()}, descripcion TEXT, responsable TEXT, costo_estimado {num()})")
+    q(f"CREATE TABLE IF NOT EXISTS bodega(id {pk()}, fecha TEXT, codigo_equipo TEXT, ot_numero TEXT, repuesto TEXT, cantidad {num()}, costo_unitario {num()}, movimiento TEXT, observacion TEXT)")
+    q(f"CREATE TABLE IF NOT EXISTS actividad(id {pk()}, fecha TEXT, tipo TEXT, titulo TEXT, detalle TEXT, usuario TEXT)")
+    q(f"CREATE TABLE IF NOT EXISTS importaciones(id {pk()}, fecha TEXT, archivo TEXT, hoja TEXT, registros INTEGER, detalle TEXT)")
+
 def execute_sql_file(path: Path):
     sql = path.read_text(encoding='utf-8')
     # Railway usa PostgreSQL; exec_driver_sql permite ejecutar el script completo.
@@ -339,8 +365,10 @@ def cargar_sql_final():
         if not sql_file.exists():
             flash('No se encontró DATOS_REALES_DEMOTRON_FINAL_VALIDO.sql dentro del paquete.')
             return redirect(url_for('index'))
+        rebuild_schema_for_real_data()
         execute_sql_file(sql_file)
-        flash('DATOS REALES V4 CARGADOS POR SQL: 255 equipos, 5040 lecturas, 1557 compras, 568 bodega y 780 OT. Dashboard recalculado.')
+        cts = {t: one(f'SELECT COUNT(*) n FROM {t}')["n"] for t in ['equipos','lecturas','compras','ot','bodega']}
+        flash(f'DATOS REALES V5 CARGADOS: {cts["equipos"]} equipos, {cts["lecturas"]} lecturas, {cts["compras"]} compras, {cts["bodega"]} bodega y {cts["ot"]} OT.')
     except Exception as e:
         flash(f'Error cargando SQL final V4: {e}')
     return redirect(url_for('index'))
@@ -376,6 +404,25 @@ def reset_cargar_datos():
     except Exception as e:
         flash(f'Error cargando datos reales V3: {e}')
     return redirect(url_for('index'))
+
+
+@app.route('/admin/diagnostico_datos')
+@login_required
+def diagnostico_datos():
+    counts = {}
+    columns = {}
+    for t in ['equipos','lecturas','compras','ot','bodega','actividad','importaciones','usuarios']:
+        try:
+            counts[t] = one(f"SELECT COUNT(*) n FROM {t}")['n'] if table_exists(t) else 'NO EXISTE'
+            columns[t] = sorted(table_cols(t)) if table_exists(t) else []
+        except Exception as e:
+            counts[t] = str(e)
+            columns[t] = []
+    files = []
+    if DATA_IMPORT.exists():
+        for p in sorted(DATA_IMPORT.iterdir()):
+            if p.is_file(): files.append({'archivo': p.name, 'bytes': p.stat().st_size})
+    return jsonify({'version': APP_VERSION, 'counts': counts, 'columns': columns, 'data_import_files': files})
 
 @app.route('/admin/vaciar_datos')
 @login_required
