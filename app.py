@@ -298,10 +298,64 @@ def lecturas_post():
     flash('Lectura registrada y KPI recalculado.'); return redirect(url_for('index')+'#lecturas')
 
 
+
+def execute_sql_file(path: Path):
+    sql = path.read_text(encoding='utf-8')
+    # Railway usa PostgreSQL; exec_driver_sql permite ejecutar el script completo.
+    if is_pg():
+        with engine.begin() as conn:
+            conn.exec_driver_sql(sql)
+    else:
+        raw = engine.raw_connection()
+        try:
+            raw.executescript(sql)
+            raw.commit()
+        finally:
+            raw.close()
+
+@app.route('/admin/verificar_archivos')
+@login_required
+def verificar_archivos():
+    files = []
+    if DATA_IMPORT.exists():
+        for p in sorted(DATA_IMPORT.iterdir()):
+            if p.is_file():
+                files.append({'archivo': p.name, 'bytes': p.stat().st_size})
+    counts = {}
+    for t in ['equipos','lecturas','compras','ot','bodega','actividad','importaciones']:
+        try:
+            counts[t] = one(f"SELECT COUNT(*) n FROM {t}")['n']
+        except Exception as e:
+            counts[t] = str(e)
+    return jsonify({'data_import': str(DATA_IMPORT), 'archivos': files, 'conteos': counts})
+
+@app.route('/admin/cargar_sql_final')
+@login_required
+def cargar_sql_final():
+    try:
+        sql_file = DATA_IMPORT / 'DATOS_REALES_DEMOTRON_FINAL_VALIDO.sql'
+        if not sql_file.exists():
+            sql_file = BASE / 'DATOS_REALES_DEMOTRON_FINAL_VALIDO.sql'
+        if not sql_file.exists():
+            flash('No se encontró DATOS_REALES_DEMOTRON_FINAL_VALIDO.sql dentro del paquete.')
+            return redirect(url_for('index'))
+        execute_sql_file(sql_file)
+        flash('DATOS REALES V4 CARGADOS POR SQL: 255 equipos, 5040 lecturas, 1557 compras, 568 bodega y 780 OT. Dashboard recalculado.')
+    except Exception as e:
+        flash(f'Error cargando SQL final V4: {e}')
+    return redirect(url_for('index'))
+
 @app.route('/admin/reset_cargar_datos')
 @login_required
 def reset_cargar_datos():
     try:
+        sql_file = DATA_IMPORT / 'DATOS_REALES_DEMOTRON_FINAL_VALIDO.sql'
+        if not sql_file.exists():
+            sql_file = BASE / 'DATOS_REALES_DEMOTRON_FINAL_VALIDO.sql'
+        if sql_file.exists():
+            execute_sql_file(sql_file)
+            flash('DATOS REALES V4 CARGADOS POR SQL: 255 equipos, 5040 lecturas, 1557 compras, 568 bodega y 780 OT. Dashboard recalculado.')
+            return redirect(url_for('index'))
         if is_pg():
             q('TRUNCATE TABLE lecturas, compras, ot, bodega, actividad, equipos, importaciones RESTART IDENTITY CASCADE')
         else:
