@@ -1,1 +1,1 @@
-{"deploy":{"startCommand":"gunicorn app:app"}}
+{"deploy":{"startCommand":"gunicorn app:app --timeout 120"}}
