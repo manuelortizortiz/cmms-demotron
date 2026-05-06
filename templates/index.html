@@ -388,7 +388,7 @@ tr:hover{background:#f8fafc}
     <a href="#admin">⚙ Configuración</a>
   </nav>
   <input class="buscar" id="buscar" placeholder="Buscar..." oninput="filterCards(this.value)">
-  <div class="badgeV2">VISUAL V3 DATOS REALES</div>
+  <div class="badgeV2">VISUAL V4 SQL REAL</div>
   <div class="user">👤 {{ rol or 'Administrador' }} · <a href="/logout">Salir</a></div>
 </header>
 
@@ -509,7 +509,7 @@ tr:hover{background:#f8fafc}
   <div class="panel" id="admin">
     <h3>Importar / cargar datos CMMS</h3>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-      <a class="btn" style="text-decoration:none;background:#15803d" href="/admin/reset_cargar_datos" onclick="return confirm('Esto reemplazará la data del ERP por los Excel reales incluidos. ¿Continuar?')">Cargar datos reales V3</a>
+      <a class="btn" style="text-decoration:none;background:#15803d" href="/admin/cargar_sql_final" onclick="return confirm('Esto reemplazará la data del ERP por los Excel reales incluidos. ¿Continuar?')">Cargar datos reales V3</a>
       <a class="btn" style="text-decoration:none;background:#991b1b" href="/admin/vaciar_datos" onclick="return confirm('Esto vaciará equipos, lecturas, compras, OT y bodega. ¿Continuar?')">Vaciar datos</a>
     </div>
     <form method="post" action="/importar_excel" enctype="multipart/form-data" class="formline">
