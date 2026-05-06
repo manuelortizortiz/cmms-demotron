@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DEMOTRON ERP CMMS - Dashboard Industrial V3 Datos Reales</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --azul:#082b5f;
+  --azul2:#0c3f86;
+  --azul3:#1261d6;
+  --fondo:#f4f6fa;
+  --borde:#e6ebf2;
+  --texto:#12203a;
+  --muted:#667085;
+  --rojo:#ef3f45;
+  --amarillo:#f7b500;
+  --verde:#35b96b;
+  --morado:#7449d4;
+  --teal:#07939a;
+  --shadow:0 6px 18px rgba(9,30,66,.08);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--fondo);
+  color:var(--texto);
+  font-family:"Segoe UI",Inter,Arial,sans-serif;
+}
+.topbar{
+  height:64px;
+  background:#fff;
+  border-bottom:1px solid var(--borde);
+  display:flex;
+  align-items:center;
+  gap:22px;
+  padding:0 24px;
+  position:sticky;
+  top:0;
+  z-index:100;
+  box-shadow:0 2px 8px rgba(9,30,66,.04);
+}
+.logo{
+  font-size:30px;
+  font-weight:950;
+  letter-spacing:11px;
+  color:var(--azul);
+  line-height:1;
+  margin-right:16px;
+}
+.menu{
+  display:flex;
+  align-items:center;
+  gap:2px;
+  flex:1;
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.menu a{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  color:#334155;
+  text-decoration:none;
+  padding:23px 13px 19px;
+  border-bottom:3px solid transparent;
+  font-weight:600;
+  font-size:14px;
+  white-space:nowrap;
+}
+.menu a.active{
+  color:var(--azul);
+  border-bottom-color:var(--azul3);
+}
+.buscar{
+  width:230px;
+  height:42px;
+  border:1px solid var(--borde);
+  border-radius:10px;
+  padding:0 14px;
+  outline:none;
+}
+.badgeV2{
+  background:#dcfce7;
+  color:#15803d;
+  font-weight:900;
+  font-size:11px;
+  border-radius:999px;
+  padding:6px 10px;
+  white-space:nowrap;
+}
+.user{
+  font-size:14px;
+  color:#334155;
+  white-space:nowrap;
+}
+.user a{color:var(--azul);font-weight:700;text-decoration:none}
+.wrap{padding:20px 24px 0}
+.flash{
+  background:#e0f2fe;
+  border:1px solid #7dd3fc;
+  color:#075985;
+  padding:11px 16px;
+  border-radius:10px;
+  margin-bottom:14px;
+  font-weight:700;
+}
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(6,minmax(155px,1fr));
+  gap:14px;
+}
+.kpi{
+  background:#fff;
+  border:1px solid #edf1f7;
+  box-shadow:var(--shadow);
+  border-radius:10px;
+  padding:20px 18px;
+  display:flex;
+  align-items:center;
+  gap:17px;
+  min-height:116px;
+}
+.circle{
+  width:68px;
+  height:68px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  color:#fff;
+  font-size:33px;
+  font-weight:900;
+  box-shadow:inset 0 -6px 10px rgba(0,0,0,.12);
+}
+.c-red{background:var(--rojo)}
+.c-yellow{background:var(--amarillo)}
+.c-green{background:var(--verde)}
+.c-blue{background:var(--azul3)}
+.c-purple{background:var(--morado)}
+.c-teal{background:var(--teal)}
+.kpi small{
+  display:block;
+  color:#2f3b52;
+  letter-spacing:.6px;
+  font-weight:900;
+  font-size:12px;
+}
+.kpi b{
+  display:block;
+  font-size:30px;
+  margin:5px 0 3px;
+  color:#0f172a;
+}
+.kpi span{
+  color:#64748b;
+  font-size:13px;
+}
+.grid3{
+  display:grid;
+  grid-template-columns:1fr 1fr 1.05fr;
+  gap:14px;
+  margin-top:14px;
+}
+.panel{
+  background:#fff;
+  border:1px solid var(--borde);
+  border-radius:10px;
+  box-shadow:var(--shadow);
+  padding:18px;
+}
+.panel h3{
+  margin:0 0 14px;
+  color:#0b1d3d;
+  font-size:16px;
+  letter-spacing:.2px;
+}
+.canvasBox{
+  height:260px;
+  position:relative;
+}
+.split{
+  display:grid;
+  grid-template-columns:2fr 1.2fr;
+  gap:14px;
+  margin-top:14px;
+}
+.tablewrap{overflow:auto}
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13.5px;
+}
+th{
+  text-align:left;
+  padding:10px;
+  border-bottom:1px solid var(--borde);
+  font-size:12px;
+  color:#334155;
+  white-space:nowrap;
+}
+td{
+  padding:10px;
+  border-bottom:1px solid #eef2f7;
+  vertical-align:middle;
+}
+tr:hover{background:#f8fafc}
+.code{
+  color:var(--azul);
+  font-weight:950;
+}
+.pill{
+  border-radius:999px;
+  padding:6px 11px;
+  font-weight:900;
+  font-size:11px;
+  display:inline-block;
+}
+.pill.red{background:#ffe1e3;color:#dc2626}
+.pill.yellow{background:#fff4cc;color:#a16207}
+.pill.green{background:#dcfce7;color:#15803d}
+.pill.gray{background:#e5e7eb;color:#64748b}
+.btn{
+  border:0;
+  border-radius:7px;
+  padding:8px 13px;
+  background:var(--azul);
+  color:#fff;
+  font-weight:900;
+  cursor:pointer;
+}
+.btn.red{background:var(--rojo)}
+.btn:hover{filter:brightness(.94)}
+.activity{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.act{
+  display:grid;
+  grid-template-columns:34px 1fr auto;
+  gap:10px;
+  align-items:center;
+  padding-bottom:12px;
+  border-bottom:1px solid #eef2f7;
+}
+.actIcon{
+  width:26px;
+  height:26px;
+  border-radius:7px;
+  display:grid;
+  place-items:center;
+  background:#e0f2fe;
+}
+.act b{font-size:13.5px}
+.act span{display:block;color:#64748b;font-size:12.5px;margin-top:2px}
+.act time{font-size:12px;color:#64748b;white-space:nowrap}
+.cardsPanel{
+  margin-top:14px;
+}
+.cardsHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:8px;
+}
+.cards{
+  display:flex;
+  gap:14px;
+  overflow-x:auto;
+  padding:8px 0 14px;
+  scroll-snap-type:x mandatory;
+}
+.cards::-webkit-scrollbar{height:9px}
+.cards::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:999px}
+.eqcard{
+  min-width:178px;
+  max-width:178px;
+  background:#fff;
+  border:1px solid var(--borde);
+  border-radius:9px;
+  padding:13px;
+  scroll-snap-align:start;
+  transition:.2s ease;
+}
+.eqcard:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.eqcard.red{border-color:var(--rojo)}
+.eqcard.yellow{border-color:var(--amarillo)}
+.eqcard.green{border-color:#dbeafe}
+.eqcard.gray{opacity:.55}
+.dot{
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  display:inline-block;
+  margin-right:7px;
+}
+.dot.red{background:var(--rojo)}
+.dot.yellow{background:var(--amarillo)}
+.dot.green{background:var(--verde)}
+.dot.gray{background:#cbd5e1}
+.eqtitle{
+  font-weight:950;
+  color:#0f172a;
+  display:inline-block;
+}
+.eqcard img{
+  width:76px;
+  height:52px;
+  object-fit:contain;
+  float:left;
+  margin:9px 10px 6px 0;
+}
+.eqdesc{
+  font-size:12px;
+  color:#334155;
+  min-height:42px;
+  margin-top:6px;
+}
+.eqmeta{
+  clear:both;
+  font-size:12.5px;
+  color:#334155;
+  line-height:1.6;
+}
+.plus{color:#159447;font-weight:900}
+.bad{color:#dc2626;font-weight:900}
+.forms{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-top:14px;
+}
+.formline{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:10px;
+}
+.formline input,.formline select{
+  height:40px;
+  border:1px solid var(--borde);
+  border-radius:8px;
+  padding:0 10px;
+  min-width:0;
+}
+.footer{
+  height:58px;
+  background:var(--azul);
+  color:#fff;
+  margin-top:16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 24px;
+  font-size:13px;
+}
+.footer b{letter-spacing:2px}
+@media(max-width:1250px){
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  .grid3{grid-template-columns:1fr}
+  .split,.forms{grid-template-columns:1fr}
+  .canvasBox{height:300px}
+  .buscar{display:none}
+}
+@media(max-width:760px){
+  .topbar{padding:0 12px}
+  .logo{font-size:20px;letter-spacing:6px}
+  .menu{display:none}
+  .wrap{padding:12px}
+  .kpis{grid-template-columns:1fr}
+  .kpi{min-height:96px}
+  .circle{width:54px;height:54px;font-size:26px}
+  .formline{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="logo">DEMOTRON</div>
+  <nav class="menu">
+    <a class="active" href="#dashboard">▦ Dashboard</a>
+    <a href="#equipos">⚙ Equipos</a>
+    <a href="#ot">🛠 OT</a>
+    <a href="#lecturas">▤ Lecturas</a>
+    <a href="#compras">🛒 Compras</a>
+    <a href="#bodega">⌂ Bodega</a>
+    <a href="#reportes">▣ Reportes</a>
+    <a href="#admin">⚙ Configuración</a>
+  </nav>
+  <input class="buscar" id="buscar" placeholder="Buscar..." oninput="filterCards(this.value)">
+  <div class="badgeV2">VISUAL V4 SQL REAL</div>
+  <div class="user">👤 {{ rol or 'Administrador' }} · <a href="/logout">Salir</a></div>
+</header>
+
+<main class="wrap" id="dashboard">
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+  {% endif %}
+{% endwith %}
+
+<section class="kpis">
+  <div class="kpi"><div class="circle c-red">!</div><div><small>ATRASADOS</small><b>{{ kpis.atrasados }}</b><span>{{ kpis.total }} equipos total</span></div></div>
+  <div class="kpi"><div class="circle c-yellow">◷</div><div><small>PRÓXIMOS</small><b>{{ kpis.proximos }}</b><span>Servicios por vencer</span></div></div>
+  <div class="kpi"><div class="circle c-green">✓</div><div><small>CONTROLADO REAL</small><b>{{ kpis.controlado_pct }}%</b><span>{{ kpis.controlados }} de {{ kpis.operativos }} equipos</span></div></div>
+  <div class="kpi"><div class="circle c-blue">▣</div><div><small>OT ABIERTAS</small><b>{{ kpis.ot_abiertas }}</b><span>Órdenes de trabajo</span></div></div>
+  <div class="kpi"><div class="circle c-purple">🛒</div><div><small>COMPRAS EN PROCESO</small><b>{{ kpis.compras_proceso }}</b><span>OC pendientes</span></div></div>
+  <div class="kpi"><div class="circle c-teal">$</div><div><small>COSTO MENSUAL</small><b>${{ "{:,.0f}".format(kpis.costo_mes or 0).replace(',', '.') }}</b><span>Compras cargadas</span></div></div>
+</section>
+
+<section class="grid3">
+  <div class="panel"><h3>ESTADO GENERAL DE LA FLOTA</h3><div class="canvasBox"><canvas id="donut"></canvas></div></div>
+  <div class="panel"><h3>ATRASADOS POR UBICACIÓN</h3><div class="canvasBox"><canvas id="ubic"></canvas></div></div>
+  <div class="panel"><h3>GESTIÓN (OT Y COMPRAS)</h3><div class="canvasBox"><canvas id="gestion"></canvas></div></div>
+</section>
+
+<section class="split">
+  <div class="panel">
+    <h3>EQUIPOS ATRASADOS (CRÍTICOS)</h3>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th>Equipo</th><th>Descripción</th><th>Ubicación</th><th>Última Lectura</th><th>Próxima PM</th><th>Margen</th><th>Estado</th><th>Acción</th></tr></thead>
+      <tbody>
+      {% for e in criticos %}
+        <tr>
+          <td class="code">{{ e.codigo }}</td>
+          <td>{{ e.descripcion }}</td>
+          <td>{{ e.ubicacion }}</td>
+          <td>{{ "{:,.0f}".format(e.lectura_actual or 0).replace(',', '.') }}</td>
+          <td>{{ "{:,.0f}".format(e.proxima_pm or 0).replace(',', '.') }}</td>
+          <td class="bad">{{ "{:,.0f}".format(e.margen or 0).replace(',', '.') }}</td>
+          <td><span class="pill red">{{ e.estado_calculado or 'ATRASADA' }}</span></td>
+          <td>
+            <form method="post" action="/crear_ot">
+              <input type="hidden" name="codigo" value="{{ e.codigo }}">
+              <input type="hidden" name="descripcion" value="PM atrasada {{ e.codigo }}">
+              <button class="btn red">Crear OT</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8">No hay equipos críticos atrasados.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>ACTIVIDAD RECIENTE</h3>
+    <div class="activity">
+    {% for a in actividad %}
+      <div class="act">
+        <div class="actIcon">🔹</div>
+        <div><b>{{ a.titulo }}</b><span>{{ a.detalle }} · {{ a.usuario }}</span></div>
+        <time>{{ a.fecha }}</time>
+      </div>
+    {% else %}
+      <div class="act"><div class="actIcon">ℹ</div><div><b>Sistema listo</b><span>Sin actividad registrada todavía</span></div><time>Hoy</time></div>
+    {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="panel cardsPanel" id="equipos">
+  <div class="cardsHeader">
+    <h3>EQUIPOS (VISTA RÁPIDA)</h3>
+    <button class="btn" onclick="document.getElementById('cards').scrollBy({left:700,behavior:'smooth'})">Ver más →</button>
+  </div>
+  <div class="cards" id="cards">
+    {% for e in equipos if e.semaforo != 'gray' %}
+    <div class="eqcard {{ e.semaforo }}" data-search="{{ e.codigo }} {{ e.descripcion }} {{ e.ubicacion }} {{ e.marca }} {{ e.modelo }}">
+      <span class="dot {{ e.semaforo }}"></span><div class="eqtitle">{{ e.codigo }}</div>
+      <img src="{{ e.imagen_url or '/static/equipos/equipo.svg' }}">
+      <div class="eqdesc">{{ e.descripcion or e.marca ~ ' ' ~ e.modelo }}</div>
+      <div class="eqmeta">
+        <div>{{ e.ubicacion or 'Sin ubicación' }}</div>
+        <div>Lectura: {{ "{:,.0f}".format(e.lectura_actual or 0).replace(',', '.') }}</div>
+        <div>Margen: <span class="{{ 'bad' if (e.margen or 0) < 0 else 'plus' }}">{{ "{:,.0f}".format(e.margen or 0).replace(',', '.') }}</span></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="forms">
+  <div class="panel" id="lecturas">
+    <h3>Registrar lectura</h3>
+    <form method="post" action="/lecturas" class="formline">
+      <input name="codigo" placeholder="Código">
+      <input name="valor" placeholder="Lectura">
+      <input name="ubicacion" placeholder="Ubicación">
+      <input name="observacion" placeholder="Observación">
+      <button class="btn">Guardar</button>
+    </form>
+  </div>
+
+  <div class="panel" id="ot">
+    <h3>Crear OT</h3>
+    <form method="post" action="/crear_ot" class="formline">
+      <input name="codigo" placeholder="Código">
+      <select name="tipo"><option>Preventiva</option><option>Correctiva</option></select>
+      <select name="prioridad"><option>Alta</option><option>Media</option><option>Baja</option></select>
+      <input name="descripcion" placeholder="Descripción">
+      <button class="btn">Crear</button>
+    </form>
+  </div>
+
+  <div class="panel" id="admin">
+    <h3>Importar / cargar datos CMMS</h3>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <a class="btn" style="text-decoration:none;background:#15803d" href="/admin/cargar_sql_final" onclick="return confirm('Esto reemplazará la data del ERP por los Excel reales incluidos. ¿Continuar?')">Cargar datos reales V3</a>
+      <a class="btn" style="text-decoration:none;background:#991b1b" href="/admin/vaciar_datos" onclick="return confirm('Esto vaciará equipos, lecturas, compras, OT y bodega. ¿Continuar?')">Vaciar datos</a>
+    </div>
+    <form method="post" action="/importar_excel" enctype="multipart/form-data" class="formline">
+      <input type="file" name="excel" accept=".xlsx,.xls">
+      <button class="btn">Importar Excel manual</button>
+    </form>
+  </div>
+
+  <div class="panel" id="bodega">
+    <h3>Equipos en taller</h3>
+    <div class="tablewrap">
+    <table>
+      <tbody>
+      {% for e in taller %}
+        <tr><td class="code">{{ e.codigo }}</td><td>{{ e.descripcion }}</td><td>{{ e.ubicacion }}</td></tr>
+      {% else %}
+        <tr><td>No hay equipos en taller.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="footer">
+  <b>DEMOTRON CMMS</b>
+  <span>© 2026 Demotron Maquinarias - Dashboard Industrial V3 Datos Reales</span>
+  <span>{{ version }}</span>
+</footer>
+
+<script>
+const data={{ charts|safe }};
+function safeObj(o){return o && typeof o === 'object' ? o : {}}
+const estado=safeObj(data.estado);
+const ubicacion=safeObj(data.ubicacion);
+const gestion=safeObj(data.gestion);
+function chart(id,type,labels,values,colors){
+  const el=document.getElementById(id);
+  if(!el) return;
+  new Chart(el,{
+    type:type,
+    data:{labels:labels,datasets:[{data:values,backgroundColor:colors||['#35b96b','#f7b500','#ef3f45','#9ca3af','#1261d6','#7449d4'],borderWidth:0}]},
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{position:type==='doughnut'?'right':'bottom'}},
+      scales:type==='bar'?{y:{beginAtZero:true,grid:{color:'#edf2f7'}},x:{grid:{display:false}}}:{}
+    }
+  });
+}
+chart('donut','doughnut',Object.keys(estado),Object.values(estado));
+chart('ubic','bar',Object.keys(ubicacion),Object.values(ubicacion),['#ef3f45']);
+const gLabels=Object.keys(gestion);
+new Chart(document.getElementById('gestion'),{
+  type:'bar',
+  data:{
+    labels:gLabels,
+    datasets:[
+      {label:'OT Creadas',data:Object.values(gestion).map(x=>Array.isArray(x)?x[0]:0),backgroundColor:'#1261d6'},
+      {label:'Compras',data:Object.values(gestion).map(x=>Array.isArray(x)?x[1]:0),backgroundColor:'#7449d4'}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true,grid:{color:'#edf2f7'}},x:{grid:{display:false}}}}
+});
+function filterCards(q){
+  q=(q||'').toLowerCase();
+  document.querySelectorAll('.eqcard').forEach(c=>c.style.display=c.dataset.search.toLowerCase().includes(q)?'block':'none');
+}
+</script>
+</body>
+</html>
