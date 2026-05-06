@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON ERP CMMS KOMATSU STYLE FINAL 2026"
+APP_VERSION = "DEMOTRON VISUAL V3 DATOS REALES ACTIVO"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
@@ -129,6 +129,27 @@ def save_equipo(d):
     params = {"codigo":codigo, "tipo_equipo":clean(d.get('tipo_equipo')), "familia":clean(d.get('familia')), "marca":clean(d.get('marca')), "modelo":clean(d.get('modelo')), "descripcion":clean(d.get('descripcion')), "ano":clean(d.get('ano')), "patente":clean(d.get('patente')), "vin":clean(d.get('vin')), "motor":clean(d.get('motor')), "chofer":clean(d.get('chofer')), "ubicacion":clean(d.get('ubicacion')), "responsable":clean(d.get('responsable')), "control_base":clean(d.get('control_base'),'HORAS'), "frecuencia_base":fnum(d.get('frecuencia_base')), "lectura_actual":fnum(d.get('lectura_actual')), "ultima_pm":fnum(d.get('ultima_pm')), "proxima_pm":prox, "margen":margen, "costo_total_pm":fnum(d.get('costo_total_pm')), "estado_operacional":clean(d.get('estado_operacional'),'OPERATIVO'), "estado_calculado":estado, "semaforo":semaforo, "imagen_url":clean(d.get('imagen_url')) or img_for(d.get('familia'), codigo), "fecha_actualizacion":datetime.now().strftime('%Y-%m-%d %H:%M')}
     if not params['descripcion']:
         params['descripcion'] = " ".join(x for x in [params['familia'], params['marca'], params['modelo']] if x)
+
+    # V3 DATOS REALES: no borrar datos buenos con celdas vacías de otro Excel.
+    # Ejemplo: la planilla de ubicaciones trae chofer/ubicación, pero no horómetro, PM ni costo.
+    # Antes eso podía sobreescribir lecturas con cero. Ahora conserva el dato existente.
+    existing = one("SELECT * FROM equipos WHERE codigo=:codigo", {"codigo": codigo}) if table_exists('equipos') else None
+    if existing:
+        existing = dict(existing)
+        text_keys = ['tipo_equipo','familia','marca','modelo','descripcion','ano','patente','vin','motor','chofer','ubicacion','responsable','control_base','estado_operacional','imagen_url']
+        num_keys = ['frecuencia_base','lectura_actual','ultima_pm','costo_total_pm']
+        for k in text_keys:
+            if not clean(params.get(k)) and clean(existing.get(k)):
+                params[k] = existing.get(k)
+        for k in num_keys:
+            if fnum(params.get(k)) == 0 and fnum(existing.get(k)) != 0:
+                params[k] = existing.get(k)
+        estado,semaforo,prox,margen = estado_calc(params.get('frecuencia_base'), params.get('lectura_actual'), params.get('ultima_pm'), params.get('estado_operacional'))
+        params['estado_calculado'] = estado
+        params['semaforo'] = semaforo
+        params['proxima_pm'] = prox
+        params['margen'] = margen
+
     if is_pg():
         q("""INSERT INTO equipos(codigo,tipo_equipo,familia,marca,modelo,descripcion,ano,patente,vin,motor,chofer,ubicacion,responsable,control_base,frecuencia_base,lectura_actual,ultima_pm,proxima_pm,margen,costo_total_pm,estado_operacional,estado_calculado,semaforo,imagen_url,fecha_actualizacion)
         VALUES(:codigo,:tipo_equipo,:familia,:marca,:modelo,:descripcion,:ano,:patente,:vin,:motor,:chofer,:ubicacion,:responsable,:control_base,:frecuencia_base,:lectura_actual,:ultima_pm,:proxima_pm,:margen,:costo_total_pm,:estado_operacional,:estado_calculado,:semaforo,:imagen_url,:fecha_actualizacion)
@@ -275,6 +296,46 @@ def lecturas_post():
         if ub: d['ubicacion']=ub
         save_equipo(d)
     flash('Lectura registrada y KPI recalculado.'); return redirect(url_for('index')+'#lecturas')
+
+
+@app.route('/admin/reset_cargar_datos')
+@login_required
+def reset_cargar_datos():
+    try:
+        if is_pg():
+            q('TRUNCATE TABLE lecturas, compras, ot, bodega, actividad, equipos, importaciones RESTART IDENTITY CASCADE')
+        else:
+            for t in ['lecturas','compras','ot','bodega','actividad','equipos','importaciones']:
+                q(f'DELETE FROM {t}')
+        total = 0
+        orden = [
+            'Plantilla_Maestra_CMMS_ERP_DEMOTRON_DATOS_WEB.xlsx',
+            'CMMS DEMOTRON MANU ORTIZ(24).xlsx',
+            'Equipos choferes y ubicaciones.xlsx',
+        ]
+        for nombre in orden:
+            p = DATA_IMPORT / nombre
+            if p.exists():
+                total += import_excel_file(p)
+        q("INSERT INTO actividad(fecha,tipo,titulo,detalle,usuario) VALUES(:f,'datos','Datos reales V3 cargados',:d,:u)", {"f":datetime.now().strftime('%Y-%m-%d %H:%M'), "d":f'{total} registros importados desde Excel base', "u":session.get('user','admin')})
+        flash(f'DATOS REALES V3 CARGADOS: {total} registros procesados. Dashboard recalculado.')
+    except Exception as e:
+        flash(f'Error cargando datos reales V3: {e}')
+    return redirect(url_for('index'))
+
+@app.route('/admin/vaciar_datos')
+@login_required
+def vaciar_datos():
+    try:
+        if is_pg():
+            q('TRUNCATE TABLE lecturas, compras, ot, bodega, actividad, equipos, importaciones RESTART IDENTITY CASCADE')
+        else:
+            for t in ['lecturas','compras','ot','bodega','actividad','equipos','importaciones']:
+                q(f'DELETE FROM {t}')
+        flash('Base de datos vaciada. Ahora puedes cargar datos reales V3.')
+    except Exception as e:
+        flash(f'Error vaciando datos: {e}')
+    return redirect(url_for('index'))
 
 @app.route('/health')
 def health(): return jsonify({'status':'ok','database':'postgresql' if is_pg() else 'sqlite','version':APP_VERSION})
