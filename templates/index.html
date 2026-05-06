@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DEMOTRON ERP CMMS - Dashboard Industrial V2</title>
+<title>DEMOTRON ERP CMMS - Dashboard Industrial V3 Datos Reales</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 :root{
@@ -388,7 +388,7 @@ tr:hover{background:#f8fafc}
     <a href="#admin">⚙ Configuración</a>
   </nav>
   <input class="buscar" id="buscar" placeholder="Buscar..." oninput="filterCards(this.value)">
-  <div class="badgeV2">VISUAL V2 ACTIVO</div>
+  <div class="badgeV2">VISUAL V3 DATOS REALES</div>
   <div class="user">👤 {{ rol or 'Administrador' }} · <a href="/logout">Salir</a></div>
 </header>
 
@@ -507,10 +507,14 @@ tr:hover{background:#f8fafc}
   </div>
 
   <div class="panel" id="admin">
-    <h3>Importar Excel CMMS</h3>
+    <h3>Importar / cargar datos CMMS</h3>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <a class="btn" style="text-decoration:none;background:#15803d" href="/admin/reset_cargar_datos" onclick="return confirm('Esto reemplazará la data del ERP por los Excel reales incluidos. ¿Continuar?')">Cargar datos reales V3</a>
+      <a class="btn" style="text-decoration:none;background:#991b1b" href="/admin/vaciar_datos" onclick="return confirm('Esto vaciará equipos, lecturas, compras, OT y bodega. ¿Continuar?')">Vaciar datos</a>
+    </div>
     <form method="post" action="/importar_excel" enctype="multipart/form-data" class="formline">
       <input type="file" name="excel" accept=".xlsx,.xls">
-      <button class="btn">Importar</button>
+      <button class="btn">Importar Excel manual</button>
     </form>
   </div>
 
@@ -533,7 +537,7 @@ tr:hover{background:#f8fafc}
 
 <footer class="footer">
   <b>DEMOTRON CMMS</b>
-  <span>© 2026 Demotron Maquinarias - Dashboard Industrial V2</span>
+  <span>© 2026 Demotron Maquinarias - Dashboard Industrial V3 Datos Reales</span>
   <span>{{ version }}</span>
 </footer>
 
