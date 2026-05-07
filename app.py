@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON_ERP_CMMS_V6_6_DASHBOARD_STANDALONE"
+APP_VERSION = "DEMOTRON_ERP_CMMS_V7_PAGINAS_REALES_UNIDADES"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
@@ -1503,6 +1503,223 @@ def dashboard_v66():
         bodega_count=v66_count("bodega"),
         version=APP_VERSION,
     )
+
+
+# ===================== V7 ERP REAL =====================
+
+def v7f(v):
+    try:
+        s=str(v or "").strip()
+        if s=="" or s.lower() in ("nan","none","null"): return 0.0
+        if "," in s and "." in s: s=s.replace(".","").replace(",",".")
+        elif "," in s: s=s.replace(",",".")
+        return float(s)
+    except Exception:
+        return 0.0
+
+def v7rows(sql, params=None):
+    with engine.begin() as conn:
+        return [dict(r._mapping) for r in conn.execute(text(sql), params or {})]
+
+def v7one(sql, params=None):
+    with engine.begin() as conn:
+        return conn.execute(text(sql), params or {}).mappings().first()
+
+def v7exec(sql, params=None):
+    with engine.begin() as conn:
+        conn.execute(text(sql), params or {})
+
+def v7exists(t):
+    try:
+        with engine.begin() as conn:
+            r=conn.execute(text("SELECT to_regclass(:t) AS name"), {"t":t}).mappings().first()
+            return bool(r and r["name"])
+    except Exception:
+        return False
+
+def v7count(t):
+    try:
+        return int(v7rows(f"SELECT COUNT(*) AS n FROM {t}")[0]["n"]) if v7exists(t) else 0
+    except Exception:
+        return 0
+
+def v7norm(s):
+    s=str(s or "").strip().lower()
+    for a,b in {"á":"a","é":"e","í":"i","ó":"o","ú":"u","ñ":"n"}.items(): s=s.replace(a,b)
+    return s
+
+def v7unidad(e):
+    cb=v7norm(e.get("control_base"))
+    if cb in ("hora","horas","hrs","hr","h","horometro","horómetro"): return "HORAS"
+    if cb in ("km","kms","kilometro","kilometros","kilómetro","kilómetros","odometro","odómetro"): return "KM"
+    cod=str(e.get("codigo") or "").upper()
+    txt=v7norm(" ".join(str(e.get(k) or "") for k in ["tipo_equipo","familia","marca","modelo","descripcion"]))
+    if cod.startswith("VD"): return "KM"
+    if cod.startswith("MD") or cod.startswith("EQP"): return "HORAS"
+    if cod.startswith("CD"):
+        if any(x in txt for x in ["tolva","faena","aljibe","pluma","gravilladora","barredora"]): return "HORAS"
+        if any(x in txt for x in ["liviano","plano","carretera","reparto","jac","hino","hyundai"]): return "KM"
+        return "HORAS"
+    if any(x in txt for x in ["excavadora","cargador","rodillo","motoniveladora","retroexcavadora","planta"]): return "HORAS"
+    return "HORAS"
+
+def v7eq(e):
+    e=dict(e)
+    for f in ["frecuencia_base","lectura_actual","ultima_pm","proxima_pm","margen","costo_total_pm"]:
+        e[f]=v7f(e.get(f))
+    e["unidad_control"]=v7unidad(e)
+    if e["frecuencia_base"]>0 and e["ultima_pm"]>0:
+        e["proxima_pm"]=e["ultima_pm"]+e["frecuencia_base"]
+        e["margen"]=e["proxima_pm"]-e["lectura_actual"]
+    op=v7norm(e.get("estado_operacional"))
+    if "fuera" in op: estado,sem="FUERA DE SERVICIO","gray"
+    elif "taller" in op: estado,sem="EN TALLER","gray"
+    elif e["lectura_actual"]<=0 or e["frecuencia_base"]<=0: estado,sem="SIN LECTURA","yellow"
+    elif e["ultima_pm"]<=0: estado,sem="SIN HISTORIAL PM","yellow"
+    elif e["margen"]<0: estado,sem="ATRASADA","red"
+    elif e["margen"]<=max(15,e["frecuencia_base"]*.1): estado,sem="PRÓXIMA","yellow"
+    else: estado,sem="AL DÍA","green"
+    e["estado_calculado"]=estado
+    e["semaforo"]=sem
+    if not e.get("imagen_url"):
+        cod=str(e.get("codigo") or "")
+        txt=v7norm(str(e.get("familia") or "")+" "+str(e.get("descripcion") or ""))
+        if cod.startswith("CD") or "camion" in txt: e["imagen_url"]="/static/equipos/camion.svg"
+        elif cod.startswith("VD") or "camioneta" in txt: e["imagen_url"]="/static/equipos/camioneta.svg"
+        elif "excav" in txt: e["imagen_url"]="/static/equipos/excavadora.svg"
+        elif "cargador" in txt: e["imagen_url"]="/static/equipos/cargador.svg"
+        else: e["imagen_url"]="/static/equipos/equipo.svg"
+    return e
+
+def v7equipos():
+    return [v7eq(e) for e in v7rows("SELECT * FROM equipos ORDER BY codigo LIMIT 1000")] if v7exists("equipos") else []
+
+def v7list(t, lim=500):
+    if not v7exists(t): return []
+    order="id DESC" if t!="equipos" else "codigo"
+    return v7rows(f"SELECT * FROM {t} ORDER BY {order} LIMIT {int(lim)}")
+
+def v7kpi():
+    eq=v7equipos()
+    op=[e for e in eq if e["semaforo"]!="gray"]
+    atras=[e for e in op if e["semaforo"]=="red"]
+    prox=[e for e in op if e["semaforo"]=="yellow"]
+    compras=v7list("compras", 2000)
+    ots=v7list("ot", 2000)
+    for c in compras: c["costo_total"]=v7f(c.get("costo_total"))
+    ctrl=max(0,len(op)-len(atras))
+    return {"total":len(eq),"operativos":len(op),"atrasados":len(atras),"proximos":len(prox),
+            "controlados":ctrl,"controlado_pct":round(ctrl/len(op)*100,1) if op else 0,
+            "ot_abiertas":sum(1 for o in ots if str(o.get("estado") or "").upper() not in ("CERRADA","CERRADO","EJECUTADA")),
+            "compras_proceso":sum(1 for c in compras if str(c.get("estado") or "").upper() in ("EN PROCESO","POR RECIBIR","PENDIENTE","")),
+            "costo_mes":sum(v7f(c.get("costo_total")) for c in compras),
+            "lecturas":v7count("lecturas"),"compras":v7count("compras"),"ot":v7count("ot"),"bodega":v7count("bodega")}
+
+CSS="""<style>
+body{margin:0;background:#f4f6fa;font-family:Segoe UI,Arial;color:#14213d}.top{height:66px;background:white;border-bottom:1px solid #e6ebf2;display:flex;align-items:center;gap:20px;padding:0 24px;position:sticky;top:0;z-index:10}.logo{font-size:30px;font-weight:950;letter-spacing:11px;color:#082b5f}.nav{display:flex;gap:16px;flex:1;overflow:auto}.nav a{font-weight:800;color:#334155;text-decoration:none}.v{background:#dcfce7;color:#15803d;padding:7px 11px;border-radius:999px;font-weight:900;font-size:12px}.wrap{padding:20px 24px}.panel,.kpi,.card{background:white;border:1px solid #e6ebf2;border-radius:10px;box-shadow:0 6px 18px rgba(9,30,66,.08);padding:18px;margin-bottom:14px}.kpis{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:14px}.kpi{display:flex;gap:15px;align-items:center}.circle{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;color:white;font-weight:950;font-size:27px}.red{background:#ef3f45}.yellow{background:#f7b500}.green{background:#35b96b}.blue{background:#1261d6}.purple{background:#7449d4}.teal{background:#07939a}.kpi small{font-size:11px;color:#475569;font-weight:900}.kpi b{display:block;font-size:28px}.grid{display:grid;grid-template-columns:1fr 1fr 1.1fr;gap:14px}.canvas{height:265px}.split{display:grid;grid-template-columns:2fr 1fr;gap:14px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px;border-bottom:1px solid #eef2f7;text-align:left}th{font-size:12px;color:#334155}.code{font-weight:950;color:#082b5f}.pill{border-radius:999px;padding:5px 10px;font-weight:900;font-size:11px;display:inline-block}.pill.red{background:#ffe1e3;color:#b91c1c}.pill.yellow{background:#fff4cc;color:#a16207}.pill.green{background:#dcfce7;color:#15803d}.pill.gray{background:#e5e7eb;color:#475569}.cards{display:flex;gap:14px;overflow-x:auto;padding:8px 0 14px}.card{min-width:185px}.card.red{border-color:#ef3f45}.card.yellow{border-color:#f7b500}.card.green{border-color:#bbf7d0}.card.gray{opacity:.6}.card img{width:80px;height:54px;object-fit:contain;float:left;margin:8px 10px 8px 0}.btn{background:#082b5f;color:white;border:0;border-radius:8px;padding:9px 13px;font-weight:900;text-decoration:none;display:inline-block}input,select{height:40px;border:1px solid #e6ebf2;border-radius:8px;padding:0 10px}.foot{height:55px;background:#082b5f;color:white;display:flex;align-items:center;justify-content:space-between;padding:0 24px;margin-top:18px}@media(max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}.grid,.split{grid-template-columns:1fr}}@media(max-width:700px){.kpis{grid-template-columns:1fr}.logo{font-size:20px;letter-spacing:6px}.nav{display:none}.wrap{padding:12px}}</style>"""
+TOP="""<header class='top'><div class='logo'>DEMOTRON</div><nav class='nav'><a href='/erp'>Dashboard</a><a href='/equipos'>Equipos</a><a href='/ot'>OT</a><a href='/compras'>Compras</a><a href='/lecturas'>Lecturas</a><a href='/bodega'>Bodega</a><a href='/taller'>Taller</a><a href='/reportes'>Reportes</a></nav><div class='v'>V7 ERP REAL</div></header>"""
+
+@app.before_request
+def v7_root():
+    if request.path=="/":
+        return redirect("/erp")
+
+@app.route("/admin/v7/version")
+@app.route("/v7/version")
+def v7_version():
+    return jsonify({"status":"OK","version":APP_VERSION,"mensaje":"V7 ERP REAL ACTIVO","dashboard":"/erp"})
+
+@app.route("/admin/v7/diagnostico")
+@app.route("/v7/diagnostico")
+def v7_diag():
+    return jsonify({"status":"OK","version":APP_VERSION,"equipos":v7count("equipos"),"lecturas":v7count("lecturas"),"compras":v7count("compras"),"ot":v7count("ot"),"bodega":v7count("bodega")})
+
+@app.route("/erp")
+@app.route("/dashboard_v7")
+def v7_dashboard():
+    import json as _json
+    eq=v7equipos(); k=v7kpi()
+    crit=[e for e in eq if e["semaforo"] in ("red","yellow")][:50]
+    taller=[e for e in eq if e["semaforo"]=="gray" and "TALLER" in str(e.get("estado_calculado") or "").upper()][:50]
+    estado={"Al día":0,"Próximos":0,"Atrasados":0,"No operativos":0}; ubic={}
+    for e in eq:
+        if e["semaforo"]=="red": estado["Atrasados"]+=1; ubic[e.get("ubicacion") or "Sin ubicación"]=ubic.get(e.get("ubicacion") or "Sin ubicación",0)+1
+        elif e["semaforo"]=="yellow": estado["Próximos"]+=1
+        elif e["semaforo"]=="gray": estado["No operativos"]+=1
+        else: estado["Al día"]+=1
+    html=f"""<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>DEMOTRON ERP V7</title><script src='https://cdn.jsdelivr.net/npm/chart.js'></script>{CSS}</head><body>{TOP}<main class='wrap'>
+<section class='kpis'>
+<div class='kpi'><div class='circle red'>!</div><div><small>ATRASADOS</small><b>{{{{k.atrasados}}}}</b></div></div><div class='kpi'><div class='circle yellow'>◷</div><div><small>PRÓXIMOS</small><b>{{{{k.proximos}}}}</b></div></div><div class='kpi'><div class='circle green'>✓</div><div><small>CONTROLADO</small><b>{{{{k.controlado_pct}}}}%</b></div></div><div class='kpi'><div class='circle blue'>▣</div><div><small>OT ABIERTAS</small><b>{{{{k.ot_abiertas}}}}</b></div></div><div class='kpi'><div class='circle purple'>🛒</div><div><small>COMPRAS</small><b>{{{{k.compras_proceso}}}}</b></div></div><div class='kpi'><div class='circle teal'>$</div><div><small>COSTO</small><b>${{{{"{{:,.0f}}".format(k.costo_mes).replace(",", ".")}}}}</b></div></div></section>
+<section class='grid'><div class='panel'><h3>Estado general</h3><div class='canvas'><canvas id='estado'></canvas></div></div><div class='panel'><h3>Atrasados por ubicación</h3><div class='canvas'><canvas id='ubic'></canvas></div></div><div class='panel'><h3>Control ERP</h3><div class='canvas'><canvas id='gestion'></canvas></div></div></section>
+<section class='panel'><h3>Equipos activos con scroll</h3><div class='cards'>{{% for e in equipos if e.semaforo!='gray' %}}<div class='card {{{{e.semaforo}}}}'><b class='code'><a href='/equipo/{{{{e.codigo}}}}'>{{{{e.codigo}}}}</a></b><br><img src='{{{{e.imagen_url}}}}'><div>{{{{e.descripcion or e.familia or e.modelo}}}}</div><small>{{{{e.ubicacion or 'Sin ubicación'}}}}<br>{{{{e.unidad_control}}}}: {{{{"{{:,.0f}}".format(e.lectura_actual).replace(",", ".")}}}}</small></div>{{% endfor %}}</div></section>
+<section class='split'><div class='panel'><h3>Equipos críticos</h3><table><tr><th>Código</th><th>Descripción</th><th>Unidad</th><th>Ubicación</th><th>Lectura</th><th>Margen</th><th>Estado</th></tr>{{% for e in crit %}}<tr><td class='code'><a href='/equipo/{{{{e.codigo}}}}'>{{{{e.codigo}}}}</a></td><td>{{{{e.descripcion}}}}</td><td>{{{{e.unidad_control}}}}</td><td>{{{{e.ubicacion}}}}</td><td>{{{{"{{:,.0f}}".format(e.lectura_actual).replace(",", ".")}}}}</td><td>{{{{"{{:,.0f}}".format(e.margen).replace(",", ".")}}}}</td><td><span class='pill {{{{e.semaforo}}}}'>{{{{e.estado_calculado}}}}</span></td></tr>{{% endfor %}}</table></div><div class='panel'><h3>Equipos en taller</h3><table>{{% for e in taller %}}<tr><td class='code'><a href='/equipo/{{{{e.codigo}}}}'>{{{{e.codigo}}}}</a></td><td>{{{{e.descripcion}}}}</td></tr>{{% else %}}<tr><td>No hay equipos en taller.</td></tr>{{% endfor %}}</table></div></section>
+</main><footer class='foot'><b>DEMOTRON CMMS V7</b><span>Datos reales: {{{{k.total}}}} equipos</span></footer><script>
+const estado={_json.dumps(estado,ensure_ascii=False)}, ubic={_json.dumps(dict(sorted(ubic.items(),key=lambda x:x[1],reverse=True)[:10]),ensure_ascii=False)};
+new Chart(document.getElementById('estado'),{{type:'doughnut',data:{{labels:Object.keys(estado),datasets:[{{data:Object.values(estado),backgroundColor:['#35b96b','#f7b500','#ef3f45','#9ca3af']}}]}},options:{{responsive:true,maintainAspectRatio:false}}}});
+new Chart(document.getElementById('ubic'),{{type:'bar',data:{{labels:Object.keys(ubic),datasets:[{{data:Object.values(ubic),backgroundColor:'#ef3f45'}}]}},options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{display:false}}}},scales:{{y:{{beginAtZero:true}}}}}}}});
+new Chart(document.getElementById('gestion'),{{type:'bar',data:{{labels:['Equipos','Lecturas','Compras','OT','Bodega'],datasets:[{{data:[{k['total']},{k['lecturas']},{k['compras']},{k['ot']},{k['bodega']}],backgroundColor:['#082b5f','#1261d6','#7449d4','#07939a','#35b96b']}}]}},options:{{responsive:true,maintainAspectRatio:false,plugins:{{legend:{{display:false}}}},scales:{{y:{{beginAtZero:true}}}}}}}});
+</script></body></html>"""
+    return render_template_string(html,k=k,equipos=eq,crit=crit,taller=taller)
+
+def v7page(title, content):
+    return render_template_string(f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{title}</title>{CSS}</head><body>{TOP}<main class='wrap'><section class='panel'><h3>{title}</h3>{content}</section></main><footer class='foot'><b>DEMOTRON CMMS V7</b><span>{APP_VERSION}</span></footer></body></html>")
+
+@app.route("/equipos")
+def v7_equipos_page():
+    html="<table><tr><th>Código</th><th>Descripción</th><th>Unidad</th><th>Ubicación</th><th>Lectura</th><th>Estado</th><th>Ficha</th></tr>"
+    for e in v7equipos():
+        html+=f"<tr><td class='code'>{e.get('codigo','')}</td><td>{e.get('descripcion','')}</td><td><b>{e.get('unidad_control','')}</b></td><td>{e.get('ubicacion','')}</td><td>{e.get('lectura_actual',0):,.0f}</td><td><span class='pill {e.get('semaforo','green')}'>{e.get('estado_calculado','')}</span></td><td><a class='btn' href='/equipo/{e.get('codigo','')}'>Abrir</a></td></tr>"
+    return v7page("Equipos DEMOTRON", html+"</table>")
+
+@app.route("/equipo/<codigo>", methods=["GET","POST"])
+def v7_ficha(codigo):
+    codigo=codigo.upper()
+    if request.method=="POST":
+        u=request.form.get("unidad_control","").upper()
+        if u in ("HORAS","KM"): v7exec("UPDATE equipos SET control_base=:u WHERE codigo=:c",{"u":u,"c":codigo})
+        return redirect(f"/equipo/{codigo}")
+    r=v7one("SELECT * FROM equipos WHERE codigo=:c",{"c":codigo})
+    if not r: return "Equipo no encontrado",404
+    e=v7eq(dict(r))
+    html=f"""<div class='split'><div><h2 class='code'>{e.get('codigo')}</h2><img src='{e.get('imagen_url')}' style='width:220px;height:140px;object-fit:contain;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px'><p><b>Descripción:</b> {e.get('descripcion','')}</p><p><b>Marca/Modelo:</b> {e.get('marca','')} {e.get('modelo','')}</p><p><b>Ubicación:</b> {e.get('ubicacion','')}</p><p><b>Estado:</b> <span class='pill {e.get('semaforo')}'>{e.get('estado_calculado')}</span></p></div><div><h3>Unidad de control editable</h3><form method='post'><select name='unidad_control'><option {'selected' if e.get('unidad_control')=='HORAS' else ''}>HORAS</option><option {'selected' if e.get('unidad_control')=='KM' else ''}>KM</option></select> <button class='btn'>Guardar</button></form><p><b>Lectura:</b> {e.get('lectura_actual',0):,.0f} {e.get('unidad_control')}</p><p><b>Próxima PM:</b> {e.get('proxima_pm',0):,.0f}</p><p><b>Margen:</b> {e.get('margen',0):,.0f}</p></div></div>"""
+    for title,table,cols,where in [("OT","ot",["numero","tipo","estado","fecha_creacion","descripcion"],"codigo"),("Compras/OC","compras",["fecha","oc","proveedor","item","costo_total","estado"],"codigo_equipo"),("Lecturas","lecturas",["fecha","tipo_lectura","valor","ubicacion","observacion"],"codigo")]:
+        data=v7rows(f"SELECT * FROM {table} WHERE {where}=:c ORDER BY id DESC LIMIT 50",{"c":codigo}) if v7exists(table) else []
+        html+=f"<h3>{title}</h3><table><tr>"+ "".join(f"<th>{c}</th>" for c in cols)+"</tr>"
+        for row in data: html+="<tr>"+"".join(f"<td>{row.get(c,'')}</td>" for c in cols)+"</tr>"
+        html+="</table>"
+    return v7page(f"Ficha equipo {codigo}", html)
+
+def v7_generic_table(title, table, cols, code_col=None):
+    data=v7list(table,500)
+    html="<table><tr>"+"".join(f"<th>{c}</th>" for c in cols)+"</tr>"
+    for row in data:
+        html+="<tr>"
+        for c in cols:
+            val=row.get(c,"")
+            if code_col and c==code_col: val=f"<a href='/equipo/{val}'>{val}</a>"
+            html+=f"<td>{val}</td>"
+        html+="</tr>"
+    return v7page(title,html+"</table>")
+
+@app.route("/ot")
+def v7_ot_page(): return v7_generic_table("Órdenes de Trabajo","ot",["numero","codigo","tipo","estado","fecha_creacion","descripcion","costo_estimado"],"codigo")
+@app.route("/compras")
+def v7_compras_page(): return v7_generic_table("Compras / OC","compras",["fecha","codigo_equipo","oc","proveedor","item","estado","costo_total"],"codigo_equipo")
+@app.route("/lecturas")
+def v7_lecturas_page(): return v7_generic_table("Lecturas","lecturas",["fecha","codigo","tipo_lectura","valor","ubicacion","observacion"],"codigo")
+@app.route("/bodega")
+def v7_bodega_page(): return v7_generic_table("Bodega","bodega",["fecha","codigo_equipo","ot_numero","repuesto","cantidad","costo_unitario","movimiento"],"codigo_equipo")
+@app.route("/taller")
+def v7_taller_page():
+    html="<table><tr><th>Equipo</th><th>Descripción</th><th>Unidad</th><th>Ubicación</th><th>Estado</th></tr>"
+    for e in [x for x in v7equipos() if "TALLER" in str(x.get("estado_calculado") or x.get("estado_operacional") or "").upper()]:
+        html+=f"<tr><td class='code'><a href='/equipo/{e.get('codigo','')}'>{e.get('codigo','')}</a></td><td>{e.get('descripcion','')}</td><td>{e.get('unidad_control')}</td><td>{e.get('ubicacion')}</td><td>{e.get('estado_calculado')}</td></tr>"
+    return v7page("Equipos en Taller", html+"</table>")
+@app.route("/reportes")
+def v7_reportes_page():
+    k=v7kpi()
+    html=f"<div class='kpis'><div class='kpi'><div class='circle blue'>▣</div><div><small>Equipos</small><b>{k['total']}</b></div></div><div class='kpi'><div class='circle green'>✓</div><div><small>Controlado</small><b>{k['controlado_pct']}%</b></div></div><div class='kpi'><div class='circle red'>!</div><div><small>Atrasados</small><b>{k['atrasados']}</b></div></div><div class='kpi'><div class='circle purple'>OT</div><div><small>OT</small><b>{k['ot']}</b></div></div></div><p>Reporte gerencial V7 con datos reales PostgreSQL.</p>"
+    return v7page("Reportes Gerenciales", html)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5000)), debug=False)
