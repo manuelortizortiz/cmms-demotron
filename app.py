@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON_ERP_CMMS_V7_1_RECALCULO_REAL"
+APP_VERSION = "DEMOTRON_ERP_CMMS_V8_IMAGENES_REALES_HORAS_KM"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
@@ -1817,6 +1817,205 @@ def v71_version():
         ]
     })
 
+
+
+# ================= V8 ERP REAL: IMAGENES REALES + HORAS/KM =================
+
+def v8f(v):
+    try:
+        s=str(v or "").strip()
+        if s=="" or s.lower() in ("nan","none","null"): return 0.0
+        if "," in s and "." in s: s=s.replace(".","").replace(",",".")
+        elif "," in s: s=s.replace(",",".")
+        return float(s)
+    except Exception: return 0.0
+
+def v8rows(sql, p=None):
+    with engine.begin() as c: return [dict(r._mapping) for r in c.execute(text(sql), p or {})]
+def v8one(sql, p=None):
+    with engine.begin() as c: return c.execute(text(sql), p or {}).mappings().first()
+def v8exec(sql, p=None):
+    with engine.begin() as c: c.execute(text(sql), p or {})
+def v8exists(t):
+    try:
+        return bool(v8one("SELECT to_regclass(:t) AS name", {"t":t})["name"])
+    except Exception: return False
+def v8count(t):
+    try: return int(v8rows(f"SELECT COUNT(*) n FROM {t}")[0]["n"]) if v8exists(t) else 0
+    except Exception: return 0
+def v8norm(s):
+    s=str(s or "").lower().strip()
+    for a,b in {"á":"a","é":"e","í":"i","ó":"o","ú":"u","ñ":"n"}.items(): s=s.replace(a,b)
+    return s
+
+def v8col(t,c):
+    try: return bool(v8one("SELECT column_name FROM information_schema.columns WHERE table_name=:t AND column_name=:c",{"t":t,"c":c}))
+    except Exception: return False
+def v8schema():
+    if not v8exists("equipos"): return
+    for col in ["unidad_control","lectura_horas","lectura_km","ultima_pm_horas","ultima_pm_km","imagen_tipo"]:
+        if not v8col("equipos",col): v8exec(f"ALTER TABLE equipos ADD COLUMN {col} TEXT")
+
+def v8unidad(e):
+    for key in ["unidad_control","control_base"]:
+        u=v8norm(e.get(key))
+        if u in ("hora","horas","hrs","hr","h","horometro","horómetro"): return "HORAS"
+        if u in ("km","kms","kilometro","kilometros","kilómetro","kilómetros","odometro","odómetro"): return "KM"
+    cod=str(e.get("codigo") or "").upper()
+    txt=v8norm(" ".join(str(e.get(k) or "") for k in ["tipo_equipo","familia","marca","modelo","descripcion"]))
+    if cod.startswith("VD"): return "KM"
+    if cod.startswith("MD") or cod.startswith("EQP"): return "HORAS"
+    if cod.startswith("CD"):
+        if any(x in txt for x in ["tolva","faena","aljibe","pluma","gravilladora","barredora"]): return "HORAS"
+        if any(x in txt for x in ["liviano","plano","carretera","reparto","jac","hino","hyundai","furgon"]): return "KM"
+        return "HORAS"
+    return "HORAS"
+
+def v8tipo_img(e):
+    cod=str(e.get("codigo") or "").upper()
+    txt=v8norm(" ".join(str(e.get(k) or "") for k in ["tipo_equipo","familia","marca","modelo","descripcion"]))
+    rules=[("maxus","maxus_t60"),("t-60","maxus_t60"),("t60","maxus_t60"),("partner","furgon_partner"),("peugeot","furgon_partner"),
+           ("aljibe","camion_aljibe"),("pluma","camion_pluma"),("liviano","camion_liviano"),("plano","camion_liviano"),
+           ("tracto","tractocamion"),("barredora","barredora"),("gravilladora","gravilladora"),("motoniveladora","motoniveladora"),
+           ("retro","retroexcavadora"),("excav","excavadora"),("cargador","cargador_frontal"),("frontal","cargador_frontal"),
+           ("planta","planta_aridos"),("aridos","planta_aridos"),("áridos","planta_aridos"),("neumatico","rodillo_neumaticos"),
+           ("neumático","rodillo_neumaticos"),("rodillo","rodillo_compactador"),("tolva","camion_man_tolva"),("man","camion_man_tolva")]
+    for k,v in rules:
+        if k in txt: return v
+    if cod.startswith("VD"): return "maxus_t60"
+    if cod.startswith("CD"): return "camion_man_tolva"
+    if cod.startswith("MD"): return "excavadora"
+    return "cargador_frontal"
+
+def v8lecturas_tipo(codigo):
+    if not v8exists("lecturas"): return (0.0,0.0)
+    try: data=v8rows("SELECT tipo_lectura,valor,observacion FROM lecturas WHERE codigo=:c ORDER BY id DESC LIMIT 200",{"c":codigo})
+    except Exception: return (0.0,0.0)
+    h=0.0; km=0.0
+    for r in data:
+        t=v8norm(str(r.get("tipo_lectura") or "")+" "+str(r.get("observacion") or ""))
+        val=v8f(r.get("valor"))
+        if val<=0: continue
+        if any(x in t for x in ["hora","hrs","horometro","horómetro"]): h=max(h,val)
+        elif any(x in t for x in ["km","kilometro","kilómetro","odometro","odómetro"]): km=max(km,val)
+    return (h,km)
+
+def v8eq(raw):
+    e=dict(raw); v8schema()
+    unidad=v8unidad(e); codigo=str(e.get("codigo") or "").upper()
+    lh=v8f(e.get("lectura_horas")); lk=v8f(e.get("lectura_km")); la=v8f(e.get("lectura_actual"))
+    if lh<=0 and lk<=0:
+        th,tk=v8lecturas_tipo(codigo); lh=max(lh,th); lk=max(lk,tk)
+    if lh<=0 and lk<=0:
+        if la>80000: lk=la
+        elif unidad=="HORAS": lh=la
+        else: lk=la
+    if unidad=="HORAS" and lh>80000:
+        lk=max(lk,lh); lh=0.0
+    usada=lh if unidad=="HORAS" else lk
+    frec=v8f(e.get("frecuencia_base")); ult=v8f(e.get("ultima_pm"))
+    prox=ult+frec if ult>0 and frec>0 else 0.0
+    op=v8norm(e.get("estado_operacional"))
+    if "fuera" in op: estado,sem="FUERA DE SERVICIO","gray"
+    elif "taller" in op: estado,sem="EN TALLER","gray"
+    elif unidad=="HORAS" and usada<=0: estado,sem="SIN HORÓMETRO","yellow"
+    elif unidad=="KM" and usada<=0: estado,sem="SIN ODÓMETRO","yellow"
+    elif frec<=0: estado,sem="SIN FRECUENCIA","yellow"
+    elif ult<=0: estado,sem="SIN HISTORIAL PM","yellow"
+    else:
+        margen=prox-usada
+        if margen<0: estado,sem="ATRASADA","red"
+        elif margen<=max(15,frec*.1): estado,sem="PRÓXIMA","yellow"
+        else: estado,sem="AL DÍA","green"
+    margen=(prox-usada) if usada>0 and prox>0 else 0.0
+    tipo=v8tipo_img(e)
+    e.update({"unidad_control":unidad,"lectura_horas":lh,"lectura_km":lk,"lectura_actual":usada,"proxima_pm":prox,
+              "margen":margen,"estado_calculado":estado,"semaforo":sem,"imagen_tipo":tipo,"imagen_url":f"/static/equipos_real/{tipo}.png"})
+    return e
+
+def v8equipos():
+    return [v8eq(e) for e in v8rows("SELECT * FROM equipos ORDER BY codigo LIMIT 1000")] if v8exists("equipos") else []
+def v8kpi():
+    eq=v8equipos(); op=[e for e in eq if e["semaforo"]!="gray"]; atr=[e for e in op if e["semaforo"]=="red"]; pro=[e for e in op if e["semaforo"]=="yellow"]
+    compras=v8rows("SELECT * FROM compras LIMIT 2000") if v8exists("compras") else []; ot=v8rows("SELECT * FROM ot LIMIT 2000") if v8exists("ot") else []
+    ctrl=max(0,len(op)-len(atr))
+    return {"total":len(eq),"operativos":len(op),"atrasados":len(atr),"proximos":len(pro),"controlado_pct":round(ctrl/len(op)*100,1) if op else 0,
+            "ot_abiertas":sum(1 for o in ot if str(o.get("estado") or "").upper() not in ("CERRADA","CERRADO","EJECUTADA")),
+            "compras_proceso":sum(1 for c in compras if str(c.get("estado") or "").upper() in ("EN PROCESO","POR RECIBIR","PENDIENTE","")),
+            "costo_mes":sum(v8f(c.get("costo_total")) for c in compras),"lecturas":v8count("lecturas"),"compras":v8count("compras"),"ot":v8count("ot"),"bodega":v8count("bodega")}
+
+def v8guardar():
+    v8schema(); cambios=[]; ok=0
+    for raw in v8rows("SELECT * FROM equipos ORDER BY codigo"):
+        e=v8eq(raw)
+        v8exec("""UPDATE equipos SET unidad_control=:u,control_base=:u,lectura_horas=:h,lectura_km=:km,lectura_actual=:la,
+        proxima_pm=:p,margen=:m,estado_calculado=:est,semaforo=:s,imagen_tipo=:it,imagen_url=:iu WHERE codigo=:c""",
+        {"u":e["unidad_control"],"h":str(e["lectura_horas"]),"km":str(e["lectura_km"]),"la":str(e["lectura_actual"]),"p":str(e["proxima_pm"]),"m":str(e["margen"]),"est":e["estado_calculado"],"s":e["semaforo"],"it":e["imagen_tipo"],"iu":e["imagen_url"],"c":e["codigo"]})
+        ok+=1
+        if str(raw.get("lectura_actual"))!=str(e["lectura_actual"]) or str(raw.get("imagen_url"))!=str(e["imagen_url"]):
+            cambios.append({"codigo":e["codigo"],"unidad":e["unidad_control"],"hrs":e["lectura_horas"],"km":e["lectura_km"],"usada":e["lectura_actual"],"estado":e["estado_calculado"],"imagen":e["imagen_tipo"]})
+    return ok,cambios
+
+CSS="<style>body{margin:0;background:#f4f6fa;font-family:Segoe UI,Arial;color:#14213d}.top{height:66px;background:white;border-bottom:1px solid #e6ebf2;display:flex;align-items:center;gap:20px;padding:0 24px;position:sticky;top:0}.logo{font-size:30px;font-weight:950;letter-spacing:11px;color:#082b5f}.nav{display:flex;gap:16px;flex:1;overflow:auto}.nav a{font-weight:800;color:#334155;text-decoration:none}.v{background:#dcfce7;color:#15803d;padding:7px 11px;border-radius:999px;font-weight:900;font-size:12px}.wrap{padding:20px 24px}.panel,.kpi,.card{background:white;border:1px solid #e6ebf2;border-radius:10px;box-shadow:0 6px 18px rgba(9,30,66,.08);padding:18px;margin-bottom:14px}.kpis{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:14px}.kpi b{display:block;font-size:28px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.cards{display:flex;gap:14px;overflow-x:auto;padding:8px 0 14px}.card{min-width:205px}.card img{width:160px;height:100px;object-fit:contain;display:block;margin:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px;border-bottom:1px solid #eef2f7;text-align:left}.eqimg{width:130px;height:80px;object-fit:contain}.code{font-weight:950;color:#082b5f}.pill{border-radius:999px;padding:5px 10px;font-weight:900;font-size:11px}.pill.red{background:#ffe1e3;color:#b91c1c}.pill.yellow{background:#fff4cc;color:#a16207}.pill.green{background:#dcfce7;color:#15803d}.pill.gray{background:#e5e7eb;color:#475569}.btn{background:#082b5f;color:white;border:0;border-radius:8px;padding:9px 13px;font-weight:900;text-decoration:none;display:inline-block}input,select{height:40px;border:1px solid #e6ebf2;border-radius:8px;padding:0 10px}.foot{height:55px;background:#082b5f;color:white;display:flex;align-items:center;justify-content:space-between;padding:0 24px;margin-top:18px}@media(max-width:900px){.kpis,.grid{grid-template-columns:1fr}.nav{display:none}.logo{font-size:20px;letter-spacing:6px}}</style>"
+TOP="<header class='top'><div class='logo'>DEMOTRON</div><nav class='nav'><a href='/erp'>Dashboard</a><a href='/equipos'>Equipos</a><a href='/ot'>OT</a><a href='/compras'>Compras</a><a href='/lecturas'>Lecturas</a><a href='/bodega'>Bodega</a></nav><div class='v'>V8 ERP REAL</div></header>"
+
+@app.before_request
+def v8redir():
+    if request.path=="/": return redirect("/erp")
+    if request.path=="/erp": return redirect("/erp_v8")
+    if request.path=="/equipos": return redirect("/equipos_v8")
+
+@app.route("/admin/v8/version")
+@app.route("/v8/version")
+def v8version():
+    return jsonify({"status":"OK","version":APP_VERSION,"mensaje":"V8 ERP REAL ACTIVO","rutas":["/admin/v8/recalcular","/erp_v8","/equipos_v8"]})
+
+@app.route("/admin/v8/diagnostico")
+@app.route("/v8/diagnostico")
+def v8diag():
+    base=Path(__file__).resolve().parent/"static"/"equipos_real"
+    return jsonify({"status":"OK","version":APP_VERSION,"equipos":v8count("equipos"),"lecturas":v8count("lecturas"),"compras":v8count("compras"),"ot":v8count("ot"),"bodega":v8count("bodega"),"imagenes":len(list(base.glob('*.png'))) if base.exists() else 0})
+
+@app.route("/admin/v8/recalcular")
+@app.route("/v8/recalcular")
+def v8recalc():
+    ok,c=v8guardar()
+    return jsonify({"status":"OK","version":APP_VERSION,"mensaje":"V8 aplicado: HORAS/KM separados e imágenes reales","procesados":ok,"kpi":v8kpi(),"cambios":c[:80]})
+
+@app.route("/erp_v8")
+def v8dash():
+    k=v8kpi(); eq=v8equipos(); crit=[e for e in eq if e["semaforo"] in ("red","yellow")][:50]
+    html=f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>DEMOTRON V8</title>{CSS}</head><body>{TOP}<main class='wrap'><section class='kpis'><div class='kpi'><small>Equipos</small><b>{k['total']}</b></div><div class='kpi'><small>Atrasados</small><b>{k['atrasados']}</b></div><div class='kpi'><small>Próximos/Sin HRS</small><b>{k['proximos']}</b></div><div class='kpi'><small>Controlado</small><b>{k['controlado_pct']}%</b></div><div class='kpi'><small>OT abiertas</small><b>{k['ot_abiertas']}</b></div><div class='kpi'><small>Costo</small><b>${k['costo_mes']:,.0f}</b></div></section><section class='panel'><h3>Flota con imágenes reales</h3><div class='cards'>"
+    for e in eq:
+        if e["semaforo"]=="gray": continue
+        html+=f"<div class='card'><img src='{e['imagen_url']}'><b class='code'><a href='/equipo_v8/{e['codigo']}'>{e['codigo']}</a></b><div>{e.get('descripcion') or ''}</div><small>{e['unidad_control']} usada: {e['lectura_actual']:,.0f}<br>HRS: {e['lectura_horas']:,.0f} · KM: {e['lectura_km']:,.0f}</small></div>"
+    html+="</div></section><section class='panel'><h3>Críticos / sin horómetro</h3><table><tr><th>Imagen</th><th>Código</th><th>Unidad</th><th>HRS</th><th>KM</th><th>Usada</th><th>Estado</th></tr>"
+    for e in crit:
+        html+=f"<tr><td><img class='eqimg' src='{e['imagen_url']}'></td><td class='code'><a href='/equipo_v8/{e['codigo']}'>{e['codigo']}</a></td><td>{e['unidad_control']}</td><td>{e['lectura_horas']:,.0f}</td><td>{e['lectura_km']:,.0f}</td><td>{e['lectura_actual']:,.0f}</td><td><span class='pill {e['semaforo']}'>{e['estado_calculado']}</span></td></tr>"
+    html+=f"</table></section></main><footer class='foot'><b>DEMOTRON CMMS V8</b><span>HORAS/KM separados · {APP_VERSION}</span></footer></body></html>"
+    return html
+
+@app.route("/equipos_v8")
+def v8equipos_page():
+    html=f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Equipos V8</title>{CSS}</head><body>{TOP}<main class='wrap'><section class='panel'><h3>Equipos DEMOTRON V8</h3><table><tr><th>Imagen</th><th>Código</th><th>Descripción</th><th>Unidad</th><th>HRS</th><th>KM</th><th>Usada</th><th>Estado</th><th>Ficha</th></tr>"
+    for e in v8equipos():
+        html+=f"<tr><td><img class='eqimg' src='{e['imagen_url']}'></td><td class='code'>{e['codigo']}</td><td>{e.get('descripcion') or ''}</td><td><b>{e['unidad_control']}</b></td><td>{e['lectura_horas']:,.0f}</td><td>{e['lectura_km']:,.0f}</td><td>{e['lectura_actual']:,.0f}</td><td><span class='pill {e['semaforo']}'>{e['estado_calculado']}</span></td><td><a class='btn' href='/equipo_v8/{e['codigo']}'>Abrir</a></td></tr>"
+    html+=f"</table></section></main><footer class='foot'><b>DEMOTRON CMMS V8</b><span>{APP_VERSION}</span></footer></body></html>"
+    return html
+
+@app.route("/equipo_v8/<codigo>", methods=["GET","POST"])
+def v8ficha(codigo):
+    codigo=codigo.upper()
+    if request.method=="POST":
+        u=request.form.get("unidad_control","").upper(); h=v8f(request.form.get("lectura_horas")); km=v8f(request.form.get("lectura_km"))
+        if u in ("HORAS","KM"):
+            v8exec("UPDATE equipos SET unidad_control=:u,control_base=:u,lectura_horas=:h,lectura_km=:km,lectura_actual=:la WHERE codigo=:c",{"u":u,"h":str(h),"km":str(km),"la":str(h if u=="HORAS" else km),"c":codigo})
+        return redirect(f"/equipo_v8/{codigo}")
+    r=v8one("SELECT * FROM equipos WHERE codigo=:c",{"c":codigo})
+    if not r: return "Equipo no encontrado",404
+    e=v8eq(dict(r))
+    html=f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{codigo}</title>{CSS}</head><body>{TOP}<main class='wrap'><section class='panel'><h2 class='code'>{codigo}</h2><div class='grid'><div><img src='{e['imagen_url']}' style='width:360px;height:230px;object-fit:contain'><p>{e.get('descripcion') or ''}</p><p><span class='pill {e['semaforo']}'>{e['estado_calculado']}</span></p></div><div><h3>HORAS/KM separados</h3><form method='post'><label>Unidad</label><br><select name='unidad_control'><option {'selected' if e['unidad_control']=='HORAS' else ''}>HORAS</option><option {'selected' if e['unidad_control']=='KM' else ''}>KM</option></select><br><br><label>Horómetro real</label><br><input name='lectura_horas' value='{e['lectura_horas']:.0f}'><br><br><label>Odómetro KM real</label><br><input name='lectura_km' value='{e['lectura_km']:.0f}'><br><br><button class='btn'>Guardar</button></form><p>Lectura usada: {e['lectura_actual']:,.0f} {e['unidad_control']}</p><p>Próxima PM: {e['proxima_pm']:,.0f}</p><p>Margen: {e['margen']:,.0f}</p></div></div></section></main><footer class='foot'><b>DEMOTRON CMMS V8</b><span>{APP_VERSION}</span></footer></body></html>"
+    return html
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5000)), debug=False)
