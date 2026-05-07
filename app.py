@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON_ERP_CMMS_V9_DASHBOARD_EXCEL_REAL"
+APP_VERSION = "DEMOTRON_ERP_CMMS_V9_1_IMPORT_FIX"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
@@ -2147,6 +2147,241 @@ def v9equipos_page():
         est=v9estado(r); sem='gray' if ('FUERA' in est or 'TALLER' in est) else ('red' if 'ATRAS' in est else ('yellow' if any(x in est for x in ['PROX','PROCESO','POR RECIBIR']) else 'green'))
         html+=f"<tr><td><img class='eqimg' src='{v9img(r)}'></td><td class='code'>{r.get('codigo','')}</td><td>{r.get('tipo_equipo','')}</td><td>{r.get('marca','')}</td><td>{r.get('modelo','')}</td><td><b>{r.get('control_base','')}</b></td><td>{r.get('ultimo_horometro','')}</td><td>{r.get('ultimo_kilometraje','')}</td><td>{r.get('lectura_actual','')}</td><td><span class='pill {sem}'>{est}</span></td><td>{r.get('costo_total_pm_clp','')}</td></tr>"
     return html+f"</table></section></main><footer class='foot'><b>DEMOTRON CMMS V9</b><span>{APP_VERSION}</span></footer></body></html>"
+
+
+
+# ================= V9.1 FIX IMPORT CMMS EXCEL REAL =================
+
+def v91_find_cmms_file():
+    base = Path(__file__).resolve().parent
+    candidates = [
+        base / "data_import" / "cmms_excel_real.tsv",
+        base / "data_import" / "CMMS_EXCEL_REAL.tsv",
+        base / "cmms_excel_real.tsv",
+        base / "CMMS_EXCEL_REAL.tsv",
+    ]
+    for p in candidates:
+        if p.exists() and p.stat().st_size > 50:
+            return p
+    for p in (base / "data_import").glob("*"):
+        if p.suffix.lower() in (".txt", ".tsv", ".csv") and "cmms" in p.name.lower():
+            return p
+    return None
+
+
+def v91_clean_header(h):
+    return str(h or "").strip().replace("\ufeff", "")
+
+
+def v91_create_table():
+    v9_exec("DROP TABLE IF EXISTS cmms_excel")
+    v9_exec("""
+    CREATE TABLE cmms_excel (
+        id SERIAL PRIMARY KEY,
+        codigo TEXT,
+        tipo_equipo TEXT,
+        familia TEXT,
+        marca TEXT,
+        modelo TEXT,
+        ano TEXT,
+        ubicacion TEXT,
+        control_base TEXT,
+        frecuencia_base TEXT,
+        promedio_diario TEXT,
+        ultima_fecha_lectura TEXT,
+        ultimo_horometro TEXT,
+        ultimo_kilometraje TEXT,
+        lectura_actual TEXT,
+        ultima_fecha_pm TEXT,
+        ultima_pm TEXT,
+        ultima_lectura_pm TEXT,
+        costo_mantenciones_clp TEXT,
+        costo_compras_pm_clp TEXT,
+        costo_total_pm_clp TEXT,
+        estado_operacional TEXT,
+        estado_cmms TEXT,
+        dias_a_proxima_mantencion TEXT,
+        fecha_est_proxima_mantencion TEXT,
+        fecha_compra_pm TEXT,
+        fecha_salida_bodega TEXT,
+        tiempo_compra_mantencion TEXT,
+        tiempo_bodega_mantencion TEXT,
+        estado_bodega_mantencion TEXT,
+        estado_operativo_real TEXT,
+        prioridad_taller TEXT,
+        accion_sugerida TEXT
+    )
+    """)
+
+
+def v91_importar_cmms():
+    path = v91_find_cmms_file()
+    if not path:
+        return 0, "No encontré archivo CMMS TSV/TXT en data_import"
+
+    text_lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    if not text_lines:
+        return 0, "Archivo vacío"
+
+    # Busca la fila de encabezados.
+    start = None
+    for i, line in enumerate(text_lines[:200]):
+        line_clean = line.strip().replace("\ufeff", "")
+        if line_clean.startswith("Codigo\t") or line_clean.startswith("Código\t"):
+            start = i
+            break
+
+    if start is None:
+        return 0, "No encontré encabezado Codigo<TAB>Tipo Equipo"
+
+    header = [v91_clean_header(x) for x in text_lines[start].split("\t")]
+
+    colmap = {
+        "Codigo":"codigo",
+        "Código":"codigo",
+        "Tipo Equipo":"tipo_equipo",
+        "Familia":"familia",
+        "Marca":"marca",
+        "Modelo":"modelo",
+        "Año":"ano",
+        "Ano":"ano",
+        "Ubicacion":"ubicacion",
+        "Ubicación":"ubicacion",
+        "Control Base":"control_base",
+        "Frecuencia Base":"frecuencia_base",
+        "Promedio Diario":"promedio_diario",
+        "Ultima Fecha Lectura":"ultima_fecha_lectura",
+        "Última Fecha Lectura":"ultima_fecha_lectura",
+        "Ultimo Horometro":"ultimo_horometro",
+        "Último Horometro":"ultimo_horometro",
+        "Último Horómetro":"ultimo_horometro",
+        "Ultimo Kilometraje":"ultimo_kilometraje",
+        "Último Kilometraje":"ultimo_kilometraje",
+        "Lectura Actual":"lectura_actual",
+        "Ultima Fecha PM":"ultima_fecha_pm",
+        "Última Fecha PM":"ultima_fecha_pm",
+        "Ultima PM":"ultima_pm",
+        "Última PM":"ultima_pm",
+        "Ultima Lectura PM":"ultima_lectura_pm",
+        "Última Lectura PM":"ultima_lectura_pm",
+        "Costo Mantenciones CLP":"costo_mantenciones_clp",
+        "Costo Compras PM CLP":"costo_compras_pm_clp",
+        "Costo Total PM CLP":"costo_total_pm_clp",
+        "Estado Operacional":"estado_operacional",
+        "Estado CMMS":"estado_cmms",
+        "Dias a Proxima Mantencion":"dias_a_proxima_mantencion",
+        "Días a Próxima Mantención":"dias_a_proxima_mantencion",
+        "Fecha Est. Proxima Mantencion":"fecha_est_proxima_mantencion",
+        "Fecha Est. Próxima Mantención":"fecha_est_proxima_mantencion",
+        "Fecha Compra PM":"fecha_compra_pm",
+        "Fecha Salida Bodega":"fecha_salida_bodega",
+        "Tiempo Compra → Mantención":"tiempo_compra_mantencion",
+        "Tiempo Compra -> Mantención":"tiempo_compra_mantencion",
+        "Tiempo Compra -> Mantencion":"tiempo_compra_mantencion",
+        "Tiempo Bodega → Mantención":"tiempo_bodega_mantencion",
+        "Tiempo Bodega -> Mantención":"tiempo_bodega_mantencion",
+        "Tiempo Bodega -> Mantencion":"tiempo_bodega_mantencion",
+        "Estado Bodega → Mantención":"estado_bodega_mantencion",
+        "Estado Bodega -> Mantención":"estado_bodega_mantencion",
+        "Estado Bodega -> Mantencion":"estado_bodega_mantencion",
+        "Estado Operativo Real":"estado_operativo_real",
+        "Prioridad Taller":"prioridad_taller",
+        "Acción Sugerida":"accion_sugerida",
+        "Accion Sugerida":"accion_sugerida",
+    }
+
+    insert_cols = [
+        "codigo","tipo_equipo","familia","marca","modelo","ano","ubicacion","control_base","frecuencia_base",
+        "promedio_diario","ultima_fecha_lectura","ultimo_horometro","ultimo_kilometraje","lectura_actual",
+        "ultima_fecha_pm","ultima_pm","ultima_lectura_pm","costo_mantenciones_clp","costo_compras_pm_clp",
+        "costo_total_pm_clp","estado_operacional","estado_cmms","dias_a_proxima_mantencion",
+        "fecha_est_proxima_mantencion","fecha_compra_pm","fecha_salida_bodega","tiempo_compra_mantencion",
+        "tiempo_bodega_mantencion","estado_bodega_mantencion","estado_operativo_real","prioridad_taller",
+        "accion_sugerida"
+    ]
+
+    v91_create_table()
+    sql = "INSERT INTO cmms_excel (" + ",".join(insert_cols) + ") VALUES (" + ",".join(":"+c for c in insert_cols) + ")"
+
+    count = 0
+    for line in text_lines[start+1:]:
+        if not line.strip():
+            continue
+        parts = line.split("\t")
+        row = {}
+        for idx, h in enumerate(header):
+            key = colmap.get(v91_clean_header(h))
+            if key:
+                row[key] = parts[idx].strip() if idx < len(parts) else ""
+
+        codigo = str(row.get("codigo") or "").strip().upper()
+        if not codigo or codigo == "CODIGO":
+            continue
+        if not any(codigo.startswith(prefix) for prefix in ["CD-", "MD-", "VD-", "EQP-", "ED-"]):
+            continue
+
+        params = {c: row.get(c, "") for c in insert_cols}
+        v9_exec(sql, params)
+        count += 1
+
+    return count, f"Importado desde {path.name}"
+
+
+@app.route("/admin/v91/version")
+@app.route("/v91/version")
+def v91_version():
+    return jsonify({
+        "status":"OK",
+        "version":APP_VERSION,
+        "mensaje":"V9.1 IMPORT FIX ACTIVO",
+        "rutas":["/admin/v91/importar_excel_real","/admin/v91/sincronizar","/erp_v9","/equipos_v9"]
+    })
+
+
+@app.route("/admin/v91/importar_excel_real")
+@app.route("/v91/importar_excel_real")
+def v91_import_route():
+    n, msg = v91_importar_cmms()
+    return jsonify({
+        "status":"OK" if n > 0 else "ERROR",
+        "version":APP_VERSION,
+        "registros":n,
+        "mensaje":msg,
+        "archivo":str(v91_find_cmms_file())
+    })
+
+
+@app.route("/admin/v91/sincronizar")
+@app.route("/v91/sincronizar")
+def v91_sync_route():
+    if not v9_exists("cmms_excel") or v9_count("cmms_excel") == 0:
+        n, msg = v91_importar_cmms()
+    else:
+        n, msg = v9_count("cmms_excel"), "cmms_excel ya tenía datos"
+
+    actualizados = v9_sync_equipos_desde_excel()
+    return jsonify({
+        "status":"OK",
+        "version":APP_VERSION,
+        "importados":n,
+        "actualizados":actualizados,
+        "mensaje":msg,
+        "kpi_excel":v9_kpis_excel()
+    })
+
+
+@app.route("/admin/v91/diagnostico")
+@app.route("/v91/diagnostico")
+def v91_diag():
+    return jsonify({
+        "status":"OK",
+        "version":APP_VERSION,
+        "archivo":str(v91_find_cmms_file()),
+        "cmms_excel":v9_count("cmms_excel"),
+        "equipos":v9_count("equipos"),
+        "kpi_excel":v9_kpis_excel()
+    })
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5000)), debug=False)
