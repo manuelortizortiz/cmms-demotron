@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON_ERP_CMMS_V9_3_VISUAL_DASHBOARD_FINAL"
+APP_VERSION = "DEMOTRON_ERP_CMMS_V9_4_ROUTE_FIX_VISUAL_FINAL"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
@@ -1961,9 +1961,7 @@ TOP="<header class='top'><div class='logo'>DEMOTRON</div><nav class='nav'><a hre
 
 @app.before_request
 def v8redir():
-    if request.path=="/": return redirect("/erp")
-    if request.path=="/erp": return redirect("/erp_v8")
-    if request.path=="/equipos": return redirect("/equipos_v8")
+    return None
 
 @app.route("/admin/v8/version")
 @app.route("/v8/version")
@@ -2647,8 +2645,7 @@ V92_NAV = "<div class='nav'><a href='/erp'>Dashboard Excel</a><a href='/equipos_
 
 @app.before_request
 def v92_redirect():
-    if request.path == "/" or request.path == "/erp":
-        return redirect("/erp_v92")
+    return None
 
 @app.route("/admin/v92/version")
 @app.route("/v92/version")
@@ -2761,8 +2758,7 @@ def v93_rows_data():
 
 @app.before_request
 def v93_redirect_main():
-    if request.path in ["/", "/erp"]:
-        return redirect("/erp_v93")
+    return None
 
 @app.route("/admin/v93/version")
 @app.route("/v93/version")
@@ -2893,6 +2889,50 @@ def v93_equipos():
         html += f"<tr><td><img class='eqimg' src='{v92_img(r)}'></td><td class='code'>{r.get('codigo','')}</td><td>{r.get('tipo_equipo','')}</td><td>{r.get('marca','')}</td><td>{r.get('modelo','')}</td><td><b>{r.get('control_base','')}</b></td><td>{r.get('ultimo_horometro','')}</td><td>{r.get('ultimo_kilometraje','')}</td><td>{r.get('lectura_actual','')}</td><td><span class='pill {sem}'>{v92_estado(r)}</span></td><td>{r.get('costo_total_pm_clp','')}</td></tr>"
     html += f"</table></section></main><footer class='foot'><b>DEMOTRON CMMS V9.3</b><span>{APP_VERSION}</span></footer></body></html>"
     return html
+
+
+
+
+# ================= V9.4 ROUTE FIX FINAL =================
+
+@app.before_request
+def v94_force_visual_final():
+    if request.path in ["/", "/erp", "/dashboard"]:
+        return redirect("/erp_v94")
+    if request.path == "/equipos":
+        return redirect("/equipos_v94")
+    return None
+
+@app.route("/admin/v94/version")
+@app.route("/v94/version")
+def v94_version():
+    return jsonify({
+        "status": "OK",
+        "version": APP_VERSION,
+        "mensaje": "V9.4 ROUTE FIX ACTIVO - /erp apunta al dashboard visual final",
+        "dashboard": "/erp_v94",
+        "equipos": "/equipos_v94"
+    })
+
+@app.route("/admin/v94/diagnostico")
+@app.route("/v94/diagnostico")
+def v94_diag():
+    data = v93_rows_data()
+    return jsonify({
+        "status": "OK",
+        "version": APP_VERSION,
+        "cmms_excel": len(data),
+        "dashboard_principal": "/erp_v94",
+        "kpi": v92_kpis()
+    })
+
+@app.route("/erp_v94")
+def v94_dashboard():
+    return v93_dashboard()
+
+@app.route("/equipos_v94")
+def v94_equipos():
+    return v93_equipos()
 
 
 if __name__ == '__main__':
