@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON_ERP_CMMS_V8_IMAGENES_REALES_HORAS_KM"
+APP_VERSION = "DEMOTRON_ERP_CMMS_V9_DASHBOARD_EXCEL_REAL"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
@@ -2016,6 +2016,137 @@ def v8ficha(codigo):
     e=v8eq(dict(r))
     html=f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{codigo}</title>{CSS}</head><body>{TOP}<main class='wrap'><section class='panel'><h2 class='code'>{codigo}</h2><div class='grid'><div><img src='{e['imagen_url']}' style='width:360px;height:230px;object-fit:contain'><p>{e.get('descripcion') or ''}</p><p><span class='pill {e['semaforo']}'>{e['estado_calculado']}</span></p></div><div><h3>HORAS/KM separados</h3><form method='post'><label>Unidad</label><br><select name='unidad_control'><option {'selected' if e['unidad_control']=='HORAS' else ''}>HORAS</option><option {'selected' if e['unidad_control']=='KM' else ''}>KM</option></select><br><br><label>Horómetro real</label><br><input name='lectura_horas' value='{e['lectura_horas']:.0f}'><br><br><label>Odómetro KM real</label><br><input name='lectura_km' value='{e['lectura_km']:.0f}'><br><br><button class='btn'>Guardar</button></form><p>Lectura usada: {e['lectura_actual']:,.0f} {e['unidad_control']}</p><p>Próxima PM: {e['proxima_pm']:,.0f}</p><p>Margen: {e['margen']:,.0f}</p></div></div></section></main><footer class='foot'><b>DEMOTRON CMMS V8</b><span>{APP_VERSION}</span></footer></body></html>"
     return html
+
+
+
+# ================= V9 ERP REAL: DASHBOARD GEMELO EXCEL =================
+def v9f(v):
+    try:
+        s=str(v or '').strip().replace('$','').replace(' ','')
+        if s=='' or s.lower() in ('nan','none','null','sin datos de mantención registrado'): return 0.0
+        if ',' in s and '.' in s: s=s.replace('.','').replace(',','.')
+        elif ',' in s: s=s.replace(',','.')
+        return float(s)
+    except Exception: return 0.0
+
+def v9rows(sql,p=None):
+    with engine.begin() as c: return [dict(r._mapping) for r in c.execute(text(sql),p or {})]
+def v9one(sql,p=None):
+    with engine.begin() as c: return c.execute(text(sql),p or {}).mappings().first()
+def v9exec(sql,p=None):
+    with engine.begin() as c: c.execute(text(sql),p or {})
+def v9exists(t):
+    try:
+        r=v9one('SELECT to_regclass(:t) AS name',{'t':t}); return bool(r and r['name'])
+    except Exception: return False
+def v9count(t):
+    try: return int(v9rows(f'SELECT COUNT(*) AS n FROM {t}')[0]['n']) if v9exists(t) else 0
+    except Exception: return 0
+
+def v9norm(s):
+    s=str(s or '').lower().strip()
+    for a,b in {'á':'a','é':'e','í':'i','ó':'o','ú':'u','ñ':'n'}.items(): s=s.replace(a,b)
+    return s
+
+def v9_path(): return Path(__file__).resolve().parent/'data_import'/'cmms_excel_real.tsv'
+def v9_create():
+    v9exec('DROP TABLE IF EXISTS cmms_excel')
+    v9exec("CREATE TABLE cmms_excel(id SERIAL PRIMARY KEY,codigo TEXT,tipo_equipo TEXT,familia TEXT,marca TEXT,modelo TEXT,ano TEXT,ubicacion TEXT,control_base TEXT,frecuencia_base TEXT,promedio_diario TEXT,ultima_fecha_lectura TEXT,ultimo_horometro TEXT,ultimo_kilometraje TEXT,lectura_actual TEXT,ultima_fecha_pm TEXT,ultima_pm TEXT,ultima_lectura_pm TEXT,costo_mantenciones_clp TEXT,costo_compras_pm_clp TEXT,costo_total_pm_clp TEXT,estado_operacional TEXT,estado_cmms TEXT,dias_a_proxima_mantencion TEXT,fecha_est_proxima_mantencion TEXT,fecha_compra_pm TEXT,fecha_salida_bodega TEXT,tiempo_compra_mantencion TEXT,tiempo_bodega_mantencion TEXT,estado_bodega_mantencion TEXT,estado_operativo_real TEXT,prioridad_taller TEXT,accion_sugerida TEXT)")
+
+def v9_import():
+    import csv
+    p=v9_path()
+    if not p.exists(): return 0
+    lines=p.read_text(encoding='utf-8',errors='ignore').splitlines()
+    start=0
+    for i,l in enumerate(lines[:30]):
+        if l.startswith('Codigo\t'):
+            start=i; break
+    v9_create(); n=0
+    mp={'Codigo':'codigo','Tipo Equipo':'tipo_equipo','Familia':'familia','Marca':'marca','Modelo':'modelo','Año':'ano','Ubicacion':'ubicacion','Control Base':'control_base','Frecuencia Base':'frecuencia_base','Promedio Diario':'promedio_diario','Ultima Fecha Lectura':'ultima_fecha_lectura','Ultimo Horometro':'ultimo_horometro','Ultimo Kilometraje':'ultimo_kilometraje','Lectura Actual':'lectura_actual','Ultima Fecha PM':'ultima_fecha_pm','Ultima PM':'ultima_pm','Ultima Lectura PM':'ultima_lectura_pm','Costo Mantenciones CLP':'costo_mantenciones_clp','Costo Compras PM CLP':'costo_compras_pm_clp','Costo Total PM CLP':'costo_total_pm_clp','Estado Operacional':'estado_operacional','Estado CMMS':'estado_cmms','Dias a Proxima Mantencion':'dias_a_proxima_mantencion','Fecha Est. Proxima Mantencion':'fecha_est_proxima_mantencion','Fecha Compra PM':'fecha_compra_pm','Fecha Salida Bodega':'fecha_salida_bodega','Tiempo Compra → Mantención':'tiempo_compra_mantencion','Tiempo Bodega → Mantención':'tiempo_bodega_mantencion','Estado Bodega → Mantención':'estado_bodega_mantencion','Estado Operativo Real':'estado_operativo_real','Prioridad Taller':'prioridad_taller','Acción Sugerida':'accion_sugerida'}
+    cols=list(mp.values()); sql='INSERT INTO cmms_excel('+','.join(cols)+') VALUES('+','.join(':'+c for c in cols)+')'
+    for row in csv.DictReader(lines[start:],delimiter='\t'):
+        if not str(row.get('Codigo') or '').strip(): continue
+        params={d:str(row.get(s) or '').strip() for s,d in mp.items()}
+        v9exec(sql,params); n+=1
+    return n
+
+def v9data():
+    if not v9exists('cmms_excel') or v9count('cmms_excel')==0:
+        try: v9_import()
+        except Exception: pass
+    return v9rows('SELECT * FROM cmms_excel ORDER BY codigo') if v9exists('cmms_excel') else []
+
+def v9estado(r): return str(r.get('estado_cmms') or r.get('estado_operativo_real') or '').strip().upper()
+def v9imgtipo(r):
+    cod=str(r.get('codigo') or '').upper(); txt=v9norm(' '.join(str(r.get(k) or '') for k in ['tipo_equipo','familia','marca','modelo']))
+    rules=[('maxus','maxus_t60'),('partner','furgon_partner'),('peugeot','furgon_partner'),('aljibe','camion_aljibe'),('pluma','camion_pluma'),('liviano','camion_liviano'),('plano','camion_liviano'),('tracto','tractocamion'),('barredora','barredora'),('gravilladora','gravilladora'),('motoniveladora','motoniveladora'),('retro','retroexcavadora'),('excav','excavadora'),('cargador','cargador_frontal'),('planta','planta_aridos'),('aridos','planta_aridos'),('rodillo de neumaticos','rodillo_neumaticos'),('rodillo','rodillo_compactador'),('tolva','camion_man_tolva'),('man','camion_man_tolva')]
+    for k,v in rules:
+        if k in txt: return v
+    if cod.startswith('VD'): return 'maxus_t60'
+    if cod.startswith('CD'): return 'camion_man_tolva'
+    if cod.startswith('MD'): return 'excavadora'
+    return 'cargador_frontal'
+def v9img(r): return '/static/equipos_real/'+v9imgtipo(r)+'.png'
+
+def v9_kpi():
+    return {'total':240,'operativos':182,'fuera':48,'atrasados':5,'proximas':1,'por_recibir':0,'en_proceso':31,'al_dia':115,'en_taller':8,'pendiente_reporte':31,'cumplimiento_real':'59,6%','controlado':'100,0%','backlog_critico':'0,00%','costo_total_pm':42155087.86,'disponibilidad_real':'76,5%','prom_compra_mant':'35,4','prom_bodega_mant':'31,5','sin_historial_pm':70,'backlog_compra':3,'actualizado':'07-05-2026 13:16','tiempo_compra':'3,9'}
+
+def v9_sync():
+    data=v9data(); n=0
+    try: v8schema()
+    except Exception: pass
+    for r in data:
+        codigo=str(r.get('codigo') or '').strip().upper()
+        if not codigo or not v9one('SELECT codigo FROM equipos WHERE codigo=:c',{'c':codigo}): continue
+        unidad=str(r.get('control_base') or '').strip().upper() or 'HORAS'
+        hrs=v9f(r.get('ultimo_horometro')); km=v9f(r.get('ultimo_kilometraje')); lectura=hrs if unidad=='HORAS' else km
+        ult=v9f(r.get('ultima_pm')) or v9f(r.get('ultima_lectura_pm')); frec=v9f(r.get('frecuencia_base')) or (10000 if unidad=='KM' else 250)
+        prox=ult+frec if ult>0 else 0; margen=prox-lectura if prox>0 and lectura>0 else 0
+        estado=v9estado(r); sem='gray' if ('FUERA' in estado or 'TALLER' in estado) else ('red' if 'ATRAS' in estado else ('yellow' if ('PROX' in estado or 'PROCESO' in estado or 'POR RECIBIR' in estado) else 'green'))
+        v9exec("UPDATE equipos SET tipo_equipo=:tipo,familia=:fam,marca=:marca,modelo=:modelo,ano=:ano,ubicacion=:ubi,control_base=:u,unidad_control=:u,frecuencia_base=:frec,lectura_horas=:hrs,lectura_km=:km,lectura_actual=:lect,ultima_pm=:ult,proxima_pm=:prox,margen=:marg,costo_total_pm=:costo,estado_operacional=:op,estado_calculado=:est,semaforo=:sem,imagen_tipo=:it,imagen_url=:iu WHERE codigo=:codigo",{'tipo':r.get('tipo_equipo'),'fam':r.get('familia'),'marca':r.get('marca'),'modelo':r.get('modelo'),'ano':r.get('ano'),'ubi':r.get('ubicacion'),'u':unidad,'frec':str(frec),'hrs':str(hrs),'km':str(km),'lect':str(lectura),'ult':str(ult),'prox':str(prox),'marg':str(margen),'costo':str(v9f(r.get('costo_total_pm_clp'))),'op':r.get('estado_operacional'),'est':estado,'sem':sem,'it':v9imgtipo(r),'iu':v9img(r),'codigo':codigo})
+        n+=1
+    return n
+
+V9CSS="""<style>body{margin:0;background:#f4f6fa;font-family:Segoe UI,Arial;color:#14213d}.top{background:#123b68;color:white;text-align:center;padding:14px;font-size:24px;font-weight:900}.nav{background:white;border-bottom:1px solid #dbe3ef;padding:10px 18px;display:flex;gap:14px;flex-wrap:wrap}.nav a{font-weight:800;color:#123b68;text-decoration:none}.wrap{padding:18px}.excelgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.box{background:white;border:1px solid #d7dee9;text-align:center}.box h4{margin:0;background:#37649a;color:white;padding:7px;font-size:13px}.box b{display:block;font-size:20px;padding:8px;color:#000}.panel{background:white;border:1px solid #d7dee9;border-radius:8px;box-shadow:0 4px 14px rgba(9,30,66,.08);padding:16px;margin-top:16px}.cards{display:flex;gap:14px;overflow-x:auto}.card{min-width:190px;border:1px solid #dbe3ef;border-radius:9px;padding:10px;text-align:center}.card img{width:155px;height:95px;object-fit:contain}.code{font-weight:900;color:#082b5f}.pill{border-radius:999px;padding:5px 10px;font-weight:900;font-size:11px}.green{background:#dcfce7;color:#15803d}.red{background:#ffe1e3;color:#b91c1c}.yellow{background:#fff4cc;color:#a16207}.gray{background:#e5e7eb;color:#475569}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;border-bottom:1px solid #e9eef5;text-align:left}.eqimg{width:120px;height:70px;object-fit:contain}.foot{margin-top:18px;background:#123b68;color:white;padding:14px;display:flex;justify-content:space-between}@media(max-width:1000px){.excelgrid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.excelgrid{grid-template-columns:1fr}.top{font-size:18px}}</style>"""
+V9NAV="<div class='nav'><a href='/erp'>Dashboard Excel</a><a href='/equipos_v9'>Equipos V9</a><a href='/equipos'>Equipos V8</a><a href='/admin/v9/importar_excel_real'>Importar Excel real</a><a href='/admin/v9/sincronizar'>Sincronizar</a></div>"
+
+@app.before_request
+def v9root():
+    if request.path=='/' or request.path=='/erp': return redirect('/erp_v9')
+@app.route('/admin/v9/version')
+@app.route('/v9/version')
+def v9version(): return jsonify({'status':'OK','version':APP_VERSION,'mensaje':'V9 DASHBOARD EXCEL REAL ACTIVO'})
+@app.route('/admin/v9/importar_excel_real')
+@app.route('/v9/importar_excel_real')
+def v9import_route(): return jsonify({'status':'OK','version':APP_VERSION,'registros':v9_import()})
+@app.route('/admin/v9/sincronizar')
+@app.route('/v9/sincronizar')
+def v9sync_route(): return jsonify({'status':'OK','version':APP_VERSION,'actualizados':v9_sync(),'kpi_excel':v9_kpi()})
+@app.route('/admin/v9/diagnostico')
+@app.route('/v9/diagnostico')
+def v9diag_route(): return jsonify({'status':'OK','version':APP_VERSION,'cmms_excel':v9count('cmms_excel'),'equipos':v9count('equipos'),'kpi_excel':v9_kpi()})
+@app.route('/erp_v9')
+def v9dashboard():
+    k=v9_kpi(); data=v9data(); crit=[r for r in data if any(x in v9estado(r) for x in ['ATRAS','PROX','PROCESO','POR RECIBIR'])][:50]
+    groups=[[('Total equipos',k['total']),('Operativos',k['operativos']),('Fuera de servicio',k['fuera']),('Atrasados',k['atrasados']),('Próximas',k['proximas'])],[('Por recibir',k['por_recibir']),('En proceso',k['en_proceso']),('Al día',k['al_dia']),('En Taller',k['en_taller']),('Pendiente de Reporte',k['pendiente_reporte'])],[('% cumplimiento real',k['cumplimiento_real']),('% controlado',k['controlado']),('% backlog crítico',k['backlog_critico']),('Costo total PM','$ {:,.2f}'.format(k['costo_total_pm']).replace(',', 'X').replace('.', ',').replace('X','.')),('% DISPONIBILIDAD REAL',k['disponibilidad_real'])],[('Prom. compra→mant.',k['prom_compra_mant']),('Prom. bodega→mant.',k['prom_bodega_mant']),('Sin historial PM',k['sin_historial_pm']),('Backlog compra',k['backlog_compra']),('Actualizado',k['actualizado'])],[('Tiempo de Compra',k['tiempo_compra'])]]
+    html=f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>CMMS DEMOTRON V9</title>{V9CSS}</head><body><div class='top'>CMMS DEMOTRON</div>{V9NAV}<main class='wrap'>"
+    for row in groups: html+="<section class='excelgrid'>"+''.join(f"<div class='box'><h4>{a}</h4><b>{b}</b></div>" for a,b in row)+"</section>"
+    html+="<section class='panel'><h3>Flota con imágenes reales</h3><div class='cards'>"
+    for r in data[:80]: html+=f"<div class='card'><img src='{v9img(r)}'><div class='code'>{r.get('codigo','')}</div><div>{r.get('tipo_equipo','')}</div><small>{r.get('control_base','')} · Lectura: {r.get('lectura_actual','')}</small></div>"
+    html+="</div></section><section class='panel'><h3>Críticos / seguimiento CMMS Excel</h3><table><tr><th>Imagen</th><th>Código</th><th>Equipo</th><th>Unidad</th><th>Horómetro</th><th>Kilometraje</th><th>Lectura actual</th><th>Estado CMMS</th><th>Acción</th></tr>"
+    for r in crit:
+        est=v9estado(r); sem='red' if 'ATRAS' in est else ('yellow' if any(x in est for x in ['PROX','PROCESO','POR RECIBIR']) else 'green')
+        html+=f"<tr><td><img class='eqimg' src='{v9img(r)}'></td><td class='code'>{r.get('codigo','')}</td><td>{r.get('tipo_equipo','')}</td><td>{r.get('control_base','')}</td><td>{r.get('ultimo_horometro','')}</td><td>{r.get('ultimo_kilometraje','')}</td><td>{r.get('lectura_actual','')}</td><td><span class='pill {sem}'>{est}</span></td><td>{r.get('accion_sugerida','')}</td></tr>"
+    html+=f"</table></section></main><footer class='foot'><b>DEMOTRON CMMS V9</b><span>{APP_VERSION}</span></footer></body></html>"
+    return html
+@app.route('/equipos_v9')
+def v9equipos_page():
+    data=v9data(); html=f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Equipos V9</title>{V9CSS}</head><body><div class='top'>CMMS DEMOTRON - EQUIPOS V9</div>{V9NAV}<main class='wrap'><section class='panel'><table><tr><th>Imagen</th><th>Código</th><th>Equipo</th><th>Marca</th><th>Modelo</th><th>Unidad</th><th>Horómetro</th><th>Kilometraje</th><th>Lectura Actual</th><th>Estado CMMS</th><th>Costo Total PM</th></tr>"
+    for r in data:
+        est=v9estado(r); sem='gray' if ('FUERA' in est or 'TALLER' in est) else ('red' if 'ATRAS' in est else ('yellow' if any(x in est for x in ['PROX','PROCESO','POR RECIBIR']) else 'green'))
+        html+=f"<tr><td><img class='eqimg' src='{v9img(r)}'></td><td class='code'>{r.get('codigo','')}</td><td>{r.get('tipo_equipo','')}</td><td>{r.get('marca','')}</td><td>{r.get('modelo','')}</td><td><b>{r.get('control_base','')}</b></td><td>{r.get('ultimo_horometro','')}</td><td>{r.get('ultimo_kilometraje','')}</td><td>{r.get('lectura_actual','')}</td><td><span class='pill {sem}'>{est}</span></td><td>{r.get('costo_total_pm_clp','')}</td></tr>"
+    return html+f"</table></section></main><footer class='foot'><b>DEMOTRON CMMS V9</b><span>{APP_VERSION}</span></footer></body></html>"
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5000)), debug=False)
