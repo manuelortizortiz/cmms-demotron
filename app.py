@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON_ERP_CMMS_V6_2_FIX_BASEDIR_SCHEMA_DATOS_REALES"
+APP_VERSION = "DEMOTRON_ERP_CMMS_V6_3_SCHEMA_THEN_SQL_DATOS_REALES"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
@@ -663,6 +663,241 @@ def v62_admin_cargar_sql_final():
                 "ot": v62_count_table("ot"),
                 "bodega": v62_count_table("bodega"),
                 "actividad": v62_count_table("actividad"),
+            }
+        })
+
+    except Exception as e:
+        return jsonify({
+            "status": "ERROR",
+            "version": APP_VERSION,
+            "sql_file": str(sql_file),
+            "mensaje": repr(e)
+        }), 500
+
+
+
+
+# ============================================================
+# V6.3 - CREA ESQUEMA COMPLETO ANTES DE EJECUTAR SQL REAL
+# ============================================================
+
+def v63_count_table(table_name: str) -> int:
+    try:
+        r = one(f"SELECT COUNT(*) AS n FROM {table_name}")
+        return int(r["n"] or 0) if r else 0
+    except Exception:
+        return 0
+
+
+def v63_find_sql_file():
+    base = Path(__file__).resolve().parent
+    candidates = [
+        base / "data_import" / "DATOS_REALES_DEMOTRON_FINAL_VALIDO.sql",
+        base / "DATOS_REALES_DEMOTRON_FINAL_VALIDO.sql",
+        base / "data_import" / "DATOS_DEMOTRON_ERP_CMMS_POSTGRES_RAILWAY.sql",
+        base / "DATOS_DEMOTRON_ERP_CMMS_POSTGRES_RAILWAY.sql",
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    for p in base.rglob("*.sql"):
+        return p
+    return None
+
+
+def v63_crear_esquema_limpio():
+    ddl = """
+    DROP TABLE IF EXISTS actividad CASCADE;
+    DROP TABLE IF EXISTS bodega CASCADE;
+    DROP TABLE IF EXISTS compras CASCADE;
+    DROP TABLE IF EXISTS lecturas CASCADE;
+    DROP TABLE IF EXISTS ot CASCADE;
+    DROP TABLE IF EXISTS equipos CASCADE;
+    DROP TABLE IF EXISTS importaciones CASCADE;
+
+    CREATE TABLE equipos (
+        id SERIAL PRIMARY KEY,
+        codigo TEXT UNIQUE NOT NULL,
+        tipo_equipo TEXT,
+        familia TEXT,
+        marca TEXT,
+        modelo TEXT,
+        descripcion TEXT,
+        ano TEXT,
+        patente TEXT,
+        vin TEXT,
+        motor TEXT,
+        chofer TEXT,
+        ubicacion TEXT,
+        responsable TEXT,
+        control_base TEXT,
+        frecuencia_base DOUBLE PRECISION DEFAULT 0,
+        lectura_actual DOUBLE PRECISION DEFAULT 0,
+        ultima_pm DOUBLE PRECISION DEFAULT 0,
+        proxima_pm DOUBLE PRECISION DEFAULT 0,
+        margen DOUBLE PRECISION DEFAULT 0,
+        costo_total_pm DOUBLE PRECISION DEFAULT 0,
+        estado_operacional TEXT DEFAULT 'OPERATIVO',
+        estado_calculado TEXT,
+        semaforo TEXT,
+        imagen_url TEXT,
+        fecha_actualizacion TEXT
+    );
+
+    CREATE TABLE lecturas (
+        id SERIAL PRIMARY KEY,
+        fecha TEXT,
+        codigo TEXT,
+        tipo_lectura TEXT,
+        valor DOUBLE PRECISION DEFAULT 0,
+        ubicacion TEXT,
+        responsable TEXT,
+        observacion TEXT
+    );
+
+    CREATE TABLE compras (
+        id SERIAL PRIMARY KEY,
+        fecha TEXT,
+        codigo_equipo TEXT,
+        oc TEXT,
+        proveedor TEXT,
+        item TEXT,
+        cantidad DOUBLE PRECISION DEFAULT 0,
+        costo_total DOUBLE PRECISION DEFAULT 0,
+        estado TEXT,
+        observacion TEXT
+    );
+
+    CREATE TABLE ot (
+        id SERIAL PRIMARY KEY,
+        numero TEXT UNIQUE,
+        codigo TEXT,
+        tipo TEXT,
+        prioridad TEXT,
+        estado TEXT,
+        fecha_creacion TEXT,
+        fecha_cierre TEXT,
+        lectura DOUBLE PRECISION DEFAULT 0,
+        descripcion TEXT,
+        responsable TEXT,
+        costo_estimado DOUBLE PRECISION DEFAULT 0
+    );
+
+    CREATE TABLE bodega (
+        id SERIAL PRIMARY KEY,
+        fecha TEXT,
+        codigo_equipo TEXT,
+        ot_numero TEXT,
+        repuesto TEXT,
+        cantidad DOUBLE PRECISION DEFAULT 0,
+        costo_unitario DOUBLE PRECISION DEFAULT 0,
+        movimiento TEXT,
+        observacion TEXT
+    );
+
+    CREATE TABLE actividad (
+        id SERIAL PRIMARY KEY,
+        fecha TEXT,
+        tipo TEXT,
+        titulo TEXT,
+        detalle TEXT,
+        usuario TEXT
+    );
+
+    CREATE TABLE importaciones (
+        id SERIAL PRIMARY KEY,
+        fecha TEXT,
+        archivo TEXT,
+        hoja TEXT,
+        registros INTEGER,
+        detalle TEXT
+    );
+    """
+    with engine.begin() as conn:
+        raw = conn.connection.cursor()
+        for statement in ddl.split(";"):
+            stmt = statement.strip()
+            if stmt:
+                raw.execute(stmt)
+        raw.close()
+
+
+@app.route("/admin/v63/version")
+@app.route("/v63/version")
+def v63_admin_version():
+    return jsonify({
+        "status": "OK",
+        "version": APP_VERSION,
+        "mensaje": "V6.3 ACTIVO - CREA ESQUEMA Y LUEGO CARGA SQL",
+        "database": "postgresql" if DATABASE_URL else "sqlite",
+        "rutas": [
+            "/admin/v63/cargar_sql_final",
+            "/admin/v63/diagnostico_datos"
+        ]
+    })
+
+
+@app.route("/admin/v63/diagnostico_datos")
+@app.route("/v63/diagnostico_datos")
+def v63_admin_diagnostico():
+    return jsonify({
+        "status": "OK",
+        "version": APP_VERSION,
+        "database": "postgresql" if DATABASE_URL else "sqlite",
+        "equipos": v63_count_table("equipos"),
+        "lecturas": v63_count_table("lecturas"),
+        "compras": v63_count_table("compras"),
+        "ot": v63_count_table("ot"),
+        "bodega": v63_count_table("bodega"),
+        "actividad": v63_count_table("actividad"),
+        "usuarios": v63_count_table("usuarios"),
+    })
+
+
+@app.route("/admin/v63/cargar_sql_final")
+@app.route("/v63/cargar_sql_final")
+def v63_admin_cargar_sql_final():
+    sql_file = v63_find_sql_file()
+    if not sql_file:
+        return jsonify({
+            "status": "ERROR",
+            "version": APP_VERSION,
+            "mensaje": "No encontré archivo SQL."
+        }), 500
+
+    try:
+        # Primero crea todas las tablas nuevas con columnas completas.
+        v63_crear_esquema_limpio()
+
+        sql_text = sql_file.read_text(encoding="utf-8", errors="ignore")
+
+        with engine.begin() as conn:
+            raw = conn.connection.cursor()
+            for statement in sql_text.split(";"):
+                stmt = statement.strip()
+                if not stmt:
+                    continue
+
+                upper = stmt.upper()
+                # El SQL trae BEGIN/COMMIT; Railway ya maneja la transacción con engine.begin().
+                if upper in ("BEGIN", "COMMIT", "ROLLBACK"):
+                    continue
+
+                raw.execute(stmt)
+            raw.close()
+
+        return jsonify({
+            "status": "OK",
+            "version": APP_VERSION,
+            "mensaje": "V6.3: Esquema creado y datos reales cargados correctamente.",
+            "sql_file": sql_file.name,
+            "conteos": {
+                "equipos": v63_count_table("equipos"),
+                "lecturas": v63_count_table("lecturas"),
+                "compras": v63_count_table("compras"),
+                "ot": v63_count_table("ot"),
+                "bodega": v63_count_table("bodega"),
+                "actividad": v63_count_table("actividad"),
             }
         })
 
