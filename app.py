@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON_ERP_CMMS_V6_RUTAS_ADMIN_DATOS_REALES"
+APP_VERSION = "DEMOTRON_ERP_CMMS_V6_1_ADMIN_FIX_DATOS_REALES"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
@@ -445,6 +445,118 @@ try:
     init_db(); auto_import_if_empty()
 except Exception as e:
     print('BOOT_ERROR', e)
+
+
+
+# ============================================================
+# V6.1 - RUTAS ADMIN GARANTIZADAS
+# ============================================================
+
+def v61_count_table(table_name: str) -> int:
+    try:
+        if not table_exists(table_name):
+            return 0
+        r = one(f"SELECT COUNT(*) AS n FROM {table_name}")
+        return int(r["n"] or 0) if r else 0
+    except Exception:
+        return 0
+
+
+@app.route("/admin/version")
+@app.route("/version_admin")
+def v61_admin_version():
+    return jsonify({
+        "status": "OK",
+        "version": APP_VERSION,
+        "mensaje": "V6.1 ADMIN ROUTES ACTIVAS",
+        "database": "postgresql" if DATABASE_URL else "sqlite",
+        "rutas": [
+            "/admin/version",
+            "/admin/diagnostico_datos",
+            "/admin/cargar_sql_final",
+            "/admin/reset_cargar_datos"
+        ]
+    })
+
+
+@app.route("/admin/diagnostico_datos")
+@app.route("/diagnostico_datos")
+def v61_admin_diagnostico_datos():
+    return jsonify({
+        "status": "OK",
+        "version": APP_VERSION,
+        "database": "postgresql" if DATABASE_URL else "sqlite",
+        "equipos": v61_count_table("equipos"),
+        "lecturas": v61_count_table("lecturas"),
+        "compras": v61_count_table("compras"),
+        "ot": v61_count_table("ot"),
+        "bodega": v61_count_table("bodega"),
+        "usuarios": v61_count_table("usuarios"),
+        "mensaje": "Si equipos/lecturas/compras están en 0, ejecuta /admin/cargar_sql_final"
+    })
+
+
+def v61_find_sql_file():
+    candidates = [
+        BASE_DIR / "DATOS_REALES_DEMOTRON_FINAL_VALIDO.sql",
+        BASE_DIR / "DATOS_DEMOTRON_ERP_CMMS_POSTGRES_RAILWAY.sql",
+        BASE_DIR / "data_import" / "DATOS_REALES_DEMOTRON_FINAL_VALIDO.sql",
+        BASE_DIR / "data_import" / "DATOS_DEMOTRON_ERP_CMMS_POSTGRES_RAILWAY.sql",
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    for p in BASE_DIR.rglob("*.sql"):
+        return p
+    return None
+
+
+@app.route("/admin/cargar_sql_final")
+@app.route("/cargar_sql_final")
+def v61_admin_cargar_sql_final():
+    sql_file = v61_find_sql_file()
+    if not sql_file:
+        return jsonify({
+            "status": "ERROR",
+            "version": APP_VERSION,
+            "mensaje": "No encontré archivo .sql en el proyecto."
+        }), 500
+
+    try:
+        sql_text = sql_file.read_text(encoding="utf-8", errors="ignore")
+        with engine.begin() as conn:
+            for t in ["bodega", "compras", "lecturas", "ot", "equipos"]:
+                conn.execute(text(f"DROP TABLE IF EXISTS {t} CASCADE"))
+            conn.execute(text(sql_text))
+
+        return jsonify({
+            "status": "OK",
+            "version": APP_VERSION,
+            "mensaje": "Base reconstruida y datos reales cargados.",
+            "sql_file": sql_file.name,
+            "conteos": {
+                "equipos": v61_count_table("equipos"),
+                "lecturas": v61_count_table("lecturas"),
+                "compras": v61_count_table("compras"),
+                "ot": v61_count_table("ot"),
+                "bodega": v61_count_table("bodega"),
+            }
+        })
+
+    except Exception as e:
+        return jsonify({
+            "status": "ERROR",
+            "version": APP_VERSION,
+            "sql_file": str(sql_file),
+            "mensaje": str(e)
+        }), 500
+
+
+@app.route("/admin/reset_cargar_datos")
+@app.route("/reset_cargar_datos")
+def v61_admin_reset_cargar_datos():
+    return v61_admin_cargar_sql_final()
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5000)), debug=False)
