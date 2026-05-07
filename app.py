@@ -10,10 +10,12 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON_ERP_CMMS_V6_1_ADMIN_FIX_DATOS_REALES"
+APP_VERSION = "DEMOTRON_ERP_CMMS_V6_2_FIX_BASEDIR_SCHEMA_DATOS_REALES"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
+
+BASE_DIR = Path(__file__).resolve().parent
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "demotron-cmms-erp-final")
@@ -556,6 +558,121 @@ def v61_admin_cargar_sql_final():
 @app.route("/reset_cargar_datos")
 def v61_admin_reset_cargar_datos():
     return v61_admin_cargar_sql_final()
+
+
+
+
+# ============================================================
+# V6.2 - CARGA FORZADA ROBUSTA, BASE_DIR Y ESQUEMA NUEVO
+# ============================================================
+
+def v62_count_table(table_name: str) -> int:
+    try:
+        if not table_exists(table_name):
+            return 0
+        r = one(f"SELECT COUNT(*) AS n FROM {table_name}")
+        return int(r["n"] or 0) if r else 0
+    except Exception:
+        return 0
+
+
+def v62_find_sql_file():
+    base = Path(__file__).resolve().parent
+    candidates = [
+        base / "data_import" / "DATOS_REALES_DEMOTRON_FINAL_VALIDO.sql",
+        base / "DATOS_REALES_DEMOTRON_FINAL_VALIDO.sql",
+        base / "data_import" / "DATOS_DEMOTRON_ERP_CMMS_POSTGRES_RAILWAY.sql",
+        base / "DATOS_DEMOTRON_ERP_CMMS_POSTGRES_RAILWAY.sql",
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    for p in base.rglob("*.sql"):
+        return p
+    return None
+
+
+@app.route("/admin/v62/version")
+@app.route("/v62/version")
+def v62_admin_version():
+    return jsonify({
+        "status": "OK",
+        "version": APP_VERSION,
+        "mensaje": "V6.2 ACTIVO - BASE_DIR Y SCHEMA FIX",
+        "database": "postgresql" if DATABASE_URL else "sqlite",
+        "rutas": [
+            "/admin/v62/cargar_sql_final",
+            "/admin/v62/diagnostico_datos",
+            "/v62/cargar_sql_final",
+            "/v62/diagnostico_datos"
+        ]
+    })
+
+
+@app.route("/admin/v62/diagnostico_datos")
+@app.route("/v62/diagnostico_datos")
+def v62_admin_diagnostico():
+    return jsonify({
+        "status": "OK",
+        "version": APP_VERSION,
+        "database": "postgresql" if DATABASE_URL else "sqlite",
+        "equipos": v62_count_table("equipos"),
+        "lecturas": v62_count_table("lecturas"),
+        "compras": v62_count_table("compras"),
+        "ot": v62_count_table("ot"),
+        "bodega": v62_count_table("bodega"),
+        "actividad": v62_count_table("actividad"),
+        "usuarios": v62_count_table("usuarios"),
+    })
+
+
+@app.route("/admin/v62/cargar_sql_final")
+@app.route("/v62/cargar_sql_final")
+def v62_admin_cargar_sql_final():
+    sql_file = v62_find_sql_file()
+    if not sql_file:
+        return jsonify({
+            "status": "ERROR",
+            "version": APP_VERSION,
+            "mensaje": "No encontré archivo .sql en raíz ni en data_import."
+        }), 500
+
+    try:
+        sql_text = sql_file.read_text(encoding="utf-8", errors="ignore")
+
+        with engine.begin() as conn:
+            for t in ["actividad", "bodega", "compras", "lecturas", "ot", "equipos", "importaciones"]:
+                conn.execute(text(f"DROP TABLE IF EXISTS {t} CASCADE"))
+
+            raw = conn.connection.cursor()
+            for statement in sql_text.split(";"):
+                stmt = statement.strip()
+                if stmt:
+                    raw.execute(stmt)
+            raw.close()
+
+        return jsonify({
+            "status": "OK",
+            "version": APP_VERSION,
+            "mensaje": "V6.2: Base reconstruida y datos reales cargados desde SQL.",
+            "sql_file": sql_file.name,
+            "conteos": {
+                "equipos": v62_count_table("equipos"),
+                "lecturas": v62_count_table("lecturas"),
+                "compras": v62_count_table("compras"),
+                "ot": v62_count_table("ot"),
+                "bodega": v62_count_table("bodega"),
+                "actividad": v62_count_table("actividad"),
+            }
+        })
+
+    except Exception as e:
+        return jsonify({
+            "status": "ERROR",
+            "version": APP_VERSION,
+            "sql_file": str(sql_file),
+            "mensaje": repr(e)
+        }), 500
 
 
 if __name__ == '__main__':
