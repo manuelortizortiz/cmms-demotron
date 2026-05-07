@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON_ERP_CMMS_V6_3_SCHEMA_THEN_SQL_DATOS_REALES"
+APP_VERSION = "DEMOTRON_ERP_CMMS_V6_4_EXCEL_SAFE_NUMBERS_DATOS_REALES"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
@@ -898,6 +898,245 @@ def v63_admin_cargar_sql_final():
                 "ot": v63_count_table("ot"),
                 "bodega": v63_count_table("bodega"),
                 "actividad": v63_count_table("actividad"),
+            }
+        })
+
+    except Exception as e:
+        return jsonify({
+            "status": "ERROR",
+            "version": APP_VERSION,
+            "sql_file": str(sql_file),
+            "mensaje": repr(e)
+        }), 500
+
+
+
+
+# ============================================================
+# V6.4 - ESQUEMA COMPATIBLE CON EXCEL: NUMÉRICOS COMO TEXT
+# Evita: invalid input syntax for type double precision: ""
+# ============================================================
+
+def v64_count_table(table_name: str) -> int:
+    try:
+        r = one(f"SELECT COUNT(*) AS n FROM {table_name}")
+        return int(r["n"] or 0) if r else 0
+    except Exception:
+        return 0
+
+
+def v64_find_sql_file():
+    base = Path(__file__).resolve().parent
+    candidates = [
+        base / "data_import" / "DATOS_REALES_DEMOTRON_FINAL_VALIDO.sql",
+        base / "DATOS_REALES_DEMOTRON_FINAL_VALIDO.sql",
+        base / "data_import" / "DATOS_DEMOTRON_ERP_CMMS_POSTGRES_RAILWAY.sql",
+        base / "DATOS_DEMOTRON_ERP_CMMS_POSTGRES_RAILWAY.sql",
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    for p in base.rglob("*.sql"):
+        return p
+    return None
+
+
+def v64_crear_esquema_excel_safe():
+    # Las columnas numéricas quedan como TEXT porque los Excel/SQL exportados traen valores vacíos ''.
+    # La app convierte a número usando safe_float() al calcular KPIs.
+    ddl = """
+    DROP TABLE IF EXISTS actividad CASCADE;
+    DROP TABLE IF EXISTS bodega CASCADE;
+    DROP TABLE IF EXISTS compras CASCADE;
+    DROP TABLE IF EXISTS lecturas CASCADE;
+    DROP TABLE IF EXISTS ot CASCADE;
+    DROP TABLE IF EXISTS equipos CASCADE;
+    DROP TABLE IF EXISTS importaciones CASCADE;
+
+    CREATE TABLE equipos (
+        id SERIAL PRIMARY KEY,
+        codigo TEXT UNIQUE NOT NULL,
+        tipo_equipo TEXT,
+        familia TEXT,
+        marca TEXT,
+        modelo TEXT,
+        descripcion TEXT,
+        ano TEXT,
+        patente TEXT,
+        vin TEXT,
+        motor TEXT,
+        chofer TEXT,
+        ubicacion TEXT,
+        responsable TEXT,
+        control_base TEXT,
+        frecuencia_base TEXT,
+        lectura_actual TEXT,
+        ultima_pm TEXT,
+        proxima_pm TEXT,
+        margen TEXT,
+        costo_total_pm TEXT,
+        estado_operacional TEXT,
+        estado_calculado TEXT,
+        semaforo TEXT,
+        imagen_url TEXT,
+        fecha_actualizacion TEXT
+    );
+
+    CREATE TABLE lecturas (
+        id SERIAL PRIMARY KEY,
+        fecha TEXT,
+        codigo TEXT,
+        tipo_lectura TEXT,
+        valor TEXT,
+        ubicacion TEXT,
+        responsable TEXT,
+        observacion TEXT
+    );
+
+    CREATE TABLE compras (
+        id SERIAL PRIMARY KEY,
+        fecha TEXT,
+        codigo_equipo TEXT,
+        oc TEXT,
+        proveedor TEXT,
+        item TEXT,
+        cantidad TEXT,
+        costo_total TEXT,
+        estado TEXT,
+        observacion TEXT
+    );
+
+    CREATE TABLE ot (
+        id SERIAL PRIMARY KEY,
+        numero TEXT UNIQUE,
+        codigo TEXT,
+        tipo TEXT,
+        prioridad TEXT,
+        estado TEXT,
+        fecha_creacion TEXT,
+        fecha_cierre TEXT,
+        lectura TEXT,
+        descripcion TEXT,
+        responsable TEXT,
+        costo_estimado TEXT
+    );
+
+    CREATE TABLE bodega (
+        id SERIAL PRIMARY KEY,
+        fecha TEXT,
+        codigo_equipo TEXT,
+        ot_numero TEXT,
+        repuesto TEXT,
+        cantidad TEXT,
+        costo_unitario TEXT,
+        movimiento TEXT,
+        observacion TEXT
+    );
+
+    CREATE TABLE actividad (
+        id SERIAL PRIMARY KEY,
+        fecha TEXT,
+        tipo TEXT,
+        titulo TEXT,
+        detalle TEXT,
+        usuario TEXT
+    );
+
+    CREATE TABLE importaciones (
+        id SERIAL PRIMARY KEY,
+        fecha TEXT,
+        archivo TEXT,
+        hoja TEXT,
+        registros TEXT,
+        detalle TEXT
+    );
+    """
+    with engine.begin() as conn:
+        raw = conn.connection.cursor()
+        for statement in ddl.split(";"):
+            stmt = statement.strip()
+            if stmt:
+                raw.execute(stmt)
+        raw.close()
+
+
+@app.route("/admin/v64/version")
+@app.route("/v64/version")
+def v64_admin_version():
+    return jsonify({
+        "status": "OK",
+        "version": APP_VERSION,
+        "mensaje": "V6.4 ACTIVO - EXCEL SAFE NUMBERS",
+        "database": "postgresql" if DATABASE_URL else "sqlite",
+        "rutas": [
+            "/admin/v64/cargar_sql_final",
+            "/admin/v64/diagnostico_datos"
+        ]
+    })
+
+
+@app.route("/admin/v64/diagnostico_datos")
+@app.route("/v64/diagnostico_datos")
+def v64_admin_diagnostico():
+    return jsonify({
+        "status": "OK",
+        "version": APP_VERSION,
+        "database": "postgresql" if DATABASE_URL else "sqlite",
+        "equipos": v64_count_table("equipos"),
+        "lecturas": v64_count_table("lecturas"),
+        "compras": v64_count_table("compras"),
+        "ot": v64_count_table("ot"),
+        "bodega": v64_count_table("bodega"),
+        "actividad": v64_count_table("actividad"),
+        "usuarios": v64_count_table("usuarios"),
+    })
+
+
+@app.route("/admin/v64/cargar_sql_final")
+@app.route("/v64/cargar_sql_final")
+def v64_admin_cargar_sql_final():
+    sql_file = v64_find_sql_file()
+    if not sql_file:
+        return jsonify({
+            "status": "ERROR",
+            "version": APP_VERSION,
+            "mensaje": "No encontré archivo SQL."
+        }), 500
+
+    try:
+        v64_crear_esquema_excel_safe()
+        sql_text = sql_file.read_text(encoding="utf-8", errors="ignore")
+
+        with engine.begin() as conn:
+            raw = conn.connection.cursor()
+            for statement in sql_text.split(";"):
+                stmt = statement.strip()
+                if not stmt:
+                    continue
+
+                upper = stmt.upper()
+                if upper in ("BEGIN", "COMMIT", "ROLLBACK"):
+                    continue
+
+                try:
+                    raw.execute(stmt)
+                except Exception as e:
+                    # Si una sentencia falla por datos sucios, reporta exactamente cuál fue.
+                    raise RuntimeError(f"Fallo ejecutando sentencia SQL: {stmt[:500]} ... ERROR: {repr(e)}")
+            raw.close()
+
+        return jsonify({
+            "status": "OK",
+            "version": APP_VERSION,
+            "mensaje": "V6.4: Datos reales cargados. Esquema compatible con Excel y campos vacíos.",
+            "sql_file": sql_file.name,
+            "conteos": {
+                "equipos": v64_count_table("equipos"),
+                "lecturas": v64_count_table("lecturas"),
+                "compras": v64_count_table("compras"),
+                "ot": v64_count_table("ot"),
+                "bodega": v64_count_table("bodega"),
+                "actividad": v64_count_table("actividad"),
             }
         })
 
