@@ -5,12 +5,12 @@ from datetime import datetime
 from functools import wraps
 
 import pandas as pd
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import render_template_string, Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON_ERP_CMMS_V6_5_DASHBOARD_TEXT_NUM_FIX"
+APP_VERSION = "DEMOTRON_ERP_CMMS_V6_6_DASHBOARD_STANDALONE"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
@@ -1292,6 +1292,217 @@ def dashboard_v65():
         version_sistema=APP_VERSION,
     )
 
+
+
+
+# ============================================================
+# V6.6 - DASHBOARD STANDALONE SIN DEPENDER DE equipos_list()
+# ============================================================
+
+def v66_float(v):
+    try:
+        if v is None:
+            return 0.0
+        s = str(v).strip()
+        if s == "" or s.lower() in ("nan", "none", "null"):
+            return 0.0
+        if "," in s and "." in s:
+            s = s.replace(".", "").replace(",", ".")
+        elif "," in s:
+            s = s.replace(",", ".")
+        return float(s)
+    except Exception:
+        return 0.0
+
+
+def v66_rows(sql, params=None):
+    with engine.begin() as conn:
+        return [dict(r._mapping) for r in conn.execute(text(sql), params or {})]
+
+
+def v66_table_exists(table_name):
+    try:
+        with engine.begin() as conn:
+            r = conn.execute(text("SELECT to_regclass(:t) AS name"), {"t": table_name}).mappings().first()
+            return bool(r and r["name"])
+    except Exception:
+        return False
+
+
+def v66_count(table):
+    try:
+        if not v66_table_exists(table):
+            return 0
+        return int(v66_rows(f"SELECT COUNT(*) AS n FROM {table}")[0]["n"])
+    except Exception:
+        return 0
+
+
+def v66_data():
+    equipos = v66_rows("SELECT * FROM equipos ORDER BY codigo LIMIT 600") if v66_table_exists("equipos") else []
+    compras = v66_rows("SELECT * FROM compras ORDER BY id DESC LIMIT 400") if v66_table_exists("compras") else []
+    ots = v66_rows("SELECT * FROM ot ORDER BY id DESC LIMIT 400") if v66_table_exists("ot") else []
+
+    for e in equipos:
+        for f in ["frecuencia_base", "lectura_actual", "ultima_pm", "proxima_pm", "margen", "costo_total_pm"]:
+            e[f] = v66_float(e.get(f))
+
+        estado = str(e.get("estado_calculado") or e.get("estado_operacional") or "").upper()
+        sem = str(e.get("semaforo") or "").lower()
+
+        if sem == "orange":
+            sem = "yellow"
+        if sem not in ("red", "yellow", "green", "gray"):
+            if "ATRAS" in estado or "VENC" in estado:
+                sem = "red"
+            elif "PROX" in estado or "SIN" in estado:
+                sem = "yellow"
+            elif "TALLER" in estado or "FUERA" in estado:
+                sem = "gray"
+            else:
+                sem = "green"
+
+        e["semaforo"] = sem
+        if not e.get("imagen_url"):
+            cod = str(e.get("codigo") or "")
+            fam = str(e.get("familia") or e.get("descripcion") or "").lower()
+            if cod.startswith("CD") or "camion" in fam:
+                e["imagen_url"] = "/static/equipos/camion.svg"
+            elif cod.startswith("VD") or "camioneta" in fam:
+                e["imagen_url"] = "/static/equipos/camioneta.svg"
+            elif "excav" in fam:
+                e["imagen_url"] = "/static/equipos/excavadora.svg"
+            elif "cargador" in fam:
+                e["imagen_url"] = "/static/equipos/cargador.svg"
+            else:
+                e["imagen_url"] = "/static/equipos/equipo.svg"
+
+    for c in compras:
+        c["costo_total"] = v66_float(c.get("costo_total"))
+    for o in ots:
+        o["costo_estimado"] = v66_float(o.get("costo_estimado"))
+
+    operativos = [e for e in equipos if e.get("semaforo") != "gray"]
+    atrasados = [e for e in operativos if e.get("semaforo") == "red"]
+    proximos = [e for e in operativos if e.get("semaforo") == "yellow"]
+    taller = [e for e in equipos if "TALLER" in str(e.get("estado_calculado") or e.get("estado_operacional") or "").upper()]
+    controlados = max(0, len(operativos) - len(atrasados))
+    controlado_pct = round((controlados / len(operativos) * 100), 1) if operativos else 0
+
+    estado_counts = {"Al día": 0, "Próximos": 0, "Atrasados": 0, "No operativos": 0}
+    ubicacion = {}
+    for e in equipos:
+        sem = e.get("semaforo")
+        if sem == "red":
+            estado_counts["Atrasados"] += 1
+            u = e.get("ubicacion") or "Sin ubicación"
+            ubicacion[u] = ubicacion.get(u, 0) + 1
+        elif sem == "yellow":
+            estado_counts["Próximos"] += 1
+        elif sem == "gray":
+            estado_counts["No operativos"] += 1
+        else:
+            estado_counts["Al día"] += 1
+
+    compras_proceso = sum(1 for c in compras if str(c.get("estado") or "").upper() in ("EN PROCESO", "POR RECIBIR", "PENDIENTE", ""))
+    ot_abiertas = sum(1 for o in ots if str(o.get("estado") or "").upper() not in ("CERRADA", "CERRADO", "EJECUTADA"))
+
+    return {
+        "equipos": equipos,
+        "compras": compras,
+        "ots": ots,
+        "criticos": sorted(atrasados + proximos, key=lambda x: (x.get("semaforo") != "red", x.get("codigo") or ""))[:50],
+        "taller": taller[:50],
+        "kpis": {
+            "total": len(equipos),
+            "operativos": len(operativos),
+            "atrasados": len(atrasados),
+            "proximos": len(proximos),
+            "controlados": controlados,
+            "controlado_pct": controlado_pct,
+            "ot_abiertas": ot_abiertas,
+            "compras_proceso": compras_proceso,
+            "costo_mes": sum(c.get("costo_total", 0) for c in compras),
+            "taller": len(taller),
+        },
+        "estado_counts": estado_counts,
+        "ubicacion": dict(sorted(ubicacion.items(), key=lambda x: x[1], reverse=True)[:10]),
+    }
+
+
+V66_HTML = """
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DEMOTRON ERP CMMS V6.6</title><script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--azul:#082b5f;--fondo:#f4f6fa;--borde:#e6ebf2;--rojo:#ef3f45;--amarillo:#f7b500;--verde:#35b96b;--morado:#7449d4;--teal:#07939a;--shadow:0 6px 18px rgba(9,30,66,.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--fondo);font-family:Segoe UI,Arial,sans-serif;color:#14213d}.top{height:66px;background:white;border-bottom:1px solid var(--borde);display:flex;align-items:center;gap:20px;padding:0 24px;position:sticky;top:0;z-index:10}.logo{font-size:30px;font-weight:950;letter-spacing:11px;color:var(--azul)}.nav{display:flex;gap:18px;flex:1;overflow:auto}.nav a{font-weight:700;color:#334155;text-decoration:none;white-space:nowrap}.v{background:#dcfce7;color:#15803d;padding:7px 11px;border-radius:999px;font-weight:900;font-size:12px}.wrap{padding:20px 24px}.kpis{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:14px}.kpi{background:#fff;border:1px solid var(--borde);box-shadow:var(--shadow);border-radius:10px;padding:18px;display:flex;gap:15px;align-items:center}.circle{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;color:white;font-weight:950;font-size:27px}.red{background:var(--rojo)}.yellow{background:var(--amarillo)}.green{background:var(--verde)}.blue{background:#1261d6}.purple{background:var(--morado)}.teal{background:var(--teal)}.kpi small{font-size:11px;color:#475569;font-weight:900}.kpi b{display:block;font-size:28px;margin-top:4px}.grid{display:grid;grid-template-columns:1fr 1fr 1.1fr;gap:14px;margin-top:14px}.panel{background:white;border:1px solid var(--borde);border-radius:10px;box-shadow:var(--shadow);padding:18px}.panel h3{margin:0 0 12px;font-size:16px}.canvas{height:265px}.split{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-top:14px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px;border-bottom:1px solid #eef2f7;text-align:left}th{font-size:12px;color:#334155}.code{font-weight:950;color:var(--azul)}.pill{border-radius:999px;padding:5px 10px;font-weight:900;font-size:11px}.pill.red{background:#ffe1e3;color:#b91c1c}.pill.yellow{background:#fff4cc;color:#a16207}.pill.green{background:#dcfce7;color:#15803d}.cards{display:flex;gap:14px;overflow-x:auto;padding:8px 0 14px}.card{min-width:180px;border:1px solid var(--borde);border-radius:10px;background:white;padding:13px}.card.red{border-color:var(--rojo)}.card.yellow{border-color:var(--amarillo)}.card.green{border-color:#bbf7d0}.card img{width:80px;height:54px;object-fit:contain;float:left;margin:8px 10px 8px 0}.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:7px}.foot{height:55px;background:var(--azul);color:white;display:flex;align-items:center;justify-content:space-between;padding:0 24px;margin-top:18px}@media(max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}.grid,.split{grid-template-columns:1fr}}@media(max-width:700px){.kpis{grid-template-columns:1fr}.logo{font-size:20px;letter-spacing:6px}.nav{display:none}.wrap{padding:12px}}
+</style></head><body>
+<header class="top"><div class="logo">DEMOTRON</div><nav class="nav"><a>Dashboard</a><a>Equipos</a><a>OT</a><a>Compras</a><a>Bodega</a><a>Reportes</a></nav><div class="v">V6.6 DASHBOARD ACTIVO</div></header>
+<main class="wrap">
+<section class="kpis">
+<div class="kpi"><div class="circle red">!</div><div><small>ATRASADOS</small><b>{{k.atrasados}}</b></div></div>
+<div class="kpi"><div class="circle yellow">◷</div><div><small>PRÓXIMOS</small><b>{{k.proximos}}</b></div></div>
+<div class="kpi"><div class="circle green">✓</div><div><small>CONTROLADO</small><b>{{k.controlado_pct}}%</b></div></div>
+<div class="kpi"><div class="circle blue">▣</div><div><small>OT ABIERTAS</small><b>{{k.ot_abiertas}}</b></div></div>
+<div class="kpi"><div class="circle purple">🛒</div><div><small>COMPRAS</small><b>{{k.compras_proceso}}</b></div></div>
+<div class="kpi"><div class="circle teal">$</div><div><small>COSTO</small><b>${{"{:,.0f}".format(k.costo_mes).replace(",", ".")}}</b></div></div>
+</section>
+<section class="grid"><div class="panel"><h3>Estado general</h3><div class="canvas"><canvas id="estado"></canvas></div></div><div class="panel"><h3>Atrasados por ubicación</h3><div class="canvas"><canvas id="ubic"></canvas></div></div><div class="panel"><h3>Control ERP</h3><div class="canvas"><canvas id="gestion"></canvas></div></div></section>
+<section class="panel" style="margin-top:14px"><h3>Equipos activos con scroll</h3><div class="cards">{% for e in equipos if e.semaforo != 'gray' %}<div class="card {{e.semaforo}}"><span class="dot {{e.semaforo}}"></span><b class="code">{{e.codigo}}</b><br><img src="{{e.imagen_url}}"><div>{{e.descripcion or e.familia or e.modelo}}</div><small>{{e.ubicacion or 'Sin ubicación'}}<br>Lectura: {{"{:,.0f}".format(e.lectura_actual).replace(",", ".")}}</small></div>{% endfor %}</div></section>
+<section class="split"><div class="panel"><h3>Equipos críticos atrasados / próximos</h3><table><thead><tr><th>Código</th><th>Descripción</th><th>Ubicación</th><th>Lectura</th><th>Margen</th><th>Estado</th></tr></thead><tbody>{% for e in criticos %}<tr><td class="code">{{e.codigo}}</td><td>{{e.descripcion}}</td><td>{{e.ubicacion}}</td><td>{{"{:,.0f}".format(e.lectura_actual).replace(",", ".")}}</td><td>{{"{:,.0f}".format(e.margen).replace(",", ".")}}</td><td><span class="pill {{e.semaforo}}">{{e.estado_calculado or e.semaforo}}</span></td></tr>{% endfor %}</tbody></table></div><div class="panel"><h3>Equipos en taller</h3><table><tbody>{% for e in taller %}<tr><td class="code">{{e.codigo}}</td><td>{{e.descripcion}}</td></tr>{% else %}<tr><td>No hay equipos en taller.</td></tr>{% endfor %}</tbody></table></div></section>
+</main><footer class="foot"><b>DEMOTRON CMMS</b><span>Datos reales: {{k.total}} equipos · {{version}}</span></footer>
+<script>
+const estado={{estado|safe}}, ubic={{ubic|safe}};
+new Chart(document.getElementById('estado'),{type:'doughnut',data:{labels:Object.keys(estado),datasets:[{data:Object.values(estado),backgroundColor:['#35b96b','#f7b500','#ef3f45','#9ca3af']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right'}}}});
+new Chart(document.getElementById('ubic'),{type:'bar',data:{labels:Object.keys(ubic),datasets:[{data:Object.values(ubic),backgroundColor:'#ef3f45'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+new Chart(document.getElementById('gestion'),{type:'bar',data:{labels:['Equipos','Lecturas','Compras','OT','Bodega'],datasets:[{data:[{{k.total}},{{lecturas_count}},{{compras_count}},{{ot_count}},{{bodega_count}}],backgroundColor:['#082b5f','#1261d6','#7449d4','#07939a','#35b96b']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+</script></body></html>
+"""
+
+
+@app.route("/admin/v66/version")
+@app.route("/v66/version")
+def v66_version():
+    return jsonify({"status": "OK", "version": APP_VERSION, "mensaje": "V6.6 STANDALONE ACTIVO", "dashboard": "/erp"})
+
+
+@app.route("/admin/v66/dashboard_test")
+@app.route("/v66/dashboard_test")
+def v66_dashboard_test():
+    try:
+        d = v66_data()
+        return jsonify({
+            "status": "OK",
+            "version": APP_VERSION,
+            "equipos": len(d["equipos"]),
+            "lecturas": v66_count("lecturas"),
+            "compras": v66_count("compras"),
+            "ot": v66_count("ot"),
+            "bodega": v66_count("bodega"),
+        })
+    except Exception as e:
+        return jsonify({"status": "ERROR", "version": APP_VERSION, "mensaje": repr(e)}), 500
+
+
+@app.route("/dashboard_v66")
+@app.route("/erp")
+def dashboard_v66():
+    d = v66_data()
+    import json as _json
+    return render_template_string(
+        V66_HTML,
+        k=d["kpis"],
+        equipos=d["equipos"],
+        criticos=d["criticos"],
+        taller=d["taller"],
+        estado=_json.dumps(d["estado_counts"], ensure_ascii=False),
+        ubic=_json.dumps(d["ubicacion"], ensure_ascii=False),
+        lecturas_count=v66_count("lecturas"),
+        compras_count=v66_count("compras"),
+        ot_count=v66_count("ot"),
+        bodega_count=v66_count("bodega"),
+        version=APP_VERSION,
+    )
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5000)), debug=False)
