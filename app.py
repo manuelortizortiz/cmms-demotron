@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON_ERP_CMMS_V7_PAGINAS_REALES_UNIDADES"
+APP_VERSION = "DEMOTRON_ERP_CMMS_V7_1_RECALCULO_REAL"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
@@ -1720,6 +1720,103 @@ def v7_reportes_page():
     k=v7kpi()
     html=f"<div class='kpis'><div class='kpi'><div class='circle blue'>▣</div><div><small>Equipos</small><b>{k['total']}</b></div></div><div class='kpi'><div class='circle green'>✓</div><div><small>Controlado</small><b>{k['controlado_pct']}%</b></div></div><div class='kpi'><div class='circle red'>!</div><div><small>Atrasados</small><b>{k['atrasados']}</b></div></div><div class='kpi'><div class='circle purple'>OT</div><div><small>OT</small><b>{k['ot']}</b></div></div></div><p>Reporte gerencial V7 con datos reales PostgreSQL.</p>"
     return v7page("Reportes Gerenciales", html)
+
+
+
+# ===================== V7.1 RECALCULO REAL =====================
+
+def v71_recalcular_equipo(e):
+    e = v7eq(e)
+
+    try:
+        v7exec("""
+        UPDATE equipos
+        SET
+            control_base=:control_base,
+            estado_calculado=:estado_calculado,
+            semaforo=:semaforo,
+            margen=:margen,
+            proxima_pm=:proxima_pm
+        WHERE codigo=:codigo
+        """, {
+            "control_base": e.get("unidad_control"),
+            "estado_calculado": e.get("estado_calculado"),
+            "semaforo": e.get("semaforo"),
+            "margen": float(e.get("margen") or 0),
+            "proxima_pm": float(e.get("proxima_pm") or 0),
+            "codigo": e.get("codigo")
+        })
+        return True, e
+    except Exception as ex:
+        return False, str(ex)
+
+
+@app.route("/admin/v71/recalcular")
+@app.route("/v71/recalcular")
+def v71_recalcular():
+    if not v7exists("equipos"):
+        return jsonify({
+            "status":"ERROR",
+            "version":APP_VERSION,
+            "mensaje":"Tabla equipos no existe"
+        }), 500
+
+    equipos = v7rows("SELECT * FROM equipos ORDER BY codigo")
+    ok = 0
+    err = 0
+    cambios = []
+
+    for eq in equipos:
+        estado_antes = str(eq.get("estado_calculado") or "")
+        control_antes = str(eq.get("control_base") or "")
+
+        r, data = v71_recalcular_equipo(eq)
+
+        if r:
+            ok += 1
+
+            if (
+                estado_antes != data.get("estado_calculado")
+                or control_antes != data.get("unidad_control")
+            ):
+                cambios.append({
+                    "codigo": data.get("codigo"),
+                    "unidad": data.get("unidad_control"),
+                    "estado": data.get("estado_calculado"),
+                    "margen": round(float(data.get("margen") or 0), 1)
+                })
+        else:
+            err += 1
+
+    k = v7kpi()
+
+    return jsonify({
+        "status":"OK",
+        "version":APP_VERSION,
+        "mensaje":"V7.1 recalculo real aplicado a PostgreSQL",
+        "procesados": len(equipos),
+        "correctos": ok,
+        "errores": err,
+        "kpi": k,
+        "cambios_detectados": cambios[:50]
+    })
+
+
+@app.route("/admin/v71/version")
+@app.route("/v71/version")
+def v71_version():
+    return jsonify({
+        "status":"OK",
+        "version":APP_VERSION,
+        "mensaje":"V7.1 RECALCULO REAL ACTIVO",
+        "rutas":[
+            "/admin/v71/recalcular",
+            "/v71/recalcular",
+            "/erp",
+            "/equipos"
+        ]
+    })
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5000)), debug=False)
