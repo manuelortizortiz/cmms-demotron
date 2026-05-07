@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON_ERP_CMMS_V6_4_EXCEL_SAFE_NUMBERS_DATOS_REALES"
+APP_VERSION = "DEMOTRON_ERP_CMMS_V6_5_DASHBOARD_TEXT_NUM_FIX"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
@@ -1147,6 +1147,150 @@ def v64_admin_cargar_sql_final():
             "sql_file": str(sql_file),
             "mensaje": repr(e)
         }), 500
+
+
+
+
+# ============================================================
+# V6.5 - FIX DASHBOARD: CONVERTIR TEXTOS NUMÉRICOS A FLOAT
+# Evita Internal Server Error en index.html por format(e.valor_texto)
+# ============================================================
+
+def v65_to_float(value, default=0.0):
+    try:
+        if value is None:
+            return default
+        s = str(value).strip()
+        if s == "" or s.lower() in ("nan", "none", "null"):
+            return default
+        # Soporta formato chileno: 1.234.567,89 y formato normal.
+        if "," in s and "." in s:
+            s = s.replace(".", "").replace(",", ".")
+        elif "," in s:
+            s = s.replace(",", ".")
+        return float(s)
+    except Exception:
+        return default
+
+
+def v65_normalizar_equipo(e):
+    e = dict(e)
+    numeric_fields = [
+        "frecuencia_base", "lectura_actual", "ultima_pm", "proxima_pm",
+        "margen", "costo_total_pm"
+    ]
+    for field in numeric_fields:
+        e[field] = v65_to_float(e.get(field), 0.0)
+
+    if not e.get("estado_calculado"):
+        estado, semaforo, proxima, margen = calc_estado(
+            e.get("frecuencia_base"),
+            e.get("lectura_actual"),
+            e.get("ultima_pm"),
+            e.get("estado_operacional"),
+        )
+        e["estado_calculado"] = estado
+        e["semaforo"] = semaforo
+        e["proxima_pm"] = proxima
+        e["margen"] = margen
+
+    if not e.get("semaforo"):
+        estado_txt = str(e.get("estado_calculado") or "").upper()
+        if "ATRAS" in estado_txt or "VENC" in estado_txt:
+            e["semaforo"] = "red"
+        elif "PROX" in estado_txt or "SIN" in estado_txt:
+            e["semaforo"] = "yellow"
+        elif "TALLER" in estado_txt or "FUERA" in estado_txt:
+            e["semaforo"] = "gray"
+        else:
+            e["semaforo"] = "green"
+
+    return e
+
+
+def v65_normalizar_lista(rows_list, numeric_fields):
+    clean = []
+    for r in rows_list:
+        d = dict(r)
+        for f in numeric_fields:
+            if f in d:
+                d[f] = v65_to_float(d.get(f), 0.0)
+        clean.append(d)
+    return clean
+
+
+@app.route("/admin/v65/version")
+@app.route("/v65/version")
+def v65_admin_version():
+    return jsonify({
+        "status": "OK",
+        "version": APP_VERSION,
+        "mensaje": "V6.5 ACTIVO - DASHBOARD TEXT NUM FIX",
+        "rutas": ["/admin/v65/dashboard_test", "/"]
+    })
+
+
+@app.route("/admin/v65/dashboard_test")
+@app.route("/v65/dashboard_test")
+def v65_dashboard_test():
+    try:
+        eq = [v65_normalizar_equipo(e) for e in equipos_list()[:5]]
+        return jsonify({
+            "status": "OK",
+            "version": APP_VERSION,
+            "mensaje": "Dashboard puede convertir columnas TEXT a número.",
+            "muestra": eq
+        })
+    except Exception as e:
+        return jsonify({"status": "ERROR", "mensaje": repr(e), "version": APP_VERSION}), 500
+
+
+# Reemplazo seguro de la ruta principal.
+# Si el archivo ya tenía una ruta "/" antigua, Flask usará la primera registrada.
+# Por eso también dejamos una ruta alternativa pública para probar.
+@app.route("/dashboard_v65")
+@login_required
+def dashboard_v65():
+    equipos = [v65_normalizar_equipo(e) for e in equipos_list()]
+    ots = v65_normalizar_lista(safe_table_rows("ot", 200), ["lectura", "costo_estimado"])
+    compras = v65_normalizar_lista(safe_table_rows("compras", 300), ["cantidad", "costo_total"])
+    lecturas = v65_normalizar_lista(safe_table_rows("lecturas", 300), ["valor"])
+    bodega = v65_normalizar_lista(safe_table_rows("bodega", 200), ["cantidad", "costo_unitario"])
+
+    kpis = build_kpis(equipos, ots, compras, lecturas, bodega)
+
+    # Compatibilidad con templates que esperan otros nombres.
+    if "controlado_pct" not in kpis:
+        kpis["controlado_pct"] = kpis.get("controlado", 0)
+    if "controlados" not in kpis:
+        kpis["controlados"] = max(0, kpis.get("operativos", 0) - kpis.get("atrasados", 0))
+    if "costo_mes" not in kpis:
+        kpis["costo_mes"] = kpis.get("compras_monto", 0)
+
+    criticos = [e for e in equipos if e.get("semaforo") in ("red", "yellow", "orange")][:30]
+    taller = [e for e in equipos if str(e.get("estado_calculado") or "").upper() == "EN TALLER"][:30]
+
+    actividad = safe_table_rows("actividad", 20) if table_exists("actividad") else []
+
+    return render_template(
+        "index.html",
+        equipos=equipos,
+        ots=ots,
+        compras=compras,
+        lecturas=lecturas,
+        bodega=bodega,
+        kpis=kpis,
+        criticos=criticos,
+        taller=taller,
+        actividad=actividad,
+        charts=json.dumps(charts(equipos, compras), ensure_ascii=False),
+        current_user=session.get("user"),
+        current_role=session.get("rol"),
+        rol=session.get("rol"),
+        version=APP_VERSION,
+        anio_actual=datetime.now().year,
+        version_sistema=APP_VERSION,
+    )
 
 
 if __name__ == '__main__':
