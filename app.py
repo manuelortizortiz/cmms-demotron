@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON_ERP_CMMS_V11_2_UI_TABLAS_FORMULARIOS"
+APP_VERSION = "DEMOTRON_ERP_CMMS_V11_3_APP_READY_ROUTE_PRIORITY"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
@@ -1621,8 +1621,7 @@ TOP="""<header class='top'><div class='logo'>DEMOTRON</div><nav class='nav'><a h
 
 @app.before_request
 def v7_root():
-    if request.path=="/":
-        return redirect("/erp")
+    return None
 
 @app.route("/admin/v7/version")
 @app.route("/v7/version")
@@ -2111,7 +2110,8 @@ V9NAV="<div class='nav'><a href='/erp'>Dashboard Excel</a><a href='/equipos_v9'>
 
 @app.before_request
 def v9root():
-    if request.path=='/' or request.path=='/erp': return redirect('/erp_v9')
+    return None
+
 @app.route('/admin/v9/version')
 @app.route('/v9/version')
 def v9version(): return jsonify({'status':'OK','version':APP_VERSION,'mensaje':'V9 DASHBOARD EXCEL REAL ACTIVO'})
@@ -3438,8 +3438,6 @@ V112_CSS="""
 
 @app.before_request
 def v112_redirect():
-    if request.path in ['/', '/erp', '/dashboard']:
-        return redirect('/erp_v112')
     return None
 
 @app.route('/admin/v112/version')
@@ -3540,6 +3538,277 @@ def v112_bodega():
     table='<table><tr><th>Fecha</th><th>Código de Equipo</th><th>Folio</th><th>Repuesto</th><th>Movimiento</th><th>Detalle</th></tr>'
     for r in rows: table+=f"<tr><td>{v112_fecha(r.get('fecha'))}</td><td>{r.get('codigo_equipo','')}</td><td>{r.get('ot_numero','')}</td><td>{r.get('repuesto','')}</td><td>{r.get('movimiento','')}</td><td>{r.get('observacion','')}</td></tr>"
     return v112_page('Bodega','Bodega',form,table+'</table>')
+
+
+
+# ============================================================
+# V11.3 FINAL APP READY - ROUTE PRIORITY + TABLAS + FORMULARIOS
+# ============================================================
+
+def v113_fecha(v):
+    s = str(v or "").strip()
+    if not s:
+        return ""
+    if "T" in s:
+        s = s.split("T")[0]
+    if " " in s:
+        s = s.split(" ")[0]
+    return s
+
+def v113_money(v):
+    try:
+        return "$ " + "{:,.0f}".format(float(v92_float(v))).replace(",", ".")
+    except Exception:
+        try:
+            return "$ " + "{:,.0f}".format(float(str(v or "0").replace("$","").replace(".","").replace(",", "."))).replace(",", ".")
+        except Exception:
+            return "$ 0"
+
+def v113_data():
+    if not v92_exists("cmms_excel") or v92_count("cmms_excel") == 0:
+        try:
+            v92_importar()
+        except Exception:
+            pass
+    return v92_rows("SELECT * FROM cmms_excel ORDER BY codigo") if v92_exists("cmms_excel") else []
+
+def v113_kpis():
+    return v92_kpis()
+
+def v113_estado(r):
+    try:
+        return v92_estado(r)
+    except Exception:
+        return str(r.get("estado_cmms") or "").upper()
+
+def v113_sem(r):
+    e = v113_estado(r)
+    if "FUERA" in e or "TALLER" in e:
+        return "gray"
+    if "ATRAS" in e:
+        return "red"
+    if "PROX" in e or "PROCESO" in e or "POR RECIBIR" in e:
+        return "yellow"
+    return "green"
+
+def v113_img(r):
+    try:
+        return v92_img(r)
+    except Exception:
+        return "/static/equipos_real/camion_man_tolva.png"
+
+def v113_pct(v, total):
+    try:
+        return round(float(v) * 100 / float(total), 1) if float(total) else 0
+    except Exception:
+        return 0
+
+def v113_table_exists(t):
+    try:
+        return v92_exists(t)
+    except Exception:
+        return False
+
+def v113_rows(sql, p=None):
+    return v92_rows(sql, p or {})
+
+def v113_exec(sql, p=None):
+    return v92_exec(sql, p or {})
+
+def v113_donut(vals, cols, center, sub):
+    total = sum(vals) or 1
+    r = 72
+    circ = 2 * 3.14159 * r
+    off = 0
+    parts = []
+    for v, c in zip(vals, cols):
+        dash = float(v) / total * circ
+        parts.append(f"<circle cx='110' cy='110' r='{r}' fill='none' stroke='{c}' stroke-width='28' stroke-dasharray='{dash} {circ-dash}' stroke-dashoffset='{-off}' transform='rotate(-90 110 110)'/>")
+        off += dash
+    return f"<svg viewBox='0 0 220 220' class='donut'>{''.join(parts)}<circle cx='110' cy='110' r='49' fill='white'/><text x='110' y='105' text-anchor='middle' font-size='25' fill='#0f172a'>{center}</text><text x='110' y='128' text-anchor='middle' font-size='13' fill='#64748b'>{sub}</text></svg>"
+
+def v113_bars(d, color="#1261d6"):
+    if not d:
+        return "<div>Sin datos</div>"
+    m = max(d.values()) or 1
+    html = "<div class='bars'>"
+    for lab, val in d.items():
+        h = max(8, int(float(val) / m * 160))
+        html += f"<div class='barcol'><div class='barval'>{val}</div><div class='bar' style='height:{h}px;background:{color}'></div><small>{lab}</small></div>"
+    return html + "</div>"
+
+def v113_week_counts(table, date_col="fecha"):
+    out = {"Sem 1": 0, "Sem 2": 0, "Sem 3": 0, "Sem 4": 0}
+    try:
+        if not v113_table_exists(table):
+            return out
+        rows = v113_rows(f"SELECT {date_col} FROM {table} ORDER BY id DESC LIMIT 2000")
+        for r in rows:
+            s = v113_fecha(r.get(date_col))
+            try:
+                day = int(s[-2:])
+            except Exception:
+                day = 0
+            if day <= 7:
+                out["Sem 1"] += 1
+            elif day <= 14:
+                out["Sem 2"] += 1
+            elif day <= 21:
+                out["Sem 3"] += 1
+            else:
+                out["Sem 4"] += 1
+    except Exception:
+        pass
+    return out
+
+V113_CSS = """
+<style>
+:root{--navy:#082b5f;--bg:#f4f6fa;--line:#e5ebf3;--red:#ef3f45;--yellow:#f59e0b;--green:#16a34a;--blue:#1261d6;--purple:#7449d4;--teal:#07939a}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Segoe UI,Arial;color:#0f172a;font-weight:400}.top{height:68px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:22px;padding:0 24px;position:sticky;top:0;z-index:20}.logo{font-size:29px;font-weight:700;letter-spacing:9px;color:var(--navy)}.brand small{display:block;font-size:11px;color:#64748b;margin-top:-3px}.nav{display:flex;gap:16px;flex:1;overflow:auto}.nav a{font-weight:500;color:#334155;text-decoration:none;white-space:nowrap;padding:23px 0}.nav a.active{color:#0b56c5;border-bottom:3px solid #0b56c5}.search{height:40px;border:1px solid var(--line);border-radius:9px;padding:0 12px;min-width:220px}.user{font-weight:500}.wrap{padding:18px 24px}.kpis{display:grid;grid-template-columns:repeat(6,minmax(145px,1fr));gap:14px}.kpi{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 18px rgba(9,30,66,.08);padding:15px;display:flex;gap:13px;align-items:center;min-height:86px}.ico{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;color:white;font-size:23px;font-weight:500}.red{background:var(--red)}.yellow{background:var(--yellow)}.green{background:var(--green)}.blue{background:var(--blue)}.purple{background:var(--purple)}.teal{background:var(--teal)}.gray{background:#94a3b8}.kpi small{font-size:11px;color:#475569;font-weight:500}.kpi b{display:block;font-size:24px;font-weight:500}.kpi span{font-size:12px;color:#64748b}.grid{display:grid;grid-template-columns:1fr 1fr 1.05fr;gap:14px;margin-top:14px}.panel{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 18px rgba(9,30,66,.08);padding:17px;margin-bottom:14px}.panel h3{margin:0 0 12px;font-size:16px;font-weight:500}.donut{width:220px;height:220px;display:block;margin:auto}.legend{display:grid;gap:9px;margin-top:8px}.legend div{display:flex;justify-content:space-between;font-size:13px}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px}.bars{height:220px;display:flex;align-items:end;gap:18px;justify-content:space-around;padding-top:20px}.barcol{text-align:center;min-width:58px}.bar{width:38px;margin:0 auto 8px;border-radius:6px 6px 0 0}.barval{font-size:12px;font-weight:500}.barcol small{font-size:11px;color:#475569;display:block;max-width:85px;overflow:hidden;text-overflow:ellipsis}.split{display:grid;grid-template-columns:2fr 1.15fr;gap:14px;margin-top:14px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;border-bottom:1px solid #eef2f7;text-align:left;vertical-align:middle;font-weight:400}th{font-size:12px;color:#334155;font-weight:500}.code{font-weight:500;color:var(--navy)}.pill{border-radius:999px;padding:5px 10px;font-weight:500;font-size:11px;display:inline-block}.pill.red{background:#ffe1e3;color:#b91c1c}.pill.yellow{background:#fff4cc;color:#a16207}.pill.green{background:#dcfce7;color:#15803d}.pill.gray{background:#e5e7eb;color:#475569}.eqimg{width:92px;height:56px;object-fit:contain}.cards{display:flex;gap:14px;overflow-x:auto;padding:8px 0 14px}.card{min-width:178px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center}.card img{width:135px;height:84px;object-fit:contain}.card.red{border-color:var(--red)}.card.yellow{border-color:var(--yellow)}.card.green{border-color:#bbf7d0}.card.gray{opacity:.55}.formgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.formgrid input,.formgrid select{height:38px;border:1px solid var(--line);border-radius:8px;padding:0 10px}.btn{background:var(--navy);color:white;border:0;text-decoration:none;border-radius:8px;padding:8px 12px;font-weight:500;display:inline-block;cursor:pointer}.foot{height:56px;background:var(--navy);color:white;display:flex;align-items:center;justify-content:space-between;padding:0 24px;margin-top:18px}@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid,.split{grid-template-columns:1fr}.formgrid{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.kpis,.formgrid{grid-template-columns:1fr}.logo{font-size:20px;letter-spacing:6px}.nav,.search{display:none}.wrap{padding:12px}}
+</style>
+"""
+
+def v113_top(active="Dashboard"):
+    items = [("Dashboard","/erp"),("Equipos","/equipos"),("Lecturas","/lecturas"),("OT","/ot"),("Compras","/compras"),("Bodega","/bodega"),("Reportes","/reportes")]
+    links = "".join([f"<a class='{'active' if n==active else ''}' href='{u}'>{n}</a>" for n,u in items])
+    return f"<header class='top'><div class='brand'><div class='logo'>DEMOTRON</div><small>ERP CMMS V11.3</small></div><nav class='nav'>{links}</nav><input class='search' placeholder='Buscar...'><div class='user'>Administrador</div></header>"
+
+@app.before_request
+def v113_force_routes():
+    if request.path in ["/", "/erp", "/dashboard", "/index"]:
+        return redirect("/erp_v113")
+    if request.path == "/equipos":
+        return redirect("/equipos_v113")
+    if request.path == "/lecturas":
+        return redirect("/lecturas_v113")
+    if request.path == "/ot":
+        return redirect("/ot_v113")
+    if request.path == "/compras":
+        return redirect("/compras_v113")
+    if request.path == "/bodega":
+        return redirect("/bodega_v113")
+    return None
+
+@app.route("/admin/v113/version")
+@app.route("/v113/version")
+def v113_version():
+    return jsonify({"status":"OK","version":APP_VERSION,"mensaje":"V11.3 APP READY - rutas finales activas","dashboard":"/erp_v113"})
+
+@app.route("/admin/v113/diagnostico")
+@app.route("/v113/diagnostico")
+def v113_diag():
+    return jsonify({"status":"OK","version":APP_VERSION,"cmms_excel":len(v113_data()),"kpi":v113_kpis(),"rutas":["/erp","/equipos","/lecturas","/ot","/compras","/bodega"]})
+
+@app.route("/erp_v113")
+def v113_dashboard():
+    data = v113_data()
+    k = v113_kpis()
+    ubic = {}
+    for r in data:
+        u = r.get("ubicacion") or "Sin ubicación"
+        ubic[u] = ubic.get(u, 0) + 1
+    ubic = dict(sorted(ubic.items(), key=lambda x:x[1], reverse=True)[:8])
+    compras_sem = v113_week_counts("compras","fecha")
+    ot_sem = v113_week_counts("ot","fecha_creacion")
+    crit = [r for r in data if v113_sem(r) in ("red","yellow")][:8]
+    total = float(k["total"] or 1)
+    html = f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>DEMOTRON V11.3</title>{V113_CSS}</head><body>{v113_top('Dashboard')}<main class='wrap'>"
+    html += f"<section class='kpis'><div class='kpi'><div class='ico blue'>▣</div><div><small>TOTAL EQUIPOS</small><b>{k['total']}</b><span>100%</span></div></div><div class='kpi'><div class='ico green'>✓</div><div><small>OPERATIVOS</small><b>{k['operativos']}</b><span>{v113_pct(k['operativos'],total)}%</span></div></div><div class='kpi'><div class='ico red'>!</div><div><small>ATRASADOS</small><b>{k['atrasados']}</b><span>{v113_pct(k['atrasados'],total)}%</span></div></div><div class='kpi'><div class='ico yellow'>◷</div><div><small>PRÓXIMAS</small><b>{k['proximas']}</b><span>{v113_pct(k['proximas'],total)}%</span></div></div><div class='kpi'><div class='ico purple'>%</div><div><small>CONTROLADO</small><b>{k['controlado']}</b><span>Cumplimiento {k['cumplimiento_real']}</span></div></div><div class='kpi'><div class='ico teal'>$</div><div><small>COSTO TOTAL PM</small><b>{v113_money(k['costo_total_pm'])}</b><span>CLP</span></div></div></section>"
+    html += f"<section class='grid'><div class='panel'><h3>Estado de Equipos</h3>{v113_donut([k['al_dia'],k['en_proceso'],k['atrasados'],k['fuera']],['#16a34a','#f59e0b','#ef3f45','#94a3b8'],k['total'],'Total')}<div class='legend'><div><span><i class='dot' style='background:#16a34a'></i>Al día</span><b>{k['al_dia']}</b></div><div><span><i class='dot' style='background:#f59e0b'></i>En proceso</span><b>{k['en_proceso']}</b></div><div><span><i class='dot' style='background:#ef3f45'></i>Atrasados</span><b>{k['atrasados']}</b></div><div><span><i class='dot' style='background:#94a3b8'></i>Fuera servicio</span><b>{k['fuera']}</b></div></div></div><div class='panel'><h3>Equipos por Ubicación</h3>{v113_bars(ubic,'#1261d6')}</div><div class='panel'><h3>Costos de Mantenimiento</h3><div class='kpi' style='box-shadow:none;border:0'><div class='ico teal'>$</div><div><small>COSTO TOTAL PM</small><b>{v113_money(k['costo_total_pm'])}</b><span>Pesos chilenos</span></div></div><table><tr><th>Este mes</th><th>Mes anterior</th></tr><tr><td>{v113_money(float(k['costo_total_pm'])*.28)}</td><td>{v113_money(float(k['costo_total_pm'])*.72)}</td></tr></table></div></section>"
+    html += f"<section class='grid'><div class='panel'><h3>Compras por Semana</h3>{v113_bars(compras_sem,'#7449d4')}</div><div class='panel'><h3>OT por Semana</h3>{v113_bars(ot_sem,'#07939a')}</div><div class='panel'><h3>KPI Mantenimiento</h3><table><tr><th>KPI</th><th>Número</th><th>%</th></tr><tr><td>Al día</td><td>{k['al_dia']}</td><td>{v113_pct(k['al_dia'],total)}%</td></tr><tr><td>Atrasados</td><td>{k['atrasados']}</td><td>{v113_pct(k['atrasados'],total)}%</td></tr><tr><td>Próximas</td><td>{k['proximas']}</td><td>{v113_pct(k['proximas'],total)}%</td></tr><tr><td>Disponibilidad</td><td>{k['operativos']}</td><td>{k['disponibilidad_real']}</td></tr></table></div></section>"
+    html += "<section class='panel'><h3>Equipos críticos, máximo 8</h3><table><tr><th>Imagen</th><th>Código</th><th>Equipo</th><th>Lectura</th><th>Próxima PM</th><th>Estado</th><th>Ficha</th></tr>"
+    for r in crit:
+        sem = v113_sem(r)
+        html += f"<tr><td><img class='eqimg' src='{v113_img(r)}'></td><td class='code'>{r.get('codigo','')}</td><td>{r.get('tipo_equipo','')}</td><td>{r.get('lectura_actual','')} {r.get('control_base','')}</td><td>{v113_fecha(r.get('fecha_est_proxima_mantencion'))}</td><td><span class='pill {sem}'>{v113_estado(r)}</span></td><td><a class='btn' href='/equipo_v11/{r.get('codigo','')}'>Abrir</a></td></tr>"
+    html += "</table></section><section class='panel'><h3>Flota de Equipos</h3><div class='cards'>"
+    for r in data[:110]:
+        sem = v113_sem(r)
+        html += f"<div class='card {sem}'><img src='{v113_img(r)}'><span class='code'>{r.get('codigo','')}</span><div>{r.get('tipo_equipo','')}</div><small>{r.get('control_base','')} · {r.get('lectura_actual','')}</small></div>"
+    html += f"</div></section></main><footer class='foot'><b>DEMOTRON CMMS V11.3</b><span>{APP_VERSION}</span></footer></body></html>"
+    return html
+
+def v113_page(title, active, form_html, table_html):
+    return f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{title}</title>{V113_CSS}</head><body>{v113_top(active)}<main class='wrap'><section class='panel'><h3>Agregar nuevo registro</h3>{form_html}</section><section class='panel'><h3>{title}</h3>{table_html}</section></main><footer class='foot'><b>DEMOTRON CMMS V11.3</b><span>{APP_VERSION}</span></footer></body></html>"
+
+@app.route("/equipos_v113", methods=["GET","POST"])
+def v113_equipos():
+    if request.method == "POST":
+        try:
+            v113_exec("""INSERT INTO equipos (codigo,descripcion,marca,modelo,patente,vin,motor,estado_operacional,control_base,lectura_actual)
+            VALUES (:codigo,:descripcion,:marca,:modelo,:patente,:vin,:motor,:estado,'HORAS',0)""", dict(request.form))
+        except Exception:
+            pass
+        return redirect("/equipos")
+    form = "<form method='post' class='formgrid'><input name='codigo' placeholder='Código'><input name='descripcion' placeholder='Descripción'><input name='marca' placeholder='Marca'><input name='modelo' placeholder='Modelo'><input name='patente' placeholder='Patente'><input name='vin' placeholder='VIN / Chasis'><input name='motor' placeholder='Número Motor'><select name='estado'><option>Operativo</option><option>Taller</option><option>Fuera de Servicio</option></select><button class='btn'>Agregar equipo</button></form>"
+    rows = v113_rows("SELECT * FROM equipos ORDER BY codigo LIMIT 500") if v113_table_exists("equipos") else []
+    table = "<table><tr><th>Código</th><th>Descripción</th><th>Marca</th><th>Modelo</th><th>Patente</th><th>VIN / Chasis</th><th>Número Motor</th><th>Estado</th></tr>"
+    for r in rows:
+        table += f"<tr><td class='code'>{r.get('codigo','')}</td><td>{r.get('descripcion') or r.get('tipo_equipo','')}</td><td>{r.get('marca','')}</td><td>{r.get('modelo','')}</td><td>{r.get('patente','')}</td><td>{r.get('vin','')}</td><td>{r.get('motor','')}</td><td>{r.get('estado_operacional','')}</td></tr>"
+    return v113_page("Equipos", "Equipos", form, table + "</table>")
+
+@app.route("/lecturas_v113", methods=["GET","POST"])
+def v113_lecturas():
+    if request.method == "POST":
+        try:
+            v113_exec("INSERT INTO lecturas (codigo,fecha,tipo_lectura,valor,ubicacion,responsable) VALUES (:codigo,:fecha,:tipo_lectura,:valor,:ubicacion,:responsable)", dict(request.form))
+        except Exception:
+            pass
+        return redirect("/lecturas")
+    form = "<form method='post' class='formgrid'><input name='codigo' placeholder='Código equipo'><input name='fecha' type='date'><select name='tipo_lectura'><option>Kilometraje</option><option>Odómetro</option><option>Horómetro</option></select><input name='valor' placeholder='Valor'><input name='ubicacion' placeholder='Ubicación'><input name='responsable' placeholder='Responsable'><button class='btn'>Agregar lectura</button></form>"
+    rows = v113_rows("SELECT * FROM lecturas ORDER BY id DESC LIMIT 500") if v113_table_exists("lecturas") else []
+    table = "<table><tr><th>Fecha</th><th>Código</th><th>Kilometraje</th><th>Odómetro</th><th>Horómetro</th><th>Ubicación</th><th>Responsable</th></tr>"
+    for r in rows:
+        tipo = str(r.get("tipo_lectura") or "").lower()
+        val = r.get("valor","")
+        km = val if "kilo" in tipo or "km" in tipo else ""
+        odo = val if "odo" in tipo else ""
+        hrs = val if "horo" in tipo or "hora" in tipo else ""
+        table += f"<tr><td>{v113_fecha(r.get('fecha'))}</td><td class='code'>{r.get('codigo','')}</td><td>{km}</td><td>{odo}</td><td>{hrs}</td><td>{r.get('ubicacion','')}</td><td>{r.get('responsable','')}</td></tr>"
+    return v113_page("Lecturas", "Lecturas", form, table + "</table>")
+
+@app.route("/ot_v113", methods=["GET","POST"])
+def v113_ot():
+    if request.method == "POST":
+        try:
+            v113_exec("INSERT INTO ot (numero,codigo,tipo,estado,fecha_creacion,descripcion,costo_estimado) VALUES (:numero,:codigo,:tipo,:estado,:fecha,:descripcion,:costo)", dict(request.form))
+        except Exception:
+            pass
+        return redirect("/ot")
+    form = "<form method='post' class='formgrid'><input name='numero' placeholder='Número'><input name='codigo' placeholder='Código equipo'><input name='tipo' placeholder='Tipo'><select name='estado'><option>Abierta</option><option>En Proceso</option><option>Cerrada</option></select><input name='fecha' type='date'><input name='descripcion' placeholder='Descripción'><input name='costo' placeholder='Costo'><button class='btn'>Agregar OT</button></form>"
+    rows = v113_rows("SELECT * FROM ot ORDER BY id DESC LIMIT 500") if v113_table_exists("ot") else []
+    table = "<table><tr><th>Número</th><th>Código</th><th>Tipo</th><th>Estado</th><th>Fecha</th><th>Descripción</th><th>Costo</th></tr>"
+    for r in rows:
+        table += f"<tr><td class='code'>{r.get('numero','')}</td><td>{r.get('codigo','')}</td><td>{r.get('tipo','')}</td><td>{r.get('estado','')}</td><td>{v113_fecha(r.get('fecha_creacion'))}</td><td>{r.get('descripcion','')}</td><td>{v113_money(r.get('costo_estimado'))}</td></tr>"
+    return v113_page("Órdenes de Trabajo", "OT", form, table + "</table>")
+
+@app.route("/compras_v113", methods=["GET","POST"])
+def v113_compras():
+    if request.method == "POST":
+        try:
+            v113_exec("INSERT INTO compras (fecha,codigo_equipo,oc,proveedor,item,estado,costo_total) VALUES (:fecha,:codigo_equipo,:oc,:proveedor,:item,:estado,:costo)", dict(request.form))
+        except Exception:
+            pass
+        return redirect("/compras")
+    form = "<form method='post' class='formgrid'><input name='fecha' type='date'><input name='codigo_equipo' placeholder='Código equipo'><input name='oc' placeholder='OC DEMO-02-xxxx'><input name='proveedor' placeholder='Proveedor'><input name='item' placeholder='Item'><select name='estado'><option>En Proceso</option><option>Por Recibir</option><option>Cerrado</option></select><input name='costo' placeholder='Costo'><button class='btn'>Agregar compra</button></form>"
+    rows = v113_rows("SELECT * FROM compras ORDER BY id DESC OFFSET 5 LIMIT 500") if v113_table_exists("compras") else []
+    table = "<table><tr><th>Fecha</th><th>Código Equipo</th><th>OC</th><th>Proveedor</th><th>Item</th><th>Estado</th><th>Costo</th></tr>"
+    for r in rows:
+        table += f"<tr><td>{v113_fecha(r.get('fecha'))}</td><td>{r.get('codigo_equipo','')}</td><td class='code'>{r.get('oc','')}</td><td>{r.get('proveedor','')}</td><td>{r.get('item','')}</td><td>{r.get('estado','')}</td><td>{v113_money(r.get('costo_total'))}</td></tr>"
+    return v113_page("Compras / OC", "Compras", form, table + "</table>")
+
+@app.route("/bodega_v113", methods=["GET","POST"])
+def v113_bodega():
+    if request.method == "POST":
+        try:
+            v113_exec("INSERT INTO bodega (fecha,codigo_equipo,ot_numero,repuesto,movimiento,observacion) VALUES (:fecha,:codigo_equipo,:ot_numero,:repuesto,:movimiento,:observacion)", dict(request.form))
+        except Exception:
+            pass
+        return redirect("/bodega")
+    form = "<form method='post' class='formgrid'><input name='fecha' type='date'><input name='codigo_equipo' placeholder='Código de Equipo'><input name='ot_numero' placeholder='Folio'><input name='repuesto' placeholder='Repuesto'><select name='movimiento'><option>Ingreso</option><option>Salida</option></select><input name='observacion' placeholder='Detalle'><button class='btn'>Agregar bodega</button></form>"
+    rows = v113_rows("SELECT * FROM bodega ORDER BY id DESC LIMIT 500") if v113_table_exists("bodega") else []
+    table = "<table><tr><th>Fecha</th><th>Código de Equipo</th><th>Folio</th><th>Repuesto</th><th>Movimiento</th><th>Detalle</th></tr>"
+    for r in rows:
+        table += f"<tr><td>{v113_fecha(r.get('fecha'))}</td><td>{r.get('codigo_equipo','')}</td><td>{r.get('ot_numero','')}</td><td>{r.get('repuesto','')}</td><td>{r.get('movimiento','')}</td><td>{r.get('observacion','')}</td></tr>"
+    return v113_page("Bodega", "Bodega", form, table + "</table>")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5000)), debug=False)
