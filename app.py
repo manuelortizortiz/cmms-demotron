@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-APP_VERSION = "DEMOTRON_ERP_CMMS_V9_4_ROUTE_FIX_VISUAL_FINAL"
+APP_VERSION = "DEMOTRON_ERP_CMMS_V11_DASHBOARD_FICHA_HISTORIAL"
 BASE = Path(__file__).resolve().parent
 UPLOAD = BASE / "static" / "uploads"; UPLOAD.mkdir(parents=True, exist_ok=True)
 DATA_IMPORT = BASE / "data_import"
@@ -2897,10 +2897,6 @@ def v93_equipos():
 
 @app.before_request
 def v94_force_visual_final():
-    if request.path in ["/", "/erp", "/dashboard"]:
-        return redirect("/erp_v94")
-    if request.path == "/equipos":
-        return redirect("/equipos_v94")
     return None
 
 @app.route("/admin/v94/version")
@@ -2934,6 +2930,400 @@ def v94_dashboard():
 def v94_equipos():
     return v93_equipos()
 
+
+
+
+# ================= V10 TOP NAV + GRAFICOS SIN CDN + FICHA EQUIPO =================
+
+def v10_data():
+    if not v92_exists("cmms_excel") or v92_count("cmms_excel") == 0:
+        try:
+            v92_importar()
+        except Exception:
+            pass
+    return v92_rows("SELECT * FROM cmms_excel ORDER BY codigo") if v92_exists("cmms_excel") else []
+
+def v10_money(v):
+    try:
+        return "$ " + "{:,.0f}".format(float(v)).replace(",", ".")
+    except Exception:
+        return "$ 0"
+
+def v10_sem(r):
+    estado = v92_estado(r)
+    if "FUERA" in estado or "TALLER" in estado:
+        return "gray"
+    if "ATRAS" in estado:
+        return "red"
+    if "PROX" in estado or "PROCESO" in estado or "POR RECIBIR" in estado:
+        return "yellow"
+    return "green"
+
+def v10_estado_label(r):
+    estado = v92_estado(r)
+    return estado if estado else "SIN ESTADO"
+
+def v10_pct(value, total):
+    try:
+        return round((float(value) / float(total)) * 100, 1) if float(total) else 0
+    except Exception:
+        return 0
+
+def v10_svg_donut(values, colors, labels=None):
+    total = sum(values) or 1
+    radius = 72
+    circ = 2 * 3.14159 * radius
+    offset = 0
+    pieces = []
+    for v, c in zip(values, colors):
+        dash = (v / total) * circ
+        pieces.append(f"<circle cx='100' cy='100' r='{radius}' fill='none' stroke='{c}' stroke-width='28' stroke-dasharray='{dash} {circ-dash}' stroke-dashoffset='{-offset}' transform='rotate(-90 100 100)'/>")
+        offset += dash
+    return "<svg viewBox='0 0 200 200' class='donut'>" + "".join(pieces) + "<circle cx='100' cy='100' r='48' fill='white'/></svg>"
+
+def v10_bar_chart(data, color="#ef3f45"):
+    if not data:
+        return "<div class='empty'>Sin datos</div>"
+    maxv = max(data.values()) or 1
+    html = "<div class='bars'>"
+    for label, val in data.items():
+        h = max(8, int((val / maxv) * 155))
+        html += f"<div class='barcol'><div class='barval'>{val}</div><div class='bar' style='height:{h}px;background:{color}'></div><small>{label}</small></div>"
+    return html + "</div>"
+
+def v10_img(r):
+    try:
+        return v92_img(r)
+    except Exception:
+        return "/static/equipos_real/camion_man_tolva.png"
+
+def v10_lookup(codigo):
+    codigo = codigo.upper()
+    for r in v10_data():
+        if str(r.get("codigo") or "").upper() == codigo:
+            return r
+    return None
+
+V10_CSS = """
+<style>
+:root{--navy:#082b5f;--blue:#1261d6;--bg:#f4f6fa;--line:#e5ebf3;--red:#ef3f45;--yellow:#f59e0b;--green:#16a34a;--purple:#7449d4;--teal:#07939a;--text:#0f172a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Segoe UI,Arial,sans-serif;color:var(--text)}.top{height:68px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:22px;padding:0 24px;position:sticky;top:0;z-index:20}.logo{font-size:29px;font-weight:950;letter-spacing:9px;color:var(--navy);white-space:nowrap}.brand small{display:block;letter-spacing:0;font-size:11px;color:#64748b;margin-top:-3px}.nav{display:flex;gap:16px;flex:1;overflow:auto}.nav a{font-weight:800;color:#334155;text-decoration:none;white-space:nowrap;padding:23px 0}.nav a.active{color:#0b56c5;border-bottom:3px solid #0b56c5}.search{height:40px;border:1px solid var(--line);border-radius:9px;padding:0 12px;min-width:220px}.user{font-weight:800;color:#0f172a}.wrap{padding:18px 24px}.kpis{display:grid;grid-template-columns:repeat(6,minmax(145px,1fr));gap:14px}.kpi{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 18px rgba(9,30,66,.08);padding:15px;display:flex;gap:13px;align-items:center;min-height:86px}.ico{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:24px;font-weight:900}.red{background:var(--red)}.yellow{background:var(--yellow)}.green{background:var(--green)}.blue{background:var(--blue)}.purple{background:var(--purple)}.teal{background:var(--teal)}.gray{background:#94a3b8}.kpi small{font-size:11px;color:#475569;font-weight:900}.kpi b{display:block;font-size:25px}.kpi span{font-size:12px;color:#64748b}.grid{display:grid;grid-template-columns:1fr 1fr 1.05fr;gap:14px;margin-top:14px}.panel{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 18px rgba(9,30,66,.08);padding:17px}.panel h3{margin:0 0 12px;font-size:16px}.donut{width:220px;height:220px;display:block;margin:auto}.legend{display:grid;gap:9px;margin-top:8px}.legend div{display:flex;justify-content:space-between;gap:10px;font-size:13px}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px}.bars{height:220px;display:flex;align-items:end;gap:18px;justify-content:space-around;padding-top:20px}.barcol{text-align:center;min-width:58px}.bar{width:38px;margin:0 auto 8px;border-radius:6px 6px 0 0}.barval{font-size:12px;font-weight:900}.barcol small{font-size:11px;color:#475569;display:block;max-width:85px;overflow:hidden;text-overflow:ellipsis}.split{display:grid;grid-template-columns:2fr 1.15fr;gap:14px;margin-top:14px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;border-bottom:1px solid #eef2f7;text-align:left;vertical-align:middle}th{font-size:12px;color:#334155}.code{font-weight:950;color:var(--navy)}.pill{border-radius:999px;padding:5px 10px;font-weight:900;font-size:11px;display:inline-block}.pill.red{background:#ffe1e3;color:#b91c1c}.pill.yellow{background:#fff4cc;color:#a16207}.pill.green{background:#dcfce7;color:#15803d}.pill.gray{background:#e5e7eb;color:#475569}.eqimg{width:92px;height:56px;object-fit:contain}.cards{display:flex;gap:14px;overflow-x:auto;padding:8px 0 14px}.card{min-width:178px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center}.card img{width:135px;height:84px;object-fit:contain}.card.red{border-color:var(--red)}.card.yellow{border-color:var(--yellow)}.card.green{border-color:#bbf7d0}.card.gray{opacity:.55}.activity{display:flex;gap:11px;border-bottom:1px solid #edf2f7;padding:10px 0}.activity .tag{width:32px;height:32px;border-radius:8px;background:#e0f2fe;display:grid;place-items:center;color:#0369a1;font-weight:900}.activity b{display:block;font-size:13px}.activity span{font-size:12px;color:#64748b}.specgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.spec{background:#f8fafc;border:1px solid var(--line);border-radius:9px;padding:12px}.spec small{display:block;color:#64748b;font-weight:800}.spec b{font-size:17px}.hero{display:grid;grid-template-columns:330px 1fr;gap:18px}.hero img{width:320px;height:220px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:12px}.btn{background:var(--navy);color:white;text-decoration:none;border-radius:8px;padding:8px 12px;font-weight:900;display:inline-block}.foot{height:56px;background:var(--navy);color:white;display:flex;align-items:center;justify-content:space-between;padding:0 24px;margin-top:18px}@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid,.split,.hero{grid-template-columns:1fr}.specgrid{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.kpis,.specgrid{grid-template-columns:1fr}.logo{font-size:20px;letter-spacing:6px}.nav,.search{display:none}.wrap{padding:12px}}
+</style>
+"""
+
+def v10_top(active="Dashboard"):
+    items=[("Dashboard","/erp"),("Equipos","/equipos_v10"),("Lecturas","/lecturas"),("OT","/ot"),("Compras","/compras"),("Bodega","/bodega"),("Reportes","/reportes")]
+    links="".join([f"<a class='{'active' if name==active else ''}' href='{url}'>{name}</a>" for name,url in items])
+    return f"<header class='top'><div class='brand'><div class='logo'>DEMOTRON</div><small>ERP CMMS V10</small></div><nav class='nav'>{links}</nav><input class='search' placeholder='Buscar equipo, OT, OC...'><div class='user'>Administrador</div></header>"
+
+@app.before_request
+def v10_redirect():
+    return None
+
+@app.route("/admin/v10/version")
+@app.route("/v10/version")
+def v10_version():
+    return jsonify({"status":"OK","version":APP_VERSION,"mensaje":"V10 TOP NAV + FICHA + GRAFICOS ACTIVO","dashboard":"/erp_v10","equipos":"/equipos_v10"})
+
+@app.route("/admin/v10/diagnostico")
+@app.route("/v10/diagnostico")
+def v10_diag():
+    data=v10_data()
+    return jsonify({"status":"OK","version":APP_VERSION,"cmms_excel":len(data),"kpi":v92_kpis()})
+
+@app.route("/erp_v10")
+def v10_dashboard():
+    import json as _json
+    data=v10_data()
+    k=v92_kpis()
+    estado_vals=[k["al_dia"],k["en_proceso"],k["atrasados"],k["fuera"]]
+    donut=v10_svg_donut(estado_vals,["#16a34a","#f59e0b","#ef3f45","#94a3b8"])
+    ubic={}
+    for r in data:
+        if v10_sem(r) in ["red","yellow"]:
+            u=r.get("ubicacion") or "Sin ubicación"
+            ubic[u]=ubic.get(u,0)+1
+    ubic=dict(sorted(ubic.items(), key=lambda x:x[1], reverse=True)[:8])
+    tipo={"Camiones":0,"Maquinaria":0,"Vehículos":0,"Otros":0}
+    for r in data:
+        cod=str(r.get("codigo") or "").upper()
+        fam=v92_norm(r.get("familia"))
+        if cod.startswith("CD"): tipo["Camiones"]+=1
+        elif cod.startswith("VD"): tipo["Vehículos"]+=1
+        elif "maquinaria" in fam or cod.startswith(("MD","EQP","ED")): tipo["Maquinaria"]+=1
+        else: tipo["Otros"]+=1
+    crit=[r for r in data if v10_sem(r) in ["red","yellow"]][:16]
+    html=f"""<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>DEMOTRON ERP CMMS V10</title>{V10_CSS}</head><body>{v10_top('Dashboard')}<main class='wrap'>
+<section class='kpis'>
+<div class='kpi'><div class='ico blue'>▣</div><div><small>TOTAL EQUIPOS</small><b>{k['total']}</b><span>CMMS Excel real</span></div></div>
+<div class='kpi'><div class='ico green'>✓</div><div><small>OPERATIVOS</small><b>{k['operativos']}</b><span>{k['disponibilidad_real']} disponibilidad</span></div></div>
+<div class='kpi'><div class='ico red'>!</div><div><small>ATRASADOS</small><b>{k['atrasados']}</b><span>Backlog crítico {k['backlog_critico']}</span></div></div>
+<div class='kpi'><div class='ico yellow'>◷</div><div><small>PRÓXIMAS</small><b>{k['proximas']}</b><span>PM próximas</span></div></div>
+<div class='kpi'><div class='ico purple'>OT</div><div><small>EN PROCESO</small><b>{k['en_proceso']}</b><span>Pend. reporte {k['pendiente_reporte']}</span></div></div>
+<div class='kpi'><div class='ico teal'>$</div><div><small>COSTO TOTAL PM</small><b>{v10_money(k['costo_total_pm'])}</b><span>Fuente Excel</span></div></div>
+</section>
+<section class='grid'>
+<div class='panel'><h3>Estado general de la flota</h3>{donut}<div class='legend'>
+<div><span><i class='dot' style='background:#16a34a'></i>Al día</span><b>{k['al_dia']}</b></div>
+<div><span><i class='dot' style='background:#f59e0b'></i>En proceso</span><b>{k['en_proceso']}</b></div>
+<div><span><i class='dot' style='background:#ef3f45'></i>Atrasados</span><b>{k['atrasados']}</b></div>
+<div><span><i class='dot' style='background:#94a3b8'></i>Fuera servicio</span><b>{k['fuera']}</b></div>
+</div></div>
+<div class='panel'><h3>Seguimiento por ubicación</h3>{v10_bar_chart(ubic,'#ef3f45')}</div>
+<div class='panel'><h3>Distribución por tipo</h3>{v10_svg_donut(list(tipo.values()),['#1261d6','#16a34a','#f59e0b','#94a3b8'])}<div class='legend'>"""
+    for name,val in tipo.items():
+        html+=f"<div><span>{name}</span><b>{val} ({v10_pct(val,sum(tipo.values()))}%)</b></div>"
+    html+=f"""</div></div></section>
+<section class='split'><div class='panel'><h3>Equipos críticos / seguimiento</h3><table><tr><th>Imagen</th><th>Código</th><th>Equipo</th><th>Unidad</th><th>Lectura</th><th>Estado</th><th>Ficha</th></tr>"""
+    for r in crit:
+        sem=v10_sem(r)
+        html+=f"<tr><td><img class='eqimg' src='{v10_img(r)}'></td><td class='code'>{r.get('codigo','')}</td><td>{r.get('tipo_equipo','')}</td><td>{r.get('control_base','')}</td><td>{r.get('lectura_actual','')}</td><td><span class='pill {sem}'>{v10_estado_label(r)}</span></td><td><a class='btn' href='/equipo_v10/{r.get('codigo','')}'>Abrir</a></td></tr>"
+    html+="</table></div><div class='panel'><h3>Actividad reciente</h3>"
+    acts=[("PM",f"{k['al_dia']} equipos al día","Control según CMMS Excel"),("OT",f"{k['en_proceso']} en proceso","Seguimiento taller/compra"),("REP",f"{k['pendiente_reporte']} pendientes reporte","Requieren cierre"),("HIS",f"{k['sin_historial_pm']} sin historial PM","Datos por completar"),("DIS",f"{k['disponibilidad_real']} disponibilidad","Disponibilidad real")]
+    for a,b,c in acts:
+        html+=f"<div class='activity'><div class='tag'>{a}</div><div><b>{b}</b><span>{c}</span></div></div>"
+    html+="</div></section><section class='panel'><h3>Flota de equipos con imágenes reales</h3><div class='cards'>"
+    for r in data[:110]:
+        sem=v10_sem(r)
+        html+=f"<div class='card {sem}'><img src='{v10_img(r)}'><span class='code'>{r.get('codigo','')}</span><div>{r.get('tipo_equipo','')}</div><small>{r.get('control_base','')} · {r.get('lectura_actual','')}</small><br><a class='btn' href='/equipo_v10/{r.get('codigo','')}'>Ficha</a></div>"
+    html+=f"</div></section></main><footer class='foot'><b>DEMOTRON CMMS V10</b><span>Top nav · gráficos visibles · fichas completas · {APP_VERSION}</span></footer></body></html>"
+    return html
+
+@app.route("/equipos_v10")
+def v10_equipos():
+    data=v10_data()
+    html=f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Equipos V10</title>{V10_CSS}</head><body>{v10_top('Equipos')}<main class='wrap'><section class='panel'><h3>Equipos CMMS Excel Real</h3><table><tr><th>Imagen</th><th>Código</th><th>Equipo</th><th>Marca</th><th>Modelo</th><th>Unidad</th><th>Horómetro</th><th>Kilometraje</th><th>Estado</th><th>Ficha</th></tr>"
+    for r in data:
+        sem=v10_sem(r)
+        html+=f"<tr><td><img class='eqimg' src='{v10_img(r)}'></td><td class='code'>{r.get('codigo','')}</td><td>{r.get('tipo_equipo','')}</td><td>{r.get('marca','')}</td><td>{r.get('modelo','')}</td><td><b>{r.get('control_base','')}</b></td><td>{r.get('ultimo_horometro','')}</td><td>{r.get('ultimo_kilometraje','')}</td><td><span class='pill {sem}'>{v10_estado_label(r)}</span></td><td><a class='btn' href='/equipo_v10/{r.get('codigo','')}'>Abrir</a></td></tr>"
+    html+=f"</table></section></main><footer class='foot'><b>DEMOTRON CMMS V10</b><span>{APP_VERSION}</span></footer></body></html>"
+    return html
+
+@app.route("/equipo_v10/<codigo>")
+def v10_ficha(codigo):
+    codigo=codigo.upper()
+    r=v10_lookup(codigo)
+    if not r:
+        return "Equipo no encontrado",404
+    # historial desde tablas reales
+    ots=[]
+    compras=[]
+    lecturas=[]
+    try:
+        if v92_exists("ot"): ots=v92_rows("SELECT * FROM ot WHERE codigo=:c ORDER BY id DESC LIMIT 30",{"c":codigo})
+    except Exception: pass
+    try:
+        if v92_exists("compras"): compras=v92_rows("SELECT * FROM compras WHERE codigo_equipo=:c ORDER BY id DESC LIMIT 30",{"c":codigo})
+    except Exception: pass
+    try:
+        if v92_exists("lecturas"): lecturas=v92_rows("SELECT * FROM lecturas WHERE codigo=:c ORDER BY id DESC LIMIT 30",{"c":codigo})
+    except Exception: pass
+    sem=v10_sem(r)
+    specs=[("Código",r.get("codigo","")),("Tipo",r.get("tipo_equipo","")),("Familia",r.get("familia","")),("Marca",r.get("marca","")),("Modelo",r.get("modelo","")),("Año",r.get("ano","")),("Ubicación",r.get("ubicacion","")),("Control base",r.get("control_base","")),("Frecuencia",r.get("frecuencia_base","")),("Horómetro",r.get("ultimo_horometro","")),("Kilometraje",r.get("ultimo_kilometraje","")),("Lectura usada",r.get("lectura_actual","")),("Última PM",r.get("ultima_pm","")),("Última lectura PM",r.get("ultima_lectura_pm","")),("Próxima PM",r.get("fecha_est_proxima_mantencion","")),("Costo Total PM",r.get("costo_total_pm_clp",""))]
+    html=f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Ficha {codigo}</title>{V10_CSS}</head><body>{v10_top('Equipos')}<main class='wrap'><section class='panel hero'><div><img src='{v10_img(r)}'><h2 class='code'>{codigo}</h2><span class='pill {sem}'>{v10_estado_label(r)}</span></div><div><h3>Ficha técnica y control CMMS</h3><div class='specgrid'>"
+    for a,b in specs:
+        html+=f"<div class='spec'><small>{a}</small><b>{b}</b></div>"
+    html+=f"</div><p><b>Acción sugerida:</b> {r.get('accion_sugerida','')}</p><p><b>Prioridad taller:</b> {r.get('prioridad_taller','')}</p></div></section>"
+    def table(title, rows, cols):
+        out=f"<section class='panel'><h3>{title}</h3><table><tr>"+ "".join(f"<th>{c}</th>" for c in cols)+"</tr>"
+        if not rows:
+            out+=f"<tr><td colspan='{len(cols)}'>Sin registros asociados.</td></tr>"
+        for row in rows:
+            out+="<tr>"+"".join(f"<td>{row.get(c,'')}</td>" for c in cols)+"</tr>"
+        return out+"</table></section>"
+    html+=table("Historial de mantenciones / OT",ots,["numero","tipo","estado","fecha_creacion","fecha_cierre","lectura","descripcion","costo_estimado"])
+    html+=table("Compras / OC asociadas",compras,["fecha","oc","proveedor","item","cantidad","costo_total","estado"])
+    html+=table("Lecturas registradas",lecturas,["fecha","tipo_lectura","valor","ubicacion","observacion"])
+    html+=f"</main><footer class='foot'><b>DEMOTRON CMMS V10</b><span>Ficha completa del equipo · {APP_VERSION}</span></footer></body></html>"
+    return html
+
+
+
+# ================= V11 DASHBOARD + FICHA HISTORIAL =================
+
+def v11_data():
+    if not v92_exists("cmms_excel") or v92_count("cmms_excel") == 0:
+        try: v92_importar()
+        except Exception: pass
+    return v92_rows("SELECT * FROM cmms_excel ORDER BY codigo") if v92_exists("cmms_excel") else []
+
+def v11_money(v):
+    try: return "$ " + "{:,.0f}".format(float(v)).replace(",", ".")
+    except Exception: return "$ 0"
+
+def v11_sem(r):
+    e = v92_estado(r)
+    if "FUERA" in e or "TALLER" in e: return "gray"
+    if "ATRAS" in e: return "red"
+    if "PROX" in e or "PROCESO" in e or "POR RECIBIR" in e: return "yellow"
+    return "green"
+
+def v11_img(r):
+    try: return v92_img(r)
+    except Exception: return "/static/equipos_real/camion_man_tolva.png"
+
+def v11_pct(v,t):
+    try: return round(float(v)*100/float(t),1) if float(t) else 0
+    except Exception: return 0
+
+def v11_lookup(codigo):
+    codigo = codigo.upper()
+    for r in v11_data():
+        if str(r.get("codigo") or "").upper() == codigo: return r
+    return None
+
+def v11_donut(vals, cols, center, sub):
+    total=sum(vals) or 1; r=72; circ=2*3.14159*r; off=0; parts=[]
+    for v,c in zip(vals,cols):
+        dash=float(v)/total*circ
+        parts.append(f"<circle cx='110' cy='110' r='{r}' fill='none' stroke='{c}' stroke-width='28' stroke-dasharray='{dash} {circ-dash}' stroke-dashoffset='{-off}' transform='rotate(-90 110 110)'/>")
+        off += dash
+    return f"<svg viewBox='0 0 220 220' class='donut'>{''.join(parts)}<circle cx='110' cy='110' r='49' fill='white'/><text x='110' y='105' text-anchor='middle' font-size='25' font-weight='900'>{center}</text><text x='110' y='128' text-anchor='middle' font-size='13' fill='#64748b'>{sub}</text></svg>"
+
+def v11_bars(d, color="#1261d6"):
+    if not d: return "<div>Sin datos</div>"
+    m=max(d.values()) or 1; html="<div class='bars'>"
+    for lab,val in d.items():
+        h=max(8,int(val/m*160))
+        html += f"<div class='barcol'><div class='barval'>{val}</div><div class='bar' style='height:{h}px;background:{color}'></div><small>{lab}</small></div>"
+    return html+"</div>"
+
+def v11_costos():
+    k=v92_kpis(); total=float(k.get("costo_total_pm") or 0)
+    este=round(total*.28); ant=max(0,total-este)
+    try:
+        if v92_exists("compras"):
+            rows=v92_rows("SELECT fecha,costo_total FROM compras")
+            e=a=0
+            for c in rows:
+                fecha=str(c.get("fecha") or "")
+                val=v92_float(c.get("costo_total"))
+                if "2026-05" in fecha or "/05/2026" in fecha: e += val
+                if "2026-04" in fecha or "/04/2026" in fecha: a += val
+            if e>0: este=e
+            if a>0: ant=a
+    except Exception: pass
+    return total, este, ant
+
+def v11_tecnica(r):
+    tipo=(r.get("tipo_equipo") or "").lower(); marca=r.get("marca",""); modelo=r.get("modelo",""); frec=r.get("frecuencia_base","250")
+    base=[("Identificación",[f"Equipo: {marca} {modelo}",f"Control base: {r.get('control_base','')}",f"Frecuencia CMMS: {frec}"]),
+          ("Mantención preventiva",["Aceite motor, filtros y revisión general.","Registrar lectura real antes y después de cada PM.","Cerrar OT con evidencia y costo asociado."]),
+          ("Seguridad",["Checklist operacional, luces, alarma, extintor y documentación.","Revisar fugas, estado estructural y protecciones."])]
+    if "excav" in tipo:
+        base.insert(1,("Sistema hidráulico",["Control de bombas, cilindros, mangueras y pilotaje.","Revisar contaminación de aceite y filtros hidráulicos."]))
+        base.insert(2,("Tren de rodaje y estructura",["Inspección de cadenas, rodillos, tensores, pluma, brazo y balde.","Control de pasadores, bujes, fisuras y holguras."]))
+    elif "cargador" in tipo:
+        base.insert(1,("Sistema hidráulico",["Revisar bombas, cilindros, mangueras y acoples.","Control de aceite hidráulico y filtros."]))
+        base.insert(2,("Transmisión y balde",["Revisar caja, ejes, articulación central, pasadores y balde."]))
+    elif "rodillo" in tipo:
+        base.insert(1,("Sistema de compactación",["Control de tambor/neumáticos, vibración y soportes.","Revisar fugas, temperatura y sistema hidráulico."]))
+    elif "cam" in tipo or str(r.get("codigo") or "").upper().startswith("CD"):
+        base.insert(1,("Tren motriz",["Motor, transmisión, diferencial, cardanes y dirección.","Control de frenos, líneas de aire y suspensión."]))
+        base.insert(2,("Equipo especial",["Tolva, pluma, aljibe o sistema hidráulico según configuración.","Revisar cilindros, toma fuerza, mangueras y estructura."]))
+    return base
+
+CSS = """
+<style>
+:root{--navy:#082b5f;--bg:#f4f6fa;--line:#e5ebf3;--red:#ef3f45;--yellow:#f59e0b;--green:#16a34a;--blue:#1261d6;--purple:#7449d4;--teal:#07939a}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Segoe UI,Arial;color:#0f172a}.top{height:68px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:22px;padding:0 24px;position:sticky;top:0;z-index:20}.logo{font-size:29px;font-weight:950;letter-spacing:9px;color:var(--navy)}.brand small{display:block;font-size:11px;color:#64748b;margin-top:-3px}.nav{display:flex;gap:16px;flex:1;overflow:auto}.nav a{font-weight:800;color:#334155;text-decoration:none;white-space:nowrap;padding:23px 0}.nav a.active{color:#0b56c5;border-bottom:3px solid #0b56c5}.search{height:40px;border:1px solid var(--line);border-radius:9px;padding:0 12px;min-width:220px}.user{font-weight:800}.wrap{padding:18px 24px}.kpis{display:grid;grid-template-columns:repeat(6,minmax(145px,1fr));gap:14px}.kpi{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 18px rgba(9,30,66,.08);padding:15px;display:flex;gap:13px;align-items:center;min-height:86px}.ico{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;color:white;font-size:23px;font-weight:900}.red{background:var(--red)}.yellow{background:var(--yellow)}.green{background:var(--green)}.blue{background:var(--blue)}.purple{background:var(--purple)}.teal{background:var(--teal)}.gray{background:#94a3b8}.kpi small{font-size:11px;color:#475569;font-weight:900}.kpi b{display:block;font-size:24px}.kpi span{font-size:12px;color:#64748b}.grid{display:grid;grid-template-columns:1fr 1fr 1.05fr;gap:14px;margin-top:14px}.panel{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 18px rgba(9,30,66,.08);padding:17px}.donut{width:220px;height:220px;display:block;margin:auto}.legend{display:grid;gap:9px;margin-top:8px}.legend div{display:flex;justify-content:space-between;font-size:13px}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px}.bars{height:220px;display:flex;align-items:end;gap:18px;justify-content:space-around;padding-top:20px}.barcol{text-align:center;min-width:58px}.bar{width:38px;margin:0 auto 8px;border-radius:6px 6px 0 0}.barval{font-size:12px;font-weight:900}.barcol small{font-size:11px;color:#475569;display:block;max-width:85px;overflow:hidden;text-overflow:ellipsis}.split{display:grid;grid-template-columns:2fr 1.15fr;gap:14px;margin-top:14px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;border-bottom:1px solid #eef2f7;text-align:left;vertical-align:middle}th{font-size:12px;color:#334155}.code{font-weight:950;color:var(--navy)}.pill{border-radius:999px;padding:5px 10px;font-weight:900;font-size:11px;display:inline-block}.pill.red{background:#ffe1e3;color:#b91c1c}.pill.yellow{background:#fff4cc;color:#a16207}.pill.green{background:#dcfce7;color:#15803d}.pill.gray{background:#e5e7eb;color:#475569}.eqimg{width:92px;height:56px;object-fit:contain}.cards{display:flex;gap:14px;overflow-x:auto;padding:8px 0 14px}.card{min-width:178px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center}.card img{width:135px;height:84px;object-fit:contain}.card.red{border-color:var(--red)}.card.yellow{border-color:var(--yellow)}.card.green{border-color:#bbf7d0}.card.gray{opacity:.55}.specgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.spec,.techbox{background:#f8fafc;border:1px solid var(--line);border-radius:9px;padding:12px}.spec small{display:block;color:#64748b;font-weight:800}.spec b{font-size:17px}.hero{display:grid;grid-template-columns:330px 1fr;gap:18px}.hero img{width:320px;height:220px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:12px}.tech{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.techbox h4{margin:0 0 8px;color:var(--navy)}.btn{background:var(--navy);color:white;text-decoration:none;border-radius:8px;padding:8px 12px;font-weight:900;display:inline-block}.foot{height:56px;background:var(--navy);color:white;display:flex;align-items:center;justify-content:space-between;padding:0 24px;margin-top:18px}@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}.grid,.split,.hero{grid-template-columns:1fr}.specgrid,.tech{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.kpis,.specgrid,.tech{grid-template-columns:1fr}.logo{font-size:20px;letter-spacing:6px}.nav,.search{display:none}.wrap{padding:12px}}
+</style>
+"""
+
+def v11_top(active="Dashboard"):
+    items=[("Dashboard","/erp"),("Equipos","/equipos_v11"),("Lecturas","/lecturas"),("OT","/ot"),("Compras","/compras"),("Bodega","/bodega"),("Reportes","/reportes")]
+    links="".join([f"<a class='{'active' if n==active else ''}' href='{u}'>{n}</a>" for n,u in items])
+    return f"<header class='top'><div class='brand'><div class='logo'>DEMOTRON</div><small>ERP CMMS V11</small></div><nav class='nav'>{links}</nav><input class='search' placeholder='Buscar equipo, OT, OC...'><div class='user'>Administrador</div></header>"
+
+@app.before_request
+def v11_redirect():
+    if request.path in ["/","/erp","/dashboard"]: return redirect("/erp_v11")
+    if request.path == "/equipos": return redirect("/equipos_v11")
+    return None
+
+@app.route("/admin/v11/version")
+@app.route("/v11/version")
+def v11_version():
+    return jsonify({"status":"OK","version":APP_VERSION,"mensaje":"V11 DASHBOARD FICHA HISTORIAL ACTIVO","dashboard":"/erp_v11"})
+
+@app.route("/admin/v11/diagnostico")
+@app.route("/v11/diagnostico")
+def v11_diag():
+    return jsonify({"status":"OK","version":APP_VERSION,"cmms_excel":len(v11_data()),"kpi":v92_kpis()})
+
+@app.route("/erp_v11")
+def v11_dashboard():
+    data=v11_data(); k=v92_kpis(); total,este,ant=v11_costos()
+    ubic={}
+    for r in data:
+        u=r.get("ubicacion") or "Sin ubicación"
+        ubic[u]=ubic.get(u,0)+1
+    ubic=dict(sorted(ubic.items(), key=lambda x:x[1], reverse=True)[:8])
+    tipo={"Camiones":0,"Maquinaria Pesada":0,"Vehículos":0,"Otros":0}
+    for r in data:
+        cod=str(r.get("codigo") or "").upper(); fam=v92_norm(r.get("familia"))
+        if cod.startswith("CD"): tipo["Camiones"]+=1
+        elif cod.startswith("VD"): tipo["Vehículos"]+=1
+        elif "maquinaria" in fam or cod.startswith(("MD","EQP","ED")): tipo["Maquinaria Pesada"]+=1
+        else: tipo["Otros"]+=1
+    crit=[r for r in data if v11_sem(r) in ("red","yellow")][:8]
+    html=f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>DEMOTRON V11</title>{CSS}</head><body>{v11_top('Dashboard')}<main class='wrap'>"
+    html+=f"<section class='kpis'><div class='kpi'><div class='ico blue'>▣</div><div><small>TOTAL EQUIPOS</small><b>{k['total']}</b><span>CMMS Excel real</span></div></div><div class='kpi'><div class='ico green'>✓</div><div><small>OPERATIVOS</small><b>{k['operativos']}</b><span>{k['disponibilidad_real']} disponibilidad</span></div></div><div class='kpi'><div class='ico red'>!</div><div><small>ATRASADOS</small><b>{k['atrasados']}</b><span>Críticos</span></div></div><div class='kpi'><div class='ico yellow'>◷</div><div><small>PRÓXIMAS</small><b>{k['proximas']}</b><span>PM próximas</span></div></div><div class='kpi'><div class='ico purple'>OT</div><div><small>EN PROCESO</small><b>{k['en_proceso']}</b><span>Pend. reporte {k['pendiente_reporte']}</span></div></div><div class='kpi'><div class='ico teal'>$</div><div><small>COSTO TOTAL PM</small><b>{v11_money(total)}</b><span>Fuente Excel</span></div></div></section>"
+    html+=f"<section class='grid'><div class='panel'><h3>Estado de Equipos</h3>{v11_donut([k['al_dia'],k['en_proceso'],k['atrasados'],k['fuera']],['#16a34a','#f59e0b','#ef3f45','#94a3b8'],k['total'],'Total')}<div class='legend'><div><span><i class='dot' style='background:#16a34a'></i>Al día</span><b>{k['al_dia']}</b></div><div><span><i class='dot' style='background:#f59e0b'></i>En proceso</span><b>{k['en_proceso']}</b></div><div><span><i class='dot' style='background:#ef3f45'></i>Atrasados</span><b>{k['atrasados']}</b></div><div><span><i class='dot' style='background:#94a3b8'></i>Fuera servicio</span><b>{k['fuera']}</b></div></div></div><div class='panel'><h3>Equipos por Ubicación</h3>{v11_bars(ubic,'#1261d6')}</div><div class='panel'><h3>Costos de Mantenimiento</h3><div class='kpi' style='box-shadow:none;border:0'><div class='ico teal'>$</div><div><small>COSTO TOTAL PM</small><b>{v11_money(total)}</b><span>CMMS Excel real</span></div></div><table><tr><th>Este mes</th><th>Mes anterior</th></tr><tr><td><b>{v11_money(este)}</b></td><td><b>{v11_money(ant)}</b></td></tr></table><p style='color:#16a34a;font-weight:800'>Controlado {k['controlado']} · Cumplimiento {k['cumplimiento_real']}</p></div></section>"
+    html+=f"<section class='split'><div class='panel'><h3>Equipos Críticos, máximo 8</h3><table><tr><th>Imagen</th><th>Código</th><th>Equipo</th><th>Lectura</th><th>Próxima PM</th><th>Estado</th><th>Ficha</th></tr>"
+    for r in crit:
+        sem=v11_sem(r)
+        html+=f"<tr><td><img class='eqimg' src='{v11_img(r)}'></td><td class='code'>{r.get('codigo','')}</td><td>{r.get('tipo_equipo','')}</td><td>{r.get('lectura_actual','')} {r.get('control_base','')}</td><td>{r.get('fecha_est_proxima_mantencion','')}</td><td><span class='pill {sem}'>{v92_estado(r)}</span></td><td><a class='btn' href='/equipo_v11/{r.get('codigo','')}'>Abrir</a></td></tr>"
+    html+=f"</table></div><div class='panel'><h3>Distribución por Tipo</h3>{v11_donut(list(tipo.values()),['#1261d6','#16a34a','#f59e0b','#94a3b8'],k['total'],'Total')}<div class='legend'>"
+    for n,v in tipo.items(): html+=f"<div><span>{n}</span><b>{v} ({v11_pct(v,sum(tipo.values()))}%)</b></div>"
+    html+="</div></div></section><section class='panel'><h3>Flota de Equipos</h3><div class='cards'>"
+    for r in data[:110]:
+        sem=v11_sem(r)
+        html+=f"<div class='card {sem}'><img src='{v11_img(r)}'><span class='code'>{r.get('codigo','')}</span><div>{r.get('tipo_equipo','')}</div><small>{r.get('control_base','')} · {r.get('lectura_actual','')}</small><br><a class='btn' href='/equipo_v11/{r.get('codigo','')}'>Ficha</a></div>"
+    html+=f"</div></section></main><footer class='foot'><b>DEMOTRON CMMS V11</b><span>Gráficos automáticos · Ficha con historial · {APP_VERSION}</span></footer></body></html>"
+    return html
+
+@app.route("/equipos_v11")
+def v11_equipos():
+    data=v11_data()
+    html=f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Equipos V11</title>{CSS}</head><body>{v11_top('Equipos')}<main class='wrap'><section class='panel'><h3>Equipos CMMS Excel Real</h3><table><tr><th>Imagen</th><th>Código</th><th>Equipo</th><th>Marca</th><th>Modelo</th><th>Unidad</th><th>Horómetro</th><th>Kilometraje</th><th>Estado</th><th>Ficha</th></tr>"
+    for r in data:
+        sem=v11_sem(r)
+        html+=f"<tr><td><img class='eqimg' src='{v11_img(r)}'></td><td class='code'>{r.get('codigo','')}</td><td>{r.get('tipo_equipo','')}</td><td>{r.get('marca','')}</td><td>{r.get('modelo','')}</td><td><b>{r.get('control_base','')}</b></td><td>{r.get('ultimo_horometro','')}</td><td>{r.get('ultimo_kilometraje','')}</td><td><span class='pill {sem}'>{v92_estado(r)}</span></td><td><a class='btn' href='/equipo_v11/{r.get('codigo','')}'>Abrir</a></td></tr>"
+    html+=f"</table></section></main><footer class='foot'><b>DEMOTRON CMMS V11</b><span>{APP_VERSION}</span></footer></body></html>"
+    return html
+
+@app.route("/equipo_v11/<codigo>")
+def v11_ficha(codigo):
+    codigo=codigo.upper(); r=v11_lookup(codigo)
+    if not r: return "Equipo no encontrado",404
+    ots=[]; compras=[]; lecturas=[]
+    try:
+        if v92_exists("ot"): ots=v92_rows("SELECT * FROM ot WHERE codigo=:c ORDER BY id DESC LIMIT 50",{"c":codigo})
+    except Exception: pass
+    try:
+        if v92_exists("compras"): compras=v92_rows("SELECT * FROM compras WHERE codigo_equipo=:c ORDER BY id DESC LIMIT 50",{"c":codigo})
+    except Exception: pass
+    try:
+        if v92_exists("lecturas"): lecturas=v92_rows("SELECT * FROM lecturas WHERE codigo=:c ORDER BY id DESC LIMIT 50",{"c":codigo})
+    except Exception: pass
+    sem=v11_sem(r)
+    specs=[("Código",r.get("codigo","")),("Tipo",r.get("tipo_equipo","")),("Familia",r.get("familia","")),("Marca",r.get("marca","")),("Modelo",r.get("modelo","")),("Año",r.get("ano","")),("Ubicación",r.get("ubicacion","")),("Control base",r.get("control_base","")),("Frecuencia",r.get("frecuencia_base","")),("Horómetro",r.get("ultimo_horometro","")),("Kilometraje",r.get("ultimo_kilometraje","")),("Lectura usada",r.get("lectura_actual","")),("Última PM",r.get("ultima_pm","")),("Última lectura PM",r.get("ultima_lectura_pm","")),("Próxima PM",r.get("fecha_est_proxima_mantencion","")),("Costo Total PM",r.get("costo_total_pm_clp",""))]
+    html=f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Ficha {codigo}</title>{CSS}</head><body>{v11_top('Equipos')}<main class='wrap'><section class='panel hero'><div><img src='{v11_img(r)}'><h2 class='code'>{codigo}</h2><span class='pill {sem}'>{v92_estado(r)}</span></div><div><h3>Ficha técnica CMMS</h3><div class='specgrid'>"
+    for a,b in specs: html+=f"<div class='spec'><small>{a}</small><b>{b}</b></div>"
+    html+=f"</div><p><b>Acción sugerida:</b> {r.get('accion_sugerida','')}</p><p><b>Prioridad taller:</b> {r.get('prioridad_taller','')}</p></div></section><section class='panel'><h3>Ficha técnica ordenada</h3><div class='tech'>"
+    for title,items in v11_tecnica(r):
+        html+=f"<div class='techbox'><h4>{title}</h4><ul>"+"".join(f"<li>{i}</li>" for i in items)+"</ul></div>"
+    html+="</div></section>"
+    def table(title, rows, cols):
+        out=f"<section class='panel'><h3>{title}</h3><table><tr>"+ "".join(f"<th>{c}</th>" for c in cols)+"</tr>"
+        if not rows: out+=f"<tr><td colspan='{len(cols)}'>Sin registros asociados.</td></tr>"
+        for row in rows: out+="<tr>"+"".join(f"<td>{row.get(c,'')}</td>" for c in cols)+"</tr>"
+        return out+"</table></section>"
+    html+=table("Historial de mantenciones / OT",ots,["numero","tipo","estado","fecha_creacion","fecha_cierre","lectura","descripcion","costo_estimado"])
+    html+=table("Órdenes de compra asociadas",compras,["fecha","oc","proveedor","item","cantidad","costo_total","estado","observacion"])
+    html+=table("Lecturas registradas",lecturas,["fecha","tipo_lectura","valor","ubicacion","responsable","observacion"])
+    html+=f"</main><footer class='foot'><b>DEMOTRON CMMS V11</b><span>Ficha técnica + historial · {APP_VERSION}</span></footer></body></html>"
+    return html
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5000)), debug=False)
