@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash
 
 
-APP_VERSION = "DEMOTRON_CLEAN_FINAL_V12_NO_LEGACY_ROUTES"
+APP_VERSION = "DEMOTRON_CLEAN_FINAL_V12_1_MESES_OT_DETALLE"
 BASE_DIR = Path(__file__).resolve().parent
 
 DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or "sqlite:///demotron_local.db"
@@ -319,6 +319,65 @@ def week_counts(table, date_col):
     return {k: out[k] for k in sorted(out, key=lambda x: int(x.replace("S", "")))}
 
 
+
+def month_counts_from_feb(table, date_col):
+    out = {}
+    if not table_exists(table):
+        return {}
+    month_names = {1:"Ene",2:"Feb",3:"Mar",4:"Abr",5:"May",6:"Jun",7:"Jul",8:"Ago",9:"Sep",10:"Oct",11:"Nov",12:"Dic"}
+    try:
+        data = rows(f"SELECT {date_col} FROM {table} ORDER BY id DESC LIMIT 5000")
+        for r in data:
+            s = str(r.get(date_col) or "").strip()
+            if not s:
+                continue
+            if "T" in s:
+                s = s.split("T")[0]
+            if " " in s:
+                s = s.split(" ")[0]
+            dt = None
+            for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%Y/%m/%d"):
+                try:
+                    dt = datetime.strptime(s[:10], fmt).date()
+                    break
+                except Exception:
+                    pass
+            if not dt:
+                continue
+            if dt.year < 2026:
+                continue
+            if dt.year == 2026 and dt.month < 2:
+                continue
+            key = f"{month_names.get(dt.month, str(dt.month))}-{str(dt.year)[-2:]}"
+            out[key] = out.get(key, 0) + 1
+    except Exception:
+        return {}
+    order = {"Ene":1,"Feb":2,"Mar":3,"Abr":4,"May":5,"Jun":6,"Jul":7,"Ago":8,"Sep":9,"Oct":10,"Nov":11,"Dic":12}
+    def ok(k):
+        try:
+            m,y = k.split("-")
+            return (2000+int(y), order.get(m, 99))
+        except Exception:
+            return (9999,99)
+    return {k: out[k] for k in sorted(out, key=ok)}
+
+def date_is_from_feb_2026(v):
+    s = str(v or "").strip()
+    if not s:
+        return False
+    if "T" in s:
+        s = s.split("T")[0]
+    if " " in s:
+        s = s.split(" ")[0]
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%Y/%m/%d"):
+        try:
+            d = datetime.strptime(s[:10], fmt).date()
+            return d >= datetime.strptime("2026-02-01", "%Y-%m-%d").date()
+        except Exception:
+            pass
+    return False
+
+
 # ============================================================
 # GRÁFICOS
 # ============================================================
@@ -364,7 +423,7 @@ def logo_html():
     return "<div class='logotxt'>DEMOTRON</div>"
 
 def top(active):
-    items = [("Dashboard","/erp"),("Equipos","/equipos"),("Lecturas","/lecturas"),("OT","/ot"),("Compras","/compras"),("Bodega","/bodega"),("Reportes","/reportes")]
+    items = [("Dashboard","/erp"),("Equipos","/equipos"),("Lecturas","/lecturas"),("OT","/ot"),("Compras","/compras"),("Bodega","/bodega")]
     links = "".join([f"<a class='{'active' if n == active else ''}' href='{u}'>{n}</a>" for n,u in items])
     return f"<header class='top'>{logo_html()}<nav class='nav'>{links}</nav><input class='search' placeholder='Buscar...'><a class='logout' href='/logout'>Cerrar sesión</a></header>"
 
@@ -426,8 +485,8 @@ def dashboard():
         ubic[u] = ubic.get(u, 0) + 1
     ubic = dict(sorted(ubic.items(), key=lambda x:x[1], reverse=True)[:8])
 
-    compras_sem = week_counts("compras", "fecha")
-    ot_sem = week_counts("ot", "fecha_creacion")
+    compras_mes = month_counts_from_feb("compras", "fecha")
+    ot_mes = month_counts_from_feb("ot", "fecha_creacion")
     crit = [r for r in data if sem(r) in ("red", "yellow")]
 
     def fleet_sort(r):
@@ -465,8 +524,8 @@ def dashboard():
     </section>
 
     <section class='grid'>
-        <div class='panel'><h3>Compras por Semana</h3>{bars(compras_sem, '#7449d4')}</div>
-        <div class='panel'><h3>OT por Semana</h3>{bars(ot_sem, '#07939a')}</div>
+        <div class='panel'><h3>Compras por Mes</h3>{bars(compras_mes, '#7449d4')}</div>
+        <div class='panel'><h3>OT por Mes</h3>{bars(ot_mes, '#07939a')}</div>
         <div class='panel'><h3>KPI Mantenimiento</h3>
             <table>
                 <tr><th>KPI</th><th>Número</th><th>%</th></tr>
@@ -483,7 +542,7 @@ def dashboard():
         <table>
             <tr><th>Imagen</th><th>Código</th><th>Equipo</th><th>Lectura</th><th>Última Mantención</th><th>Estado</th><th>Ficha</th></tr>
     """
-    for r in crit[:50]:
+    for r in crit[:10]:
         body += f"<tr><td><img class='eqimg' src='{img_url(r)}'></td><td class='code'>{r.get('codigo','')}</td><td>{r.get('tipo_equipo','')}</td><td>{r.get('lectura_actual','')} {r.get('control_base','')}</td><td>{fecha(r.get('ultima_fecha_pm'))}</td><td><span class='pill {sem(r)}'>{estado(r)}</span></td><td><a class='btn' href='/equipo/{r.get('codigo','')}'>Abrir</a></td></tr>"
     body += "</table></section>"
 
@@ -579,7 +638,7 @@ def ot_page():
             """)
     table = "<table><tr><th>Número</th><th>Código</th><th>Tipo</th><th>Estado</th><th>Fecha</th><th>Descripción</th><th>Costo</th></tr>"
     for r in data:
-        table += f"<tr><td class='code'>{r.get('numero','')}</td><td>{r.get('codigo','')}</td><td>{r.get('tipo','')}</td><td>{r.get('estado','')}</td><td>{fecha(r.get('fecha_creacion'))}</td><td>{r.get('descripcion','')}</td><td>{clp(nfloat(r.get('costo_estimado')))}</td></tr>"
+        table += f"<tr><td class='code'><a href='/ot/{r.get('numero','')}'>{r.get('numero','')}</a></td><td>{r.get('codigo','')}</td><td>{r.get('tipo','')}</td><td>{r.get('estado','')}</td><td>{fecha(r.get('fecha_creacion'))}</td><td>{r.get('descripcion','')}</td><td>{clp(nfloat(r.get('costo_estimado')))}</td></tr>"
     table += "</table>"
     return form_page("Órdenes de Trabajo", "OT", form, table)
 
@@ -610,7 +669,8 @@ def bodega_page():
         return redirect("/bodega")
 
     form = "<form method='post' class='formgrid'><input name='fecha' type='date'><input name='codigo_equipo' placeholder='Código de Equipo'><input name='ot_numero' placeholder='Folio'><input name='repuesto' placeholder='Repuesto'><select name='movimiento'><option>Ingreso</option><option>Salida</option></select><input name='observacion' placeholder='Detalle'><button class='btn'>Agregar Bodega</button></form>"
-    data = rows("SELECT * FROM bodega ORDER BY id DESC LIMIT 1000") if table_exists("bodega") else []
+    raw_bodega = rows("SELECT * FROM bodega ORDER BY id DESC LIMIT 2000") if table_exists("bodega") else []
+    data = [r for r in raw_bodega if date_is_from_feb_2026(r.get("fecha"))]
     table = "<table><tr><th>Fecha</th><th>Código de Equipo</th><th>Folio</th><th>Repuesto</th><th>Movimiento</th><th>Detalle</th></tr>"
     for r in data:
         table += f"<tr><td>{fecha(r.get('fecha'))}</td><td>{r.get('codigo_equipo','')}</td><td>{r.get('ot_numero','')}</td><td>{r.get('repuesto','')}</td><td>{r.get('movimiento','')}</td><td>{r.get('observacion','')}</td></tr>"
@@ -619,21 +679,7 @@ def bodega_page():
 
 @app.route("/reportes")
 def reportes_page():
-    k = kpis()
-    body = f"""
-    <section class='panel'>
-        <h3>Reportes Gerenciales</h3>
-        <table>
-            <tr><th>KPI</th><th>Valor</th></tr>
-            <tr><td>Total Equipos</td><td>{k['total']}</td></tr>
-            <tr><td>Operativos</td><td>{k['operativos']}</td></tr>
-            <tr><td>Disponibilidad Real</td><td>{k['disponibilidad_real']}</td></tr>
-            <tr><td>Costo Total PM</td><td>{clp(k['costo_total_pm'])}</td></tr>
-            <tr><td>Actualizado</td><td>{k['actualizado']}</td></tr>
-        </table>
-    </section>
-    """
-    return page("Reportes", "Reportes", body)
+    return redirect("/erp")
 
 def tecnica(r):
     tipo = norm(r.get("tipo_equipo"))
@@ -652,6 +698,103 @@ def tecnica(r):
         base.insert(1, ("Tren Motriz", ["Motor, transmisión, diferencial, cardanes y dirección.", "Control de frenos, líneas de aire y suspensión."]))
         base.insert(2, ("Equipo Especial", ["Tolva, pluma, aljibe o sistema hidráulico según configuración.", "Revisar cilindros, toma fuerza, mangueras y estructura."]))
     return base
+
+
+@app.route("/ot/<numero>")
+def ot_detalle(numero):
+    if not table_exists("ot"):
+        return page("OT no encontrada", "OT", "<section class='panel'><h3>OT no encontrada</h3></section>"), 404
+
+    try:
+        ot = one("SELECT * FROM ot WHERE numero=:n ORDER BY id DESC LIMIT 1", {"n": numero})
+    except Exception:
+        ot = None
+
+    if not ot:
+        return page("OT no encontrada", "OT", "<section class='panel'><h3>OT no encontrada</h3></section>"), 404
+
+    codigo = str(ot.get("codigo") or "").upper()
+    equipo = find_equipo(codigo) if codigo else None
+    estado_ot = str(ot.get("estado") or "").upper()
+    sem_ot = "green" if "CERR" in estado_ot or "EJEC" in estado_ot else ("yellow" if "PROCESO" in estado_ot else "red")
+
+    body = f"""
+    <section class='panel'>
+        <h3>Orden de Trabajo</h3>
+        <div class='specgrid'>
+            <div class='spec'><small>Número</small><div>{ot.get('numero','')}</div></div>
+            <div class='spec'><small>Código Equipo</small><div>{codigo}</div></div>
+            <div class='spec'><small>Tipo</small><div>{ot.get('tipo','')}</div></div>
+            <div class='spec'><small>Estado</small><div><span class='pill {sem_ot}'>{ot.get('estado','')}</span></div></div>
+            <div class='spec'><small>Fecha</small><div>{fecha(ot.get('fecha_creacion'))}</div></div>
+            <div class='spec'><small>Fecha Cierre</small><div>{fecha(ot.get('fecha_cierre'))}</div></div>
+            <div class='spec'><small>Lectura</small><div>{ot.get('lectura','')}</div></div>
+            <div class='spec'><small>Costo</small><div>{clp(nfloat(ot.get('costo_estimado')))}</div></div>
+        </div>
+    </section>
+
+    <section class='panel'>
+        <h3>Alcance Técnico</h3>
+        <div class='tech'>
+            <div class='techbox'><h4>Trabajo Solicitado</h4><ul><li>{ot.get('descripcion','Sin descripción registrada.')}</li></ul></div>
+            <div class='techbox'><h4>Estándar de Ejecución</h4><ul><li>Bloqueo, seguridad y verificación del equipo antes de intervenir.</li><li>Registro de lectura real y evidencia técnica.</li><li>Cierre con costo, responsable y condición final.</li></ul></div>
+            <div class='techbox'><h4>Control de Calidad</h4><ul><li>Verificación visual de fugas, niveles, fijaciones y operación.</li><li>Prueba funcional antes de liberar el equipo.</li></ul></div>
+            <div class='techbox'><h4>Estándar Minería / Alto Rendimiento</h4><ul><li>Trazabilidad completa de repuestos, compras, lecturas y mantención.</li><li>Estado final claro: operativo, seguimiento, taller o fuera de servicio.</li></ul></div>
+        </div>
+    </section>
+    """
+
+    if equipo:
+        body += f"""
+        <section class='panel hero'>
+            <div><img src='{img_url(equipo)}'><h2 class='code'>{codigo}</h2><span class='pill {sem(equipo)}'>{estado(equipo)}</span></div>
+            <div><h3>Equipo Asociado</h3><div class='specgrid'>
+                <div class='spec'><small>Equipo</small><div>{equipo.get('tipo_equipo','')}</div></div>
+                <div class='spec'><small>Marca</small><div>{equipo.get('marca','')}</div></div>
+                <div class='spec'><small>Modelo</small><div>{equipo.get('modelo','')}</div></div>
+                <div class='spec'><small>Ubicación</small><div>{equipo.get('ubicacion','')}</div></div>
+                <div class='spec'><small>Control Base</small><div>{equipo.get('control_base','')}</div></div>
+                <div class='spec'><small>Lectura Actual</small><div>{equipo.get('lectura_actual','')}</div></div>
+                <div class='spec'><small>Última Mantención</small><div>{fecha(equipo.get('ultima_fecha_pm'))}</div></div>
+                <div class='spec'><small>Costo PM</small><div>{equipo.get('costo_total_pm_clp','')}</div></div>
+            </div></div>
+        </section>
+        """
+
+    compras = []
+    lecturas = []
+    try:
+        if table_exists("compras"):
+            compras = rows("SELECT * FROM compras WHERE codigo_equipo=:c ORDER BY id DESC LIMIT 20", {"c": codigo})
+    except Exception:
+        compras = []
+    try:
+        if table_exists("lecturas"):
+            lecturas = rows("SELECT * FROM lecturas WHERE codigo=:c ORDER BY id DESC LIMIT 20", {"c": codigo})
+    except Exception:
+        lecturas = []
+
+    def mini_table(title, data, cols):
+        out = f"<section class='panel'><h3>{title}</h3><table><tr>" + "".join(f"<th>{friendly(c)}</th>" for c in cols) + "</tr>"
+        if not data:
+            out += f"<tr><td colspan='{len(cols)}'>Sin registros asociados.</td></tr>"
+        for row in data:
+            out += "<tr>"
+            for c in cols:
+                val = row.get(c, "")
+                if "fecha" in c:
+                    val = fecha(val)
+                if "costo" in c:
+                    val = clp(nfloat(val))
+                out += f"<td>{val}</td>"
+            out += "</tr>"
+        return out + "</table></section>"
+
+    body += mini_table("Compras / OC Asociadas al Equipo", compras, ["fecha","oc","proveedor","item","cantidad","costo_total","estado"])
+    body += mini_table("Lecturas Recientes del Equipo", lecturas, ["fecha","tipo_lectura","valor","ubicacion","responsable"])
+
+    return page(f"OT {numero}", "OT", body)
+
 
 @app.route("/equipo/<codigo>")
 def ficha_equipo(codigo):
