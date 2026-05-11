@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash
 
 
-APP_VERSION = "DEMOTRON_CLEAN_FINAL_V12_1_MESES_OT_DETALLE"
+APP_VERSION = "DEMOTRON_CLEAN_FINAL_V12_2_GRAFICOS_UBICACION_REAL"
 BASE_DIR = Path(__file__).resolve().parent
 
 DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or "sqlite:///demotron_local.db"
@@ -382,6 +382,47 @@ def date_is_from_feb_2026(v):
 # GRÁFICOS
 # ============================================================
 
+
+def ubicaciones_reales_demotron():
+    """Distribución oficial entregada por CMMS Excel."""
+    return {
+        "Asfalto": 4,
+        "Cobquecura": 16,
+        "Colbun": 5,
+        "Emergencias Curico": 19,
+        "Mantul": 1,
+        "Ninhue": 2,
+        "Obras Varias": 4,
+        "Oficina": 7,
+        "Palmucho": 38,
+        "Pelluhue": 2,
+        "Quirihue": 12,
+        "RAUCO": 1,
+        "Retiro": 2,
+        "San Carlos": 14,
+        "San Nicolas": 9,
+        "SANTIAGO": 0,
+        "Taller": 49,
+        "Villaseca": 3,
+    }
+
+def date_is_from_feb_2026(v):
+    s = str(v or "").strip()
+    if not s:
+        return False
+    if "T" in s:
+        s = s.split("T")[0]
+    if " " in s:
+        s = s.split(" ")[0]
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%Y/%m/%d"):
+        try:
+            d = datetime.strptime(s[:10], fmt).date()
+            return d >= datetime.strptime("2026-02-01", "%Y-%m-%d").date()
+        except Exception:
+            pass
+    return False
+
+
 def donut(vals, colors, center, sub):
     total = sum(vals) or 1
     radius = 72
@@ -479,11 +520,7 @@ def dashboard():
     k = kpis()
     total = float(k["total"] or 1)
 
-    ubic = {}
-    for r in data:
-        u = r.get("ubicacion") or "Sin ubicación"
-        ubic[u] = ubic.get(u, 0) + 1
-    ubic = dict(sorted(ubic.items(), key=lambda x:x[1], reverse=True)[:8])
+    ubic = ubicaciones_reales_demotron()
 
     compras_mes = month_counts_from_feb("compras", "fecha")
     ot_mes = month_counts_from_feb("ot", "fecha_creacion")
