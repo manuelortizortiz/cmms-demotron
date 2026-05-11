@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash
 
 
-APP_VERSION = "DEMOTRON_CLEAN_FINAL_V12_5_PM_OC_REALES"
+APP_VERSION = "DEMOTRON_CLEAN_FINAL_V12_6_PM_REALES_AUTOIMPORT"
 BASE_DIR = Path(__file__).resolve().parent
 
 DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or "sqlite:///demotron_local.db"
@@ -576,6 +576,54 @@ def ensure_pm_tables():
     for c in ["numero","codigo","tipo","estado","fecha_creacion","fecha_cierre","lectura","descripcion","costo_estimado","prioridad","responsable"]:
         add_col("ot", c, "TEXT")
 
+
+def ensure_config_table():
+    pk = "INTEGER PRIMARY KEY AUTOINCREMENT" if is_sqlite() else "SERIAL PRIMARY KEY"
+    if not table_exists("app_config"):
+        exec_sql(f"""CREATE TABLE app_config (
+            id {pk}, clave TEXT UNIQUE, valor TEXT, actualizado TEXT
+        )""")
+
+def get_config(clave):
+    try:
+        ensure_config_table()
+        r = one("SELECT valor FROM app_config WHERE clave=:c LIMIT 1", {"c": clave})
+        return r.get("valor") if r else ""
+    except Exception:
+        return ""
+
+def set_config(clave, valor):
+    try:
+        ensure_config_table()
+        if is_sqlite():
+            exec_sql("INSERT OR REPLACE INTO app_config (clave, valor, actualizado) VALUES (:c,:v,:a)", {"c": clave, "v": valor, "a": datetime.now().isoformat()})
+        else:
+            exec_sql("""INSERT INTO app_config (clave, valor, actualizado) VALUES (:c,:v,:a)
+                         ON CONFLICT (clave) DO UPDATE SET valor=EXCLUDED.valor, actualizado=EXCLUDED.actualizado""",
+                     {"c": clave, "v": valor, "a": datetime.now().isoformat()})
+    except Exception:
+        pass
+
+def ensure_pm_reales_auto(force=False):
+    """Reemplaza automáticamente OC y OT antiguas por los archivos reales incluidos en data_import."""
+    try:
+        compras_file = data_file("compras_pm_reales.tsv")
+        mant_file = data_file("mantenciones_reales.tsv")
+        if not compras_file or not mant_file:
+            return {"status":"SIN_ARCHIVOS", "compras":0, "mantenciones":0,
+                    "archivo_compras":str(compras_file or "NO ENCONTRADO"),
+                    "archivo_mantenciones":str(mant_file or "NO ENCONTRADO")}
+        flag = get_config("pm_reales_importados_version")
+        if (not force) and flag == APP_VERSION:
+            return {"status":"YA_IMPORTADO", "compras":count_table("compras"), "mantenciones":count_table("ot")}
+        compras = import_compras_pm_reales()
+        mantenciones = import_mantenciones_pm_reales()
+        set_config("pm_reales_importados_version", APP_VERSION)
+        return {"status":"IMPORTADO", "compras":compras, "mantenciones":mantenciones}
+    except Exception as e:
+        return {"status":"ERROR", "error":repr(e), "compras":0, "mantenciones":0}
+
+
 def import_compras_pm_reales():
     ensure_pm_tables()
     path = data_file("compras_pm_reales.tsv")
@@ -666,6 +714,7 @@ def admin_version():
 @app.route("/admin/diagnostico")
 def admin_diag():
     ensure_schema()
+    ensure_pm_reales_auto(force=False)
     return jsonify({
         "status":"OK",
         "version":APP_VERSION,
@@ -707,6 +756,7 @@ def admin_diag_pm_reales():
 @app.route("/erp")
 def dashboard():
     ensure_schema()
+    ensure_pm_reales_auto(force=False)
     data = cmms_rows()
     k = kpis()
     total = float(k["total"] or 1)
@@ -842,6 +892,7 @@ def lecturas_page():
 
 @app.route("/ot", methods=["GET","POST"])
 def ot_page():
+    ensure_pm_reales_auto(force=False)
     if request.method == "POST":
         try:
             exec_sql("INSERT INTO ot (numero,codigo,tipo,estado,fecha_creacion,descripcion,costo_estimado) VALUES (:numero,:codigo,:tipo,:estado,:fecha,:descripcion,:costo)", dict(request.form))
@@ -861,6 +912,7 @@ def ot_page():
 
 @app.route("/compras", methods=["GET","POST"])
 def compras_page():
+    ensure_pm_reales_auto(force=False)
     if request.method == "POST":
         try:
             exec_sql("INSERT INTO compras (fecha,codigo_equipo,oc,proveedor,item,estado,costo_total) VALUES (:fecha,:codigo_equipo,:oc,:proveedor,:item,:estado,:costo)", dict(request.form))
@@ -1015,6 +1067,7 @@ def ot_detalle(numero):
 
 @app.route("/equipo/<codigo>")
 def ficha_equipo(codigo):
+    ensure_pm_reales_auto(force=False)
     codigo = codigo.upper()
     r = find_equipo(codigo)
     if not r:
@@ -1079,6 +1132,22 @@ def ficha_equipo(codigo):
 
     return page(f"Ficha {codigo}", "Equipos", body)
 
+
+
+@app.route("/admin/verificar_pm_reales")
+def admin_verificar_pm_reales():
+    ensure_pm_reales_auto(force=False)
+    compras_muestra = rows("SELECT fecha, oc, codigo_equipo, item, proveedor, costo_total, estado FROM compras ORDER BY id DESC LIMIT 5") if table_exists("compras") else []
+    ot_muestra = rows("SELECT numero, codigo, tipo, estado, fecha_creacion, lectura, descripcion FROM ot ORDER BY id DESC LIMIT 5") if table_exists("ot") else []
+    return jsonify({
+        "status":"OK",
+        "version":APP_VERSION,
+        "compras_total":count_table("compras"),
+        "ot_total":count_table("ot"),
+        "compras_muestra":compras_muestra,
+        "ot_muestra":ot_muestra,
+        "nota":"Si ves tipo PM2 en OT y OC DEMO-02-xxxx, la importación real está aplicada."
+    })
 
 # Compatibilidad solo para diagnóstico; no hay rutas visuales antiguas.
 @app.route("/admin/v113/version")
