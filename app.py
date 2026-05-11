@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash
 
 
-APP_VERSION = "DEMOTRON_CLEAN_FINAL_V12_3_GRAFICOS_RESPONSIVE_4_MESES"
+APP_VERSION = "DEMOTRON_CLEAN_FINAL_V12_4_MESES_FEB_MAY_2026"
 BASE_DIR = Path(__file__).resolve().parent
 
 DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or "sqlite:///demotron_local.db"
@@ -440,6 +440,27 @@ def filter_ubicaciones_dashboard(data):
     """Dashboard: solo ubicaciones con más de 4 equipos."""
     return {k: v for k, v in data.items() if int(v or 0) > 4}
 
+
+def fixed_feb_to_may_2026(data):
+    """Fuerza gráfico mensual a Feb-26, Mar-26, Abr-26 y May-26."""
+    base = {"Feb-26": 0, "Mar-26": 0, "Abr-26": 0, "May-26": 0}
+    for k, v in (data or {}).items():
+        key = str(k).strip()
+        if key in base:
+            base[key] = int(v or 0)
+        # tolerancia por si llega Febrero-26, Marzo-26, etc.
+        lk = key.lower()
+        if lk.startswith("feb"):
+            base["Feb-26"] = int(v or 0)
+        elif lk.startswith("mar"):
+            base["Mar-26"] = int(v or 0)
+        elif lk.startswith("abr") or lk.startswith("apr"):
+            base["Abr-26"] = int(v or 0)
+        elif lk.startswith("may"):
+            base["May-26"] = int(v or 0)
+    return base
+
+
 def last_4_months(data):
     """Mantiene solo los últimos 4 meses disponibles en orden."""
     if not data:
@@ -541,8 +562,8 @@ def dashboard():
 
     ubic = filter_ubicaciones_dashboard(ubicaciones_reales_demotron())
 
-    compras_mes = last_4_months(month_counts_from_feb("compras", "fecha"))
-    ot_mes = last_4_months(month_counts_from_feb("ot", "fecha_creacion"))
+    compras_mes = fixed_feb_to_may_2026(month_counts_from_feb("compras", "fecha"))
+    ot_mes = fixed_feb_to_may_2026(month_counts_from_feb("ot", "fecha_creacion"))
     crit = [r for r in data if sem(r) in ("red", "yellow")]
 
     def fleet_sort(r):
