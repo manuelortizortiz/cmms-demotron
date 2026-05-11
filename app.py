@@ -1,4 +1,5 @@
 import os
+import csv
 import math
 from datetime import datetime
 from pathlib import Path
@@ -8,7 +9,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash
 
 
-APP_VERSION = "DEMOTRON_CLEAN_FINAL_V12_4_MESES_FEB_MAY_2026"
+APP_VERSION = "DEMOTRON_CLEAN_FINAL_V12_5_PM_OC_REALES"
 BASE_DIR = Path(__file__).resolve().parent
 
 DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or "sqlite:///demotron_local.db"
@@ -117,9 +118,13 @@ def nfloat(v):
         s = str(v or "").strip()
         if s == "" or s.lower() in ("nan", "none", "null", "sin datos de mantención registrado"):
             return 0.0
-        s = s.replace("$", "").replace(" ", "")
+        s = s.replace("$", "").replace(" ", "").replace("\u00a0", "")
+        # Chile: 16.422,00. US/ERP: 126,877.80. Decide by last separator.
         if "," in s and "." in s:
-            s = s.replace(".", "").replace(",", ".")
+            if s.rfind(",") > s.rfind("."):
+                s = s.replace(".", "").replace(",", ".")
+            else:
+                s = s.replace(",", "")
         elif "," in s:
             s = s.replace(",", ".")
         return float(s)
@@ -515,6 +520,127 @@ def page(title, active, body):
     return f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{title}</title><link rel='icon' href='/favicon.ico'>{CSS}</head><body>{top(active)}<main class='wrap'>{body}</main>{footer()}</body></html>"
 
 
+
+# ============================================================
+# IMPORTADOR REAL PM / OC
+# ============================================================
+
+def date_iso(v):
+    s = str(v or "").strip()
+    if not s:
+        return ""
+    if "T" in s:
+        s = s.split("T")[0]
+    if " " in s:
+        s = s.split(" ")[0]
+    s = s.replace("/", "-")
+    for fmt in ("%d-%m-%Y", "%Y-%m-%d", "%d-%m-%y"):
+        try:
+            return datetime.strptime(s[:10], fmt).date().isoformat()
+        except Exception:
+            pass
+    return s
+
+def data_file(name):
+    p = BASE_DIR / "data_import" / name
+    return p if p.exists() else None
+
+def read_tsv_after_header(path, required_first):
+    raw = Path(path).read_text(encoding="utf-8", errors="ignore").splitlines()
+    start = None
+    for i, line in enumerate(raw):
+        if line.strip().startswith(required_first):
+            start = i
+            break
+    if start is None:
+        return []
+    text = "\n".join(raw[start:])
+    return list(csv.DictReader(text.splitlines(), delimiter="\t"))
+
+def ensure_pm_tables():
+    pk = "INTEGER PRIMARY KEY AUTOINCREMENT" if is_sqlite() else "SERIAL PRIMARY KEY"
+    if not table_exists("compras"):
+        exec_sql(f"""CREATE TABLE compras (
+            id {pk}, fecha TEXT, codigo_equipo TEXT, oc TEXT, proveedor TEXT,
+            item TEXT, estado TEXT, costo_total TEXT, cantidad TEXT, observacion TEXT
+        )""")
+    for c in ["fecha","codigo_equipo","oc","proveedor","item","estado","costo_total","cantidad","observacion"]:
+        add_col("compras", c, "TEXT")
+
+    if not table_exists("ot"):
+        exec_sql(f"""CREATE TABLE ot (
+            id {pk}, numero TEXT, codigo TEXT, tipo TEXT, estado TEXT,
+            fecha_creacion TEXT, fecha_cierre TEXT, lectura TEXT, descripcion TEXT,
+            costo_estimado TEXT, prioridad TEXT, responsable TEXT
+        )""")
+    for c in ["numero","codigo","tipo","estado","fecha_creacion","fecha_cierre","lectura","descripcion","costo_estimado","prioridad","responsable"]:
+        add_col("ot", c, "TEXT")
+
+def import_compras_pm_reales():
+    ensure_pm_tables()
+    path = data_file("compras_pm_reales.tsv")
+    if not path:
+        return 0
+    data = read_tsv_after_header(path, "Fecha\tOC")
+    exec_sql("DELETE FROM compras")
+    n = 0
+    for r in data:
+        fecha_raw = r.get("Fecha") or ""
+        oc = (r.get("OC") or "").strip()
+        if not fecha_raw or not oc:
+            continue
+        codigo = (r.get("Codigo") or r.get("Código") or "").strip().upper()
+        desc = (r.get("Descripcion") or r.get("Descripción") or "").strip()
+        proveedor = (r.get("Proveedor") or "").strip()
+        costo = nfloat(r.get("Costo PM CLP") or r.get(" Costo PM CLP ") or r.get("Costo") or "0")
+        regla = (r.get("Regla") or "").strip()
+        estado_oc = (r.get("Estado OC") or "").strip()
+        exec_sql("""INSERT INTO compras
+            (fecha, codigo_equipo, oc, proveedor, item, estado, costo_total, cantidad, observacion)
+            VALUES (:fecha, :codigo, :oc, :proveedor, :item, :estado, :costo, :cantidad, :obs)""",
+            {"fecha": date_iso(fecha_raw), "codigo": codigo, "oc": oc, "proveedor": proveedor,
+             "item": desc, "estado": estado_oc, "costo": str(costo), "cantidad": "1", "obs": regla})
+        n += 1
+    return n
+
+def import_mantenciones_pm_reales():
+    ensure_pm_tables()
+    path = data_file("mantenciones_reales.tsv")
+    if not path:
+        return 0
+    data = read_tsv_after_header(path, "Fecha\tCodigo")
+    exec_sql("DELETE FROM ot")
+    used = {}
+    n = 0
+    for r in data:
+        fecha_raw = r.get("Fecha") or ""
+        codigo = (r.get("Codigo") or r.get("Código") or "").strip().upper()
+        if not fecha_raw or not codigo:
+            continue
+        espm = norm(r.get("EsPM") or r.get("Es PM") or "")
+        if espm and espm not in ("si", "sí", "s"):
+            continue
+        folio = (r.get("Folio") or "").strip()
+        base_num = folio if folio and norm(folio) not in ("sn", "nn", "n/a") else f"PM2-{n+1:04d}"
+        used[base_num] = used.get(base_num, 0) + 1
+        numero = base_num if used[base_num] == 1 else f"{base_num}-{used[base_num]}"
+        tipo_original = (r.get("Tipo Mantencion") or r.get("Tipo Mantención") or "").strip()
+        lectura = (r.get("Lectura") or "").strip()
+        lugar = (r.get("Lugar") or "").strip()
+        proveedor = (r.get("Proveedor") or "").strip()
+        costo = nfloat(r.get(" Costo Mantencion CLP ") or r.get("Costo Mantencion CLP") or r.get("Costo Mantención CLP") or "0")
+        estado = (r.get("Estado") or "Finalizada").strip() or "Finalizada"
+        desc = f"Mantención preventiva PM2 | Original: {tipo_original} | Lugar: {lugar} | Folio: {folio}"
+        exec_sql("""INSERT INTO ot
+            (numero, codigo, tipo, estado, fecha_creacion, fecha_cierre, lectura, descripcion, costo_estimado, prioridad, responsable)
+            VALUES (:numero, :codigo, 'PM2', :estado, :fecha, :fecha_cierre, :lectura, :desc, :costo, 'Normal', :responsable)""",
+            {"numero": numero, "codigo": codigo, "estado": estado, "fecha": date_iso(fecha_raw),
+             "fecha_cierre": date_iso(fecha_raw) if norm(estado).startswith("final") else "", "lectura": lectura,
+             "desc": desc, "costo": str(costo), "responsable": proveedor})
+        n += 1
+    return n
+
+
 # ============================================================
 # ROUTES
 # ============================================================
@@ -551,6 +677,31 @@ def admin_diag():
         "bodega":count_table("bodega"),
         "kpi":kpis(),
         "legacy_routes_removed": True
+    })
+
+
+@app.route("/admin/importar_pm_reales")
+def admin_importar_pm_reales():
+    ensure_schema()
+    compras = import_compras_pm_reales()
+    mantenciones = import_mantenciones_pm_reales()
+    return jsonify({
+        "status": "OK",
+        "version": APP_VERSION,
+        "compras_reales_importadas": compras,
+        "mantenciones_pm2_importadas": mantenciones,
+        "mensaje": "OC reales reemplazadas y OT reconstruidas solo con mantenciones PM2."
+    })
+
+@app.route("/admin/diagnostico_pm_reales")
+def admin_diag_pm_reales():
+    return jsonify({
+        "status": "OK",
+        "version": APP_VERSION,
+        "compras": count_table("compras"),
+        "ot": count_table("ot"),
+        "archivo_compras": str(data_file("compras_pm_reales.tsv") or "NO ENCONTRADO"),
+        "archivo_mantenciones": str(data_file("mantenciones_reales.tsv") or "NO ENCONTRADO")
     })
 
 @app.route("/erp")
@@ -698,21 +849,10 @@ def ot_page():
             pass
         return redirect("/ot")
 
-    form = "<form method='post' class='formgrid'><input name='numero' placeholder='Número'><input name='codigo' placeholder='Código Equipo'><input name='tipo' placeholder='Tipo Mantención'><select name='estado'><option>Abierta</option><option>En Proceso</option><option>Cerrada</option></select><input name='fecha' type='date'><input name='descripcion' placeholder='Descripción'><input name='costo' placeholder='Costo'><button class='btn'>Agregar OT</button></form>"
+    form = "<form method='post' class='formgrid'><input name='numero' placeholder='Número'><input name='codigo' placeholder='Código Equipo'><select name='tipo'><option>PM1</option><option>PM2</option><option>PM3</option><option>PM4</option></select><select name='estado'><option>Abierta</option><option>En Proceso</option><option>Cerrada</option></select><input name='fecha' type='date'><input name='descripcion' placeholder='Descripción'><input name='costo' placeholder='Costo'><button class='btn'>Agregar OT</button></form>"
     data = []
     if table_exists("ot"):
-        if is_sqlite():
-            data = rows("""
-                SELECT * FROM ot
-                WHERE lower(COALESCE(tipo,'')) LIKE '%mant%' OR lower(COALESCE(descripcion,'')) LIKE '%mant%' OR lower(COALESCE(tipo,'')) LIKE '%prevent%' OR lower(COALESCE(tipo,'')) LIKE '%correct%'
-                ORDER BY id DESC LIMIT 1000
-            """)
-        else:
-            data = rows("""
-                SELECT * FROM ot
-                WHERE COALESCE(tipo,'') ILIKE '%mant%' OR COALESCE(descripcion,'') ILIKE '%mant%' OR COALESCE(tipo,'') ILIKE '%prevent%' OR COALESCE(tipo,'') ILIKE '%correct%'
-                ORDER BY id DESC LIMIT 1000
-            """)
+        data = rows("SELECT * FROM ot ORDER BY id DESC LIMIT 1000")
     table = "<table><tr><th>Número</th><th>Código</th><th>Tipo</th><th>Estado</th><th>Fecha</th><th>Descripción</th><th>Costo</th></tr>"
     for r in data:
         table += f"<tr><td class='code'><a href='/ot/{r.get('numero','')}'>{r.get('numero','')}</a></td><td>{r.get('codigo','')}</td><td>{r.get('tipo','')}</td><td>{r.get('estado','')}</td><td>{fecha(r.get('fecha_creacion'))}</td><td>{r.get('descripcion','')}</td><td>{clp(nfloat(r.get('costo_estimado')))}</td></tr>"
@@ -917,18 +1057,7 @@ def ficha_equipo(codigo):
     ots, compras, lecturas = [], [], []
     try:
         if table_exists("ot"):
-            if is_sqlite():
-                ots = rows("""
-                    SELECT * FROM ot WHERE codigo=:c
-                    AND (lower(COALESCE(tipo,'')) LIKE '%mant%' OR lower(COALESCE(descripcion,'')) LIKE '%mant%' OR lower(COALESCE(tipo,'')) LIKE '%prevent%' OR lower(COALESCE(tipo,'')) LIKE '%correct%')
-                    ORDER BY id DESC LIMIT 50
-                """, {"c": codigo})
-            else:
-                ots = rows("""
-                    SELECT * FROM ot WHERE codigo=:c
-                    AND (COALESCE(tipo,'') ILIKE '%mant%' OR COALESCE(descripcion,'') ILIKE '%mant%' OR COALESCE(tipo,'') ILIKE '%prevent%' OR COALESCE(tipo,'') ILIKE '%correct%')
-                    ORDER BY id DESC LIMIT 50
-                """, {"c": codigo})
+            ots = rows("SELECT * FROM ot WHERE codigo=:c ORDER BY id DESC LIMIT 50", {"c": codigo})
     except Exception:
         pass
 
