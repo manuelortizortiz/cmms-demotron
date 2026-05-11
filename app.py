@@ -1,15 +1,16 @@
 import os
 import csv
+import io
 import math
 from datetime import datetime
 from pathlib import Path
 
-from flask import Flask, request, redirect, jsonify, session, Response
+from flask import Flask, request, redirect, jsonify, session, Response, make_response
 from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash
 
 
-APP_VERSION = "DEMOTRON_CLEAN_FINAL_V12_6_PM_REALES_AUTOIMPORT"
+APP_VERSION = "DEMOTRON_CLEAN_FINAL_V12_7_BODEGA_EQUIPOS_REALES"
 BASE_DIR = Path(__file__).resolve().parent
 
 DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or "sqlite:///demotron_local.db"
@@ -305,10 +306,23 @@ def img_url(r):
 
 def find_equipo(codigo):
     codigo = codigo.upper()
+    found = None
     for r in cmms_rows():
         if str(r.get("codigo") or "").upper() == codigo:
-            return r
-    return None
+            found = dict(r)
+            break
+    if not found:
+        return None
+    try:
+        if table_exists("equipos"):
+            meta = one("SELECT patente, vin, motor FROM equipos WHERE UPPER(codigo)=:c LIMIT 1", {"c": codigo})
+            if meta:
+                found["patente"] = clean_equipo_field(meta.get("patente"))
+                found["vin"] = clean_equipo_field(meta.get("vin"))
+                found["motor"] = clean_equipo_field(meta.get("motor"))
+    except Exception:
+        pass
+    return found
 
 def week_counts(table, date_col):
     out = {}
@@ -381,6 +395,122 @@ def date_is_from_feb_2026(v):
         except Exception:
             pass
     return False
+
+
+
+def clean_equipo_field(v):
+    """Limpia patente/VIN/motor. Si no hay dato real, deja blanco."""
+    s = str(v or "").strip().replace('"', '').replace("\t", " ").strip()
+    bad = {"", "no disponible", "no aplica", "sin patente", "no hay info", "no hay información", "nan", "none", "null"}
+    if norm(s) in bad:
+        return ""
+    return " ".join(s.split())
+
+def find_data_import_file(names):
+    base = BASE_DIR / "data_import"
+    if not base.exists():
+        return None
+    exact = {p.name.lower(): p for p in base.iterdir() if p.is_file()}
+    for name in names:
+        if name.lower() in exact:
+            return exact[name.lower()]
+    for p in base.iterdir():
+        lname = p.name.lower()
+        for name in names:
+            key = name.lower().replace(".tsv", "").replace(".txt", "")
+            if key and key in lname:
+                return p
+    return None
+
+def parse_tsv_file(path):
+    if not path or not Path(path).exists():
+        return []
+    lines = Path(path).read_text(encoding="utf-8", errors="ignore").splitlines()
+    start = 0
+    for i, line in enumerate(lines[:100]):
+        low = line.lower()
+        if "\t" in line and any(x in low for x in ["codigo", "código", "folio", "placa"]):
+            start = i
+            break
+    if start >= len(lines):
+        return []
+    headers = [h.strip().replace("\ufeff", "") for h in lines[start].split("\t")]
+    data = []
+    for line in lines[start+1:]:
+        if not line.strip() or "\t" not in line:
+            continue
+        parts = line.split("\t")
+        row = {h: (parts[i].strip() if i < len(parts) else "") for i, h in enumerate(headers)}
+        data.append(row)
+    return data
+
+def admin_importar_bodega_real_impl():
+    path = find_data_import_file(["bodega_real.tsv", "bodega"])
+    data = parse_tsv_file(path)
+    if not data:
+        return {"status": "ERROR", "mensaje": "No se encontró bodega_real.tsv", "archivo": str(path) if path else ""}
+
+    try:
+        if table_exists("bodega"):
+            exec_sql("DELETE FROM bodega")
+    except Exception:
+        pass
+
+    if not table_exists("bodega"):
+        pk = "INTEGER PRIMARY KEY AUTOINCREMENT" if is_sqlite() else "SERIAL PRIMARY KEY"
+        exec_sql(f"""CREATE TABLE IF NOT EXISTS bodega (
+            id {pk},
+            fecha TEXT,
+            codigo_equipo TEXT,
+            ot_numero TEXT,
+            repuesto TEXT,
+            movimiento TEXT,
+            observacion TEXT
+        )""")
+
+    n = 0
+    for r in data:
+        codigo = (r.get("Codigo") or r.get("Código") or r.get("Equipo") or "").strip().upper()
+        if not codigo:
+            continue
+        fecha_val = r.get("Fecha") or ""
+        if not date_is_from_feb_2026(fecha_val):
+            continue
+        folio = r.get("Folio") or ""
+        envio = r.get("Envio") or r.get("Envío") or ""
+        persona = r.get("Persona que retiro") or r.get("Persona que retiró") or ""
+        destino = r.get("Destino") or ""
+        comentario = r.get("Comentario") or ""
+        detalle = " | ".join([x for x in [f"Retira: {persona}" if persona else "", f"Destino: {destino}" if destino else "", comentario] if x])
+        exec_sql("""INSERT INTO bodega (fecha, codigo_equipo, ot_numero, repuesto, movimiento, observacion)
+                    VALUES (:fecha, :codigo, :folio, :repuesto, 'Salida', :obs)""",
+                 {"fecha": fecha(fecha_val), "codigo": codigo, "folio": folio, "repuesto": envio, "obs": detalle})
+        n += 1
+    return {"status": "OK", "archivo": str(path), "registros": n}
+
+def admin_actualizar_datos_equipos_impl():
+    path = find_data_import_file(["equipos_identificacion.tsv", "equipos"])
+    data = parse_tsv_file(path)
+    if not data:
+        return {"status": "ERROR", "mensaje": "No se encontró equipos_identificacion.tsv", "archivo": str(path) if path else ""}
+    if not table_exists("equipos"):
+        return {"status": "ERROR", "mensaje": "No existe tabla equipos"}
+
+    for c in ["patente", "vin", "motor"]:
+        add_col("equipos", c, "TEXT")
+
+    n = 0
+    for r in data:
+        codigo = (r.get("Código interno") or r.get("Codigo interno") or r.get("Código") or r.get("Codigo") or "").strip().upper()
+        if not codigo:
+            continue
+        patente = clean_equipo_field(r.get("Placa"))
+        vin = clean_equipo_field(r.get("N° Chasis") or r.get("N Chasis") or r.get("Chasis") or r.get("VIN"))
+        motor = clean_equipo_field(r.get("N° Motor") or r.get("N Motor") or r.get("Motor"))
+        exec_sql("""UPDATE equipos SET patente=:patente, vin=:vin, motor=:motor WHERE UPPER(codigo)=:codigo""",
+                 {"patente": patente, "vin": vin, "motor": motor, "codigo": codigo})
+        n += 1
+    return {"status": "OK", "archivo": str(path), "registros": n}
 
 
 # ============================================================
@@ -576,54 +706,6 @@ def ensure_pm_tables():
     for c in ["numero","codigo","tipo","estado","fecha_creacion","fecha_cierre","lectura","descripcion","costo_estimado","prioridad","responsable"]:
         add_col("ot", c, "TEXT")
 
-
-def ensure_config_table():
-    pk = "INTEGER PRIMARY KEY AUTOINCREMENT" if is_sqlite() else "SERIAL PRIMARY KEY"
-    if not table_exists("app_config"):
-        exec_sql(f"""CREATE TABLE app_config (
-            id {pk}, clave TEXT UNIQUE, valor TEXT, actualizado TEXT
-        )""")
-
-def get_config(clave):
-    try:
-        ensure_config_table()
-        r = one("SELECT valor FROM app_config WHERE clave=:c LIMIT 1", {"c": clave})
-        return r.get("valor") if r else ""
-    except Exception:
-        return ""
-
-def set_config(clave, valor):
-    try:
-        ensure_config_table()
-        if is_sqlite():
-            exec_sql("INSERT OR REPLACE INTO app_config (clave, valor, actualizado) VALUES (:c,:v,:a)", {"c": clave, "v": valor, "a": datetime.now().isoformat()})
-        else:
-            exec_sql("""INSERT INTO app_config (clave, valor, actualizado) VALUES (:c,:v,:a)
-                         ON CONFLICT (clave) DO UPDATE SET valor=EXCLUDED.valor, actualizado=EXCLUDED.actualizado""",
-                     {"c": clave, "v": valor, "a": datetime.now().isoformat()})
-    except Exception:
-        pass
-
-def ensure_pm_reales_auto(force=False):
-    """Reemplaza automáticamente OC y OT antiguas por los archivos reales incluidos en data_import."""
-    try:
-        compras_file = data_file("compras_pm_reales.tsv")
-        mant_file = data_file("mantenciones_reales.tsv")
-        if not compras_file or not mant_file:
-            return {"status":"SIN_ARCHIVOS", "compras":0, "mantenciones":0,
-                    "archivo_compras":str(compras_file or "NO ENCONTRADO"),
-                    "archivo_mantenciones":str(mant_file or "NO ENCONTRADO")}
-        flag = get_config("pm_reales_importados_version")
-        if (not force) and flag == APP_VERSION:
-            return {"status":"YA_IMPORTADO", "compras":count_table("compras"), "mantenciones":count_table("ot")}
-        compras = import_compras_pm_reales()
-        mantenciones = import_mantenciones_pm_reales()
-        set_config("pm_reales_importados_version", APP_VERSION)
-        return {"status":"IMPORTADO", "compras":compras, "mantenciones":mantenciones}
-    except Exception as e:
-        return {"status":"ERROR", "error":repr(e), "compras":0, "mantenciones":0}
-
-
 def import_compras_pm_reales():
     ensure_pm_tables()
     path = data_file("compras_pm_reales.tsv")
@@ -714,7 +796,6 @@ def admin_version():
 @app.route("/admin/diagnostico")
 def admin_diag():
     ensure_schema()
-    ensure_pm_reales_auto(force=False)
     return jsonify({
         "status":"OK",
         "version":APP_VERSION,
@@ -753,10 +834,37 @@ def admin_diag_pm_reales():
         "archivo_mantenciones": str(data_file("mantenciones_reales.tsv") or "NO ENCONTRADO")
     })
 
+
+@app.route("/admin/importar_bodega_real")
+def admin_importar_bodega_real():
+    return jsonify(admin_importar_bodega_real_impl())
+
+@app.route("/admin/actualizar_datos_equipos")
+def admin_actualizar_datos_equipos():
+    return jsonify(admin_actualizar_datos_equipos_impl())
+
+@app.route("/admin/importar_bodega_y_equipos_reales")
+def admin_importar_bodega_y_equipos_reales():
+    bodega = admin_importar_bodega_real_impl()
+    equipos = admin_actualizar_datos_equipos_impl()
+    return jsonify({"status": "OK", "version": APP_VERSION, "bodega": bodega, "equipos": equipos})
+
+@app.route("/compras/descargar")
+def descargar_compras_csv():
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=";")
+    writer.writerow(["Fecha", "Código Equipo", "OC", "Proveedor", "Item", "Estado", "Costo"])
+    data = rows("SELECT * FROM compras ORDER BY fecha DESC, id DESC") if table_exists("compras") else []
+    for r in data:
+        writer.writerow([fecha(r.get("fecha")), r.get("codigo_equipo",""), r.get("oc",""), r.get("proveedor",""), r.get("item",""), r.get("estado",""), clp(nfloat(r.get("costo_total")))])
+    resp = make_response(output.getvalue())
+    resp.headers["Content-Disposition"] = "attachment; filename=compras_oc_demotron.csv"
+    resp.headers["Content-Type"] = "text/csv; charset=utf-8"
+    return resp
+
 @app.route("/erp")
 def dashboard():
     ensure_schema()
-    ensure_pm_reales_auto(force=False)
     data = cmms_rows()
     k = kpis()
     total = float(k["total"] or 1)
@@ -892,7 +1000,6 @@ def lecturas_page():
 
 @app.route("/ot", methods=["GET","POST"])
 def ot_page():
-    ensure_pm_reales_auto(force=False)
     if request.method == "POST":
         try:
             exec_sql("INSERT INTO ot (numero,codigo,tipo,estado,fecha_creacion,descripcion,costo_estimado) VALUES (:numero,:codigo,:tipo,:estado,:fecha,:descripcion,:costo)", dict(request.form))
@@ -912,7 +1019,6 @@ def ot_page():
 
 @app.route("/compras", methods=["GET","POST"])
 def compras_page():
-    ensure_pm_reales_auto(force=False)
     if request.method == "POST":
         try:
             exec_sql("INSERT INTO compras (fecha,codigo_equipo,oc,proveedor,item,estado,costo_total) VALUES (:fecha,:codigo_equipo,:oc,:proveedor,:item,:estado,:costo)", dict(request.form))
@@ -926,6 +1032,7 @@ def compras_page():
     for r in data:
         table += f"<tr><td>{fecha(r.get('fecha'))}</td><td>{r.get('codigo_equipo','')}</td><td class='code'>{r.get('oc','')}</td><td>{r.get('proveedor','')}</td><td>{r.get('item','')}</td><td>{r.get('estado','')}</td><td>{clp(nfloat(r.get('costo_total')))}</td></tr>"
     table += "</table>"
+    form += "<div style='margin-top:10px'><a class='btn' href='/compras/descargar'>Descargar OC</a></div>"
     return form_page("Compras / OC", "Compras", form, table)
 
 @app.route("/bodega", methods=["GET","POST"])
@@ -1065,9 +1172,22 @@ def ot_detalle(numero):
     return page(f"OT {numero}", "OT", body)
 
 
+
+@app.route("/plan_mantencion/<codigo>")
+def plan_mantencion(codigo):
+    codigo = codigo.upper()
+    body = f"""
+    <section class='panel'>
+        <h3>Plan de Mantención DEMOTRON</h3>
+        <p>Equipo: <span class='code'>{codigo}</span></p>
+        <p>Este módulo queda preparado para cargar el plan de mantención DEMOTRON cuando subamos el archivo correspondiente.</p>
+        <a class='btn' href='/equipo/{codigo}'>Volver a Ficha del Equipo</a>
+    </section>
+    """
+    return page(f"Plan de Mantención {codigo}", "Equipos", body)
+
 @app.route("/equipo/<codigo>")
 def ficha_equipo(codigo):
-    ensure_pm_reales_auto(force=False)
     codigo = codigo.upper()
     r = find_equipo(codigo)
     if not r:
@@ -1081,7 +1201,7 @@ def ficha_equipo(codigo):
         ("Última Mantención", fecha(r.get("ultima_fecha_pm"))), ("Costo Total PM", r.get("costo_total_pm_clp","")),
     ]
 
-    body = f"<section class='panel hero'><div><img src='{img_url(r)}'><h2 class='code'>{codigo}</h2><span class='pill {sem(r)}'>{estado(r)}</span></div><div><h3>Ficha Técnica CMMS</h3><div class='specgrid'>"
+    body = f"<section class='panel hero'><div><img src='{img_url(r)}'><h2 class='code'>{codigo}</h2><span class='pill {sem(r)}'>{estado(r)}</span><div class='spec' style='margin-top:12px'><small>Patente</small><div>{clean_equipo_field(r.get('patente',''))}</div></div><div class='spec' style='margin-top:8px'><small>VIN / Chasis</small><div>{clean_equipo_field(r.get('vin',''))}</div></div><div class='spec' style='margin-top:8px'><small>Número Motor</small><div>{clean_equipo_field(r.get('motor',''))}</div></div><a class='btn' style='margin-top:12px' href='/plan_mantencion/{codigo}'>Plan de Mantención DEMOTRON</a></div><div><h3>Ficha Técnica CMMS</h3><div class='specgrid'>"
     for a,b in specs:
         body += f"<div class='spec'><small>{a}</small><div>{b}</div></div>"
     body += f"</div><p>Acción sugerida: {r.get('accion_sugerida','')}</p><p>Prioridad taller: {r.get('prioridad_taller','')}</p></div></section>"
@@ -1132,22 +1252,6 @@ def ficha_equipo(codigo):
 
     return page(f"Ficha {codigo}", "Equipos", body)
 
-
-
-@app.route("/admin/verificar_pm_reales")
-def admin_verificar_pm_reales():
-    ensure_pm_reales_auto(force=False)
-    compras_muestra = rows("SELECT fecha, oc, codigo_equipo, item, proveedor, costo_total, estado FROM compras ORDER BY id DESC LIMIT 5") if table_exists("compras") else []
-    ot_muestra = rows("SELECT numero, codigo, tipo, estado, fecha_creacion, lectura, descripcion FROM ot ORDER BY id DESC LIMIT 5") if table_exists("ot") else []
-    return jsonify({
-        "status":"OK",
-        "version":APP_VERSION,
-        "compras_total":count_table("compras"),
-        "ot_total":count_table("ot"),
-        "compras_muestra":compras_muestra,
-        "ot_muestra":ot_muestra,
-        "nota":"Si ves tipo PM2 en OT y OC DEMO-02-xxxx, la importación real está aplicada."
-    })
 
 # Compatibilidad solo para diagnóstico; no hay rutas visuales antiguas.
 @app.route("/admin/v113/version")
