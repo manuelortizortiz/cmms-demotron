@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash
 
 
-APP_VERSION = "DEMOTRON_V13_LECTURAS_PLANES_OT_PRINT"
+APP_VERSION = "DEMOTRON_V13_FINAL_REAL"
 BASE_DIR = Path(__file__).resolve().parent
 
 DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or "sqlite:///demotron_local.db"
@@ -1293,3 +1293,11 @@ def legacy_version():
 if __name__ == "__main__":
     ensure_schema()
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8080")))
+
+
+@app.route("/admin/v13/version")
+def admin_v13_version():
+    return jsonify({
+        "status":"OK",
+        "version":"DEMOTRON_V13_FINAL_REAL"
+    })
