@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from werkzeug.security import generate_password_hash
 
 
-APP_VERSION = "DEMOTRON_CLEAN_FINAL_V12_7_BODEGA_EQUIPOS_REALES"
+APP_VERSION = "DEMOTRON_V13_LECTURAS_PLANES_OT_PRINT"
 BASE_DIR = Path(__file__).resolve().parent
 
 DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or "sqlite:///demotron_local.db"
@@ -102,6 +102,28 @@ def ensure_schema():
                 {"u": "admin", "n": "Administrador", "p": generate_password_hash("admin123"), "c": datetime.now().isoformat()})
     except Exception:
         pass
+
+
+
+# ============================================================
+# PLANES DEMOTRON
+# ============================================================
+
+MAN_CODES = {
+    "CD-102","CD-103","CD-104","CD-105","CD-106","CD-107",
+    "CD-120","CD-121","CD-122","CD-123","CD-124",
+    "CD-87","CD-88","CD-89","CD-90","CD-91","CD-94"
+}
+
+MAXUS_CODES = {
+    "VD-100","VD-101","VD-125","VD-126","VD-127","VD-128",
+    "VD-129","VD-130","VD-131","VD-132","VD-133","VD-134",
+    "VD-136","VD-137","VD-138","VD-139","VD-140","VD-141",
+    "VD-57","VD-58","VD-59","VD-60","VD-62","VD-63","VD-64",
+    "VD-65","VD-67","VD-68","VD-69","VD-87","VD-88","VD-89",
+    "VD-90","VD-91","VD-92","VD-93","VD-94","VD-95","VD-96",
+    "VD-97","VD-98","VD-99","VD-142"
+}
 
 
 # ============================================================
