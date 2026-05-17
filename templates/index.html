@@ -16,7 +16,7 @@ body{ margin:0; background:var(--fondo); color:var(--texto); font-family:"Segoe 
 .topbar{ height:64px; background:#fff; border-bottom:1px solid var(--borde); display:flex; align-items:center; gap:15px; padding:0 24px; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(9,30,66,.04); }
 .logo{ font-size:24px; font-weight:950; letter-spacing:5px; color:var(--azul); margin-right:10px; }
 .menu{ display:flex; align-items:center; gap:2px; flex:1; overflow-x:auto; scrollbar-width:none; }
-.menu a{ display:flex; align-items:center; gap:6px; color:#334155; text-decoration:none; padding:23px 12px 19px; border-bottom:3px solid transparent; font-weight:600; font-size:13.5px; white-space:nowrap; cursor:pointer; }
+.menu a{ display:flex; align-items:center; color:#334155; text-decoration:none; padding:23px 14px 19px; border-bottom:3px solid transparent; font-weight:600; font-size:13.5px; white-space:nowrap; cursor:pointer; }
 .menu a.active{ color:var(--azul); border-bottom-color:var(--azul3); }
 .buscar{ width:200px; height:38px; border:1px solid var(--borde); border-radius:10px; padding:0 14px; outline:none; }
 .wrap{ padding:20px 24px }
@@ -27,16 +27,16 @@ body{ margin:0; background:var(--fondo); color:var(--texto); font-family:"Segoe 
 .kpi b{ display:block; font-size:24px; margin:2px 0; }
 .kpi small{ display:block; font-weight:900; font-size:10.5px; color:#64748b; text-transform:uppercase; }
 .kpi span{ font-size:11.5px; color:#64748b; }
-.circle{ width:46px; height:46px; border-radius:50%; display:grid; place-items:center; color:#fff; font-size:20px; font-weight:900; flex-shrink:0; }
+.circle{ width:46px; height:46px; border-radius:50%; display:grid; place-items:center; color:#fff; font-size:14px; font-weight:900; flex-shrink:0; }
 .c-red{background:var(--rojo)} .c-yellow{background:var(--amarillo)} .c-green{background:var(--verde)}
 .grid3{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:14px; margin-top:14px; }
 .panel{ background:#fff; border:1px solid var(--borde); border-radius:10px; box-shadow:var(--shadow); padding:18px; margin-bottom:14px; }
-.panel h3{ margin:0 0 12px; color:#0b1d3d; font-size:15px; text-transform:uppercase; letter-spacing:0.3px; }
+.panel h3{ margin:0 0 12px; color:#0b1d3d; font-size:14px; text-transform:uppercase; letter-spacing:0.3px; font-weight:700; }
 .canvasBox{ height:250px; position:relative; width: 100%; }
 .cards{ display:flex; gap:14px; overflow-x:auto; padding:8px 0 14px; }
 .eqcard { min-width:170px; max-width:170px; background:#fff; border:1px solid var(--borde); border-radius:9px; padding:12px; cursor:pointer; }
 .eqcard.yellow{ border-color:var(--amarillo); background-color: #fffbeb; }
-.dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:6px; background:var(--amarillo); }
+.dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; background:var(--amarillo); }
 .eqtitle { font-weight:800; color:#0f172a; }
 .img-contenedor { width: 100%; height: 85px; background: #f1f5f9; border-radius: 6px; margin-bottom: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid var(--borde); }
 .img-contenedor img { width: 100%; height: 100%; object-fit: cover; }
@@ -57,11 +57,11 @@ td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
 <header class="topbar">
   <div class="logo">DEMOTRON</div>
   <nav class="menu">
-    <a id="nav-dashboard" class="active" onclick="switchTab('dashboard')">▦ Dashboard</a>
-    <a id="nav-equipos" onclick="switchTab('equipos')">⚙ Parque Equipos</a>
-    <a id="nav-ot" onclick="switchTab('ot')">🛠 Mantenciones (OT)</a>
-    <a id="nav-compras" onclick="switchTab('compras')">🛒 Compras PM</a>
-    <a id="nav-lecturas" onclick="switchTab('lecturas')">📈 Lecturas Terreno</a>
+    <a id="nav-dashboard" class="active" onclick="switchTab('dashboard')">Dashboard</a>
+    <a id="nav-equipos" onclick="switchTab('equipos')">Parque Equipos</a>
+    <a id="nav-ot" onclick="switchTab('ot')">Mantenciones (OT)</a>
+    <a id="nav-compras" onclick="switchTab('compras')">Compras PM</a>
+    <a id="nav-lecturas" onclick="switchTab('lecturas')">Lecturas Terreno</a>
   </nav>
   <input class="buscar" list="listaEquipos" placeholder="Buscar unidad..." onchange="irAFichaEquipo(this.value)">
   <datalist id="listaEquipos">
@@ -77,10 +77,10 @@ td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
     <div id="mod-dashboard" class="seccion-modulo active">
       <section class="kpis">
         <div class="kpi"><div class="circle c-red">!</div><div><small>AVERÍAS CRÍTICAS</small><b>{{ kpis.atrasados }}</b><span>Bajas operativas</span></div></div>
-        <div class="kpi"><div class="circle c-yellow">◷</div><div><small>PRÓXIMOS MANTENIMIENTOS</small><b>{{ kpis.proximos }}</b><span>Menos de 50 hrs/km</span></div></div>
-        <div class="kpi" style="background: linear-gradient(135deg, var(--azul3), #3b82f6); color:white;"><div class="circle" style="background:rgba(255,255,255,0.2)">🛠</div><div><small style="color:white">OT ABIERTAS</small><b style="color:white">{{ kpis.ot_abiertas }}</b><span>En proceso</span></div></div>
-        <div class="kpi"><div class="circle c-green">✓</div><div><small>DISPONIBILIDAD REAL</small><b>{{ kpis.controlado_pct }}%</b><span>{{ kpis.controlados }} en marcha</span></div></div>
-        <div class="kpi"><div class="circle" style="background:var(--morado)">$</div><div><small>COSTO TOTAL PM</small><b style="font-size:16px;">{{ kpis.costo_mes_str }}</b><span>Acumulado OC</span></div></div>
+        <div class="kpi"><div class="circle c-yellow">PM</div><div><small>PRÓXIMOS MANTENIMIENTOS</small><b>{{ kpis.proximos }}</b><span>Menos de 50 hrs/km</span></div></div>
+        <div class="kpi" style="background: linear-gradient(135deg, var(--azul3), #3b82f6); color:white;"><div class="circle" style="background:rgba(255,255,255,0.2)">OT</div><div><small style="color:white">OT ABIERTAS</small><b style="color:white">{{ kpis.ot_abiertas }}</b><span>En proceso</span></div></div>
+        <div class="kpi"><div class="circle c-green">OK</div><div><small>DISPONIBILIDAD REAL</small><b>{{ kpis.controlado_pct }}%</b><span>{{ kpis.controlados }} en marcha</span></div></div>
+        <div class="kpi"><div class="circle" style="background:var(--morado); color:white;">$</div><div><small>COSTO TOTAL PM</small><b style="font-size:16px;">{{ kpis.costo_mes_str }}</b><span>Acumulado OC</span></div></div>
       </section>
 
       <section class="grid3">
@@ -89,7 +89,7 @@ td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
         <div class="panel"><h3>COMPRAS Y GESTIÓN</h3><div class="canvasBox"><canvas id="gestion"></canvas></div></div>
       </section>
 
-      <h3 style="margin-top:20px;">EQUIPOS ACTUALMENTE EN TALLER ({{ taller|length }})</h3>
+      <h3 style="margin-top:20px; font-size:15px; color:var(--azul);">EQUIPOS ACTUALMENTE EN TALLER ({{ taller|length }})</h3>
       <div class="cards">
         {% for e in taller %}
         <div class="eqcard yellow" onclick="irAFichaEquipo('{{ e.codigo }}')">
@@ -105,8 +105,34 @@ td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
           <div style="font-size:11px; font-weight:bold; margin-top:4px;">📍 {{ e.ubicacion }}</div>
         </div>
         {% else %}
-        <div style="padding:15px; color:#64748b;">No hay maquinarias reportadas en taller hoy.</div>
+        <div style="padding:15px; color:#64748b; font-size:13px;">No hay maquinarias reportadas en taller hoy.</div>
         {% endfor %}
+      </div>
+
+      <div class="panel" style="margin-top:25px;">
+        <h3>EQUIPOS CON AVERÍAS (CRÍTICOS / FUERA DE SERVICIO)</h3>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr><th>Equipo</th><th>Descripción</th><th>Ubicación Actual</th><th>Responsable</th><th>Control Base</th><th>Lectura Actual</th><th>Próxima PM</th><th>Estado Maestro</th><th>Acción</th></tr>
+            </thead>
+            <tbody>
+              {% for e in criticos %}
+              <tr>
+                <td class="code">{{ e.codigo }}</td>
+                <td><b>{{ e.tipo_equipo }}</b> {{ e.marca }} {{ e.modelo }}</td>
+                <td>📍 {{ e.ubicacion }}</td>
+                <td>👤 {{ e.responsable }}</td>
+                <td><span class="pill" style="background:#edf2f7; color:#4a5568;">{{ e.control_base }}</span></td>
+                <td style="font-weight: bold;">{{ e.lectura_actual_str }}</td>
+                <td>{{ e.proxima_pm_str }}</td>
+                <td><span class="pill red">{{ e.estado_base }}</span></td>
+                <td><button class="btn" style="background:var(--rojo);" onclick="irAFichaEquipo('{{ e.codigo }}')">Ver Ficha</button></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
