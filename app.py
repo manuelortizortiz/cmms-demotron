@@ -18,7 +18,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # ==========================================
-# FUNCIONES DE LIMPIEZA Y ESCANER RECURSIVO
+# FUNCIONES MATRICIALES DE FORMATO Y BLINDAJE
 # ==========================================
 def clean_int(val, default=0):
     if val is None or pd.isna(val):
@@ -36,11 +36,23 @@ def clean_float(val, default=0.0):
     except ValueError:
         return default
 
+def format_num(val):
+    if val is None or pd.isna(val):
+        return "0"
+    try:
+        return f"{int(val):,}".replace(",", ".")
+    except:
+        return "0"
+
+def format_clp(val):
+    if val is None or pd.isna(val):
+        return "$ 0"
+    try:
+        return f"$ {int(val):,}".replace(",", ".")
+    except:
+        return "$ 0"
+
 def buscar_foto_global(codigo):
-    """
-    Escanea dinámicamente static/equipos_real recorriendo cualquier subcarpeta
-    (barredora, camion aljibe, excavadora, camiones de ruta, etc.)
-    """
     if not codigo:
         return None
     base_dir = os.path.join(app.root_path, 'static', 'equipos_real')
@@ -151,16 +163,16 @@ def dashboard():
         eq_data = {
             'codigo': e.codigo, 'tipo_equipo': e.tipo_equipo, 'marca': e.marca, 'modelo': e.modelo,
             'ubicacion': e.ubicacion or 'Sin Ubicación', 'responsable': e.responsable or 'No Asignado',
-            'control_base': e.control_base, 'lectura_actual': e.lectura_actual, 'proxima_pm': e.proxima_pm,
-            'margen': e.margen, 'estado_base': e.estado_base, 'semaforo': e.semaforo, 'foto_url': foto_url
+            'control_base': e.control_base, 'lectura_actual': e.lectura_actual, 
+            'lectura_actual_str': format_num(e.lectura_actual),
+            'proxima_pm': e.proxima_pm, 'proxima_pm_str': format_num(e.proxima_pm),
+            'margen': e.margen, 'margen_str': format_num(e.margen),
+            'estado_base': e.estado_base, 'semaforo': e.semaforo, 'foto_url': foto_url
         }
         equipos.append(eq_data)
         
         status_limpio = 'Fuera de Servicio' if e.estado_base in ['Fuera de Servicio', 'No operativo'] else e.estado_base
-        if status_limpio in conteo_estado:
-            conteo_estado[status_limpio] += 1
-        else:
-            conteo_estado[status_limpio] = 1
+        conteo_estado[status_limpio] = conteo_estado.get(status_limpio, 0) + 1
         
         if e.ubicacion:
             conteo_ubicacion[e.ubicacion] = conteo_ubicacion.get(e.ubicacion, 0) + 1
@@ -177,19 +189,16 @@ def dashboard():
         if e.estado_base == 'Operativo':
             operativos_count += 1
 
-    # Solicitud técnica: Ocultar obras con 5 o menos equipos
     conteo_ubicacion_filtrado = {k: v for k, v in conteo_ubicacion.items() if v > 5}
     ot_abiertas = OrdenTrabajo.query.filter_by(estado='Abierta').count()
     costo_compras = db.session.query(db.func.sum(CompraRepuesto.costo_pm_clp)).scalar() or 0.0
-
-    # SOLUCIÓN AL ERROR 500: Se define la variable antes de inyectarla al diccionario de KPIs
     total_equipos = len(equipos_db)
 
     kpis = {
         'atrasados': len(criticos), 'total': total_equipos, 'proximos': proximos_count,
         'ot_abiertas': ot_abiertas, 'controlados': operativos_count, 'operativos': total_equipos,
         'controlado_pct': round((operativos_count / total_equipos * 100)) if total_equipos > 0 else 0,
-        'costo_mes': int(costo_compras)
+        'costo_mes': int(costo_compras), 'costo_mes_str': format_clp(costo_compras)
     }
     
     charts = {
@@ -197,22 +206,22 @@ def dashboard():
         'gestion': {'Ene': [25, 18], 'Feb': [32, 24], 'Mar': [41, 38], 'Abr': [ot_abiertas, 15]}
     }
 
-    # Desglose de tablas históricas de Excel saneadas
+    # Desglose pre-formateado para evitar inyecciones complejas en Jinja
     todas_mantenciones = [{
         'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'codigo': m.codigo_equipo,
-        'tipo': m.tipo_mantencion, 'lectura': m.lectura, 'es_pm': m.es_pm, 'folio': m.folio,
-        'lugar': m.lugar, 'proveedor': m.proveedor, 'costo': m.costo_mantencion_clp, 'estado': m.estado
+        'tipo': m.tipo_mantencion, 'lectura_str': format_num(m.lectura), 'es_pm': m.es_pm, 'folio': m.folio,
+        'lugar': m.lugar, 'proveedor': m.proveedor, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado
     } for m in mantenciones_db]
 
     todas_compras = [{
         'fecha': c.fecha.strftime('%d/%m/%Y') if c.fecha else 'S/F', 'oc': c.oc, 'codigo': c.codigo_equipo,
-        'descripcion': c.descripcion, 'proveedor': c.proveedor, 'costo': c.costo_pm_clp, 'estado': c.estado_oc
+        'descripcion': c.descripcion, 'proveedor': c.proveedor, 'costo_str': format_clp(c.costo_pm_clp), 'estado': c.estado_oc
     } for c in compras_db]
 
     todas_lecturas = [{
         'fecha': l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else 'S/F', 'codigo': l.codigo_equipo,
-        'valor': l.horometro if l.horometro > 0 else l.kilometraje, 'tipo': 'HORAS' if l.horometro > 0 else 'KM',
-        'ubicacion': l.obra_ubicacion, 'responsable': l.responsable, 'obs': l.observacion
+        'valor_str': format_num(l.horometro if l.horometro > 0 else l.kilometraje),
+        'tipo': 'HORAS' if l.horometro > 0 else 'KM', 'ubicacion': l.obra_ubicacion, 'responsable': l.responsable, 'obs': l.observacion
     } for l in lecturas_db]
 
     return render_template('index.html', kpis=kpis, charts=json.dumps(charts), equipos=equipos, 
@@ -220,7 +229,7 @@ def dashboard():
                            compras=todas_compras, lecturas=todas_lecturas, rol="Admin")
 
 # ==========================================
-# VISTA DE LA FICHA TÉCNICA DINÁMICA
+# VISTA DE LA FICHA TÉCNICA SIN ERROR 500
 # ==========================================
 
 @app.route('/equipo/<codigo>', methods=['GET', 'POST'])
@@ -239,26 +248,35 @@ def ficha_equipo(codigo):
 
     mantenciones = [{
         'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'folio': m.folio or 'S/F',
-        'tipo_mantencion': m.tipo_mantencion, 'lectura': m.lectura, 'lugar': m.lugar, 'costo': m.costo_mantencion_clp, 'estado': m.estado
+        'tipo_mantencion': m.tipo_mantencion, 'lectura_str': format_num(m.lectura), 'lugar': m.lugar, 
+        'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado
     } for m in mantenciones_db]
 
     lecturas = [{
         'fecha': l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else 'S/F',
-        'valor': l.horometro if equipo.control_base == 'HORAS' else l.kilometraje,
+        'valor_str': format_num(l.horometro if equipo.control_base == 'HORAS' else l.kilometraje),
         'obra_ubicacion': l.obra_ubicacion, 'responsable': l.responsable
     } for l in lecturas_db]
 
     compras = [{
         'fecha': c.fecha.strftime('%d/%m/%Y') if c.fecha else 'S/F', 'oc': c.oc,
-        'descripcion': c.descripcion, 'proveedor': c.proveedor, 'costo': c.costo_pm_clp
+        'descripcion': c.descripcion, 'proveedor': c.proveedor, 'costo_str': format_clp(c.costo_pm_clp)
     } for c in compras_db]
 
     foto_url = buscar_foto_global(equipo.codigo)
 
-    return render_template('ficha_equipo.html', equipo=equipo, mantenciones=mantenciones, lecturas=lecturas, compras=compras, foto_url=foto_url)
+    # Serialización limpia de campos calculados maestros
+    eq_master = {
+        'codigo': equipo.codigo, 'tipo_equipo': equipo.tipo_equipo, 'marca': equipo.marca, 'modelo': equipo.modelo,
+        'ubicacion': equipo.ubicacion, 'proxima_pm': equipo.proxima_pm, 'estado_base': equipo.estado_base,
+        'control_base': equipo.control_base, 'lectura_actual_str': format_num(equipo.lectura_actual),
+        'margen_str': format_num(equipo.margen), 'margen': equipo.margen
+    }
+
+    return render_template('ficha_equipo.html', equipo=eq_master, mantenciones=mantenciones, lecturas=lecturas, compras=compras, foto_url=foto_url)
 
 # ==========================================
-# INYECTOR SEGURO DEL LIBRO DE EXCEL
+# INYECTOR COMPLETO SEGURO DESDE EL EXCEL
 # ==========================================
 
 @app.route('/admin/cargar_sql_final')
@@ -329,7 +347,7 @@ def cargar_sql_final():
             db.session.add(comp)
             db.session.commit()
 
-        # CONSOLIDACIÓN ESTADÍSTICA
+        # CONSOLIDACIÓN TÉCNICA
         for eq in Equipo.query.all():
             ultima_lectura = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if ultima_lectura: eq.lectura_actual = ultima_lectura.horometro if eq.control_base == 'HORAS' else ultima_lectura.kilometraje
