@@ -3,245 +3,72 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DEMOTRON ERP CMMS - Dashboard Industrial</title>
+<title>DEMOTRON ERP CMMS - Control Industrial</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 :root{
-  --azul:#082b5f;
-  --azul2:#0c3f86;
-  --azul3:#1261d6;
-  --fondo:#f4f6fa;
-  --borde:#e6ebf2;
-  --texto:#12203a;
-  --rojo:#ef3f45;
-  --amarillo:#f7b500;
-  --verde:#35b96b;
-  --morado:#7449d4;
-  --teal:#07939a;
+  --azul:#082b5f; --azul2:#0c3f86; --azul3:#1261d6; --fondo:#f4f6fa; --borde:#e6ebf2;
+  --texto:#12203a; --rojo:#ef3f45; --amarillo:#f7b500; --verde:#35b96b; --morado:#7449d4; --teal:#07939a;
   --shadow:0 6px 18px rgba(9,30,66,.08);
 }
 *{box-sizing:border-box}
-body{
-  margin:0;
-  background:var(--fondo);
-  color:var(--texto);
-  font-family:"Segoe UI",Inter,Arial,sans-serif;
-}
-.topbar{
-  height:64px;
-  background:#fff;
-  border-bottom:1px solid var(--borde);
-  display:flex;
-  align-items:center;
-  gap:15px;
-  padding:0 24px;
-  position:sticky;
-  top:0;
-  z-index:100;
-  box-shadow:0 2px 8px rgba(9,30,66,.04);
-  flex-wrap: wrap;
-}
-.logo{
-  font-size:24px;
-  font-weight:950;
-  letter-spacing:5px;
-  color:var(--azul);
-  line-height:1;
-  margin-right:10px;
-}
-.menu{
-  display:flex;
-  align-items:center;
-  gap:2px;
-  flex:1;
-  overflow-x:auto;
-  scrollbar-width:none;
-}
-.menu a{
-  display:flex;
-  align-items:center;
-  gap:7px;
-  color:#334155;
-  text-decoration:none;
-  padding:23px 13px 19px;
-  border-bottom:3px solid transparent;
-  font-weight:600;
-  font-size:14px;
-  white-space:nowrap;
-  cursor: pointer;
-}
-.menu a.active{color:var(--azul); border-bottom-color:var(--azul3);}
-.buscar{
-  width:220px;
-  height:38px;
-  border:1px solid var(--borde);
-  border-radius:10px;
-  padding:0 14px;
-  outline:none;
-  font-family: inherit;
-}
-.badge-sync{
-  background:#e0f2fe;
-  color:#0369a1;
-  font-weight:700;
-  font-size:11px;
-  border-radius:999px;
-  padding:6px 10px;
-  white-space:nowrap;
-  transition: opacity 0.3s;
-}
-.user{font-size:14px; color:#334155; white-space:nowrap;}
-.user a{color:var(--azul);font-weight:700;text-decoration:none}
-.wrap{padding:20px 24px 20px}
-
-/* Control de visibilidad de módulos */
+body{ margin:0; background:var(--fondo); color:var(--texto); font-family:"Segoe UI",sans-serif; }
+.topbar{ height:64px; background:#fff; border-bottom:1px solid var(--borde); display:flex; align-items:center; gap:15px; padding:0 24px; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(9,30,66,.04); }
+.logo{ font-size:24px; font-weight:950; letter-spacing:5px; color:var(--azul); margin-right:10px; }
+.menu{ display:flex; align-items:center; gap:2px; flex:1; overflow-x:auto; scrollbar-width:none; }
+.menu a{ display:flex; align-items:center; gap:6px; color:#334155; text-decoration:none; padding:23px 12px 19px; border-bottom:3px solid transparent; font-weight:600; font-size:13.5px; white-space:nowrap; cursor:pointer; }
+.menu a.active{ color:var(--azul); border-bottom-color:var(--azul3); }
+.buscar{ width:200px; height:38px; border:1px solid var(--borde); border-radius:10px; padding:0 14px; outline:none; }
+.wrap{ padding:20px 24px }
 .seccion-modulo { display: none; }
 .seccion-modulo.active { display: block; }
-
-.kpis{
-  display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
-  gap:14px;
-}
-.kpi{
-  background:#fff;
-  border:1px solid #edf1f7;
-  box-shadow:var(--shadow);
-  border-radius:10px;
-  padding:18px;
-  display:flex;
-  align-items:center;
-  gap:15px;
-  min-height:110px;
-  position: relative;
-  overflow: hidden;
-}
-.kpi.color-filled.blue { background: linear-gradient(135deg, var(--azul3), #3b82f6); color: white; border: none; }
-.kpi.color-filled.blue small, .kpi.color-filled.blue b, .kpi.color-filled.blue span { color: white; }
-.kpi.color-filled.yellow { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: white; border: none; }
-.kpi.color-filled.yellow small, .kpi.color-filled.yellow b, .kpi.color-filled.yellow span { color: white; }
-
-.circle{
-  width:50px; height:50px;
-  border-radius:50%;
-  display:grid; place-items:center;
-  color:#fff; font-size:22px; font-weight:900;
-  flex-shrink:0;
-  box-shadow:inset 0 -3px 6px rgba(0,0,0,.12);
-}
-.c-red{background:var(--rojo)}
-.c-yellow{background:var(--amarillo)}
-.c-green{background:var(--verde)}
-.c-blue{background:var(--azul3)}
-.c-white{background:rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);}
-
-.kpi small{display:block; letter-spacing:.6px; font-weight:900; font-size:11px; text-transform: uppercase;}
-.kpi b{display:block; font-size:26px; margin:2px 0; white-space: nowrap;}
-.kpi span{font-size:12px; display: block; line-height: 1.1; opacity: 0.8;}
-
-.kpi-costo {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 5px;
-  padding: 12px 18px;
-}
-.mini-chart-container {
-  width: 100%;
-  height: 50px;
-  margin-top: 5px;
-}
-
-.grid3{
-  display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));
-  gap:14px;
-  margin-top:14px;
-}
-.panel{
-  background:#fff;
-  border:1px solid var(--borde);
-  border-radius:10px;
-  box-shadow:var(--shadow);
-  padding:18px;
-  overflow:hidden;
-  margin-bottom: 14px;
-}
-.panel h3{margin:0 0 14px; color:#0b1d3d; font-size:16px; letter-spacing:.2px;}
-.canvasBox{height:280px; position:relative; width: 100%;}
-
-.split{
-  display:grid; grid-template-columns:2fr 1fr; gap:14px; margin-top:14px;
-}
-.tablewrap{overflow-x:auto; -webkit-overflow-scrolling: touch; width: 100%;}
-table{width:100%; min-width: 600px; border-collapse:collapse; font-size:13.5px;}
-th{text-align:left; padding:10px; border-bottom:1px solid var(--borde); font-size:12px; color:#334155; white-space:nowrap;}
-td{padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle;}
-.code{color:var(--azul); font-weight:950;}
-.pill{border-radius:999px; padding:6px 11px; font-weight:900; font-size:11px; display:inline-block;}
-.pill.red{background:#ffe1e3;color:#dc2626}
-.pill.yellow{background:#fff4cc;color:#a16207}
-.pill.green{background:#dcfce7;color:#15803d}
-
-.btn{border:0; border-radius:7px; padding:8px 13px; background:var(--azul); color:#fff; font-weight:900; cursor:pointer; white-space: nowrap;}
-.btn.red{background:var(--rojo)}
-
-.cardsHeader{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
-.cards{display:flex; gap:14px; overflow-x:auto; padding:8px 0 14px; scroll-snap-type:x mandatory;}
-.cards::-webkit-scrollbar{height:9px}
-.cards::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:999px}
-.eqcard{
-  min-width:180px; max-width:180px;
-  background:#fff; border:1px solid var(--borde); border-radius:9px; padding:13px;
-  scroll-snap-align:start; transition:.2s ease; cursor:pointer;
-}
-.eqcard.yellow{border-color:var(--amarillo); background-color: #fffbeb;}
-.eqcard:hover{transform:translateY(-2px); box-shadow:var(--shadow)}
-.dot{width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:7px;}
-.dot.yellow{background:var(--amarillo)}
-.eqtitle{font-weight:950; color:#0f172a; display:inline-block;}
-
-/* Estilos de Formularios de control */
-.form-group { margin-bottom: 12px; }
-.form-group label { display:block; font-size:12px; font-weight:700; margin-bottom:4px; color:#334155; }
-.form-control { width:100%; height:38px; border:1px solid var(--borde); border-radius:6px; padding:0 10px; font-family:inherit; }
-textarea.form-control { height: 80px; padding: 10px; resize: none; }
-
-@media(max-width:992px){
-  .split { grid-template-columns:1fr; }
-}
-@media(max-width:768px){
-  .topbar { padding: 10px 15px; height: auto; justify-content: space-between; }
-  .menu { display: none; width: 100%; flex-direction: column; padding-bottom: 10px; }
-  .menu.active-mobile { display: flex; }
-  .buscar { display: none; }
-  .wrap { padding:15px 12px; }
-  .btn-mobile-menu { display: block; background: none; border: none; font-size: 24px; color: var(--azul); cursor: pointer; }
-}
-@media(min-width:769px){ .btn-mobile-menu { display: none; } }
+.kpis{ display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; }
+.kpi{ background:#fff; border:1px solid #edf1f7; box-shadow:var(--shadow); border-radius:10px; padding:16px; display:flex; align-items:center; gap:12px; min-height:100px; }
+.kpi b{ display:block; font-size:24px; margin:2px 0; }
+.kpi small{ display:block; font-weight:900; font-size:10.5px; color:#64748b; text-transform:uppercase; }
+.kpi span{ font-size:11.5px; color:#64748b; }
+.circle{ width:46px; height:46px; border-radius:50%; display:grid; place-items:center; color:#fff; font-size:20px; font-weight:900; flex-shrink:0; }
+.c-red{background:var(--rojo)} .c-yellow{background:var(--amarillo)} .c-green{background:var(--verde)}
+.grid3{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:14px; margin-top:14px; }
+.panel{ background:#fff; border:1px solid var(--borde); border-radius:10px; box-shadow:var(--shadow); padding:18px; margin-bottom:14px; }
+.panel h3{ margin:0 0 12px; color:#0b1d3d; font-size:15px; text-transform:uppercase; letter-spacing:0.3px; }
+.canvasBox{ height:250px; position:relative; width: 100%; }
+.cards{ display:flex; gap:14px; overflow-x:auto; padding:8px 0 14px; }
+.eqcard { min-width:170px; max-width:170px; background:#fff; border:1px solid var(--borde); border-radius:9px; padding:12px; cursor:pointer; }
+.eqcard.yellow{ border-color:var(--amarillo); background-color: #fffbeb; }
+.dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:6px; background:var(--amarillo); }
+.eqtitle { font-weight:800; color:#0f172a; }
+.img-contenedor { width: 100%; height: 85px; background: #f1f5f9; border-radius: 6px; margin-bottom: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid var(--borde); }
+.img-contenedor img { width: 100%; height: 100%; object-fit: cover; }
+.tablewrap { overflow-x:auto; width: 100%; margin-top: 10px; }
+table { width:100%; min-width: 800px; border-collapse:collapse; font-size:13px; }
+th { text-align:left; padding:10px; border-bottom:2px solid var(--borde); color:#475569; font-size:11px; text-transform:uppercase; }
+td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
+.code { color:var(--azul); font-weight:700; }
+.pill { border-radius:999px; padding:3px 9px; font-weight:900; font-size:10.5px; display:inline-block; }
+.pill.red { background:#ffe1e3; color:#dc2626 }
+.pill.yellow { background:#fff4cc; color:#a16207 }
+.pill.green { background:#dcfce7; color:#15803d }
+.btn { border:0; border-radius:6px; padding:6px 12px; background:var(--azul); color:#fff; font-weight:700; cursor:pointer; font-size:12.5px; }
 </style>
 </head>
 <body>
-<header class="topbar">
-  <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-    <div class="logo">DEMOTRON</div>
-    <button class="btn-mobile-menu" onclick="toggleMenu()">☰</button>
-  </div>
-    
-  <nav class="menu" id="mobileMenu">
-    <a id="nav-dashboard" class="active" onclick="switchTab('dashboard')">▦ Dashboard</a>
-    <a id="nav-equipos" onclick="switchTab('equipos')">⚙ Equipos</a>
-    <a id="nav-ot" onclick="switchTab('ot')">🛠 OT</a>
-  </nav>
 
-  <input class="buscar" list="listaEquipos" id="buscarInput" placeholder="Buscar unidad (Ej: AB-CD)..." onchange="irAFichaEquipo(this.value)">
+<header class="topbar">
+  <div class="logo">DEMOTRON</div>
+  <nav class="menu">
+    <a id="nav-dashboard" class="active" onclick="switchTab('dashboard')">▦ Dashboard</a>
+    <a id="nav-equipos" onclick="switchTab('equipos')">⚙ Parque Equipos</a>
+    <a id="nav-ot" onclick="switchTab('ot')">🛠 Mantenciones (OT)</a>
+    <a id="nav-compras" onclick="switchTab('compras')">🛒 Compras PM</a>
+    <a id="nav-lecturas" onclick="switchTab('lecturas')">📈 Lecturas Terreno</a>
+  </nav>
+  <input class="buscar" list="listaEquipos" placeholder="Buscar unidad..." onchange="irAFichaEquipo(this.value)">
   <datalist id="listaEquipos">
     {% for e in equipos %}
-      <option value="{{ e.codigo }}">{{ e.descripcion or e.marca ~ ' ' ~ e.modelo }}</option>
+      <option value="{{ e.codigo }}">{{ e.tipo_equipo }} - {{ e.marca }}</option>
     {% endfor %}
   </datalist>
-
-  <div class="badge-sync" id="syncIndicator">✓ Sincronizado</div>
-  <div class="user">👤 Admin · <a href="/logout">Salir</a></div>
 </header>
 
 <main class="wrap">
@@ -249,107 +76,67 @@ textarea.form-control { height: 80px; padding: 10px; resize: none; }
     
     <div id="mod-dashboard" class="seccion-modulo active">
       <section class="kpis">
-        <div class="kpi"><div class="circle c-red">!</div><div><small style="color:#2f3b52;">AVERÍAS CRÍTICAS</small><b style="color:#0f172a;">{{ kpis.atrasados }}</b><span style="color:#64748b;">{{ kpis.total }} equipos total</span></div></div>
-        <div class="kpi color-filled yellow"><div class="circle c-white">◷</div><div><small>PRÓXIMOS MANTENIMIENTOS</small><b>{{ kpis.proximos }}</b><span>Servicios por vencer</span></div></div>
-        <div class="kpi color-filled blue"><div class="circle c-white">🛠</div><div><small>OT ABIERTAS</small><b>{{ kpis.ot_abiertas }}</b><span>En proceso</span></div></div>
-        <div class="kpi"><div class="circle c-green">✓</div><div><small style="color:#2f3b52;">CONTROLADO REAL</small><b style="color:#0f172a;">{{ kpis.controlado_pct }}%</b><span style="color:#64748b;">{{ kpis.controlados }} / {{ kpis.operativos }}</span></div></div>
-        
-        <div class="kpi kpi-costo">
-          <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-            <small style="color:#2f3b52;">COSTO POR MANTENCIÓN</small>
-          </div>
-          <b style="color:#0f172a;">$ {{ "{:,.0f}".format(kpis.costo_mes or 0).replace(',', '.') }}</b>
-          <div class="mini-chart-container">
-            <canvas id="chartCostoMeses"></canvas>
-          </div>
-        </div>
+        <div class="kpi"><div class="circle c-red">!</div><div><small>AVERÍAS CRÍTICAS</small><b>{{ kpis.atrasados }}</b><span>Bajas operativas</span></div></div>
+        <div class="kpi"><div class="circle c-yellow">◷</div><div><small>PRÓXIMOS MANTENIMIENTOS</small><b>{{ kpis.proximos }}</b><span>Menos de 50 hrs/km</span></div></div>
+        <div class="kpi" style="background: linear-gradient(135deg, var(--azul3), #3b82f6); color:white;"><div class="circle" style="background:rgba(255,255,255,0.2)">🛠</div><div><small style="color:white">OT ABIERTAS</small><b style="color:white">{{ kpis.ot_abiertas }}</b><span>En proceso</span></div></div>
+        <div class="kpi"><div class="circle c-green">✓</div><div><small>DISPONIBILIDAD REAL</small><b>{{ kpis.controlado_pct }}%</b><span>{{ kpis.controlados }} en marcha</span></div></div>
+        <div class="kpi"><div class="circle" style="background:var(--morado)">$</div><div><small>COSTO TOTAL PM</small><b style="font-size:16px;">$ {{ "{:,.0f}".format(kpis.costo_mes).replace(',', '.') }}</b><span>Acumulado OC</span></div></div>
       </section>
 
       <section class="grid3">
-        <div class="panel"><h3>ESTADO GENERAL DE LA FLOTA</h3><div class="canvasBox"><canvas id="donut"></canvas></div></div>
-        <div class="panel"><h3>UBICACIÓN DE EQUIPOS</h3><div class="canvasBox"><canvas id="ubic"></canvas></div></div>
-        <div class="panel"><h3>GESTIÓN (OT Y COMPRAS)</h3><div class="canvasBox"><canvas id="gestion"></canvas></div></div>
+        <div class="panel"><h3>ESTADO OPERACIONAL FLOTA</h3><div class="canvasBox"><canvas id="donut"></canvas></div></div>
+        <div class="panel"><h3>UBICACIÓN DE EQUIPOS (> 5)</h3><div class="canvasBox"><canvas id="ubic"></canvas></div></div>
+        <div class="panel"><h3>COMPRAS Y GESTIÓN</h3><div class="canvasBox"><canvas id="gestion"></canvas></div></div>
       </section>
 
-      <div class="cardsHeader" style="margin-top: 20px;">
-        <h3>EQUIPOS ACTUALMENTE EN TALLER</h3>
-      </div>
+      <h3 style="margin-top:20px;">EQUIPOS ACTUALMENTE EN TALLER ({{ taller|length }})</h3>
       <div class="cards">
         {% for e in taller %}
         <div class="eqcard yellow" onclick="irAFichaEquipo('{{ e.codigo }}')">
-          <span class="dot yellow"></span><div class="eqtitle">{{ e.codigo }}</div>
-          <div style="font-size:12px; color:#334155; margin-top:5px; height: 35px; overflow: hidden;">{{ e.descripcion }}</div>
-          <div style="font-size:11px; font-weight:bold; margin-top:5px;">📍 {{ e.ubicacion }}</div>
+          <div class="img-contenedor">
+            {% if e.foto_url %}
+              <img src="{{ e.foto_url }}" alt="{{ e.codigo }}">
+            {% else %}
+              <span style="font-size:24px; color:#94a3b8;">🚜</span>
+            {% endif %}
+          </div>
+          <span class="dot"></span><span class="eqtitle">{{ e.codigo }}</span>
+          <div style="font-size:11.5px; color:#475569; margin-top:3px; height:32px; overflow:hidden;">{{ e.tipo_equipo }}</div>
+          <div style="font-size:11px; font-weight:bold; margin-top:4px;">📍 {{ e.ubicacion }}</div>
         </div>
         {% else %}
-        <div style="padding: 20px; color: #64748b; font-size: 14px;">No hay equipos en taller en este momento.</div>
+        <div style="padding:15px; color:#64748b;">No hay maquinarias reportadas en taller hoy.</div>
         {% endfor %}
       </div>
-
-      <section class="split">
-        <div class="panel" style="grid-column: span 2;">
-          <h3>EQUIPOS CON AVERÍAS (CRÍTICOS)</h3>
-          <div class="tablewrap">
-          <table>
-            <thead><tr><th>Equipo</th><th>Descripción</th><th>Ubicación</th><th>Última Lectura</th><th>Próxima PM</th><th>Estado</th><th>Acción</th></tr></thead>
-            <tbody>
-            {% for e in criticos %}
-              <tr>
-                <td class="code">{{ e.codigo }}</td>
-                <td>{{ e.descripcion }}</td>
-                <td>{{ e.ubicacion }}</td>
-                <td>{{ "{:,.0f}".format(e.lectura_actual or 0).replace(',', '.') }}</td>
-                <td>{{ "{:,.0f}".format(e.proxima_pm or 0).replace(',', '.') }}</td>
-                <td><span class="pill red">AVERÍA</span></td>
-                <td><button class="btn red" onclick="irAFichaEquipo('{{ e.codigo }}')">Ver Ficha</button></td>
-              </tr>
-            {% endfor %}
-            </tbody>
-          </table>
-          </div>
-        </div>
-      </section>
     </div>
 
     <div id="mod-equipos" class="seccion-modulo">
       <div class="panel">
-        <h3>INVENTARIO GENERAL DE MAQUINARIA (PARQUE COMPLETO)</h3>
+        <h3>MAESTRO GENERAL DE EQUIPOS REGISTRADOS (244)</h3>
         <div class="tablewrap">
           <table>
             <thead>
-              <tr>
-                <th>Código Único</th>
-                <th>Marca / Modelo</th>
-                <th>Descripción Operativa</th>
-                <th>Ubicación</th>
-                <th>Horómetro / Km Actual</th>
-                <th>Próximo Servicio PM</th>
-                <th>Estado Operativo</th>
-                <th>Acción</th>
-              </tr>
+              <tr><th>Código</th><th>Tipo Equipo</th><th>Marca / Modelo</th><th>Ubicación</th><th>Responsable</th><th>Control</th><th>Lectura</th><th>Próximo PM</th><th>Margen</th><th>Estado</th><th>Ficha</th></tr>
             </thead>
             <tbody>
               {% for e in equipos %}
               <tr>
                 <td class="code">{{ e.codigo }}</td>
+                <td><b>{{ e.tipo_equipo }}</b></td>
                 <td>{{ e.marca }} {{ e.modelo }}</td>
-                <td>{{ e.descripcion }}</td>
                 <td>📍 {{ e.ubicacion }}</td>
-                <td>{{ "{:,.0f}".format(e.lectura_actual or 0).replace(',', '.') }}</td>
-                <td>{{ "{:,.0f}".format(e.proxima_pm or 0).replace(',', '.') }}</td>
+                <td>{{ e.responsable }}</td>
+                <td><span class="pill" style="background:#e2e8f0;">{{ e.control_base }}</span></td>
+                <td style="font-weight:bold;">{{ "{:,.0f}".format(e.lectura_actual).replace(',', '.') }}</td>
+                <td>{{ "{:,.0f}".format(e.proxima_pm).replace(',', '.') }}</td>
+                <td style="font-weight:bold; color:{% if e.margen < 0 %}var(--rojo){% else %}var(--verde){% endif %};">{{ "{:,.0f}".format(e.margen).replace(',', '.') }}</td>
                 <td>
-                  {% if e.estado == 'Avería' %}
-                    <span class="pill red">AVERÍA</span>
-                  {% elif e.estado == 'En Taller' %}
-                    <span class="pill yellow">EN TALLER</span>
-                  {% else %}
-                    <span class="pill green">OPERATIVO</span>
-                  {% endif %}
+                  <span class="pill {% if e.semaforo == 'red' %}red{% elif e.semaforo == 'yellow' %}yellow{% else %}green{% endif %}">
+                    {{ e.estado_base }}
+                  </span>
                 </td>
-                <td><button class="btn" onclick="irAFichaEquipo('{{ e.codigo }}')">Detalles / Ficha</button></td>
+                <td><button class="btn" onclick="irAFichaEquipo('{{ e.codigo }}')">Abrir</button></td>
               </tr>
-              {% else %}
-              <tr><td colspan="8" style="text-align:center; padding: 20px;">No hay maquinaria en la base de datos. Ejecuta la ruta de inicialización para cargar la simulación.</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -358,64 +145,83 @@ textarea.form-control { height: 80px; padding: 10px; resize: none; }
     </div>
 
     <div id="mod-ot" class="seccion-modulo">
-      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
-        <div class="panel">
-          <h3>EMITIR NUEVA ORDEN DE TRABAJO</h3>
-          <form action="/crear_ot" method="POST">
-            <div class="form-group">
-              <label>Código Interno de la Unidad</label>
-              <input type="text" name="codigo" class="form-control" required placeholder="Ej: SC-201">
-            </div>
-            <div class="form-group">
-              <label>Tipo de Intervención</label>
-              <select name="tipo" class="form-control">
-                <option value="Correctiva">Correctiva (Urgente)</option>
-                <option value="Preventiva">Preventiva (Mantenimiento PM)</option>
-                <option value="Predictiva">Predictiva / Inspección</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Nivel de Prioridad</label>
-              <select name="prioridad" class="form-control">
-                <option value="Baja">Baja</option>
-                <option value="Media">Media</option>
-                <option value="Alta">Alta Crítica</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Detalle Técnico del Trabajo a realizar</label>
-              <textarea name="descripcion" class="form-control" required placeholder="Describa la falla mecánica observada..."></textarea>
-            </div>
-            <button type="submit" class="btn red" style="width: 100%; margin-top: 10px;">Ingresar Orden al Sistema</button>
-          </form>
+      <div class="panel">
+        <h3>HOJA DE REGISTRO DE MANTENCIONES (MANTENCIONES)</h3>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr><th>Fecha</th><th>Código Equipo</th><th>Tipo Intervención</th><th>Lectura</th><th>Es PM</th><th>Folio</th><th>Lugar Faena</th><th>Proveedor</th><th>Costo</th><th>Estado</th></tr>
+            </thead>
+            <tbody>
+              {% for m in mantenciones %}
+              <tr>
+                <td>{{ m.fecha }}</td>
+                <td class="code">{{ m.codigo }}</td>
+                <td><b>{{ m.tipo }}</b></td>
+                <td>{{ "{:,.0f}".format(m.lectura).replace(',', '.') }}</td>
+                <td>{{ m.es_pm }}</td>
+                <td class="code">#{{ m.folio }}</td>
+                <td>📍 {{ m.lugar }}</td>
+                <td>{{ m.proveedor or 'Interno' }}</td>
+                <td style="font-weight:bold;">$ {{ "{:,.0f}".format(m.costo).replace(',', '.') }}</td>
+                <td><span class="pill {% if m.estado == 'Finalizada' %}green{% else %}yellow{% endif %}">{{ m.estado }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
+      </div>
+    </div>
 
-        <div class="panel">
-          <h3>REGISTRO DE ÓRDENES EN PROCESO</h3>
-          <div class="tablewrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Código</th>
-                  <th>Equipo Vinculado</th>
-                  <th>Clasificación</th>
-                  <th>Severidad</th>
-                  <th>Diagnóstico Técnico</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="code">#001</td>
-                  <td class="code">MB-405</td>
-                  <td>Correctiva</td>
-                  <td><span class="pill red">CRÍTICA</span></td>
-                  <td>Falla severa detectada en sistema de aire e inyección neumática.</td>
-                  <td><span class="pill yellow">Abierta</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+    <div id="mod-compras" class="seccion-modulo">
+      <div class="panel">
+        <h3>SEGUIMIENTO FINANCIERO DE ADQUISICIONES (COMPRAS PM)</h3>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr><th>Fecha Registro</th><th>Orden de Compra</th><th>Código Equipo</th><th>Descripción Insumo</th><th>Proveedor</th><th>Costo CLP</th><th>Regla Aplicación</th><th>Estado OC</th></tr>
+            </thead>
+            <tbody>
+              {% for c in compras %}
+              <tr>
+                <td>{{ c.fecha }}</td>
+                <td class="code">{{ c.oc }}</td>
+                <td class="code">{{ c.codigo }}</td>
+                <td>{{ c.descripcion }}</td>
+                <td>{{ c.proveedor }}</td>
+                <td style="font-weight:bold; color:var(--azul2);">$ {{ "{:,.0f}".format(c.costo).replace(',', '.') }}</td>
+                <td>{{ c.regla }}</td>
+                <td><span class="pill {% if 'Cancelada' in c.estado %}red{% else %}green{% endif %}">{{ c.estado }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="mod-lecturas" class="seccion-modulo">
+      <div class="panel">
+        <h3>HISTORIAL DE LOGS Y HORÓMETROS CAPTURADOS (LECTURAS)</h3>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr><th>Fecha Captura</th><th>Código Unidad</th><th>Valor Registrado</th><th>Unidad</th><th>Frente / Obra</th><th>Responsable Terreno</th><th>Observación Técnica</th></tr>
+            </thead>
+            <tbody>
+              {% for l in lecturas %}
+              <tr>
+                <td>{{ l.fecha }}</td>
+                <td class="code">{{ l.codigo }}</td>
+                <td style="font-weight:bold; color:var(--azul3);">{{ "{:,.0f}".format(l.valor).replace(',', '.') }}</td>
+                <td><span class="pill" style="background:#edf2f7;">{{ l.tipo }}</span></td>
+                <td>📍 {{ l.ubicacion or 'Sin especificar' }}</td>
+                <td>👤 {{ l.responsable or 'S/R' }}</td>
+                <td><i>{{ l.obs or '' }}</i></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -424,146 +230,56 @@ textarea.form-control { height: 80px; padding: 10px; resize: none; }
 </main>
 
 <script>
-// Sistema de navegación por pestañas del lado del cliente
-function switchTab(targetTab) {
+function switchTab(target) {
   document.querySelectorAll('.seccion-modulo').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.menu a').forEach(el => el.classList.remove('active'));
   
-  const selectedModule = document.getElementById('mod-' + targetTab);
-  const selectedNavbar = document.getElementById('nav-' + targetTab);
-  
-  if (selectedModule && selectedNavbar) {
-    selectedModule.classList.add('active');
-    selectedNavbar.classList.add('active');
-  }
+  const mod = document.getElementById('mod-' + target);
+  const nav = document.getElementById('nav-' + target);
+  if(mod && nav) { mod.classList.add('active'); nav.classList.add('active'); }
 }
+function irAFichaEquipo(codigo) { if(codigo) window.location.href = '/equipo/' + codigo; }
 
-function irAFichaEquipo(codigo) {
-  if(codigo && codigo.trim() !== "") {
-    window.location.href = '/equipo/' + codigo; 
-  }
-}
-
-function toggleMenu() {
-  document.getElementById('mobileMenu').classList.toggle('active-mobile');
-}
-
-// Inicialización de Gráficos de DEMOTRON
 const data = {{ charts|safe }};
-function safeObj(o){return o && typeof o === 'object' ? o : {}}
-const estado = safeObj(data.estado);
-const ubicacion = safeObj(data.ubicacion);
-const gestion = safeObj(data.gestion);
-
 function renderCharts() {
-  function chart(id, type, labels, values, colors, extraOptions = {}){
-    const el = document.getElementById(id);
-    if(!el) return;
-    if(Chart.getChart(id)) Chart.getChart(id).destroy();
-        
-    let options = {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: type==='doughnut' ? 'right' : 'bottom' } }
-    };
-
-    if (type === 'bar') {
-      options.scales = {
-        y: { beginAtZero: true, grid: { color: '#edf2f7' } },
-        x: { 
-          grid: { display: false },
-          ticks: { autoSkip: false, maxRotation: 45, minRotation: 45, font: {size: 10} }
-        }
-      };
-    }
-        
-    options = { ...options, ...extraOptions };
-
-    new Chart(el, {
-      type: type,
-      data: { labels: labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] },
-      options: options
-    });
-  }
-
-  chart('donut', 'doughnut', Object.keys(estado), Object.values(estado), ['#35b96b', '#f7b500', '#ef3f45', '#9ca3af']);
-  chart('ubic', 'bar', Object.keys(ubicacion), Object.values(ubicacion), ['#0c3f86']);
-
-  const elGestion = document.getElementById('gestion');
-  if(elGestion) {
+  chart('donut', 'doughnut', Object.keys(data.estado), Object.values(data.estado), ['#35b96b', '#ef3f45', '#f7b500']);
+  chart('ubic', 'bar', Object.keys(data.ubicacion), Object.values(data.ubicacion), ['#0c3f86']);
+  
+  const elG = document.getElementById('gestion');
+  if(elG) {
     if(Chart.getChart('gestion')) Chart.getChart('gestion').destroy();
-    new Chart(elGestion, {
+    new Chart(elG, {
       type: 'bar',
       data: {
-        labels: Object.keys(gestion),
+        labels: Object.keys(data.gestion),
         datasets: [
-          {label: 'OT Creadas', data: Object.values(gestion).map(x=>x[0]||0), backgroundColor: '#1261d6'},
-          {label: 'Compras', data: Object.values(gestion).map(x=>x[1]||0), backgroundColor: '#7449d4'}
+          {label: 'OT Creadas', data: Object.values(data.gestion).map(x=>x[0]||0), backgroundColor: '#1261d6'},
+          {label: 'Compras', data: Object.values(data.gestion).map(x=>x[1]||0), backgroundColor: '#7449d4'}
         ]
       },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } },
-        scales: { 
-          y: { beginAtZero: true }, 
-          x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45, font:{size:10} } }
-        }
-      }
-    });
-  }
-
-  const elCosto = document.getElementById('chartCostoMeses');
-  if(elCosto) {
-    if(Chart.getChart('chartCostoMeses')) Chart.getChart('chartCostoMeses').destroy();
-    const datosCostos = [3200000, 4100000, 4850000]; 
-    const etiquetasMeses = ['Mar', 'Abr', 'May'];
-
-    new Chart(elCosto, {
-      type: 'line',
-      data: {
-        labels: etiquetasMeses,
-        datasets: [{
-          data: datosCostos,
-          borderColor: '#07939a',
-          backgroundColor: 'rgba(7, 147, 154, 0.1)',
-          borderWidth: 2,
-          fill: true,
-          pointRadius: 3,
-          tension: 0.4
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { enabled: true } },
-        scales: { x: { display: false }, y: { display: false, min: 0 } },
-        layout: { padding: 0 }
-      }
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
     });
   }
 }
-
+function chart(id, type, labels, values, colors){
+  const el = document.getElementById(id); if(!el) return;
+  if(Chart.getChart(id)) Chart.getChart(id).destroy();
+  new Chart(el, { type: type, data: { labels: labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false } });
+}
 window.onload = renderCharts;
 
-// Ciclo Ajax síncrono para recargas automáticas en tiempo real
 setInterval(() => {
   const syncBadge = document.getElementById('syncIndicator');
   if(syncBadge) syncBadge.innerText = '↻ Sincronizando...';
-
-  // Al usar Ajax determinamos qué pestaña activa retener para evitar saltos bruscos
   const activeTab = document.querySelector('.menu a.active').id.replace('nav-', '');
-
   fetch(window.location.href)
     .then(r => r.text())
     .then(html => {
       const doc = new DOMParser().parseFromString(html, "text/html");
-      const dynamicEl = document.getElementById('dynamic-content');
-      const srcEl = doc.getElementById('dynamic-content');
-      if(dynamicEl && srcEl) {
-        dynamicEl.innerHTML = srcEl.innerHTML;
-        switchTab(activeTab); // Mantiene al usuario en la vista que estaba manipulando
-        renderCharts();
-      }
+      document.getElementById('dynamic-content').innerHTML = doc.getElementById('dynamic-content').innerHTML;
+      switchTab(activeTab); renderCharts();
       if(syncBadge) syncBadge.innerText = '✓ Sincronizado';
-    }).catch(err => console.log("Sync error:", err));
+    }).catch(err => console.log(err));
 }, 15000);
 </script>
 </body>
