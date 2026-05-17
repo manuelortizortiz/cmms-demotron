@@ -80,7 +80,7 @@ td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
         <div class="kpi"><div class="circle c-yellow">◷</div><div><small>PRÓXIMOS MANTENIMIENTOS</small><b>{{ kpis.proximos }}</b><span>Menos de 50 hrs/km</span></div></div>
         <div class="kpi" style="background: linear-gradient(135deg, var(--azul3), #3b82f6); color:white;"><div class="circle" style="background:rgba(255,255,255,0.2)">🛠</div><div><small style="color:white">OT ABIERTAS</small><b style="color:white">{{ kpis.ot_abiertas }}</b><span>En proceso</span></div></div>
         <div class="kpi"><div class="circle c-green">✓</div><div><small>DISPONIBILIDAD REAL</small><b>{{ kpis.controlado_pct }}%</b><span>{{ kpis.controlados }} en marcha</span></div></div>
-        <div class="kpi"><div class="circle" style="background:var(--morado)">$</div><div><small>COSTO TOTAL PM</small><b style="font-size:16px;">$ {{ "{:,.0f}".format(kpis.costo_mes).replace(',', '.') }}</b><span>Acumulado OC</span></div></div>
+        <div class="kpi"><div class="circle" style="background:var(--morado)">$</div><div><small>COSTO TOTAL PM</small><b style="font-size:16px;">{{ kpis.costo_mes_str }}</b><span>Acumulado OC</span></div></div>
       </section>
 
       <section class="grid3">
@@ -97,7 +97,7 @@ td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
             {% if e.foto_url %}
               <img src="{{ e.foto_url }}" alt="{{ e.codigo }}">
             {% else %}
-              <span style="font-size:24px; color:#94a3b8;">Barra</span>
+              <span style="font-size:24px; color:#94a3b8;">🚜</span>
             {% endif %}
           </div>
           <span class="dot"></span><span class="eqtitle">{{ e.codigo }}</span>
@@ -127,9 +127,9 @@ td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
                 <td>📍 {{ e.ubicacion }}</td>
                 <td>{{ e.responsable }}</td>
                 <td><span class="pill" style="background:#e2e8f0;">{{ e.control_base }}</span></td>
-                <td style="font-weight:bold;">{{ "{:,.0f}".format(e.lectura_actual).replace(',', '.') }}</td>
-                <td>{{ "{:,.0f}".format(e.proxima_pm).replace(',', '.') }}</td>
-                <td style="font-weight:bold; color:{% if e.margen < 0 %}var(--rojo){% else %}var(--verde){% endif %};">{{ "{:,.0f}".format(e.margen).replace(',', '.') }}</td>
+                <td style="font-weight:bold;">{{ e.lectura_actual_str }}</td>
+                <td>{{ e.proxima_pm_str }}</td>
+                <td style="font-weight:bold; color:{% if e.margen < 0 %}var(--rojo){% else %}var(--verde){% endif %};">{{ e.margen_str }}</td>
                 <td>
                   <span class="pill {% if e.semaforo == 'red' %}red{% elif e.semaforo == 'yellow' %}yellow{% else %}green{% endif %}">
                     {{ e.estado_base }}
@@ -158,12 +158,12 @@ td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
                 <td>{{ m.fecha }}</td>
                 <td class="code">{{ m.codigo }}</td>
                 <td><b>{{ m.tipo }}</b></td>
-                <td>{{ "{:,.0f}".format(m.lectura).replace(',', '.') }}</td>
+                <td>{{ m.lectura_str }}</td>
                 <td>{{ m.es_pm }}</td>
                 <td class="code">#{{ m.folio }}</td>
                 <td>📍 {{ m.lugar }}</td>
                 <td>{{ m.proveedor or 'Interno' }}</td>
-                <td style="font-weight:bold;">$ {{ "{:,.0f}".format(m.costo).replace(',', '.') }}</td>
+                <td style="font-weight:bold;">{{ m.costo_str }}</td>
                 <td><span class="pill {% if m.estado == 'Finalizada' %}green{% else %}yellow{% endif %}">{{ m.estado }}</span></td>
               </tr>
               {% endfor %}
@@ -189,7 +189,7 @@ td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
                 <td class="code">{{ c.codigo }}</td>
                 <td>{{ c.descripcion }}</td>
                 <td>{{ c.proveedor }}</td>
-                <td style="font-weight:bold; color:var(--azul2);">$ {{ "{:,.0f}".format(c.costo).replace(',', '.') }}</td>
+                <td style="font-weight:bold; color:var(--azul2);">{{ c.costo_str }}</td>
                 <td>{{ c.regla }}</td>
                 <td><span class="pill {% if 'Cancelada' in c.estado %}red{% else %}green{% endif %}">{{ c.estado }}</span></td>
               </tr>
@@ -213,7 +213,7 @@ td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
               <tr>
                 <td>{{ l.fecha }}</td>
                 <td class="code">{{ l.codigo }}</td>
-                <td style="font-weight:bold; color:var(--azul3);">{{ "{:,.0f}".format(l.valor).replace(',', '.') }}</td>
+                <td style="font-weight:bold; color:var(--azul3);">{{ l.valor_str }}</td>
                 <td><span class="pill" style="background:#edf2f7;">{{ l.tipo }}</span></td>
                 <td>📍 {{ l.ubicacion or 'Sin especificar' }}</td>
                 <td>👤 {{ l.responsable or 'S/R' }}</td>
