@@ -40,7 +40,8 @@ def format_num(val):
     if val is None or pd.isna(val):
         return "0"
     try:
-        return f"{int(val):,}".replace(",", ".")
+        num = int(float(str(val).strip()))
+        return f"{num:,}".replace(",", ".")
     except:
         return "0"
 
@@ -48,7 +49,8 @@ def format_clp(val):
     if val is None or pd.isna(val):
         return "$ 0"
     try:
-        return f"$ {int(val):,}".replace(",", ".")
+        num = int(float(str(val).strip()))
+        return f"$ {num:,}".replace(",", ".")
     except:
         return "$ 0"
 
@@ -74,7 +76,7 @@ def buscar_foto_global(codigo):
     return None
 
 # ==========================================
-# MODELOS DE BASE DE DATOS
+# MODELOS DE BASE DE DATOS PROTEGIDOS
 # ==========================================
 
 class Equipo(db.Model):
@@ -93,9 +95,12 @@ class Equipo(db.Model):
     lectura_actual = db.Column(db.Integer, default=0)
     proxima_pm = db.Column(db.Integer, default=0)
 
+    # BLINDAJE ABSOLUTO: Evita quiebres por valores nulos en el cálculo
     @property
     def margen(self):
-        return self.proxima_pm - self.lectura_actual
+        prox = self.proxima_pm if self.proxima_pm is not None else 0
+        lect = self.lectura_actual if self.lectura_actual is not None else 0
+        return prox - lect
 
     @property
     def semaforo(self):
@@ -206,7 +211,7 @@ def dashboard():
         'gestion': {'Ene': [25, 18], 'Feb': [32, 24], 'Mar': [41, 38], 'Abr': [ot_abiertas, 15]}
     }
 
-    # Desglose pre-formateado para evitar inyecciones complejas en Jinja
+    # Desglose formateado seguro contra celdas vacías de Excel
     todas_mantenciones = [{
         'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'codigo': m.codigo_equipo,
         'tipo': m.tipo_mantencion, 'lectura_str': format_num(m.lectura), 'es_pm': m.es_pm, 'folio': m.folio,
@@ -215,7 +220,8 @@ def dashboard():
 
     todas_compras = [{
         'fecha': c.fecha.strftime('%d/%m/%Y') if c.fecha else 'S/F', 'oc': c.oc, 'codigo': c.codigo_equipo,
-        'descripcion': c.descripcion, 'proveedor': c.proveedor, 'costo_str': format_clp(c.costo_pm_clp), 'estado': c.estado_oc
+        'descripcion': c.descripcion, 'proveedor': c.proveedor, 'costo_str': format_clp(c.costo_pm_clp), 
+        'estado': c.estado_oc if c.estado_oc else 'Aprobada'
     } for c in compras_db]
 
     todas_lecturas = [{
@@ -229,7 +235,7 @@ def dashboard():
                            compras=todas_compras, lecturas=todas_lecturas, rol="Admin")
 
 # ==========================================
-# VISTA DE LA FICHA TÉCNICA SIN ERROR 500
+# RUTA DE LA FICHA TÉCNICA
 # ==========================================
 
 @app.route('/equipo/<codigo>', methods=['GET', 'POST'])
@@ -265,7 +271,6 @@ def ficha_equipo(codigo):
 
     foto_url = buscar_foto_global(equipo.codigo)
 
-    # Serialización limpia de campos calculados maestros
     eq_master = {
         'codigo': equipo.codigo, 'tipo_equipo': equipo.tipo_equipo, 'marca': equipo.marca, 'modelo': equipo.modelo,
         'ubicacion': equipo.ubicacion, 'proxima_pm': equipo.proxima_pm, 'estado_base': equipo.estado_base,
@@ -347,7 +352,7 @@ def cargar_sql_final():
             db.session.add(comp)
             db.session.commit()
 
-        # CONSOLIDACIÓN TÉCNICA
+        # CONSOLIDACIÓN TÉCNICA PROTEGIDA
         for eq in Equipo.query.all():
             ultima_lectura = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if ultima_lectura: eq.lectura_actual = ultima_lectura.horometro if eq.control_base == 'HORAS' else ultima_lectura.kilometraje
