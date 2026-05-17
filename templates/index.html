@@ -7,49 +7,53 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 :root{
-  --azul:#082b5f; --azul2:#0c3f86; --azul3:#1261d6; --fondo:#f4f6fa; --borde:#e6ebf2;
-  --texto:#12203a; --rojo:#ef3f45; --amarillo:#f7b500; --verde:#35b96b; --morado:#7449d4; --teal:#07939a;
-  --shadow:0 6px 18px rgba(9,30,66,.08);
+  --azul-deep:#082b5f; --borde-excel:#BFBFBF; --texto:#000000; --rojo:#FF0000; --amarillo:#FFFF00; --verde:#00B050; --gris-cabecera:#D9D9D9;
 }
 *{box-sizing:border-box}
-body{ margin:0; background:var(--fondo); color:var(--texto); font-family:"Segoe UI",sans-serif; }
-.topbar{ height:64px; background:#fff; border-bottom:1px solid var(--borde); display:flex; align-items:center; gap:15px; padding:0 24px; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(9,30,66,.04); }
-.logo{ font-size:24px; font-weight:950; letter-spacing:5px; color:var(--azul); margin-right:10px; }
-.menu{ display:flex; align-items:center; gap:2px; flex:1; overflow-x:auto; scrollbar-width:none; }
-.menu a{ display:flex; align-items:center; color:#334155; text-decoration:none; padding:23px 14px 19px; border-bottom:3px solid transparent; font-weight:600; font-size:13.5px; white-space:nowrap; cursor:pointer; }
-.menu a.active{ color:var(--azul); border-bottom-color:var(--azul3); }
-.buscar{ width:200px; height:38px; border:1px solid var(--borde); border-radius:10px; padding:0 14px; outline:none; }
-.wrap{ padding:20px 24px }
+body{ margin:0; background:#ffffff; color:var(--texto); font-family: Calibri, sans-serif; font-size: 11px; }
+.topbar{ height:50px; background:#fff; border-bottom:1px solid #BFBFBF; display:flex; align-items:center; padding:0 15px; position:sticky; top:0; z-index:100; }
+.logo{ font-size:20px; font-weight:bold; color:var(--azul-deep); margin-right:20px; text-transform: uppercase; letter-spacing: 2px; }
+.menu{ display:flex; gap:0px; flex:1; }
+.menu a{ color:#000; text-decoration:none; padding:15px 15px; font-weight:bold; font-size:12px; cursor:pointer; }
+.menu a.active{ color:var(--azul-deep); border-bottom: 3px solid var(--azul-deep); }
+.wrap{ padding:15px }
 .seccion-modulo { display: none; }
 .seccion-modulo.active { display: block; }
-.kpis{ display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; }
-.kpi{ background:#fff; border:1px solid #edf1f7; box-shadow:var(--shadow); border-radius:10px; padding:16px; display:flex; align-items:center; gap:12px; min-height:100px; }
-.kpi b{ display:block; font-size:24px; margin:2px 0; }
-.kpi small{ display:block; font-weight:900; font-size:10.5px; color:#64748b; text-transform:uppercase; }
-.kpi span{ font-size:11.5px; color:#64748b; }
-.circle{ width:46px; height:46px; border-radius:50%; display:grid; place-items:center; color:#fff; font-size:12px; font-weight:900; flex-shrink:0; text-transform: uppercase; }
-.c-red{background:var(--rojo)} .c-yellow{background:var(--amarillo)} .c-green{background:var(--verde)}
-.grid3{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:14px; margin-top:14px; }
-.panel{ background:#fff; border:1px solid var(--borde); border-radius:10px; box-shadow:var(--shadow); padding:18px; margin-bottom:14px; }
-.panel h3{ margin:0 0 12px; color:#0b1d3d; font-size:14px; text-transform:uppercase; letter-spacing:0.3px; font-weight:700; }
-.canvasBox{ height:250px; position:relative; width: 100%; }
-.cards{ display:flex; gap:14px; overflow-x:auto; padding:8px 0 14px; }
-.eqcard { min-width:170px; max-width:170px; background:#fff; border:1px solid var(--borde); border-radius:9px; padding:12px; cursor:pointer; }
-.eqcard.yellow{ border-color:var(--amarillo); background-color: #fffbeb; }
-.dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; background:var(--amarillo); }
-.eqtitle { font-weight:800; color:#0f172a; }
-.img-contenedor { width: 100%; height: 85px; background: #e2e8f0; border-radius: 6px; margin-bottom: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid var(--borde); }
-.img-contenedor img { width: 100%; height: 100%; object-fit: cover; }
-.tablewrap { overflow-x:auto; width: 100%; margin-top: 10px; }
-table { width:100%; min-width: 800px; border-collapse:collapse; font-size:13px; }
-th { text-align:left; padding:10px; border-bottom:2px solid var(--borde); color:#475569; font-size:11px; text-transform:uppercase; }
-td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
-.code { color:var(--azul); font-weight:700; }
-.pill { border-radius:999px; padding:3px 9px; font-weight:900; font-size:10.5px; display:inline-block; }
-.pill.red { background:#ffe1e3; color:#dc2626 }
-.pill.yellow { background:#fff4cc; color:#a16207 }
-.pill.green { background:#dcfce7; color:#15803d }
-.btn { border:0; border-radius:6px; padding:6px 12px; background:var(--azul); color:#fff; font-weight:700; cursor:pointer; font-size:12.5px; }
+
+/* Formato Excel Plano */
+.excel-table { border-collapse: collapse; width: 100%; margin-bottom: 15px; table-layout: fixed; }
+.excel-table th, .excel-table td { border: 1px solid var(--borde-excel); padding: 4px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.excel-table th { background-color: var(--gris-cabecera); text-align: left; font-weight: bold; }
+.circulo { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 1px solid #000; }
+.circulo.red { background-color: var(--rojo); }
+.circulo.yellow { background-color: var(--amarillo); }
+.circulo.green { background-color: var(--verde); }
+
+/* Distribución de la Fila de Gráficos Superior */
+.charts-excel-row { display: flex; gap: 12px; margin-bottom: 20px; }
+.chart-excel-cell { flex: 1; border: 1px solid var(--borde-excel); background-color: #fff; height: 220px; padding: 8px; }
+.chart-excel-cell h4 { margin: 0 0 5px; font-size: 11px; text-transform: uppercase; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 2px; }
+.canvasBox { height: 180px; position: relative; width: 100%; }
+
+/* Tarjeta Buscador Interactivo */
+.panel-buscador { border: 2px solid var(--azul-deep); padding: 15px; background: #fff; margin-bottom: 20px; }
+.buscador-split { display: grid; grid-template-columns: 1fr 1.5fr; gap: 15px; margin-top: 10px; }
+
+/* Contenedores de Imágenes */
+.img-box { width: 70px; height: 50px; border: 1px solid var(--borde-excel); overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f5f5f5; }
+.img-box img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Contenedor Scroll Lateral Inferior */
+.scroll-horizontal { display: flex; gap: 12px; overflow-x: auto; padding: 10px 0; border: 1px solid var(--borde-excel); background: #fafafa; }
+.card-scroll { min-width: 140px; max-width: 140px; border: 1px solid var(--borde-excel); background: #fff; padding: 8px; text-align: center; }
+.img-scroll { width: 100%; height: 75px; border-bottom: 1px solid var(--borde-excel); margin-bottom: 5px; overflow: hidden; }
+.img-scroll img { width: 100%; height: 100%; object-fit: cover; }
+
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.bold { font-weight: bold; }
+.flex-row { display: flex; gap: 15px; margin-bottom: 15px; }
+.flex-cell { flex: 1; }
 </style>
 </head>
 <body>
@@ -63,197 +67,209 @@ td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
     <a id="nav-compras" onclick="switchTab('compras')">Compras PM</a>
     <a id="nav-lecturas" onclick="switchTab('lecturas')">Lecturas Terreno</a>
   </nav>
-  <input class="buscar" list="listaEquipos" placeholder="Buscar unidad..." onchange="irAFichaEquipo(this.value)">
-  <datalist id="listaEquipos">
-    {% for e in equipos %}
-      <option value="{{ e.codigo }}">{{ e.tipo_equipo }} - {{ e.marca }}</option>
-    {% endfor %}
-  </datalist>
 </header>
 
 <main class="wrap">
   <div id="dynamic-content">
     
     <div id="mod-dashboard" class="seccion-modulo active">
-      <section class="kpis">
-        <div class="kpi"><div class="circle c-red">AV</div><div><small>AVERÍAS CRÍTICAS</small><b>{{ kpis.atrasados }}</b><span>Bajas operativas</span></div></div>
-        <div class="kpi"><div class="circle c-yellow">PM</div><div><small>PRÓXIMOS MANTENIMIENTOS</small><b>{{ kpis.proximos }}</b><span>Menos de 50 hrs/km</span></div></div>
-        <div class="kpi" style="background: linear-gradient(135deg, var(--azul3), #3b82f6); color:white;"><div class="circle" style="background:rgba(255,255,255,0.2)">OT</div><div><small style="color:white">OT ABIERTAS</small><b style="color:white">{{ kpis.ot_abiertas }}</b><span>En proceso</span></div></div>
-        <div class="kpi"><div class="circle c-green">OK</div><div><small>DISPONIBILIDAD REAL</small><b>{{ kpis.controlado_pct }}%</b><span>{{ kpis.controlados }} en marcha</span></div></div>
-        <div class="kpi"><div class="circle" style="background:var(--morado); color:white;">$</div><div><small>COSTO TOTAL PM</small><b style="font-size:16px;">{{ kpis.costo_mes_str }}</b><span>Acumulado OC</span></div></div>
-      </section>
+      
+      <div class="charts-excel-row">
+        <div class="chart-excel-cell"><h4>ESTADO OPERACIONAL</h4><div class="canvasBox"><canvas id="donut"></canvas></div></div>
+        <div class="chart-excel-cell"><h4>UBICACIÓN DE EQUIPOS (=5)</h4><div class="canvasBox"><canvas id="ubic"></canvas></div></div>
+        <div class="chart-excel-cell"><h4>COMPRAS MENSUALES</h4><div class="canvasBox"><canvas id="gestion"></canvas></div></div>
+      </div>
 
-      <section class="grid3">
-        <div class="panel"><h3>ESTADO OPERACIONAL FLOTA</h3><div class="canvasBox"><canvas id="donut"></canvas></div></div>
-        <div class="panel"><h3>UBICACIÓN DE EQUIPOS (> 5)</h3><div class="canvasBox"><canvas id="ubic"></canvas></div></div>
-        <div class="panel"><h3>COMPRAS Y GESTIÓN</h3><div class="canvasBox"><canvas id="gestion"></canvas></div></div>
-      </section>
-
-      <h3 style="margin-top:20px; font-size:14px; color:var(--azul); text-transform: uppercase; font-weight: 700;">EQUIPOS ACTUALMENTE EN TALLER ({{ taller|length }})</h3>
-      <div class="cards">
-        {% for e in taller %}
-        <div class="eqcard yellow" onclick="irAFichaEquipo('{{ e.codigo }}')">
-          <div class="img-contenedor">
-            {% if e.foto_url %}
-              <img src="{{ e.foto_url }}" alt="{{ e.codigo }}">
-            {% else %}
-              <span style="font-size:12px; color:#94a3b8; font-weight: bold; text-transform: uppercase;">Sin Imagen</span>
-            {% endif %}
+      <div class="panel-buscador">
+        <span class="bold" style="font-size: 13px; color: var(--azul-deep);">Selecciona un equipo</span>
+        <select id="selectorEquipo" class="buscar" style="margin-left: 10px; width: 250px;" onchange="actualizarBuscadorFicha(this.value)">
+          <option value="">-- Elige una unidad --</option>
+          {% for e in equipos %}
+            <option value="{{ e.codigo }}">{{ e.codigo }} - {{ e.tipo_equipo }}</option>
+          {% endfor %}
+        </select>
+        
+        <div class="buscador-split" id="bloqueFichaInteractiva" style="display: none;">
+          <div>
+            <table class="excel-table">
+              <thead><tr><th colspan="2">Información General</th></tr></thead>
+              <tbody>
+                <tr><td class="bold" style="width:100px;">Código</td><td id="f-codigo" class="bold"></td></tr>
+                <tr><td class="bold">Tipo Equipo</td><td id="f-tipo"></td></tr>
+                <tr><td class="bold">Marca / Modelo</td><td id="f-marca"></td></tr>
+                <tr><td class="bold">Ubicación</td><td id="f-ubicacion"></td></tr>
+                <tr><td class="bold">Responsable</td><td id="f-responsable"></td></tr>
+                <tr><td class="bold">Lectura Actual</td><td id="f-lectura" class="text-right"></td></tr>
+                <tr><td class="bold">Próximo PM</td><td id="f-proximo" class="text-right"></td></tr>
+                <tr><td class="bold">Margen Técnico</td><td id="f-margen" class="text-right bold"></td></tr>
+              </tbody>
+            </table>
           </div>
-          <span class="dot"></span><span class="eqtitle">{{ e.codigo }}</span>
-          <div style="font-size:11.5px; color:#475569; margin-top:3px; height:32px; overflow:hidden;">{{ e.tipo_equipo }}</div>
-          <div style="font-size:11px; font-weight:bold; margin-top:4px;">Ubicación: {{ e.ubicacion }}</div>
+          <div style="max-height: 200px; overflow-y: auto; border: 1px solid var(--borde-excel);">
+            <table class="excel-table" style="margin-bottom:0;">
+              <thead><tr><th>Fecha</th><th>Folio</th><th>Intervención</th><th>Costo</th><th>Estado</th></tr></thead>
+              <tbody id="f-tabla-mantenciones"></tbody>
+            </table>
+          </div>
         </div>
-        {% else %}
-        <div style="padding:15px; color:#64748b; font-size:13px;">No hay maquinarias reportadas en taller hoy.</div>
+      </div>
+
+      <div class="flex-row">
+        <div class="flex-cell">
+          <table class="excel-table">
+            <thead>
+              <tr><th colspan="5" style="background-color: var(--azul-deep); color:#fff;">EQUIPOS EN TALLER</th></tr>
+              <tr><th style="width:60px;">Foto</th><th style="width:70px;">Código</th><th>Tipo Equipo</th><th>Ubicación</th><th style="width:40px; text-align:center;">Sem</th></tr>
+            </thead>
+            <tbody>
+              {% for t in taller %}
+              <tr>
+                <td class="text-center">
+                  <div class="img-box">
+                    {% if t.foto_url %}<img src="{{ t.foto_url }}" alt="Foto">{% else %}🚜{% endif %}
+                  </div>
+                </td>
+                <td class="bold text-center">{{ t.codigo }}</td>
+                <td>{{ t.tipo_equipo }}</td>
+                <td>{{ t.ubicacion }}</td>
+                <td class="text-center"><span class="circulo yellow"></span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="flex-cell">
+          <table class="excel-table">
+            <thead>
+              <tr><th colspan="5" style="background-color: var(--rojo); color:#fff;">EQUIPOS ATRASADOS</th></tr>
+              <tr><th style="width:60px;">Foto</th><th style="width:70px;">Código</th><th>Tipo Equipo</th><th>Margen</th><th style="width:40px; text-align:center;">Sem</th></tr>
+            </thead>
+            <tbody>
+              {% for c in criticos %}
+              <tr>
+                <td class="text-center">
+                  <div class="img-box">
+                    {% if c.foto_url %}<img src="{{ c.foto_url }}" alt="Foto">{% else %}🚜{% endif %}
+                  </div>
+                </td>
+                <td class="bold text-center">{{ c.codigo }}</td>
+                <td>{{ c.tipo_equipo }}</td>
+                <td class="text-right bold" style="color:var(--rojo);">{{ c.margen_str }}</td>
+                <td class="text-center"><span class="circulo red"></span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <span class="bold" style="display:block; margin-bottom:5px; text-transform:uppercase;">Catálogo Aleatorio de Flota</span>
+      <div class="scroll-horizontal">
+        {% for a in equipos_aleatorios %}
+        <div class="card-scroll" onclick="irAFichaEquipo('{{ a.codigo }}')">
+          <div class="img-scroll">
+            {% if a.foto_url %}<img src="{{ a.foto_url }}" alt="Foto">{% else %}<span style="line-height:75px; font-size:24px;">🚜</span>{% endif %}
+          </div>
+          <div class="bold" style="font-size:12px; color:var(--azul-deep);">{{ a.codigo }}</div>
+          <div style="font-size:10px; color:#475569; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ a.tipo_equipo }}</div>
+        </div>
         {% endfor %}
       </div>
 
-      <div class="panel" style="margin-top:25px;">
-        <h3>EQUIPOS CON AVERÍAS (CRÍTICOS / FUERA DE SERVICIO)</h3>
-        <div class="tablewrap">
-          <table>
-            <thead>
-              <tr><th>Equipo</th><th>Descripción</th><th>Ubicación Actual</th><th>Responsable</th><th>Control Base</th><th>Lectura Actual</th><th>Próxima PM</th><th>Estado Maestro</th><th>Acción</th></tr>
-            </thead>
-            <tbody>
-              {% for e in criticos %}
-              <tr>
-                <td class="code">{{ e.codigo }}</td>
-                <td><b>{{ e.tipo_equipo }}</b> {{ e.marca }} {{ e.modelo }}</td>
-                <td>{{ e.ubicacion }}</td>
-                <td>{{ e.responsable }}</td>
-                <td><span class="pill" style="background:#edf2f7; color:#4a5568;">{{ e.control_base }}</span></td>
-                <td style="font-weight: bold;">{{ e.lectura_actual_str }}</td>
-                <td>{{ e.proxima_pm_str }}</td>
-                <td><span class="pill red">{{ e.estado_base }}</span></td>
-                <td><button class="btn" style="background:var(--rojo);" onclick="irAFichaEquipo('{{ e.codigo }}')">Ver Ficha</button></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
 
     <div id="mod-equipos" class="seccion-modulo">
-      <div class="panel">
-        <h3>MAESTRO GENERAL DE EQUIPOS REGISTRADOS (244)</h3>
-        <div class="tablewrap">
-          <table>
-            <thead>
-              <tr><th>Código</th><th>Tipo Equipo</th><th>Marca / Modelo</th><th>Ubicación</th><th>Responsable</th><th>Control</th><th>Lectura</th><th>Próximo PM</th><th>Margen</th><th>Estado</th><th>Ficha</th></tr>
-            </thead>
-            <tbody>
-              {% for e in equipos %}
-              <tr>
-                <td class="code">{{ e.codigo }}</td>
-                <td><b>{{ e.tipo_equipo }}</b></td>
-                <td>{{ e.marca }} {{ e.modelo }}</td>
-                <td>{{ e.ubicacion }}</td>
-                <td>{{ e.responsable }}</td>
-                <td><span class="pill" style="background:#e2e8f0;">{{ e.control_base }}</span></td>
-                <td style="font-weight:bold;">{{ e.lectura_actual_str }}</td>
-                <td>{{ e.proxima_pm_str }}</td>
-                <td style="font-weight:bold; color:{% if e.margen < 0 %}var(--rojo){% else %}var(--verde){% endif %};">{{ e.margen_str }}</td>
-                <td>
-                  <span class="pill {% if e.semaforo == 'red' %}red{% elif e.semaforo == 'yellow' %}yellow{% else %}green{% endif %}">
-                    {{ e.estado_base }}
-                  </span>
-                </td>
-                <td><button class="btn" onclick="irAFichaEquipo('{{ e.codigo }}')">Abrir</button></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <table class="excel-table">
+        <thead>
+          <tr><th colspan="9" style="background-color:#404040; color:#fff; text-align:center;">MAESTRO GENERAL DE EQUIPOS</th></tr>
+          <tr><th>CÓDIGO</th><th>TIPO EQUIPO</th><th>UBICACIÓN</th><th>RESPONSABLE</th><th style="width:60px;">CTRL</th><th style="width:80px;">LECTURA</th><th style="width:80px;">PRÓX. PM</th><th style="width:80px;">MARGEN</th><th style="width:40px; text-align:center;">SEM</th></tr>
+        </thead>
+        <tbody>
+          {% for e in equipos %}
+          <tr>
+            <td class="bold text-center">{{ e.codigo }}</td>
+            <td>{{ e.tipo_equipo }}</td>
+            <td>{{ e.ubicacion }}</td>
+            <td>{{ e.responsable }}</td>
+            <td class="text-center">{{ e.control_base }}</td>
+            <td class="text-right">{{ e.lectura_actual_str }}</td>
+            <td class="text-right">{{ e.proxima_pm_str }}</td>
+            <td class="text-right bold" style="color:{% if e.margen < 0 %}var(--rojo){% else %}var(--verde){% endif %};">{{ e.margen_str }}</td>
+            <td class="text-center"><span class="circulo {{ e.semaforo }}"></span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
     <div id="mod-ot" class="seccion-modulo">
-      <div class="panel">
-        <h3>HOJA DE REGISTRO DE MANTENCIONES (MANTENCIONES)</h3>
-        <div class="tablewrap">
-          <table>
-            <thead>
-              <tr><th>Fecha</th><th>Código Equipo</th><th>Tipo Intervención</th><th>Lectura</th><th>Es PM</th><th>Folio</th><th>Lugar Faena</th><th>Proveedor</th><th>Costo</th><th>Estado</th></tr>
-            </thead>
-            <tbody>
-              {% for m in mantenciones %}
-              <tr>
-                <td>{{ m.fecha }}</td>
-                <td class="code">{{ m.codigo }}</td>
-                <td><b>{{ m.tipo }}</b></td>
-                <td>{{ m.lectura_str }}</td>
-                <td>{{ m.es_pm }}</td>
-                <td class="code">#{{ m.folio }}</td>
-                <td>{{ m.lugar }}</td>
-                <td>{{ m.proveedor or 'Interno' }}</td>
-                <td style="font-weight:bold;">{{ m.costo_str }}</td>
-                <td><span class="pill {% if m.estado == 'Finalizada' %}green{% else %}yellow{% endif %}">{{ m.estado }}</span></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <table class="excel-table">
+        <thead>
+          <tr><th colspan="9" style="background-color:#404040; color:#fff; text-align:center;">HOJA DE REGISTRO DE MANTENCIONES (MANTENCIONES)</th></tr>
+          <tr><th>FECHA</th><th>CÓDIGO</th><th>TIPO INTERVENCIÓN</th><th style="width:80px;">LECTURA</th><th style="width:50px;">PM</th><th>FOLIO</th><th>LUGAR</th><th>PROVEEDOR</th><th>COSTO</th></tr>
+        </thead>
+        <tbody>
+          {% for m in mantenciones %}
+          <tr>
+            <td class="text-center">{{ m.fecha }}</td>
+            <td class="bold text-center">{{ m.codigo }}</td>
+            <td>{{ m.tipo }}</td>
+            <td class="text-right">{{ m.lectura_str }}</td>
+            <td class="text-center">{{ m.es_pm }}</td>
+            <td>{{ m.folio }}</td>
+            <td>{{ m.lugar }}</td>
+            <td>{{ m.proveedor }}</td>
+            <td class="text-right bold">{{ m.costo_str }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
     <div id="mod-compras" class="seccion-modulo">
-      <div class="panel">
-        <h3>SEGUIMIENTO FINANCIERO DE ADQUISICIONES (COMPRAS PM)</h3>
-        <div class="tablewrap">
-          <table>
-            <thead>
-              <tr><th>Fecha Registro</th><th>Orden de Compra</th><th>Código Equipo</th><th>Descripción Insumo</th><th>Proveedor</th><th>Costo CLP</th><th>Regla Aplicación</th><th>Estado OC</th></tr>
-            </thead>
-            <tbody>
-              {% for c in compras %}
-              <tr>
-                <td>{{ c.fecha }}</td>
-                <td class="code">{{ c.oc }}</td>
-                <td class="code">{{ c.codigo }}</td>
-                <td>{{ c.descripcion }}</td>
-                <td>{{ c.proveedor }}</td>
-                <td style="font-weight:bold; color:var(--azul2);">{{ c.costo_str }}</td>
-                <td>{{ c.regla }}</td>
-                <td>
-                  <span class="pill {% if c.estado and 'Cancelada' in c.estado %}red{% else %}green{% endif %}">
-                    {{ c.estado }}
-                  </span>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <table class="excel-table">
+        <thead>
+          <tr><th colspan="8" style="background-color:#404040; color:#fff; text-align:center;">SEGUIMIENTO FINANCIERO DE ADQUISICIONES (COMPRAS PM)</th></tr>
+          <tr><th>FECHA</th><th>OC</th><th>CÓDIGO</th><th>DESCRIPCIÓN</th><th>PROVEEDOR</th><th>COSTO CLP</th><th>REGLA</th><th>ESTADO OC</th></tr>
+        </thead>
+        <tbody>
+          {% for c in compras %}
+          <tr>
+            <td class="text-center">{{ c.fecha }}</td>
+            <td class="bold text-center">{{ c.oc }}</td>
+            <td class="bold text-center">{{ c.codigo }}</td>
+            <td>{{ c.descripcion }}</td>
+            <td>{{ c.proveedor }}</td>
+            <td class="text-right bold" style="color:var(--azul-deep);">{{ c.costo_str }}</td>
+            <td>{{ c.regla }}</td>
+            <td>{{ c.estado }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
     <div id="mod-lecturas" class="seccion-modulo">
-      <div class="panel">
-        <h3>HISTORIAL DE LOGS Y HORÓMETROS CAPTURADOS (LECTURAS)</h3>
-        <div class="tablewrap">
-          <table>
-            <thead>
-              <tr><th>Fecha Captura</th><th>Código Unidad</th><th>Valor Registrado</th><th>Unidad</th><th>Frente / Obra</th><th>Responsable Terreno</th><th>Observación Técnica</th></tr>
-            </thead>
-            <tbody>
-              {% for l in lecturas %}
-              <tr>
-                <td>{{ l.fecha }}</td>
-                <td class="code">{{ l.codigo }}</td>
-                <td style="font-weight:bold; color:var(--azul3);">{{ l.valor_str }}</td>
-                <td><span class="pill" style="background:#edf2f7;">{{ l.tipo }}</span></td>
-                <td>{{ l.ubicacion or 'Sin especificar' }}</td>
-                <td>{{ l.responsable or 'S/R' }}</td>
-                <td><i>{{ l.obs or '' }}</i></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <table class="excel-table">
+        <thead>
+          <tr><th colspan="7" style="background-color:#404040; color:#fff; text-align:center;">HISTORIAL DE LOGS Y HORÓMETROS (LECTURAS)</th></tr>
+          <tr><th>FECHA</th><th>CÓDIGO</th><th style="width:90px;">VALOR</th><th style="width:50px;">UNID</th><th>FRENTE / OBRA</th><th>RESPONSABLE</th><th>OBSERVACIÓN</th></tr>
+        </thead>
+        <tbody>
+          {% for l in lecturas %}
+          <tr>
+            <td class="text-center">{{ l.fecha }}</td>
+            <td class="bold text-center">{{ l.codigo }}</td>
+            <td class="text-right bold" style="color:var(--azul-deep);">{{ l.valor_str }}</td>
+            <td class="text-center">{{ l.tipo }}</td>
+            <td>{{ l.ubicacion }}</td>
+            <td>{{ l.responsable }}</td>
+            <td>{{ l.obs }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
   </div>
@@ -263,51 +279,88 @@ td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
 function switchTab(target) {
   document.querySelectorAll('.seccion-modulo').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.menu a').forEach(el => el.classList.remove('active'));
-  
   const mod = document.getElementById('mod-' + target);
   const nav = document.getElementById('nav-' + target);
   if(mod && nav) { mod.classList.add('active'); nav.classList.add('active'); }
 }
 function irAFichaEquipo(codigo) { if(codigo) window.location.href = '/equipo/' + codigo; }
 
+// Matriz de datos inyectada para el buscador relacional
+const busquedaData = {{ busqueda_json|safe }};
+
+function actualizarBuscadorFicha(codigo) {
+  const bloque = document.getElementById('bloqueFichaInteractiva');
+  if(!codigo || !busquedaData[codigo]) { bloque.style.display = 'none'; return; }
+  
+  const item = busquedaData[codigo];
+  document.getElementById('f-codigo').innerText = item.info.codigo;
+  document.getElementById('f-tipo').innerText = item.info.tipo_equipo;
+  document.getElementById('f-marca').innerText = item.info.marca + ' ' + item.info.modelo;
+  document.getElementById('f-ubicacion').innerText = item.info.ubicacion;
+  document.getElementById('f-responsable').innerText = item.info.responsable;
+  document.getElementById('f-lectura').innerText = item.info.lectura_actual_str;
+  document.getElementById('f-proximo').innerText = item.info.proxima_pm_str;
+  
+  const margenCelda = document.getElementById('f-margen');
+  margenCelda.innerText = item.info.margen_str;
+  margenCelda.style.color = item.info.margen < 0 ? '#FF0000' : '#00B050';
+
+  const tbody = document.getElementById('f-tabla-mantenciones');
+  tbody.innerHTML = '';
+  if(item.mantenciones.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:#64748b;">No registra intervenciones históricas.</td></tr>';
+  } else {
+    item.mantenciones.forEach(m => {
+      tbody.innerHTML += `<tr><td>${m.fecha}</td><td class="code">#${m.folio}</td><td><b>${m.tipo}</b></td><td class="bold">${m.costo}</td><td>${m.estado}</td></tr>`;
+    });
+  }
+  bloque.style.display = 'grid';
+}
+
 const data = {{ charts|safe }};
+const commonOptions = { 
+    responsive: true, maintainAspectRatio: false, 
+    plugins: { legend: { display: false } },
+    scales: { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { grid: { color: '#E0E0E0' }, ticks: { font: { size: 9 } } } }
+};
+
 function renderCharts() {
-  chart('donut', 'doughnut', Object.keys(data.estado), Object.values(data.estado), ['#35b96b', '#ef3f45', '#f7b500']);
+  // 1. Gráfico Operacional
+  chart('donut', 'doughnut', Object.keys(data.estado), Object.values(data.estado), ['#00B050', '#FF0000', '#FFFF00']);
+  
+  // 2. Gráfico Ubicaciones (Filtro >= 5)
   chart('ubic', 'bar', Object.keys(data.ubicacion), Object.values(data.ubicacion), ['#0c3f86']);
   
+  // 3. Gráfico Compras Mensuales desde Febrero
   const elG = document.getElementById('gestion');
   if(elG) {
     if(Chart.getChart('gestion')) Chart.getChart('gestion').destroy();
     new Chart(elG, {
-      type: 'bar',
+      type: 'line',
       data: {
-        labels: Object.keys(data.gestion),
-        datasets: [
-          {label: 'OT Creadas', data: Object.values(data.gestion).map(x=>x[0]||0), backgroundColor: '#1261d6'},
-          {label: 'Compras', data: Object.values(data.gestion).map(x=>x[1]||0), backgroundColor: '#7449d4'}
-        ]
+        labels: Object.keys(data.compras_mensuales),
+        datasets: [{
+          label: 'Inversión CLP',
+          data: Object.values(data.compras_mensuales),
+          borderColor: '#7449d4', backgroundColor: 'rgba(116, 73, 212, 0.1)',
+          borderWidth: 2, fill: true, tension: 0.3
+        }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+      options: { ...commonOptions, plugins: { legend: { display: false } } }
     });
   }
 }
+
 function chart(id, type, labels, values, colors){
   const el = document.getElementById(id); if(!el) return;
   if(Chart.getChart(id)) Chart.getChart(id).destroy();
-  new Chart(el, { type: type, data: { labels: labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false } });
+  let options = commonOptions;
+  if(type === 'doughnut') {
+      options = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } } };
+  }
+  new Chart(el, { type: type, data: { labels: labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 1, borderColor: '#BFBFBF' }] }, options: options });
 }
 window.onload = renderCharts;
-
-setInterval(() => {
-  const activeTab = document.querySelector('.menu a.active').id.replace('nav-', '');
-  fetch(window.location.href)
-    .then(r => r.text())
-    .then(html => {
-      const doc = new DOMParser().parseFromString(html, "text/html");
-      document.getElementById('dynamic-content').innerHTML = doc.getElementById('dynamic-content').innerHTML;
-      switchTab(activeTab); renderCharts();
-    }).catch(err => console.log(err));
-}, 15000);
 </script>
 </body>
 </html>
