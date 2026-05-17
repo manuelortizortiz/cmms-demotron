@@ -89,11 +89,11 @@ def buscar_foto_por_tipo(tipo_equipo):
     for root, dirs, files in os.walk(base_dir):
         for f in files:
             nombre, ext = os.path.splitext(f)
-            nombre_limpio = nombre.lower().strip()
+            nombre_limpio = f.lower().strip()
             nombre_normalizado = "".join(remplazos.get(c, c) for c in nombre_limpio)
             
             if ext.lower() in ['.jpg', '.jpeg', '.png']:
-                if nombre_limpio == tipo_limpio or nombre_normalizado == tipo_normalizado or nombre_limpio == tipo_espacio_limpio:
+                if tipo_limpio in nombre_limpio or tipo_normalizado in nombre_normalizado or tipo_espacio_limpio in nombre_limpio:
                     abs_path = os.path.join(root, f).replace("\\", "/")
                     idx = abs_path.find('static/')
                     if idx != -1:
@@ -171,7 +171,7 @@ with app.app_context():
     db.create_all()
 
 # ==========================================
-# DESPLIEGUE MODULAR CENTRALIZADO
+# DASHBOARD GENERAL DE OPERACIONES
 # ==========================================
 
 @app.route('/')
@@ -206,7 +206,6 @@ def dashboard():
         if e.ubicacion:
             conteo_ubicacion[e.ubicacion] = conteo_ubicacion.get(e.ubicacion, 0) + 1
             
-        # CD-103 vendido (Fuera de Servicio) sale estrictamente de las tarjetas de taller activo
         if e.estado_base == 'Taller' and e.estado_base not in ['Fuera de Servicio', 'No operativo']:
             taller.append(eq_data)
             
@@ -258,7 +257,7 @@ def dashboard():
                            compras=todas_compras, lecturas=todas_lecturas, rol="Admin")
 
 # ==========================================
-# RUTA DE LA FICHA TÉCNICA SANADA
+# FICHA TÉCNICA INDIVIDUAL
 # ==========================================
 
 @app.route('/equipo/<codigo>', methods=['GET', 'POST'])
@@ -269,7 +268,7 @@ def ficha_equipo(codigo):
         equipo.estado_base = request.form.get('estado_base')
         equipo.proxima_pm = clean_int(request.form.get('proxima_pm'), 0)
         db.session.commit()
-        return redirect(url_for('ficha_equipo', code=codigo))
+        return redirect(url_for('ficha_equipo', codigo=codigo))
 
     mantenciones_db = OrdenTrabajo.query.filter_by(codigo_equipo=codigo).order_by(OrdenTrabajo.id.desc()).all()
     lecturas_db = HistorialLectura.query.filter_by(codigo_equipo=codigo).order_by(HistorialLectura.id.desc()).all()
@@ -304,7 +303,7 @@ def ficha_equipo(codigo):
     return render_template('ficha_equipo.html', equipo=eq_master, mantenciones=mantenciones, lecturas=lecturas, compras=compras, foto_url=foto_url)
 
 # ==========================================
-# RE-INYECTOR MATRICIAL COMPLETO EXCEL
+# INYECTOR REESCRITOR COMPLETO EXCEL (.XLSX)
 # ==========================================
 
 @app.route('/admin/cargar_sql_final')
@@ -321,7 +320,6 @@ def cargar_sql_final():
             conn.commit()
         db.create_all()
 
-        # 1. EQUIPOS
         df_eq = pd.read_excel(archivo_excel, sheet_name="Equipos", skiprows=2).replace({np.nan: None})
         for _, row in df_eq.iterrows():
             if not row.iloc[0]: continue
@@ -333,7 +331,6 @@ def cargar_sql_final():
             db.session.add(eq)
             db.session.commit()
 
-        # 2. LECTURAS
         df_lec = pd.read_excel(archivo_excel, sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
         for _, row in df_lec.iterrows():
             if not row.iloc[1]: continue
@@ -347,7 +344,6 @@ def cargar_sql_final():
             db.session.add(lec)
             db.session.commit()
 
-        # 3. MANTENCIONES
         df_man = pd.read_excel(archivo_excel, sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
         for _, row in df_man.iterrows():
             if not row.iloc[1]: continue
@@ -361,7 +357,6 @@ def cargar_sql_final():
             db.session.add(ot)
             db.session.commit()
 
-        # 4. COMPRAS PM
         df_com = pd.read_excel(archivo_excel, sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
         for _, row in df_com.iterrows():
             if not row.iloc[2]: continue
@@ -375,7 +370,6 @@ def cargar_sql_final():
             db.session.add(comp)
             db.session.commit()
 
-        # CONSOLIDACIÓN TÉCNICA FINAL
         for eq in Equipo.query.all():
             ultima_lectura = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if ultima_lectura: eq.lectura_actual = ultima_lectura.horometro if eq.control_base == 'HORAS' else ultima_lectura.kilometraje
