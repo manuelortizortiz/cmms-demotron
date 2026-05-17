@@ -73,8 +73,8 @@ td{ padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
       <div class="panel">
         <h3>Indicadores Base</h3>
         <div class="kpi-mini"><small>Unidad de Control</small><span>{{ equipo.control_base }}</span></div>
-        <div class="kpi-mini"><small>Lectura Actual</small><span>{{ "{:,.0f}".format(equipo.lectura_actual or 0).replace(',', '.') }}</span></div>
-        <div class="kpi-mini"><small>Margen Técnico</small><span style="color:{% if equipo.margen < 0 %}var(--rojo){% else %}var(--verde){% endif %};">{{ "{:,.0f}".format(equipo.margen).replace(',', '.') }}</span></div>
+        <div class="kpi-mini"><small>Lectura Actual</small><span>{{ equipo.lectura_actual_str }}</span></div>
+        <div class="kpi-mini"><small>Margen Técnico</small><span style="color:{% if equipo.margen < 0 %}var(--rojo){% else %}var(--verde){% endif %};">{{ equipo.margen_str }}</span></div>
       </div>
     </div>
     <div>
@@ -85,7 +85,7 @@ td{ padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
             <thead><tr><th>Fecha</th><th>Folio</th><th>Tipo Mantención</th><th>Lectura</th><th>Lugar</th><th>Estado</th></tr></thead>
             <tbody>
               {% for m in mantenciones %}
-              <tr><td>{{ m.fecha }}</td><td class="code">#{{ m.folio }}</td><td><b>{{ m.tipo_mantencion }}</b></td><td>{{ "{:,.0f}".format(m.lectura or 0).replace(',', '.') }}</td><td>📍 {{ m.lugar }}</td><td><span class="pill {% if m.estado == 'Abierta' %}yellow{% else %}green{% endif %}">{{ m.estado }}</span></td></tr>
+              <tr><td>{{ m.fecha }}</td><td class="code">#{{ m.folio }}</td><td><b>{{ m.tipo_mantencion }}</b></td><td>{{ m.lectura_str }}</td><td>📍 {{ m.lugar }}</td><td><span class="pill {% if m.estado == 'Abierta' %}yellow{% else %}green{% endif %}">{{ m.estado }}</span></td></tr>
               {% else %}
               <tr><td colspan="6" style="color:#64748b; padding:10px;">No registra órdenes de trabajo históricas.</td></tr>
               {% endfor %}
@@ -100,7 +100,7 @@ td{ padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
             <thead><tr><th>Fecha</th><th>OC / Documento</th><th>Detalle Repuesto</th><th>Proveedor</th><th>Costo Total</th></tr></thead>
             <tbody>
               {% for c in compras %}
-              <tr><td>{{ c.fecha }}</td><td class="code">{{ c.oc }}</td><td>{{ c.descripcion }}</td><td>{{ c.proveedor }}</td><td style="font-weight: bold;">$ {{ "{:,.0f}".format(c.costo or 0).replace(',', '.') }}</td></tr>
+              <tr><td>{{ c.fecha }}</td><td class="code">{{ c.oc }}</td><td>{{ c.descripcion }}</td><td>{{ c.proveedor }}</td><td style="font-weight: bold;">{{ c.costo_str }}</td></tr>
               {% else %}
               <tr><td colspan="5" style="color:#64748b; padding:10px;">No registra compras asignadas.</td></tr>
               {% endfor %}
@@ -115,7 +115,7 @@ td{ padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
             <thead><tr><th>Fecha</th><th>Valor Capturado</th><th>Ubicación / Frente</th><th>Responsable</th></tr></thead>
             <tbody>
               {% for l in lecturas %}
-              <tr><td>{{ l.fecha }}</td><td style="font-weight: bold; color: var(--azul2);">{{ "{:,.0f}".format(l.valor or 0).replace(',', '.') }}</td><td>📍 {{ l.obra_ubicacion }}</td><td>👤 {{ l.responsable }}</td></tr>
+              <tr><td>{{ l.fecha }}</td><td style="font-weight: bold; color: var(--azul2);">{{ l.valor_str }}</td><td>📍 {{ l.obra_ubicacion }}</td><td>👤 {{ l.responsable }}</td></tr>
               {% else %}
               <tr><td colspan="4" style="color:#64748b; padding:10px;">No registra historial de lecturas.</td></tr>
               {% endfor %}
