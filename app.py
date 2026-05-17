@@ -18,6 +18,28 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # ==========================================
+# FUNCIONES DE BLINDAJE Y LIMPIEZA DE EXCEL
+# ==========================================
+def clean_int(val, default=0):
+    if val is None or pd.isna(val):
+        return default
+    try:
+        # Elimina espacios y maneja decimales si vienen como flotantes en Excel
+        s = str(val).strip().split('.')[0]
+        return int(s)
+    except ValueError:
+        return default
+
+def clean_float(val, default=0.0):
+    if val is None or pd.isna(val):
+        return default
+    try:
+        s = str(val).strip().replace('$', '').replace('.', '').replace(',', '.')
+        return float(s)
+    except ValueError:
+        return default
+
+# ==========================================
 # MODELOS DE BASE DE DATOS
 # ==========================================
 
@@ -86,7 +108,7 @@ with app.app_context():
     db.create_all()
 
 # ==========================================
-# VISTAS
+# VISTAS DASHBOARD
 # ==========================================
 
 @app.route('/')
@@ -143,7 +165,7 @@ def ficha_equipo(codigo):
     if request.method == 'POST':
         equipo.ubicacion = request.form.get('ubicacion')
         equipo.estado_base = request.form.get('estado_base')
-        equipo.proxima_pm = int(request.form.get('proxima_pm') or 0)
+        equipo.proxima_pm = clean_int(request.form.get('proxima_pm'), 0)
         db.session.commit()
         return redirect(url_for('ficha_equipo', codigo=codigo))
 
@@ -153,7 +175,7 @@ def ficha_equipo(codigo):
     return render_template('ficha_equipo.html', equipo=equipo, mantenciones=mantenciones, lecturas=lecturas, compras=compras)
 
 # ==========================================
-# INYECTOR DIRECTO DESDE EL ARCHIVO EXCEL (.XLSX)
+# INYECTOR COMPLETO CON BLINDAJE DE TEXTO
 # ==========================================
 
 @app.route('/admin/cargar_sql_final')
@@ -171,11 +193,17 @@ def cargar_sql_final():
         for _, row in df_eq.iterrows():
             if not row.iloc[0]: continue
             eq = Equipo(
-                codigo=str(row.iloc[0]).strip(), tipo_equipo=row.iloc[1], marca=row.iloc[2], modelo=row.iloc[3],
-                ano=int(row.iloc[4]) if row.iloc[4] else None, ubicacion=row.iloc[5], responsable=row.iloc[6],
+                codigo=str(row.iloc[0]).strip(), 
+                tipo_equipo=row.iloc[1], 
+                marca=row.iloc[2], 
+                modelo=row.iloc[3],
+                ano=clean_int(row.iloc[4], None), 
+                ubicacion=row.iloc[5], 
+                responsable=row.iloc[6],
                 estado_base=row.iloc[7] if row.iloc[7] else 'Operativo',
                 control_base=str(row.iloc[8]).strip().upper() if row.iloc[8] else 'HORAS',
-                frecuencia_base=int(row.iloc[9]) if row.iloc[9] else 250, promedio_diario=float(row.iloc[10]) if row.iloc[10] else 0.0
+                frecuencia_base=clean_int(row.iloc[9], 250), 
+                promedio_diario=clean_float(row.iloc[10], 0.0)
             )
             db.session.add(eq)
         db.session.commit()
@@ -189,10 +217,15 @@ def cargar_sql_final():
                 fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
             except:
                 fecha_dt = datetime.now()
+            
             lec = HistorialLectura(
-                fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(),
-                horometro=int(row.iloc[2]) if row.iloc[2] else 0, kilometraje=int(row.iloc[3]) if row.iloc[3] else 0,
-                obra_ubicacion=row.iloc[4], responsable=row.iloc[5], observation=row.iloc[6]
+                fecha=fecha_dt, 
+                codigo_equipo=str(row.iloc[1]).strip(),
+                horometro=clean_int(row.iloc[2], 0), 
+                kilometraje=clean_int(row.iloc[3], 0),
+                obra_ubicacion=row.iloc[4], 
+                responsable=row.iloc[5], 
+                observacion=row.iloc[6]
             )
             db.session.add(lec)
         db.session.commit()
@@ -206,11 +239,17 @@ def cargar_sql_final():
                 fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
             except:
                 fecha_dt = datetime.now()
-            costo = str(row.iloc[8]).replace('$', '').replace('.', '').strip() if row.iloc[8] else "0"
+            
             ot = OrdenTrabajo(
-                fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(), tipo_mantencion=row.iloc[2],
-                lectura=int(row.iloc[3]) if row.iloc[3] else 0, es_pm=row.iloc[4], folio=str(row.iloc[5]),
-                lugar=row.iloc[6], proveedor=row.iloc[7], costo_mantencion_clp=float(costo) if costo.isdigit() else 0.0,
+                fecha=fecha_dt, 
+                codigo_equipo=str(row.iloc[1]).strip(), 
+                tipo_mantencion=row.iloc[2],
+                lectura=clean_int(row.iloc[3], 0), 
+                es_pm=row.iloc[4], 
+                folio=str(row.iloc[5]),
+                lugar=row.iloc[6], 
+                proveedor=row.iloc[7], 
+                costo_mantencion_clp=clean_float(row.iloc[8], 0.0),
                 estado=row.iloc[9] if row.iloc[9] else 'Finalizada'
             )
             db.session.add(ot)
@@ -225,15 +264,21 @@ def cargar_sql_final():
                 fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
             except:
                 fecha_dt = datetime.now()
-            costo_pm = str(row.iloc[5]).replace('$', '').replace('.', '').strip() if row.iloc[5] else "0"
+            
             comp = CompraRepuesto(
-                fecha=fecha_dt, oc=str(row.iloc[1]), codigo_equipo=str(row.iloc[2]).strip(), descripcion=row.iloc[3],
-                proveedor=row.iloc[4], costo_pm_clp=float(costo_pm) if costo_pm.isdigit() else 0.0, regla=row.iloc[6], estado_oc=row.iloc[7]
+                fecha=fecha_dt, 
+                oc=str(row.iloc[1]), 
+                codigo_equipo=str(row.iloc[2]).strip(), 
+                descripcion=row.iloc[3],
+                proveedor=row.iloc[4], 
+                costo_pm_clp=clean_float(row.iloc[5], 0.0), 
+                regla=row.iloc[6], 
+                estado_oc=row.iloc[7]
             )
             db.session.add(comp)
         db.session.commit()
 
-        # LOGICA CONTROL BASE AUTOMÁTICA
+        # LÓGICA DE ACTUALIZACIÓN CORRELATIVA EN VIVO
         for eq in Equipo.query.all():
             ultima_lectura = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if ultima_lectura:
@@ -248,7 +293,7 @@ def cargar_sql_final():
                 eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
                 
         db.session.commit()
-        flash('¡Base de Datos inicializada con el Excel Completo!', 'success')
+        flash('¡Base de Datos de DEMOTRON inicializada con éxito!', 'success')
         return redirect(url_for('dashboard'))
 
     except Exception as e:
