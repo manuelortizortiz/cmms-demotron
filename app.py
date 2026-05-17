@@ -39,7 +39,7 @@ def clean_float(val, default=0.0):
 def buscar_foto_global(codigo):
     """
     Escanea dinámicamente static/equipos_real recorriendo cualquier subcarpeta
-    (barredora, camion aljibe, excavadora, etc.) para encontrar la foto de la máquina.
+    (barredora, camion aljibe, excavadora, camiones de ruta, etc.)
     """
     if not codigo:
         return None
@@ -54,9 +54,11 @@ def buscar_foto_global(codigo):
         for f in files:
             nombre, ext = os.path.splitext(f)
             if nombre.lower().strip() == codigo_limpio and ext.lower() in ['.jpg', '.jpeg', '.png']:
-                abs_path = os.path.join(root, f)
-                rel_path = os.path.relpath(abs_path, app.root_path if app.root_path in abs_path else os.getcwd())
-                return "/" + rel_path.replace("\\", "/")
+                abs_path = os.path.join(root, f).replace("\\", "/")
+                idx = abs_path.find('static/')
+                if idx != -1:
+                    return "/" + abs_path[idx:]
+                return "/static/equipos_real/" + f
     return None
 
 # ==========================================
@@ -128,7 +130,7 @@ with app.app_context():
     db.create_all()
 
 # ==========================================
-# CENTRALIZACIÓN DEL DASHBOARD Y LISTAS DE EXCEL
+# RUTA CORE: INTERFAZ DE GESTIÓN CENTRAL
 # ==========================================
 
 @app.route('/')
@@ -157,11 +159,13 @@ def dashboard():
         status_limpio = 'Fuera de Servicio' if e.estado_base in ['Fuera de Servicio', 'No operativo'] else e.estado_base
         if status_limpio in conteo_estado:
             conteo_estado[status_limpio] += 1
+        else:
+            conteo_estado[status_limpio] = 1
         
         if e.ubicacion:
             conteo_ubicacion[e.ubicacion] = conteo_ubicacion.get(e.ubicacion, 0) + 1
             
-        # CONTROL ESTADO CRÍTICO: CD-103 vendido NO ENTRA en taller bajo ninguna circunstancia
+        # CD-103 vendido (Fuera de Servicio) queda automáticamente fuera de taller
         if e.estado_base == 'Taller' and e.estado_base not in ['Fuera de Servicio', 'No operativo']:
             taller.append(eq_data)
             
@@ -173,24 +177,27 @@ def dashboard():
         if e.estado_base == 'Operativo':
             operativos_count += 1
 
-    # FILTRO SOLICITADO: Solo frentes con más de 5 equipos en el gráfico
+    # Solicitud técnica: Ocultar obras con 5 o menos equipos
     conteo_ubicacion_filtrado = {k: v for k, v in conteo_ubicacion.items() if v > 5}
     ot_abiertas = OrdenTrabajo.query.filter_by(estado='Abierta').count()
     costo_compras = db.session.query(db.func.sum(CompraRepuesto.costo_pm_clp)).scalar() or 0.0
 
+    # SOLUCIÓN AL ERROR 500: Se define la variable antes de inyectarla al diccionario de KPIs
+    total_equipos = len(equipos_db)
+
     kpis = {
         'atrasados': len(criticos), 'total': total_equipos, 'proximos': proximos_count,
-        'ot_abiertas': ot_abiertas, 'controlados': operativos_count, 'operativos': len(equipos_db),
-        'controlado_pct': round((operativos_count / len(equipos_db) * 100)) if len(equipos_db) > 0 else 0,
+        'ot_abiertas': ot_abiertas, 'controlados': operativos_count, 'operativos': total_equipos,
+        'controlado_pct': round((operativos_count / total_equipos * 100)) if total_equipos > 0 else 0,
         'costo_mes': int(costo_compras)
     }
     
     charts = {
         'estado': conteo_estado, 'ubicacion': conteo_ubicacion_filtrado,
-        'gestion': {'Ene': [45, 30], 'Feb': [52, 28], 'Mar': [48, 35], 'Abr': [ot_abiertas, 12]}
+        'gestion': {'Ene': [25, 18], 'Feb': [32, 24], 'Mar': [41, 38], 'Abr': [ot_abiertas, 15]}
     }
 
-    # SERIALIZACIÓN COMPLETA DE TABLAS EXTRA DE EXCEL (SANEAMIENTO PREVENTIVO FECHAS)
+    # Desglose de tablas históricas de Excel saneadas
     todas_mantenciones = [{
         'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'codigo': m.codigo_equipo,
         'tipo': m.tipo_mantencion, 'lectura': m.lectura, 'es_pm': m.es_pm, 'folio': m.folio,
@@ -213,7 +220,7 @@ def dashboard():
                            compras=todas_compras, lecturas=todas_lecturas, rol="Admin")
 
 # ==========================================
-# RUTA DE LA FICHA TÉCNICA SANADA RECURSIVA
+# VISTA DE LA FICHA TÉCNICA DINÁMICA
 # ==========================================
 
 @app.route('/equipo/<codigo>', methods=['GET', 'POST'])
@@ -251,14 +258,14 @@ def ficha_equipo(codigo):
     return render_template('ficha_equipo.html', equipo=equipo, mantenciones=mantenciones, lecturas=lecturas, compras=compras, foto_url=foto_url)
 
 # ==========================================
-# INYECTOR MAESTRO AUTOMÁTICO EXCEL (.XLSX)
+# INYECTOR SEGURO DEL LIBRO DE EXCEL
 # ==========================================
 
 @app.route('/admin/cargar_sql_final')
 def cargar_sql_final():
     archivo_excel = "CMMS DEMOTRON MANU ORTIZ.xlsx"
     if not os.path.exists(archivo_excel):
-        return f"Error: No se encuentra el archivo maestro '{archivo_excel}'."
+        return f"Error: No se encuentra el archivo maestro '{archivo_excel}' en la raíz."
     try:
         with db.engine.connect() as conn:
             conn.execute(db.text("DROP TABLE IF EXISTS compra_repuesto CASCADE;"))
@@ -322,7 +329,7 @@ def cargar_sql_final():
             db.session.add(comp)
             db.session.commit()
 
-        # CONSOLIDACIÓN TÉCNICA CORRELATIVA
+        # CONSOLIDACIÓN ESTADÍSTICA
         for eq in Equipo.query.all():
             ultima_lectura = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if ultima_lectura: eq.lectura_actual = ultima_lectura.horometro if eq.control_base == 'HORAS' else ultima_lectura.kilometraje
