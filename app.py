@@ -18,14 +18,13 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # ==========================================
-# FUNCIONES DE BLINDAJE Y LIMPIEZA DE EXCEL
+# FUNCIONES DE LIMPIEZA Y BÚSQUEDA INDUSTRIAL
 # ==========================================
 def clean_int(val, default=0):
     if val is None or pd.isna(val):
         return default
     try:
-        s = str(val).strip().split('.')[0]
-        return int(s)
+        return int(str(val).strip().split('.')[0])
     except ValueError:
         return default
 
@@ -33,10 +32,28 @@ def clean_float(val, default=0.0):
     if val is None or pd.isna(val):
         return default
     try:
-        s = str(val).strip().replace('$', '').replace('.', '').replace(',', '.')
-        return float(s)
+        return float(str(val).strip().replace('$', '').replace('.', '').replace(',', '.'))
     except ValueError:
         return default
+
+def buscar_foto_global(codigo):
+    """
+    Escanea recursivamente static/equipos_real buscando el código del equipo
+    en cualquier subcarpeta (barredora, camion aljibe, excavadora, etc.)
+    """
+    if not codigo:
+        return None
+    base_dir = "static/equipos_real"
+    if not os.path.exists(base_dir):
+        return None
+    codigo_limpio = str(codigo).strip().lower()
+    for root, dirs, files in os.walk(base_dir):
+        for f in files:
+            nombre, ext = os.path.splitext(f)
+            if nombre.lower().strip() == codigo_limpio and ext.lower() in ['.jpg', '.jpeg', '.png']:
+                # Retorna la ruta web limpia con barras normales
+                return "/" + os.path.join(root, f).replace("\\", "/")
+    return None
 
 # ==========================================
 # MODELOS DE BASE DE DATOS
@@ -64,7 +81,7 @@ class Equipo(db.Model):
 
     @property
     def semaforo(self):
-        if self.estado_base == 'Fuera de Servicio': return 'red'
+        if self.estado_base in ['Fuera de Servicio', 'No operativo']: return 'red'
         if self.margen < 0: return 'red'
         if self.margen < 50: return 'yellow'
         return 'green'
@@ -107,7 +124,7 @@ with app.app_context():
     db.create_all()
 
 # ==========================================
-# VISTAS DASHBOARD
+# RUTA DEL DASHBOARD ORIGINAL REPARADO
 # ==========================================
 
 @app.route('/')
@@ -115,39 +132,47 @@ with app.app_context():
 def dashboard():
     equipos_db = Equipo.query.all()
     equipos, taller, criticos = [], [], []
-    atrasados_count, proximos_count, operativos_count = 0, 0, 0
-    conteo_estado = {'Operativo': 0, 'Fuera de Servicio': 0, 'En Taller': 0}
+    
+    proximos_count = 0
+    operativos_count = 0
+    conteo_estado = {'Operativo': 0, 'Fuera de Servicio': 0, 'Taller': 0}
     conteo_ubicacion = {}
 
     for e in equipos_db:
+        # Lógica de escaneo de imágenes subdivididas por tipo de equipo
+        foto_url = buscar_foto_global(e.codigo)
+
         eq_data = {
             'codigo': e.codigo, 'tipo_equipo': e.tipo_equipo, 'marca': e.marca, 'modelo': e.modelo,
             'ubicacion': e.ubicacion or 'Sin Ubicación', 'responsable': e.responsable or 'No Asignado',
             'control_base': e.control_base, 'lectura_actual': e.lectura_actual, 'proxima_pm': e.proxima_pm,
-            'margen': e.margen, 'estado_base': e.estado_base, 'semaforo': e.semaforo
+            'margen': e.margen, 'estado_base': e.estado_base, 'semaforo': e.semaforo, 'foto_url': foto_url
         }
         equipos.append(eq_data)
         
-        status = e.estado_base if e.estado_base in conteo_estado else 'Operativo'
-        conteo_estado[status] += 1
+        # Mapeo de gráficos
+        status_limpio = 'Fuera de Servicio' if e.estado_base in ['Fuera de Servicio', 'No operativo'] else e.estado_base
+        if status_limpio in conteo_estado:
+            conteo_estado[status_limpio] += 1
         
         if e.ubicacion:
             conteo_ubicacion[e.ubicacion] = conteo_ubicacion.get(e.ubicacion, 0) + 1
             
-        # SOLUCIÓN 1: El carrusel de taller ahora es EXCLUSIVO para equipos con estado 'En Taller'
-        if e.estado_base == 'En Taller':
+        # FILTRO EXCEL BLINDADO: Entran a taller SOLO los que dicen 'Taller' y NO están Fuera de Servicio (Evita CD-103)
+        if e.estado_base == 'Taller' and e.estado_base not in ['Fuera de Servicio', 'No operativo']:
             taller.append(eq_data)
             
-        if e.semaforo == 'red':
+        # FILTRO CRÍTICOS: Entran los que tienen semáforo rojo o están dados de baja
+        if e.semaforo == 'red' or e.estado_base in ['Fuera de Servicio', 'No operativo']:
             criticos.append(eq_data)
-            atrasados_count += 1
-        elif e.semaforo == 'yellow':
+        
+        if e.semaforo == 'yellow':
             proximos_count += 1
             
         if e.estado_base == 'Operativo':
             operativos_count += 1
 
-    # SOLUCIÓN 3: Filtrar el gráfico de ubicaciones para mostrar SOLO las faenas con más de 5 equipos
+    # FILTRO SOLICITADO: Mostrar en el gráfico SOLO ubicaciones con más de 5 equipos
     conteo_ubicacion_filtrado = {k: v for k, v in conteo_ubicacion.items() if v > 5}
 
     total_equipos = len(equipos_db)
@@ -155,20 +180,22 @@ def dashboard():
     costo_compras = db.session.query(db.func.sum(CompraRepuesto.costo_pm_clp)).scalar() or 0.0
 
     kpis = {
-        'atrasados': atrasados_count, 'total': total_equipos, 'proximos': proximos_count,
-        'ot_abiertas': ot_abiertas, 'controlados': operativos_count,
+        'atrasados': len(criticos), 'total': total_equipos, 'proximos': proximos_count,
+        'ot_abiertas': ot_abiertas, 'controlados': operativos_count, 'operativos': total_equipos,
         'controlado_pct': round((operativos_count / total_equipos * 100)) if total_equipos > 0 else 0,
         'costo_mes': int(costo_compras)
     }
+    
     charts = {
         'estado': conteo_estado, 
         'ubicacion': conteo_ubicacion_filtrado,
-        'gestion': {'Ene': [15, 8], 'Feb': [22, 14], 'Mar': [19, 25], 'Abr': [ot_abiertas, 12]}
+        'gestion': {'Ene': [45, 30], 'Feb': [52, 28], 'Mar': [48, 35], 'Abr': [ot_abiertas, 12]}
     }
-    return render_template('index.html', kpis=kpis, charts=json.dumps(charts), equipos=equipos, criticos=criticos, taller=taller)
+    
+    return render_template('index.html', kpis=kpis, charts=json.dumps(charts), equipos=equipos, criticos=criticos, taller=taller, rol="Admin")
 
 # ==========================================
-# SOLUCIÓN 2: VISTA DE LA FICHA SANADA CONTRA ERROR 500
+# RUTA DE LA FICHA TÉCNICA SANEADA (NO ERROR 500)
 # ==========================================
 
 @app.route('/equipo/<codigo>', methods=['GET', 'POST'])
@@ -182,59 +209,47 @@ def ficha_equipo(codigo):
         db.session.commit()
         return redirect(url_for('ficha_equipo', codigo=codigo))
 
-    # Consultas relacionales directas
     mantenciones_db = OrdenTrabajo.query.filter_by(codigo_equipo=codigo).order_by(OrdenTrabajo.id.desc()).all()
     lecturas_db = HistorialLectura.query.filter_by(codigo_equipo=codigo).order_by(HistorialLectura.id.desc()).all()
     compras_db = CompraRepuesto.query.filter_by(codigo_equipo=codigo).order_by(CompraRepuesto.id.desc()).all()
 
-    # Pre-formateo absoluto de fechas en Python para blindar Jinja contra None/Strings
     mantenciones = []
     for m in mantenciones_db:
-        fecha_str = m.fecha.strftime('%d/%m/%Y') if m.fecha else 'Sin Fecha'
+        f_str = m.fecha.strftime('%d/%m/%Y') if m.fecha else 'Sin Fecha'
         mantenciones.append({
-            'id': m.id,
-            'fecha': fecha_str,
-            'tipo_mantencion': m.tipo_mantencion or 'Mantención General',
-            'lectura': m.lectura,
-            'folio': m.folio or 'S/F',
-            'lugar': m.lugar or 'Taller',
-            'costo': m.costo_mantencion_clp,
-            'estado': m.estado or 'Finalizada'
+            'fecha': f_str, 'folio': m.folio or 'S/F', 'tipo_mantencion': m.tipo_mantencion or 'Servicio',
+            'lectura': m.lectura, 'lugar': m.lugar or 'Taller', 'costo': m.costo_mantencion_clp, 'estado': m.estado or 'Finalizada'
         })
 
     lecturas = []
     for l in lecturas_db:
-        fecha_str = l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else 'Sin Fecha'
+        f_str = l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else 'Sin Fecha'
         lecturas.append({
-            'fecha': fecha_str,
-            'valor': l.horometro if equipo.control_base == 'HORAS' else l.kilometraje,
-            'obra_ubicacion': l.obra_ubicacion or 'Faena',
-            'responsable': l.responsable or 'Operador',
-            'observacion': l.observacion or ''
+            'fecha': f_str, 'valor': l.horometro if equipo.control_base == 'HORAS' else l.kilometraje,
+            'obra_ubicacion': l.obra_ubicacion or 'Faena', 'responsable': l.responsable or 'Operador'
         })
 
     compras = []
     for c in compras_db:
-        fecha_str = c.fecha.strftime('%d/%m/%Y') if c.fecha else 'Sin Fecha'
+        f_str = c.fecha.strftime('%d/%m/%Y') if c.fecha else 'Sin Fecha'
         compras.append({
-            'fecha': fecha_str,
-            'oc': c.oc or 'N/A',
-            'descripcion': c.descripcion or 'Repuestos',
-            'proveedor': c.proveedor or 'S/P',
-            'costo': c.costo_pm_clp
+            'fecha': f_str, 'oc': c.oc or 'N/A', 'descripcion': c.descripcion or 'Insumos',
+            'proveedor': c.proveedor or 'S/P', 'costo': c.costo_pm_clp
         })
 
-    return render_template('ficha_equipo.html', equipo=equipo, mantenciones=mantenciones, lecturas=lecturas, compras=compras)
+    foto_url = buscar_foto_global(equipo.codigo)
+
+    return render_template('ficha_equipo.html', equipo=equipo, mantenciones=mantenciones, lecturas=lecturas, compras=compras, foto_url=foto_url)
 
 # ==========================================
-# INYECTOR COMPLETO LINEA POR LINEA
+# INYECTOR COMPLETO MAESTRO EXCEL
 # ==========================================
 
 @app.route('/admin/cargar_sql_final')
 def cargar_sql_final():
     archivo_excel = "CMMS DEMOTRON MANU ORTIZ.xlsx"
     if not os.path.exists(archivo_excel):
-        return f"Error: No se encuentra el archivo maestro '{archivo_excel}' en la raíz del servidor."
+        return f"Error: No se encuentra el archivo maestro '{archivo_excel}' en la raíz."
 
     try:
         with db.engine.connect() as conn:
@@ -254,7 +269,7 @@ def cargar_sql_final():
                 codigo=str(row.iloc[0]).strip(), tipo_equipo=row.iloc[1], marca=row.iloc[2], 
                 modelo=str(row.iloc[3]).strip() if row.iloc[3] else None,
                 ano=clean_int(row.iloc[4], None), ubicacion=row.iloc[5], responsable=row.iloc[6],
-                estado_base=row.iloc[7] if row.iloc[7] else 'Operativo',
+                estado_base=str(row.iloc[7]).strip() if row.iloc[7] else 'Operativo',
                 control_base=str(row.iloc[8]).strip().upper() if row.iloc[8] else 'HORAS',
                 frecuencia_base=clean_int(row.iloc[9], 250), promedio_diario=clean_float(row.iloc[10], 0.0)
             )
@@ -273,8 +288,7 @@ def cargar_sql_final():
             
             lec = HistorialLectura(
                 fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(),
-                horometro=clean_int(row.iloc[2], 0),
-                kilometraje=clean_int(row.iloc[3], 0),
+                horometro=clean_int(row.iloc[2], 0), kilometraje=clean_int(row.iloc[3], 0),
                 obra_ubicacion=row.iloc[4], responsable=row.iloc[5], observacion=row.iloc[6]
             )
             db.session.add(lec)
@@ -316,7 +330,7 @@ def cargar_sql_final():
             db.session.add(comp)
             db.session.commit()
 
-        # CALCULO SINCRÓNICO DE VARIABLES EN VIVO
+        # LOGICA CONTROL BASE ASOCIATIVA
         for eq in Equipo.query.all():
             ultima_lectura = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if ultima_lectura:
@@ -331,7 +345,6 @@ def cargar_sql_final():
                 eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
                 
         db.session.commit()
-        flash('¡Base de Datos de DEMOTRON inicializada con éxito total!', 'success')
         return redirect(url_for('dashboard'))
 
     except Exception as e:
