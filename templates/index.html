@@ -68,6 +68,7 @@ body{
   font-weight:600;
   font-size:14px;
   white-space:nowrap;
+  cursor: pointer;
 }
 .menu a.active{color:var(--azul); border-bottom-color:var(--azul3);}
 .buscar{
@@ -91,7 +92,11 @@ body{
 }
 .user{font-size:14px; color:#334155; white-space:nowrap;}
 .user a{color:var(--azul);font-weight:700;text-decoration:none}
-.wrap{padding:20px 24px 0}
+.wrap{padding:20px 24px 20px}
+
+/* Control de visibilidad de módulos */
+.seccion-modulo { display: none; }
+.seccion-modulo.active { display: block; }
 
 .kpis{
   display:grid;
@@ -159,6 +164,7 @@ body{
   box-shadow:var(--shadow);
   padding:18px;
   overflow:hidden;
+  margin-bottom: 14px;
 }
 .panel h3{margin:0 0 14px; color:#0b1d3d; font-size:16px; letter-spacing:.2px;}
 .canvasBox{height:280px; position:relative; width: 100%;}
@@ -173,6 +179,8 @@ td{padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle;}
 .code{color:var(--azul); font-weight:950;}
 .pill{border-radius:999px; padding:6px 11px; font-weight:900; font-size:11px; display:inline-block;}
 .pill.red{background:#ffe1e3;color:#dc2626}
+.pill.yellow{background:#fff4cc;color:#a16207}
+.pill.green{background:#dcfce7;color:#15803d}
 
 .btn{border:0; border-radius:7px; padding:8px 13px; background:var(--azul); color:#fff; font-weight:900; cursor:pointer; white-space: nowrap;}
 .btn.red{background:var(--rojo)}
@@ -191,6 +199,12 @@ td{padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle;}
 .dot{width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:7px;}
 .dot.yellow{background:var(--amarillo)}
 .eqtitle{font-weight:950; color:#0f172a; display:inline-block;}
+
+/* Estilos de Formularios de control */
+.form-group { margin-bottom: 12px; }
+.form-group label { display:block; font-size:12px; font-weight:700; margin-bottom:4px; color:#334155; }
+.form-control { width:100%; height:38px; border:1px solid var(--borde); border-radius:6px; padding:0 10px; font-family:inherit; }
+textarea.form-control { height: 80px; padding: 10px; resize: none; }
 
 @media(max-width:992px){
   .split { grid-template-columns:1fr; }
@@ -212,11 +226,11 @@ td{padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle;}
     <div class="logo">DEMOTRON</div>
     <button class="btn-mobile-menu" onclick="toggleMenu()">☰</button>
   </div>
-  
+    
   <nav class="menu" id="mobileMenu">
-    <a class="active" href="#dashboard">▦ Dashboard</a>
-    <a href="#equipos">⚙ Equipos</a>
-    <a href="#ot">🛠 OT</a>
+    <a id="nav-dashboard" class="active" onclick="switchTab('dashboard')">▦ Dashboard</a>
+    <a id="nav-equipos" onclick="switchTab('equipos')">⚙ Equipos</a>
+    <a id="nav-ot" onclick="switchTab('ot')">🛠 OT</a>
   </nav>
 
   <input class="buscar" list="listaEquipos" id="buscarInput" placeholder="Buscar unidad (Ej: AB-CD)..." onchange="irAFichaEquipo(this.value)">
@@ -226,82 +240,204 @@ td{padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle;}
     {% endfor %}
   </datalist>
 
-  <div class="badge-sync" id="syncIndicator">↻ Sincronizando...</div>
-  <div class="user">👤 {{ rol or 'Admin' }} · <a href="/logout">Salir</a></div>
+  <div class="badge-sync" id="syncIndicator">✓ Sincronizado</div>
+  <div class="user">👤 Admin · <a href="/logout">Salir</a></div>
 </header>
 
-<main class="wrap" id="dashboard">
+<main class="wrap">
   <div id="dynamic-content">
     
-    <section class="kpis">
-      <div class="kpi"><div class="circle c-red">!</div><div><small style="color:#2f3b52;">AVERÍAS CRÍTICAS</small><b style="color:#0f172a;">{{ kpis.atrasados }}</b><span style="color:#64748b;">{{ kpis.total }} equipos total</span></div></div>
-      
-      <div class="kpi color-filled yellow"><div class="circle c-white">◷</div><div><small>PRÓXIMOS MANTENIMIENTOS</small><b>{{ kpis.proximos }}</b><span>Servicios por vencer</span></div></div>
-      
-      <div class="kpi color-filled blue"><div class="circle c-white">🛠</div><div><small>OT ABIERTAS</small><b>{{ kpis.ot_abiertas }}</b><span>En proceso</span></div></div>
-      
-      <div class="kpi"><div class="circle c-green">✓</div><div><small style="color:#2f3b52;">CONTROLADO REAL</small><b style="color:#0f172a;">{{ kpis.controlado_pct }}%</b><span style="color:#64748b;">{{ kpis.controlados }} / {{ kpis.operativos }}</span></div></div>
-      
-      <div class="kpi kpi-costo">
-        <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-          <small style="color:#2f3b52;">COSTO POR MANTENCIÓN</small>
+    <div id="mod-dashboard" class="seccion-modulo active">
+      <section class="kpis">
+        <div class="kpi"><div class="circle c-red">!</div><div><small style="color:#2f3b52;">AVERÍAS CRÍTICAS</small><b style="color:#0f172a;">{{ kpis.atrasados }}</b><span style="color:#64748b;">{{ kpis.total }} equipos total</span></div></div>
+        <div class="kpi color-filled yellow"><div class="circle c-white">◷</div><div><small>PRÓXIMOS MANTENIMIENTOS</small><b>{{ kpis.proximos }}</b><span>Servicios por vencer</span></div></div>
+        <div class="kpi color-filled blue"><div class="circle c-white">🛠</div><div><small>OT ABIERTAS</small><b>{{ kpis.ot_abiertas }}</b><span>En proceso</span></div></div>
+        <div class="kpi"><div class="circle c-green">✓</div><div><small style="color:#2f3b52;">CONTROLADO REAL</small><b style="color:#0f172a;">{{ kpis.controlado_pct }}%</b><span style="color:#64748b;">{{ kpis.controlados }} / {{ kpis.operativos }}</span></div></div>
+        
+        <div class="kpi kpi-costo">
+          <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+            <small style="color:#2f3b52;">COSTO POR MANTENCIÓN</small>
+          </div>
+          <b style="color:#0f172a;">$ {{ "{:,.0f}".format(kpis.costo_mes or 0).replace(',', '.') }}</b>
+          <div class="mini-chart-container">
+            <canvas id="chartCostoMeses"></canvas>
+          </div>
         </div>
-        <b style="color:#0f172a;">$ {{ "{:,.0f}".format(kpis.costo_mes or 0).replace(',', '.') }}</b>
-        <div class="mini-chart-container">
-          <canvas id="chartCostoMeses"></canvas>
+      </section>
+
+      <section class="grid3">
+        <div class="panel"><h3>ESTADO GENERAL DE LA FLOTA</h3><div class="canvasBox"><canvas id="donut"></canvas></div></div>
+        <div class="panel"><h3>UBICACIÓN DE EQUIPOS</h3><div class="canvasBox"><canvas id="ubic"></canvas></div></div>
+        <div class="panel"><h3>GESTIÓN (OT Y COMPRAS)</h3><div class="canvasBox"><canvas id="gestion"></canvas></div></div>
+      </section>
+
+      <div class="cardsHeader" style="margin-top: 20px;">
+        <h3>EQUIPOS ACTUALMENTE EN TALLER</h3>
+      </div>
+      <div class="cards">
+        {% for e in taller %}
+        <div class="eqcard yellow" onclick="irAFichaEquipo('{{ e.codigo }}')">
+          <span class="dot yellow"></span><div class="eqtitle">{{ e.codigo }}</div>
+          <div style="font-size:12px; color:#334155; margin-top:5px; height: 35px; overflow: hidden;">{{ e.descripcion }}</div>
+          <div style="font-size:11px; font-weight:bold; margin-top:5px;">📍 {{ e.ubicacion }}</div>
         </div>
+        {% else %}
+        <div style="padding: 20px; color: #64748b; font-size: 14px;">No hay equipos en taller en este momento.</div>
+        {% endfor %}
       </div>
-    </section>
 
-    <section class="grid3">
-      <div class="panel"><h3>ESTADO GENERAL DE LA FLOTA</h3><div class="canvasBox"><canvas id="donut"></canvas></div></div>
-      <div class="panel"><h3>UBICACIÓN DE EQUIPOS</h3><div class="canvasBox"><canvas id="ubic"></canvas></div></div>
-      <div class="panel"><h3>GESTIÓN (OT Y COMPRAS)</h3><div class="canvasBox"><canvas id="gestion"></canvas></div></div>
-    </section>
-
-    <div class="cardsHeader" style="margin-top: 20px;">
-      <h3>EQUIPOS ACTUALMENTE EN TALLER</h3>
+      <section class="split">
+        <div class="panel" style="grid-column: span 2;">
+          <h3>EQUIPOS CON AVERÍAS (CRÍTICOS)</h3>
+          <div class="tablewrap">
+          <table>
+            <thead><tr><th>Equipo</th><th>Descripción</th><th>Ubicación</th><th>Última Lectura</th><th>Próxima PM</th><th>Estado</th><th>Acción</th></tr></thead>
+            <tbody>
+            {% for e in criticos %}
+              <tr>
+                <td class="code">{{ e.codigo }}</td>
+                <td>{{ e.descripcion }}</td>
+                <td>{{ e.ubicacion }}</td>
+                <td>{{ "{:,.0f}".format(e.lectura_actual or 0).replace(',', '.') }}</td>
+                <td>{{ "{:,.0f}".format(e.proxima_pm or 0).replace(',', '.') }}</td>
+                <td><span class="pill red">AVERÍA</span></td>
+                <td><button class="btn red" onclick="irAFichaEquipo('{{ e.codigo }}')">Ver Ficha</button></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+          </div>
+        </div>
+      </section>
     </div>
-    <div class="cards">
-      {% for e in taller %}
-      <div class="eqcard yellow" onclick="irAFichaEquipo('{{ e.codigo }}')">
-        <span class="dot yellow"></span><div class="eqtitle">{{ e.codigo }}</div>
-        <div style="font-size:12px; color:#334155; margin-top:5px; height: 35px; overflow: hidden;">{{ e.descripcion }}</div>
-        <div style="font-size:11px; font-weight:bold; margin-top:5px;">📍 {{ e.ubicacion }}</div>
-      </div>
-      {% else %}
-      <div style="padding: 20px; color: #64748b; font-size: 14px;">No hay equipos en taller en este momento.</div>
-      {% endfor %}
-    </div>
 
-    <section class="split">
-      <div class="panel" style="grid-column: span 2;">
-        <h3>EQUIPOS CON AVERÍAS (CRÍTICOS)</h3>
+    <div id="mod-equipos" class="seccion-modulo">
+      <div class="panel">
+        <h3>INVENTARIO GENERAL DE MAQUINARIA (PARQUE COMPLETO)</h3>
         <div class="tablewrap">
-        <table>
-          <thead><tr><th>Equipo</th><th>Descripción</th><th>Ubicación</th><th>Última Lectura</th><th>Próxima PM</th><th>Estado</th><th>Acción</th></tr></thead>
-          <tbody>
-          {% for e in criticos %}
-            <tr>
-              <td class="code">{{ e.codigo }}</td>
-              <td>{{ e.descripcion }}</td>
-              <td>{{ e.ubicacion }}</td>
-              <td>{{ "{:,.0f}".format(e.lectura_actual or 0).replace(',', '.') }}</td>
-              <td>{{ "{:,.0f}".format(e.proxima_pm or 0).replace(',', '.') }}</td>
-              <td><span class="pill red">AVERÍA</span></td>
-              <td><button class="btn red" onclick="irAFichaEquipo('{{ e.codigo }}')">Ver Ficha</button></td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
+          <table>
+            <thead>
+              <tr>
+                <th>Código Único</th>
+                <th>Marca / Modelo</th>
+                <th>Descripción Operativa</th>
+                <th>Ubicación</th>
+                <th>Horómetro / Km Actual</th>
+                <th>Próximo Servicio PM</th>
+                <th>Estado Operativo</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for e in equipos %}
+              <tr>
+                <td class="code">{{ e.codigo }}</td>
+                <td>{{ e.marca }} {{ e.modelo }}</td>
+                <td>{{ e.descripcion }}</td>
+                <td>📍 {{ e.ubicacion }}</td>
+                <td>{{ "{:,.0f}".format(e.lectura_actual or 0).replace(',', '.') }}</td>
+                <td>{{ "{:,.0f}".format(e.proxima_pm or 0).replace(',', '.') }}</td>
+                <td>
+                  {% if e.estado == 'Avería' %}
+                    <span class="pill red">AVERÍA</span>
+                  {% elif e.estado == 'En Taller' %}
+                    <span class="pill yellow">EN TALLER</span>
+                  {% else %}
+                    <span class="pill green">OPERATIVO</span>
+                  {% endif %}
+                </td>
+                <td><button class="btn" onclick="irAFichaEquipo('{{ e.codigo }}')">Detalles / Ficha</button></td>
+              </tr>
+              {% else %}
+              <tr><td colspan="8" style="text-align:center; padding: 20px;">No hay maquinaria en la base de datos. Ejecuta la ruta de inicialización para cargar la simulación.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
       </div>
-    </section>
-    
+    </div>
+
+    <div id="mod-ot" class="seccion-modulo">
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+        <div class="panel">
+          <h3>EMITIR NUEVA ORDEN DE TRABAJO</h3>
+          <form action="/crear_ot" method="POST">
+            <div class="form-group">
+              <label>Código Interno de la Unidad</label>
+              <input type="text" name="codigo" class="form-control" required placeholder="Ej: SC-201">
+            </div>
+            <div class="form-group">
+              <label>Tipo de Intervención</label>
+              <select name="tipo" class="form-control">
+                <option value="Correctiva">Correctiva (Urgente)</option>
+                <option value="Preventiva">Preventiva (Mantenimiento PM)</option>
+                <option value="Predictiva">Predictiva / Inspección</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Nivel de Prioridad</label>
+              <select name="prioridad" class="form-control">
+                <option value="Baja">Baja</option>
+                <option value="Media">Media</option>
+                <option value="Alta">Alta Crítica</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Detalle Técnico del Trabajo a realizar</label>
+              <textarea name="descripcion" class="form-control" required placeholder="Describa la falla mecánica observada..."></textarea>
+            </div>
+            <button type="submit" class="btn red" style="width: 100%; margin-top: 10px;">Ingresar Orden al Sistema</button>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h3>REGISTRO DE ÓRDENES EN PROCESO</h3>
+          <div class="tablewrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Equipo Vinculado</th>
+                  <th>Clasificación</th>
+                  <th>Severidad</th>
+                  <th>Diagnóstico Técnico</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="code">#001</td>
+                  <td class="code">MB-405</td>
+                  <td>Correctiva</td>
+                  <td><span class="pill red">CRÍTICA</span></td>
+                  <td>Falla severa detectada en sistema de aire e inyección neumática.</td>
+                  <td><span class="pill yellow">Abierta</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </main>
 
 <script>
+// Sistema de navegación por pestañas del lado del cliente
+function switchTab(targetTab) {
+  document.querySelectorAll('.seccion-modulo').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.menu a').forEach(el => el.classList.remove('active'));
+  
+  const selectedModule = document.getElementById('mod-' + targetTab);
+  const selectedNavbar = document.getElementById('nav-' + targetTab);
+  
+  if (selectedModule && selectedNavbar) {
+    selectedModule.classList.add('active');
+    selectedNavbar.classList.add('active');
+  }
+}
+
 function irAFichaEquipo(codigo) {
   if(codigo && codigo.trim() !== "") {
     window.location.href = '/equipo/' + codigo; 
@@ -312,6 +448,7 @@ function toggleMenu() {
   document.getElementById('mobileMenu').classList.toggle('active-mobile');
 }
 
+// Inicialización de Gráficos de DEMOTRON
 const data = {{ charts|safe }};
 function safeObj(o){return o && typeof o === 'object' ? o : {}}
 const estado = safeObj(data.estado);
@@ -323,7 +460,7 @@ function renderCharts() {
     const el = document.getElementById(id);
     if(!el) return;
     if(Chart.getChart(id)) Chart.getChart(id).destroy();
-    
+        
     let options = {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: type==='doughnut' ? 'right' : 'bottom' } }
@@ -338,7 +475,7 @@ function renderCharts() {
         }
       };
     }
-    
+        
     options = { ...options, ...extraOptions };
 
     new Chart(el, {
@@ -348,7 +485,7 @@ function renderCharts() {
     });
   }
 
-  chart('donut', 'doughnut', Object.keys(estado), Object.values(estado), ['#35b96b', '#ef3f45', '#f7b500', '#9ca3af']);
+  chart('donut', 'doughnut', Object.keys(estado), Object.values(estado), ['#35b96b', '#f7b500', '#ef3f45', '#9ca3af']);
   chart('ubic', 'bar', Object.keys(ubicacion), Object.values(ubicacion), ['#0c3f86']);
 
   const elGestion = document.getElementById('gestion');
@@ -377,7 +514,7 @@ function renderCharts() {
   const elCosto = document.getElementById('chartCostoMeses');
   if(elCosto) {
     if(Chart.getChart('chartCostoMeses')) Chart.getChart('chartCostoMeses').destroy();
-    const datosCostos = [3200000, 4100000, {{ kpis.costo_mes or 3800000 }}]; 
+    const datosCostos = [3200000, 4100000, 4850000]; 
     const etiquetasMeses = ['Mar', 'Abr', 'May'];
 
     new Chart(elCosto, {
@@ -404,11 +541,15 @@ function renderCharts() {
   }
 }
 
-renderCharts();
+window.onload = renderCharts;
 
+// Ciclo Ajax síncrono para recargas automáticas en tiempo real
 setInterval(() => {
   const syncBadge = document.getElementById('syncIndicator');
-  if(syncBadge) syncBadge.style.opacity = '0.4';
+  if(syncBadge) syncBadge.innerText = '↻ Sincronizando...';
+
+  // Al usar Ajax determinamos qué pestaña activa retener para evitar saltos bruscos
+  const activeTab = document.querySelector('.menu a.active').id.replace('nav-', '');
 
   fetch(window.location.href)
     .then(r => r.text())
@@ -418,9 +559,10 @@ setInterval(() => {
       const srcEl = doc.getElementById('dynamic-content');
       if(dynamicEl && srcEl) {
         dynamicEl.innerHTML = srcEl.innerHTML;
+        switchTab(activeTab); // Mantiene al usuario en la vista que estaba manipulando
         renderCharts();
       }
-      if(syncBadge) syncBadge.style.opacity = '1';
+      if(syncBadge) syncBadge.innerText = '✓ Sincronizado';
     }).catch(err => console.log("Sync error:", err));
 }, 15000);
 </script>
