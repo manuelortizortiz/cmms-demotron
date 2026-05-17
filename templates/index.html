@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ManTyre CMMS - Dashboard Industrial</title>
+<title>DEMOTRON ERP CMMS - Dashboard Industrial</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 :root{
@@ -70,7 +70,6 @@ body{
   white-space:nowrap;
 }
 .menu a.active{color:var(--azul); border-bottom-color:var(--azul3);}
-/* BUSCADOR MODIFICADO */
 .buscar{
   width:220px;
   height:38px;
@@ -94,7 +93,6 @@ body{
 .user a{color:var(--azul);font-weight:700;text-decoration:none}
 .wrap{padding:20px 24px 0}
 
-/* KPIs MEJORADOS */
 .kpis{
   display:grid;
   grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
@@ -113,7 +111,6 @@ body{
   position: relative;
   overflow: hidden;
 }
-/* KPIs con más color */
 .kpi.color-filled.blue { background: linear-gradient(135deg, var(--azul3), #3b82f6); color: white; border: none; }
 .kpi.color-filled.blue small, .kpi.color-filled.blue b, .kpi.color-filled.blue span { color: white; }
 .kpi.color-filled.yellow { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: white; border: none; }
@@ -131,15 +128,12 @@ body{
 .c-yellow{background:var(--amarillo)}
 .c-green{background:var(--verde)}
 .c-blue{background:var(--azul3)}
-.c-purple{background:var(--morado)}
-.c-teal{background:var(--teal)}
 .c-white{background:rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);}
 
 .kpi small{display:block; letter-spacing:.6px; font-weight:900; font-size:11px; text-transform: uppercase;}
 .kpi b{display:block; font-size:26px; margin:2px 0; white-space: nowrap;}
 .kpi span{font-size:12px; display: block; line-height: 1.1; opacity: 0.8;}
 
-/* CONTENEDOR PARA KPI DE COSTO CON GRÁFICO */
 .kpi-costo {
   flex-direction: column;
   align-items: flex-start;
@@ -167,7 +161,7 @@ body{
   overflow:hidden;
 }
 .panel h3{margin:0 0 14px; color:#0b1d3d; font-size:16px; letter-spacing:.2px;}
-.canvasBox{height:280px; position:relative; width: 100%;} /* Aumenté la altura un poco para las letras */
+.canvasBox{height:280px; position:relative; width: 100%;}
 
 .split{
   display:grid; grid-template-columns:2fr 1fr; gap:14px; margin-top:14px;
@@ -179,12 +173,10 @@ td{padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle;}
 .code{color:var(--azul); font-weight:950;}
 .pill{border-radius:999px; padding:6px 11px; font-weight:900; font-size:11px; display:inline-block;}
 .pill.red{background:#ffe1e3;color:#dc2626}
-.pill.yellow{background:#fff4cc;color:#a16207}
 
 .btn{border:0; border-radius:7px; padding:8px 13px; background:var(--azul); color:#fff; font-weight:900; cursor:pointer; white-space: nowrap;}
 .btn.red{background:var(--rojo)}
 
-/* SCROLLS DE TARJETAS */
 .cardsHeader{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
 .cards{display:flex; gap:14px; overflow-x:auto; padding:8px 0 14px; scroll-snap-type:x mandatory;}
 .cards::-webkit-scrollbar{height:9px}
@@ -200,7 +192,6 @@ td{padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle;}
 .dot.yellow{background:var(--amarillo)}
 .eqtitle{font-weight:950; color:#0f172a; display:inline-block;}
 
-/* RESPONSIVE */
 @media(max-width:992px){
   .split { grid-template-columns:1fr; }
 }
@@ -228,7 +219,6 @@ td{padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle;}
     <a href="#ot">🛠 OT</a>
   </nav>
 
-  <!-- BUSCADOR CON DATALIST (Autocompletado y Redirección) -->
   <input class="buscar" list="listaEquipos" id="buscarInput" placeholder="Buscar unidad (Ej: AB-CD)..." onchange="irAFichaEquipo(this.value)">
   <datalist id="listaEquipos">
     {% for e in equipos %}
@@ -246,20 +236,16 @@ td{padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle;}
     <section class="kpis">
       <div class="kpi"><div class="circle c-red">!</div><div><small style="color:#2f3b52;">AVERÍAS CRÍTICAS</small><b style="color:#0f172a;">{{ kpis.atrasados }}</b><span style="color:#64748b;">{{ kpis.total }} equipos total</span></div></div>
       
-      <!-- KPI CON MÁS COLOR: Mantenimientos Próximos -->
       <div class="kpi color-filled yellow"><div class="circle c-white">◷</div><div><small>PRÓXIMOS MANTENIMIENTOS</small><b>{{ kpis.proximos }}</b><span>Servicios por vencer</span></div></div>
       
-      <!-- KPI CON MÁS COLOR: OT Abiertas -->
       <div class="kpi color-filled blue"><div class="circle c-white">🛠</div><div><small>OT ABIERTAS</small><b>{{ kpis.ot_abiertas }}</b><span>En proceso</span></div></div>
       
       <div class="kpi"><div class="circle c-green">✓</div><div><small style="color:#2f3b52;">CONTROLADO REAL</small><b style="color:#0f172a;">{{ kpis.controlado_pct }}%</b><span style="color:#64748b;">{{ kpis.controlados }} / {{ kpis.operativos }}</span></div></div>
       
-      <!-- KPI COSTO CON GRÁFICO DE LÍNEAS 3 MESES Y FIX DEL SIGNO $ -->
       <div class="kpi kpi-costo">
         <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
           <small style="color:#2f3b52;">COSTO POR MANTENCIÓN</small>
         </div>
-        <!-- El signo $ y el número están juntos gracias al white-space nowrap del CSS -->
         <b style="color:#0f172a;">$ {{ "{:,.0f}".format(kpis.costo_mes or 0).replace(',', '.') }}</b>
         <div class="mini-chart-container">
           <canvas id="chartCostoMeses"></canvas>
@@ -273,25 +259,23 @@ td{padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle;}
       <div class="panel"><h3>GESTIÓN (OT Y COMPRAS)</h3><div class="canvasBox"><canvas id="gestion"></canvas></div></div>
     </section>
 
-    <!-- NUEVO: SCROLL DE EQUIPOS EN TALLER -->
-    <div class="cardsHeader mt-4" style="margin-top: 20px;">
+    <div class="cardsHeader" style="margin-top: 20px;">
       <h3>EQUIPOS ACTUALMENTE EN TALLER</h3>
     </div>
     <div class="cards">
       {% for e in taller %}
-      <!-- Al hacer clic en la tarjeta te lleva a la ficha del equipo -->
       <div class="eqcard yellow" onclick="irAFichaEquipo('{{ e.codigo }}')">
         <span class="dot yellow"></span><div class="eqtitle">{{ e.codigo }}</div>
         <div style="font-size:12px; color:#334155; margin-top:5px; height: 35px; overflow: hidden;">{{ e.descripcion }}</div>
         <div style="font-size:11px; font-weight:bold; margin-top:5px;">📍 {{ e.ubicacion }}</div>
       </div>
       {% else %}
-      <div style="padding: 20px; color: var(--muted); font-size: 14px;">No hay equipos en taller en este momento.</div>
+      <div style="padding: 20px; color: #64748b; font-size: 14px;">No hay equipos en taller en este momento.</div>
       {% endfor %}
     </div>
 
     <section class="split">
-      <div class="panel">
+      <div class="panel" style="grid-column: span 2;">
         <h3>EQUIPOS CON AVERÍAS (CRÍTICOS)</h3>
         <div class="tablewrap">
         <table>
@@ -318,10 +302,8 @@ td{padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle;}
 </main>
 
 <script>
-// Lógica de Redirección del Buscador y Tarjetas
 function irAFichaEquipo(codigo) {
   if(codigo && codigo.trim() !== "") {
-    // Cambia '/equipo/' por la ruta real que uses en app.py para ver el detalle
     window.location.href = '/equipo/' + codigo; 
   }
 }
@@ -330,7 +312,6 @@ function toggleMenu() {
   document.getElementById('mobileMenu').classList.toggle('active-mobile');
 }
 
-// Datos de Backend
 const data = {{ charts|safe }};
 function safeObj(o){return o && typeof o === 'object' ? o : {}}
 const estado = safeObj(data.estado);
@@ -343,24 +324,21 @@ function renderCharts() {
     if(!el) return;
     if(Chart.getChart(id)) Chart.getChart(id).destroy();
     
-    // Configuración base de Chart.js
     let options = {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: type==='doughnut' ? 'right' : 'bottom' } }
     };
 
-    // FIX LETRAS CORTADAS: Obligamos a que todas las etiquetas de barras se muestren en diagonal
     if (type === 'bar') {
       options.scales = {
         y: { beginAtZero: true, grid: { color: '#edf2f7' } },
         x: { 
           grid: { display: false },
-          ticks: { autoSkip: false, maxRotation: 45, minRotation: 45, font: {size: 10} } // Letras visibles siempre
+          ticks: { autoSkip: false, maxRotation: 45, minRotation: 45, font: {size: 10} }
         }
       };
     }
     
-    // Mezclar configuraciones extras
     options = { ...options, ...extraOptions };
 
     new Chart(el, {
@@ -370,17 +348,9 @@ function renderCharts() {
     });
   }
 
-  /* 
-   * NOTA SOBRE "EN TALLER":
-   * Si "En Taller" no aparece aquí, es porque desde app.py (en el diccionario `charts['estado']`) 
-   * no se está enviando el conteo de equipos en taller. 
-   * Me aseguré de que el gráfico le asigne el color amarillo (#f7b500) si app.py lo envía.
-   */
   chart('donut', 'doughnut', Object.keys(estado), Object.values(estado), ['#35b96b', '#ef3f45', '#f7b500', '#9ca3af']);
-  
   chart('ubic', 'bar', Object.keys(ubicacion), Object.values(ubicacion), ['#0c3f86']);
 
-  // Gráfico de Gestión
   const elGestion = document.getElementById('gestion');
   if(elGestion) {
     if(Chart.getChart('gestion')) Chart.getChart('gestion').destroy();
@@ -398,19 +368,15 @@ function renderCharts() {
         plugins: { legend: { position: 'bottom' } },
         scales: { 
           y: { beginAtZero: true }, 
-          x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45, font:{size:10} } } // Letras visibles
+          x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45, font:{size:10} } }
         }
       }
     });
   }
 
-  // NUEVO GRÁFICO: Mini línea de tendencia de costos (3 meses) en el KPI
   const elCosto = document.getElementById('chartCostoMeses');
   if(elCosto) {
     if(Chart.getChart('chartCostoMeses')) Chart.getChart('chartCostoMeses').destroy();
-    
-    // **AQUÍ:** Estos son datos de ejemplo. En el futuro, debes pasar esto desde app.py
-    // por ejemplo: data.tendencia_costos = [5000000, 4200000, 3800000]
     const datosCostos = [3200000, 4100000, {{ kpis.costo_mes or 3800000 }}]; 
     const etiquetasMeses = ['Mar', 'Abr', 'May'];
 
@@ -425,13 +391,13 @@ function renderCharts() {
           borderWidth: 2,
           fill: true,
           pointRadius: 3,
-          tension: 0.4 // Hace la línea curva
+          tension: 0.4
         }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { enabled: true } },
-        scales: { x: { display: false }, y: { display: false, min: 0 } }, // Ocultamos los ejes para que sea un "Sparkline" limpio
+        scales: { x: { display: false }, y: { display: false, min: 0 } },
         layout: { padding: 0 }
       }
     });
@@ -440,19 +406,22 @@ function renderCharts() {
 
 renderCharts();
 
-// Actualización AJAX
 setInterval(() => {
   const syncBadge = document.getElementById('syncIndicator');
-  syncBadge.style.opacity = '0.4';
+  if(syncBadge) syncBadge.style.opacity = '0.4';
 
   fetch(window.location.href)
     .then(r => r.text())
     .then(html => {
       const doc = new DOMParser().parseFromString(html, "text/html");
-      document.getElementById('dynamic-content').innerHTML = doc.getElementById('dynamic-content').innerHTML;
-      renderCharts();
-      syncBadge.style.opacity = '1';
-    });
+      const dynamicEl = document.getElementById('dynamic-content');
+      const srcEl = doc.getElementById('dynamic-content');
+      if(dynamicEl && srcEl) {
+        dynamicEl.innerHTML = srcEl.innerHTML;
+        renderCharts();
+      }
+      if(syncBadge) syncBadge.style.opacity = '1';
+    }).catch(err => console.log("Sync error:", err));
 }, 15000);
 </script>
 </body>
