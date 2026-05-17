@@ -58,24 +58,37 @@ def buscar_foto_por_tipo(tipo_equipo):
             
     tipo_limpio = str(tipo_equipo).strip().lower()
     
-    # Reglas específicas solicitadas por el usuario
+    # Reglas específicas de homogenización solicitadas por el usuario
     if "tracto" in tipo_limpio or "tractocamion" in tipo_limpio:
-        tipo_limpio = "tracto_camion"
+        target = "tracto"
     elif "camioneta" in tipo_limpio:
-        tipo_limpio = "camioneta"
-
-    remplazos = {"á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ñ": "n", " ": "_", "-": "_"}
-    tipo_normalizado = "".join(remplazos.get(c, c) for c in tipo_limpio)
+        target = "camioneta"
+    elif "tolva" in tipo_limpio:
+        target = "tolva"
+    elif "aljibe" in tipo_limpio or "alguije" in tipo_limpio:
+        target = "aljibe"
+    elif "excavadora" in tipo_limpio:
+        target = "excavadora"
+    elif "barredora" in tipo_limpio:
+        target = "barredora"
+    else:
+        remplazos = {"á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ñ": "n", " ": "_", "-": "_"}
+        target = "".join(remplazos.get(c, c) for c in tipo_limpio)
 
     if os.path.exists(base_dir):
         for root, dirs, files in os.walk(base_dir):
             for f in files:
                 nombre, ext = os.path.splitext(f)
-                nombre_limpio = nombre.lower().strip().replace(" ", "_")
-                if nombre_limpio == tipo_normalizado or tipo_normalizado in nombre_limpio:
-                    abs_path = os.path.join(root, f).replace("\\", "/")
-                    idx = abs_path.find('static/')
-                    if idx != -1: return "/" + abs_path[idx:]
+                nombre_limpio = nombre.lower().strip().replace(" ", "_").replace("-", "_")
+                remplazos_v = {"á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ñ": "n"}
+                for k, v in remplazos_v.items():
+                    nombre_limpio = nombre_limpio.replace(k, v)
+                    
+                if ext.lower() in ['.jpg', '.jpeg', '.png']:
+                    if target in nombre_limpio or nombre_limpio in target:
+                        abs_path = os.path.join(root, f).replace("\\", "/")
+                        idx = abs_path.find('static/')
+                        if idx != -1: return "/" + abs_path[idx:]
     return None
 
 # ==========================================
@@ -149,7 +162,7 @@ with app.app_context():
     db.create_all()
 
 # ==========================================
-# CENTRALIZACIÓN LOGICA DEL ERP
+# DESPLIEGUE CENTRALIZADO DEL ERP
 # ==========================================
 
 @app.route('/')
@@ -164,7 +177,7 @@ def dashboard():
     conteo_estado = {'Operativo': 0, 'Fuera de Servicio': 0, 'Taller': 0}
     conteo_ubicacion = {}
 
-    # Lógica de cálculo de compras mensuales reales desde febrero
+    # Lógica solicitada: Compras mensuales agrupadas desde Febrero
     compras_mensuales = {"Feb": 0.0, "Mar": 0.0, "Abr": 0.0, "May": 0.0}
     for c in compras_db:
         if c.fecha and c.fecha.year == 2026:
@@ -173,7 +186,6 @@ def dashboard():
             elif c.fecha.month == 4: compras_mensuales["Abr"] += c.costo_pm_clp
             elif c.fecha.month == 5: compras_mensuales["May"] += c.costo_pm_clp
 
-    # Mapeo estructurado para el buscador interactivo
     busqueda_map = {}
 
     for e in equipos_db:
@@ -182,7 +194,7 @@ def dashboard():
             'codigo': e.codigo, 'tipo_equipo': e.tipo_equipo, 'marca': e.marca, 'modelo': e.modelo,
             'ubicacion': e.ubicacion or 'Sin Ubicación', 'responsable': e.responsable or 'No Asignado',
             'control_base': e.control_base, 'lectura_actual_str': format_num(e.lectura_actual),
-            'proxima_pm_str': format_num(e.proxima_pm), 'margen_str': format_num(e.margen),
+            'proxima_pm_str': format_num(e.proxima_pm), 'margen': e.margen, 'margen_str': format_num(e.margen),
             'estado_base': e.estado_base, 'semaforo': e.semaforo, 'foto_url': foto_url
         }
         equipos.append(eq_data)
@@ -200,7 +212,6 @@ def dashboard():
         if e.semaforo == 'red' or e.estado_base in ['Fuera de Servicio', 'No operativo']:
             criticos.append(eq_data)
 
-    # Inyectar historial a la matriz de búsqueda
     for m in mantenciones_db:
         if m.codigo_equipo in busqueda_map:
             busqueda_map[m.codigo_equipo]['mantenciones'].append({
@@ -208,8 +219,8 @@ def dashboard():
                 'tipo': m.tipo_mantencion, 'folio': m.folio or 'S/F', 'costo': format_clp(m.costo_mantencion_clp), 'estado': m.estado
             })
 
-    # Filtro estricto solicitado: Lugares donde existan justo o igual a 5 equipos
-    conteo_ubicacion_filtrado = {k: v for k, v in conteo_ubicacion.items() if v >= 5}
+    # Filtro estricto solicitado: Frente con exactamente u justo 5 equipos asignados
+    conteo_ubicacion_filtrado = {k: v for k, v in conteo_ubicacion.items() if v == 5}
     ot_abiertas = OrdenTrabajo.query.filter_by(estado='Abierta').count()
     costo_compras = db.session.query(db.func.sum(CompraRepuesto.costo_pm_clp)).scalar() or 0.0
 
@@ -224,7 +235,6 @@ def dashboard():
         'compras_mensuales': compras_mensuales
     }
 
-    # Desglose plano de tablas para las hojas del ERP
     todas_mantenciones = [{
         'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'codigo': m.codigo_equipo,
         'tipo': m.tipo_mantencion, 'lectura_str': format_num(m.lectura), 'es_pm': m.es_pm, 'folio': m.folio,
@@ -242,7 +252,6 @@ def dashboard():
         'tipo': 'HORAS' if l.horometro > 0 else 'KM', 'ubicacion': l.obra_ubicacion, 'responsable': l.responsable, 'obs': l.observacion
     } for l in lecturas_db]
 
-    # Generación de la lista aleatoria para el scroll inferior
     equipos_aleatorios = list(equipos)
     random.shuffle(equipos_aleatorios)
 
@@ -287,6 +296,9 @@ def ficha_equipo(codigo):
     }
     return render_template('ficha_equipo.html', equipo=eq_master, mantenciones=mantenciones, lecturas=lecturas, compras=compras, foto_url=foto_url)
 
+# ==========================================
+# SOLUCIÓN EXCLUSIVA CONTRA PARÁMETROS CRUZADOS PSYGOPG2
+# ==========================================
 @app.route('/admin/cargar_sql_final')
 def cargar_sql_final():
     archivo_excel = "CMMS DEMOTRON MANU ORTIZ.xlsx"
@@ -300,6 +312,7 @@ def cargar_sql_final():
             conn.commit()
         db.create_all()
 
+        # 1. CARGA INDIVIDUAL: EQUIPOS
         df_eq = pd.read_excel(archivo_excel, sheet_name="Equipos", skiprows=2).replace({np.nan: None})
         for _, row in df_eq.iterrows():
             if not row.iloc[0]: continue
@@ -309,8 +322,9 @@ def cargar_sql_final():
                 control_base=str(row.iloc[8]).strip().upper() if row.iloc[8] else 'HORAS', frecuencia_base=clean_int(row.iloc[9], 250), promedio_diario=clean_float(row.iloc[10], 0.0)
             )
             db.session.add(eq)
-        db.session.commit()
+            db.session.commit() # Sella la fila al instante blindando el canal de PostgreSQL
 
+        # 2. CARGA INDIVIDUAL: LECTURAS
         df_lec = pd.read_excel(archivo_excel, sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
         for _, row in df_lec.iterrows():
             if not row.iloc[1]: continue
@@ -322,8 +336,9 @@ def cargar_sql_final():
                 obra_ubicacion=row.iloc[4], responsable=row.iloc[5], observacion=row.iloc[6]
             )
             db.session.add(lec)
-        db.session.commit()
+            db.session.commit()
 
+        # 3. CARGA INDIVIDUAL: MANTENCIONES
         df_man = pd.read_excel(archivo_excel, sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
         for _, row in df_man.iterrows():
             if not row.iloc[1]: continue
@@ -335,8 +350,9 @@ def cargar_sql_final():
                 es_pm=row.iloc[4], folio=str(row.iloc[5]), lugar=row.iloc[6], proveedor=row.iloc[7], costo_mantencion_clp=clean_float(row.iloc[8], 0.0), estado=row.iloc[9] if row.iloc[9] else 'Finalizada'
             )
             db.session.add(ot)
-        db.session.commit()
+            db.session.commit()
 
+        # 4. CARGA INDIVIDUAL: COMPRAS PM
         df_com = pd.read_excel(archivo_excel, sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
         for _, row in df_com.iterrows():
             if not row.iloc[2]: continue
@@ -348,15 +364,16 @@ def cargar_sql_final():
                 proveedor=row.iloc[4], costo_pm_clp=clean_float(row.iloc[5], 0.0), regla=row.iloc[6], estado_oc=row.iloc[7]
             )
             db.session.add(comp)
-        db.session.commit()
+            db.session.commit()
 
+        # CONSOLIDACIÓN ANALÍTICA FINAL
         for eq in Equipo.query.all():
-            ultima_lectura = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
-            if ultima_lectura: eq.lectura_actual = ultima_lectura.horometro if eq.control_base == 'HORAS' else ultima_lectura.kilometraje
+            u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
+            if u_lec: eq.lectura_actual = u_lec.horometro if eq.control_base == 'HORAS' else u_lec.kilometraje
             else: eq.lectura_actual = 0
             
-            ultima_pm = OrdenTrabajo.query.filter_by(codigo_equipo=eq.codigo, es_pm='Sí', estado='Finalizada').order_by(OrdenTrabajo.fecha.desc()).first()
-            if ultima_pm: eq.proxima_pm = ultima_pm.lectura + eq.frecuencia_base
+            u_pm = OrdenTrabajo.query.filter_by(codigo_equipo=eq.codigo, es_pm='Sí', estado='Finalizada').order_by(OrdenTrabajo.fecha.desc()).first()
+            if u_pm: eq.proxima_pm = u_pm.lectura + eq.frecuencia_base
             else: eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
         db.session.commit()
         return redirect(url_for('dashboard'))
