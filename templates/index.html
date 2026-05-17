@@ -20,40 +20,40 @@ body{ margin:0; background:#ffffff; color:var(--texto); font-family: Calibri, sa
 .seccion-modulo { display: none; }
 .seccion-modulo.active { display: block; }
 
-/* Formato Excel Plano */
+/* Estructuración Excel */
 .excel-table { border-collapse: collapse; width: 100%; margin-bottom: 15px; table-layout: fixed; }
 .excel-table th, .excel-table td { border: 1px solid var(--borde-excel); padding: 4px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.excel-table th { background-color: var(--gris-cabecera); text-align: left; font-weight: bold; }
+.excel-table th { background-color: var(--gris-cabecera); text-align: left; font-weight: bold; color: #000; }
 .circulo { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 1px solid #000; }
 .circulo.red { background-color: var(--rojo); }
 .circulo.yellow { background-color: var(--amarillo); }
-.circulo.green { background-color: var(--verde); }
 
-/* Distribución de la Fila de Gráficos Superior */
+/* Fila de Gráficos Superiores */
 .charts-excel-row { display: flex; gap: 12px; margin-bottom: 20px; }
 .chart-excel-cell { flex: 1; border: 1px solid var(--borde-excel); background-color: #fff; height: 220px; padding: 8px; }
 .chart-excel-cell h4 { margin: 0 0 5px; font-size: 11px; text-transform: uppercase; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 2px; }
 .canvasBox { height: 180px; position: relative; width: 100%; }
 
-/* Tarjeta Buscador Interactivo */
+/* Tarjeta Buscador Ficha Interactiva */
 .panel-buscador { border: 2px solid var(--azul-deep); padding: 15px; background: #fff; margin-bottom: 20px; }
-.buscador-split { display: grid; grid-template-columns: 1fr 1.5fr; gap: 15px; margin-top: 10px; }
+.buscar { width: 220px; height: 30px; border: 1px solid var(--borde-excel); padding: 0 10px; font-family: inherit; font-size: 12px; }
+.buscador-split { display: grid; grid-template-columns: 1fr 1.5fr; gap: 15px; margin-top: 15px; }
 
-/* Contenedores de Imágenes */
-.img-box { width: 70px; height: 50px; border: 1px solid var(--borde-excel); overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f5f5f5; }
+/* Bloques de Listas Cortas Con Fotos */
+.flex-row { display: flex; gap: 15px; margin-bottom: 15px; }
+.flex-cell { flex: 1; }
+.img-box { width: 55px; height: 40px; border: 1px solid var(--borde-excel); overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f5f5f5; margin: 0 auto; }
 .img-box img { width: 100%; height: 100%; object-fit: cover; }
 
-/* Contenedor Scroll Lateral Inferior */
-.scroll-horizontal { display: flex; gap: 12px; overflow-x: auto; padding: 10px 0; border: 1px solid var(--borde-excel); background: #fafafa; }
-.card-scroll { min-width: 140px; max-width: 140px; border: 1px solid var(--borde-excel); background: #fff; padding: 8px; text-align: center; }
-.img-scroll { width: 100%; height: 75px; border-bottom: 1px solid var(--borde-excel); margin-bottom: 5px; overflow: hidden; }
+/* Scroll Horizontal Inferior */
+.scroll-horizontal { display: flex; gap: 12px; overflow-x: auto; padding: 10px; border: 1px solid var(--borde-excel); background: #ffffff; }
+.card-scroll { min-width: 130px; max-width: 130px; border: 1px solid var(--borde-excel); background: #fff; padding: 6px; text-align: center; cursor: pointer; }
+.img-scroll { width: 100%; height: 70px; border-bottom: 1px solid var(--borde-excel); margin-bottom: 4px; overflow: hidden; }
 .img-scroll img { width: 100%; height: 100%; object-fit: cover; }
 
 .text-center { text-align: center; }
 .text-right { text-align: right; }
 .bold { font-weight: bold; }
-.flex-row { display: flex; gap: 15px; margin-bottom: 15px; }
-.flex-cell { flex: 1; }
 </style>
 </head>
 <body>
@@ -75,15 +75,15 @@ body{ margin:0; background:#ffffff; color:var(--texto); font-family: Calibri, sa
     <div id="mod-dashboard" class="seccion-modulo active">
       
       <div class="charts-excel-row">
-        <div class="chart-excel-cell"><h4>ESTADO OPERACIONAL</h4><div class="canvasBox"><canvas id="donut"></canvas></div></div>
+        <div class="chart-excel-cell"><h4>ESTADO OPERACIONAL DE LA FLOTA</h4><div class="canvasBox"><canvas id="donut"></canvas></div></div>
         <div class="chart-excel-cell"><h4>UBICACIÓN DE EQUIPOS (=5)</h4><div class="canvasBox"><canvas id="ubic"></canvas></div></div>
         <div class="chart-excel-cell"><h4>COMPRAS MENSUALES</h4><div class="canvasBox"><canvas id="gestion"></canvas></div></div>
       </div>
 
       <div class="panel-buscador">
-        <span class="bold" style="font-size: 13px; color: var(--azul-deep);">Selecciona un equipo</span>
-        <select id="selectorEquipo" class="buscar" style="margin-left: 10px; width: 250px;" onchange="actualizarBuscadorFicha(this.value)">
-          <option value="">-- Elige una unidad --</option>
+        <span class="bold" style="font-size: 12px; text-transform: uppercase;">Selecciona un equipo:</span>
+        <select id="selectorEquipo" class="buscar" style="margin-left: 10px;" onchange="actualizarBuscadorFicha(this.value)">
+          <option value="">-- Busque o Seleccione Unidad --</option>
           {% for e in equipos %}
             <option value="{{ e.codigo }}">{{ e.codigo }} - {{ e.tipo_equipo }}</option>
           {% endfor %}
@@ -91,10 +91,10 @@ body{ margin:0; background:#ffffff; color:var(--texto); font-family: Calibri, sa
         
         <div class="buscador-split" id="bloqueFichaInteractiva" style="display: none;">
           <div>
-            <table class="excel-table">
-              <thead><tr><th colspan="2">Información General</th></tr></thead>
+            <table class="excel-table" style="margin-bottom:0;">
+              <thead><tr><th colspan="2" style="background-color:#404040; color:#fff;">INFORMACIÓN GENERAL</th></tr></thead>
               <tbody>
-                <tr><td class="bold" style="width:100px;">Código</td><td id="f-codigo" class="bold"></td></tr>
+                <tr><td class="bold" style="width:110px;">Código</td><td id="f-codigo" class="bold"></td></tr>
                 <tr><td class="bold">Tipo Equipo</td><td id="f-tipo"></td></tr>
                 <tr><td class="bold">Marca / Modelo</td><td id="f-marca"></td></tr>
                 <tr><td class="bold">Ubicación</td><td id="f-ubicacion"></td></tr>
@@ -105,9 +105,9 @@ body{ margin:0; background:#ffffff; color:var(--texto); font-family: Calibri, sa
               </tbody>
             </table>
           </div>
-          <div style="max-height: 200px; overflow-y: auto; border: 1px solid var(--borde-excel);">
+          <div style="max-height: 185px; overflow-y: auto; border: 1px solid var(--borde-excel);">
             <table class="excel-table" style="margin-bottom:0;">
-              <thead><tr><th>Fecha</th><th>Folio</th><th>Intervención</th><th>Costo</th><th>Estado</th></tr></thead>
+              <thead><tr><th style="width:80px;">FECHA</th><th style="width:70px;">FOLIO</th><th>INTERVENCIÓN TÉCNICA</th><th style="width:90px;">COSTO</th><th>ESTADO</th></tr></thead>
               <tbody id="f-tabla-mantenciones"></tbody>
             </table>
           </div>
@@ -118,15 +118,15 @@ body{ margin:0; background:#ffffff; color:var(--texto); font-family: Calibri, sa
         <div class="flex-cell">
           <table class="excel-table">
             <thead>
-              <tr><th colspan="5" style="background-color: var(--azul-deep); color:#fff;">EQUIPOS EN TALLER</th></tr>
-              <tr><th style="width:60px;">Foto</th><th style="width:70px;">Código</th><th>Tipo Equipo</th><th>Ubicación</th><th style="width:40px; text-align:center;">Sem</th></tr>
+              <tr><th colspan="5" style="background-color: #404040; color:#fff;">EQUIPOS EN TALLER</th></tr>
+              <tr><th style="width:70px; text-align:center;">FOTO</th><th style="width:70px; text-align:center;">CÓDIGO</th><th>TIPO MAQUINARIA</th><th>UBICACIÓN ACTUAL</th><th style="width:40px; text-align:center;">SEM</th></tr>
             </thead>
             <tbody>
               {% for t in taller %}
               <tr>
                 <td class="text-center">
                   <div class="img-box">
-                    {% if t.foto_url %}<img src="{{ t.foto_url }}" alt="Foto">{% else %}🚜{% endif %}
+                    {% if t.foto_url %}<img src="{{ t.foto_url }}" alt="Img">{% else %}<span style="font-size:18px;">🚜</span>{% endif %}
                   </div>
                 </td>
                 <td class="bold text-center">{{ t.codigo }}</td>
@@ -143,14 +143,14 @@ body{ margin:0; background:#ffffff; color:var(--texto); font-family: Calibri, sa
           <table class="excel-table">
             <thead>
               <tr><th colspan="5" style="background-color: var(--rojo); color:#fff;">EQUIPOS ATRASADOS</th></tr>
-              <tr><th style="width:60px;">Foto</th><th style="width:70px;">Código</th><th>Tipo Equipo</th><th>Margen</th><th style="width:40px; text-align:center;">Sem</th></tr>
+              <tr><th style="width:70px; text-align:center;">FOTO</th><th style="width:70px; text-align:center;">CÓDIGO</th><th>TIPO MAQUINARIA</th><th style="width:80px; text-align:right;">MARGEN</th><th style="width:40px; text-align:center;">SEM</th></tr>
             </thead>
             <tbody>
               {% for c in criticos %}
               <tr>
                 <td class="text-center">
                   <div class="img-box">
-                    {% if c.foto_url %}<img src="{{ c.foto_url }}" alt="Foto">{% else %}🚜{% endif %}
+                    {% if c.foto_url %}<img src="{{ c.foto_url }}" alt="Img">{% else %}<span style="font-size:18px;">🚜</span>{% endif %}
                   </div>
                 </td>
                 <td class="bold text-center">{{ c.codigo }}</td>
@@ -164,15 +164,15 @@ body{ margin:0; background:#ffffff; color:var(--texto); font-family: Calibri, sa
         </div>
       </div>
 
-      <span class="bold" style="display:block; margin-bottom:5px; text-transform:uppercase;">Catálogo Aleatorio de Flota</span>
+      <table class="excel-table" style="margin-bottom:2px;"><thead><tr><th>CATÁLOGO ALEATORIO DE FLOTA (SCROLL HORIZONTAL)</th></tr></thead></table>
       <div class="scroll-horizontal">
         {% for a in equipos_aleatorios %}
         <div class="card-scroll" onclick="irAFichaEquipo('{{ a.codigo }}')">
           <div class="img-scroll">
-            {% if a.foto_url %}<img src="{{ a.foto_url }}" alt="Foto">{% else %}<span style="line-height:75px; font-size:24px;">🚜</span>{% endif %}
+            {% if a.foto_url %}<img src="{{ a.foto_url }}" alt="Img">{% else %}<span style="line-height:70px; font-size:20px;">🚜</span>{% endif %}
           </div>
-          <div class="bold" style="font-size:12px; color:var(--azul-deep);">{{ a.codigo }}</div>
-          <div style="font-size:10px; color:#475569; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ a.tipo_equipo }}</div>
+          <div class="bold" style="color:var(--azul-deep);">{{ a.codigo }}</div>
+          <div style="color:#555; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ a.tipo_equipo }}</div>
         </div>
         {% endfor %}
       </div>
@@ -182,7 +182,7 @@ body{ margin:0; background:#ffffff; color:var(--texto); font-family: Calibri, sa
     <div id="mod-equipos" class="seccion-modulo">
       <table class="excel-table">
         <thead>
-          <tr><th colspan="9" style="background-color:#404040; color:#fff; text-align:center;">MAESTRO GENERAL DE EQUIPOS</th></tr>
+          <tr><th colspan="9" style="background-color:#404040; color:#fff; text-align:center;">MAESTRO GENERAL DE EQUIPOS REGISTRADOS</th></tr>
           <tr><th>CÓDIGO</th><th>TIPO EQUIPO</th><th>UBICACIÓN</th><th>RESPONSABLE</th><th style="width:60px;">CTRL</th><th style="width:80px;">LECTURA</th><th style="width:80px;">PRÓX. PM</th><th style="width:80px;">MARGEN</th><th style="width:40px; text-align:center;">SEM</th></tr>
         </thead>
         <tbody>
@@ -285,7 +285,6 @@ function switchTab(target) {
 }
 function irAFichaEquipo(codigo) { if(codigo) window.location.href = '/equipo/' + codigo; }
 
-// Matriz de datos inyectada para el buscador relacional
 const busquedaData = {{ busqueda_json|safe }};
 
 function actualizarBuscadorFicha(codigo) {
@@ -308,10 +307,10 @@ function actualizarBuscadorFicha(codigo) {
   const tbody = document.getElementById('f-tabla-mantenciones');
   tbody.innerHTML = '';
   if(item.mantenciones.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="color:#64748b;">No registra intervenciones históricas.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="color:#64748b; padding:6px;">No registra intervenciones históricas.</td></tr>';
   } else {
     item.mantenciones.forEach(m => {
-      tbody.innerHTML += `<tr><td>${m.fecha}</td><td class="code">#${m.folio}</td><td><b>${m.tipo}</b></td><td class="bold">${m.costo}</td><td>${m.estado}</td></tr>`;
+      tbody.innerHTML += `<tr><td class="text-center">${m.fecha}</td><td class="code text-center">#${m.folio}</td><td><b>${m.tipo}</b></td><td class="bold text-right">${m.costo}</td><td class="text-center">${m.estado}</td></tr>`;
     });
   }
   bloque.style.display = 'grid';
@@ -325,13 +324,9 @@ const commonOptions = {
 };
 
 function renderCharts() {
-  // 1. Gráfico Operacional
   chart('donut', 'doughnut', Object.keys(data.estado), Object.values(data.estado), ['#00B050', '#FF0000', '#FFFF00']);
-  
-  // 2. Gráfico Ubicaciones (Filtro >= 5)
   chart('ubic', 'bar', Object.keys(data.ubicacion), Object.values(data.ubicacion), ['#0c3f86']);
   
-  // 3. Gráfico Compras Mensuales desde Febrero
   const elG = document.getElementById('gestion');
   if(elG) {
     if(Chart.getChart('gestion')) Chart.getChart('gestion').destroy();
@@ -340,13 +335,13 @@ function renderCharts() {
       data: {
         labels: Object.keys(data.compras_mensuales),
         datasets: [{
-          label: 'Inversión CLP',
+          label: 'OC Mensual',
           data: Object.values(data.compras_mensuales),
-          borderColor: '#7449d4', backgroundColor: 'rgba(116, 73, 212, 0.1)',
+          borderColor: '#0c3f86', backgroundColor: 'rgba(12, 63, 134, 0.08)',
           borderWidth: 2, fill: true, tension: 0.3
         }]
       },
-      options: { ...commonOptions, plugins: { legend: { display: false } } }
+      options: commonOptions
     });
   }
 }
