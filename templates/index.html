@@ -97,7 +97,7 @@ td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
             {% if e.foto_url %}
               <img src="{{ e.foto_url }}" alt="{{ e.codigo }}">
             {% else %}
-              <span style="font-size:24px; color:#94a3b8;">🚜</span>
+              <span style="font-size:24px; color:#94a3b8;">Barra</span>
             {% endif %}
           </div>
           <span class="dot"></span><span class="eqtitle">{{ e.codigo }}</span>
@@ -269,8 +269,6 @@ function chart(id, type, labels, values, colors){
 window.onload = renderCharts;
 
 setInterval(() => {
-  const syncBadge = document.getElementById('syncIndicator');
-  if(syncBadge) syncBadge.innerText = '↻ Sincronizando...';
   const activeTab = document.querySelector('.menu a.active').id.replace('nav-', '');
   fetch(window.location.href)
     .then(r => r.text())
@@ -278,7 +276,6 @@ setInterval(() => {
       const doc = new DOMParser().parseFromString(html, "text/html");
       document.getElementById('dynamic-content').innerHTML = doc.getElementById('dynamic-content').innerHTML;
       switchTab(activeTab); renderCharts();
-      if(syncBadge) syncBadge.innerText = '✓ Sincronizado';
     }).catch(err => console.log(err));
 }, 15000);
 </script>
