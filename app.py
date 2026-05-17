@@ -1,14 +1,15 @@
 import os
 import json
+import pandas as pd
+import numpy as np
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.secret_key = 'demotron_secure_key'
+app.secret_key = 'demotron_master_key'
 
-# Configuración de Base de Datos para Railway (PostgreSQL) o local (SQLite)
-ruta_db = os.getenv('DATABASE_URL', 'sqlite:///demotron_cmms.db')
+ruta_db = os.getenv('DATABASE_URL', 'sqlite:///demotron_master.db')
 if ruta_db.startswith("postgres://"):
     ruta_db = ruta_db.replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = ruta_db
@@ -17,174 +18,242 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # ==========================================
-# 1. MODELOS DE BASE DE DATOS (Estructura base para Excel)
+# MODELOS DE BASE DE DATOS
 # ==========================================
 
 class Equipo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     codigo = db.Column(db.String(50), unique=True, nullable=False)
+    tipo_equipo = db.Column(db.String(100))
     marca = db.Column(db.String(50))
     modelo = db.Column(db.String(50))
-    descripcion = db.Column(db.String(150))
+    ano = db.Column(db.Integer)
     ubicacion = db.Column(db.String(100))
+    responsable = db.Column(db.String(100))
+    estado_base = db.Column(db.String(50))      
+    control_base = db.Column(db.String(50))     
+    frecuencia_base = db.Column(db.Integer)    
+    promedio_diario = db.Column(db.Float)
     lectura_actual = db.Column(db.Integer, default=0)
     proxima_pm = db.Column(db.Integer, default=0)
-    estado = db.Column(db.String(50), default='Operativo') # Operativo, En Taller, Avería
-    imagen_url = db.Column(db.String(250), nullable=True)
 
     @property
     def margen(self):
         return self.proxima_pm - self.lectura_actual
 
-class Actividad(db.Model):
+    @property
+    def semaforo(self):
+        if self.estado_base == 'Fuera de Servicio': return 'red'
+        if self.margen < 0: return 'red'
+        if self.margen < 50: return 'yellow'
+        return 'green'
+
+class HistorialLectura(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    fecha = db.Column(db.DateTime, default=datetime.now)
-    titulo = db.Column(db.String(100))
-    detalle = db.Column(db.String(250))
-    usuario = db.Column(db.String(50))
+    fecha = db.Column(db.DateTime)
+    codigo_equipo = db.Column(db.String(50))
+    horometro = db.Column(db.Integer, default=0)
+    kilometraje = db.Column(db.Integer, default=0)
+    obra_ubicacion = db.Column(db.String(100))
+    responsable = db.Column(db.String(100))
+    observacion = db.Column(db.String(250))
 
 class OrdenTrabajo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    fecha = db.Column(db.DateTime)
     codigo_equipo = db.Column(db.String(50))
-    tipo = db.Column(db.String(50))
-    prioridad = db.Column(db.String(50))
+    tipo_mantencion = db.Column(db.String(100))
+    lectura = db.Column(db.Integer, default=0)
+    es_pm = db.Column(db.String(20)) 
+    folio = db.Column(db.String(50))
+    lugar = db.Column(db.String(100))
+    proveedor = db.Column(db.String(100))
+    costo_mantencion_clp = db.Column(db.Float, default=0.0)
+    estado = db.Column(db.String(50)) 
+
+class CompraRepuesto(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    fecha = db.Column(db.DateTime)
+    oc = db.Column(db.String(100))
+    codigo_equipo = db.Column(db.String(50))
     descripcion = db.Column(db.String(250))
-    estado = db.Column(db.String(50), default='Abierta')
+    proveedor = db.Column(db.String(100))
+    costo_pm_clp = db.Column(db.Float, default=0.0)
+    regla = db.Column(db.String(100))
+    estado_oc = db.Column(db.String(100))
 
 with app.app_context():
     db.create_all()
 
 # ==========================================
-# 2. RUTA PRINCIPAL - DEMOTRON DASHBOARD
+# VISTAS
 # ==========================================
 
 @app.route('/')
 @app.route('/erp')
 def dashboard():
     equipos_db = Equipo.query.all()
-    actividad_db = Actividad.query.order_by(Actividad.id.desc()).limit(5).all()
-    ot_db = OrdenTrabajo.query.filter_by(estado='Abierta').count()
-
-    equipos = []
-    taller = []
-    criticos = []
-    
-    averias_count = 0
-    proximos_count = 0
-    operativos_count = 0
-    en_taller_count = 0
-
-    conteo_estado = {'Operativo': 0, 'En Taller': 0, 'Avería': 0}
+    equipos, taller, criticos = [], [], []
+    atrasados_count, proximos_count, operativos_count = 0, 0, 0
+    conteo_estado = {'Operativo': 0, 'Fuera de Servicio': 0, 'En Taller': 0}
     conteo_ubicacion = {}
 
     for e in equipos_db:
         eq_data = {
-            'codigo': e.codigo,
-            'marca': e.marca,
-            'modelo': e.modelo,
-            'descripcion': e.descripcion,
-            'ubicacion': e.ubicacion or 'Sin Ubicación',
-            'lectura_actual': e.lectura_actual,
-            'proxima_pm': e.proxima_pm,
-            'margen': e.margen,
-            'estado': e.estado
+            'codigo': e.codigo, 'tipo_equipo': e.tipo_equipo, 'marca': e.marca, 'modelo': e.modelo,
+            'ubicacion': e.ubicacion or 'Sin Ubicación', 'responsable': e.responsable or 'No Asignado',
+            'control_base': e.control_base, 'lectura_actual': e.lectura_actual, 'proxima_pm': e.proxima_pm,
+            'margen': e.margen, 'estado_base': e.estado_base, 'semaforo': e.semaforo
         }
         equipos.append(eq_data)
-
-        # Contadores de Estado para Gráfico Donut
-        if e.estado in conteo_estado:
-            conteo_estado[e.estado] += 1
-        else:
-            conteo_estado[e.estado] = 1
-
-        # Contadores de Ubicación para Gráfico de Barras
+        
+        status = e.estado_base if e.estado_base in conteo_estado else 'Operativo'
+        conteo_estado[status] += 1
         if e.ubicacion:
             conteo_ubicacion[e.ubicacion] = conteo_ubicacion.get(e.ubicacion, 0) + 1
-
-        # Clasificación de listas para los bucles del HTML
-        if e.estado == 'En Taller':
+        if e.estado_base in ['Fuera de Servicio', 'En Taller']:
             taller.append(eq_data)
-            en_taller_count += 1
-        
-        if e.estado == 'Avería':
+        if e.semaforo == 'red':
             criticos.append(eq_data)
-            averias_count += 1
-        elif e.margen < 500:
+            atrasados_count += 1
+        elif e.semaforo == 'yellow':
             proximos_count += 1
-            
-        if e.estado == 'Operativo':
+        if e.estado_base == 'Operativo':
             operativos_count += 1
 
     total_equipos = len(equipos_db)
-    
-    # Sincronización exacta con las llaves {{ kpis.xxx }} de tu index.html
+    ot_abiertas = OrdenTrabajo.query.filter_by(estado='Abierta').count()
+    costo_compras = db.session.query(db.func.sum(CompraRepuesto.costo_pm_clp)).scalar() or 0.0
+
     kpis = {
-        'atrasados': averias_count,     # Muestra las averías críticas
-        'total': total_equipos,         # Cantidad total del parque
-        'proximos': proximos_count,     # Alertas de PM vencidos/por vencer
-        'ot_abiertas': ot_db,           # Órdenes abiertas en taller
-        'controlados': operativos_count, # Equipos en marcha
-        'operativos': total_equipos,    # Base del divisor
+        'atrasados': atrasados_count, 'total': total_equipos, 'proximos': proximos_count,
+        'ot_abiertas': ot_abiertas, 'controlados': operativos_count,
         'controlado_pct': round((operativos_count / total_equipos * 100)) if total_equipos > 0 else 0,
-        'costo_mes': 4850000            # Costo de mantención
+        'costo_mes': int(costo_compras)
     }
-
     charts = {
-        'estado': conteo_estado,
-        'ubicacion': conteo_ubicacion,
-        'gestion': {
-            'Ene': [12, 5], 'Feb': [18, 8], 'Mar': [14, 11], 'Abr': [ot_db, 4]
-        }
+        'estado': conteo_estado, 'ubicacion': conteo_ubicacion,
+        'gestion': {'Ene': [15, 8], 'Feb': [22, 14], 'Mar': [19, 25], 'Abr': [ot_abiertas, 12]}
     }
+    return render_template('index.html', kpis=kpis, charts=json.dumps(charts), equipos=equipos, criticos=criticos, taller=taller)
 
-    # Solución definitiva al error strftime: Valida el tipo de dato de la fecha
-    actividad_formateada = []
-    for a in actividad_db:
-        if isinstance(a.fecha, datetime):
-            fecha_str = a.fecha.strftime("%d/%m/%Y %H:%M")
-        else:
-            fecha_str = str(a.fecha)
-        
-        actividad_formateada.append({
-            'titulo': a.titulo, 
-            'detalle': a.detalle, 
-            'usuario': a.usuario, 
-            'fecha': fecha_str
-        })
-
-    return render_template('index.html', 
-                           kpis=kpis, 
-                           charts=json.dumps(charts), 
-                           equipos=equipos, 
-                           criticos=criticos, 
-                           taller=taller, 
-                           actividad=actividad_formateada,
-                           rol="Admin")
-
-# ==========================================
-# 3. ACCIONES Y CONTROL DE UNIDADES
-# ==========================================
-
-@app.route('/equipo/<codigo>')
+@app.route('/equipo/<codigo>', methods=['GET', 'POST'])
 def ficha_equipo(codigo):
-    flash(f'Cargando ficha técnica de la unidad {codigo}', 'success')
-    return redirect(url_for('dashboard'))
+    equipo = Equipo.query.filter_by(codigo=codigo).first_or_404()
+    if request.method == 'POST':
+        equipo.ubicacion = request.form.get('ubicacion')
+        equipo.estado_base = request.form.get('estado_base')
+        equipo.proxima_pm = int(request.form.get('proxima_pm') or 0)
+        db.session.commit()
+        return redirect(url_for('ficha_equipo', codigo=codigo))
+
+    mantenciones = OrdenTrabajo.query.filter_by(codigo_equipo=codigo).order_by(OrdenTrabajo.id.desc()).all()
+    lecturas = HistorialLectura.query.filter_by(codigo_equipo=codigo).order_by(HistorialLectura.id.desc()).all()
+    compras = CompraRepuesto.query.filter_by(codigo_equipo=codigo).order_by(CompraRepuesto.id.desc()).all()
+    return render_template('ficha_equipo.html', equipo=equipo, mantenciones=mantenciones, lecturas=lecturas, compras=compras)
+
+# ==========================================
+# INYECTOR DIRECTO DESDE EL ARCHIVO EXCEL (.XLSX)
+# ==========================================
 
 @app.route('/admin/cargar_sql_final')
 def cargar_sql_final():
-    db.drop_all()
-    db.create_all()
+    archivo_excel = "CMMS DEMOTRON MANU ORTIZ.xlsx"
+    if not os.path.exists(archivo_excel):
+        return f"Error: No se encuentra el archivo maestro '{archivo_excel}' en la raíz del servidor."
 
-    # Inyección de maquinaría base de prueba limpia
-    unidades_iniciales = [
-        Equipo(codigo="VD-109", marca="SsangYong", modelo="Musso Grand", descripcion="Camioneta Supervisión", ubicacion="Talca", lectura_actual=45000, proxima_pm=50000, estado="Operativo"),
-        Equipo(codigo="SC-201", marca="Scania", modelo="DC13", descripcion="Tractocamión Principal", ubicacion="Ruta 5 Sur", lectura_actual=345000, proxima_pm=346000, estado="Operativo"),
-        Equipo(codigo="SC-188", marca="Scania", modelo="G380", descripcion="Camión Tolva", ubicacion="Linares", lectura_actual=612000, proxima_pm=610000, estado="En Taller"),
-        Equipo(codigo="MB-405", marca="Mercedes-Benz", modelo="Actros", descripcion="Tractocamión", ubicacion="San Rafael", lectura_actual=128000, proxima_pm=125000, estado="Avería")
-    ]
-    db.session.add_all(unidades_iniciales)
-    db.session.commit()
-    return redirect(url_for('dashboard'))
+    try:
+        db.drop_all()
+        db.create_all()
+
+        # 1. PESTAÑA: EQUIPOS
+        df_eq = pd.read_excel(archivo_excel, sheet_name="Equipos", skiprows=2).replace({np.nan: None})
+        for _, row in df_eq.iterrows():
+            if not row.iloc[0]: continue
+            eq = Equipo(
+                codigo=str(row.iloc[0]).strip(), tipo_equipo=row.iloc[1], marca=row.iloc[2], modelo=row.iloc[3],
+                ano=int(row.iloc[4]) if row.iloc[4] else None, ubicacion=row.iloc[5], responsable=row.iloc[6],
+                estado_base=row.iloc[7] if row.iloc[7] else 'Operativo',
+                control_base=str(row.iloc[8]).strip().upper() if row.iloc[8] else 'HORAS',
+                frecuencia_base=int(row.iloc[9]) if row.iloc[9] else 250, promedio_diario=float(row.iloc[10]) if row.iloc[10] else 0.0
+            )
+            db.session.add(eq)
+        db.session.commit()
+
+        # 2. PESTAÑA: LECTURAS
+        df_lec = pd.read_excel(archivo_excel, sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
+        for _, row in df_lec.iterrows():
+            if not row.iloc[1]: continue
+            f_val = str(row.iloc[0]).split()[0]
+            try:
+                fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
+            except:
+                fecha_dt = datetime.now()
+            lec = HistorialLectura(
+                fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(),
+                horometro=int(row.iloc[2]) if row.iloc[2] else 0, kilometraje=int(row.iloc[3]) if row.iloc[3] else 0,
+                obra_ubicacion=row.iloc[4], responsable=row.iloc[5], observation=row.iloc[6]
+            )
+            db.session.add(lec)
+        db.session.commit()
+
+        # 3. PESTAÑA: MANTENCIONES
+        df_man = pd.read_excel(archivo_excel, sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
+        for _, row in df_man.iterrows():
+            if not row.iloc[1]: continue
+            f_val = str(row.iloc[0]).split()[0]
+            try:
+                fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
+            except:
+                fecha_dt = datetime.now()
+            costo = str(row.iloc[8]).replace('$', '').replace('.', '').strip() if row.iloc[8] else "0"
+            ot = OrdenTrabajo(
+                fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(), tipo_mantencion=row.iloc[2],
+                lectura=int(row.iloc[3]) if row.iloc[3] else 0, es_pm=row.iloc[4], folio=str(row.iloc[5]),
+                lugar=row.iloc[6], proveedor=row.iloc[7], costo_mantencion_clp=float(costo) if costo.isdigit() else 0.0,
+                estado=row.iloc[9] if row.iloc[9] else 'Finalizada'
+            )
+            db.session.add(ot)
+        db.session.commit()
+
+        # 4. PESTAÑA: COMPRAS PM
+        df_com = pd.read_excel(archivo_excel, sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
+        for _, row in df_com.iterrows():
+            if not row.iloc[2]: continue
+            f_val = str(row.iloc[0]).split()[0]
+            try:
+                fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
+            except:
+                fecha_dt = datetime.now()
+            costo_pm = str(row.iloc[5]).replace('$', '').replace('.', '').strip() if row.iloc[5] else "0"
+            comp = CompraRepuesto(
+                fecha=fecha_dt, oc=str(row.iloc[1]), codigo_equipo=str(row.iloc[2]).strip(), descripcion=row.iloc[3],
+                proveedor=row.iloc[4], costo_pm_clp=float(costo_pm) if costo_pm.isdigit() else 0.0, regla=row.iloc[6], estado_oc=row.iloc[7]
+            )
+            db.session.add(comp)
+        db.session.commit()
+
+        # LOGICA CONTROL BASE AUTOMÁTICA
+        for eq in Equipo.query.all():
+            ultima_lectura = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
+            if ultima_lectura:
+                eq.lectura_actual = ultima_lectura.horometro if eq.control_base == 'HORAS' else ultima_lectura.kilometraje
+            else:
+                eq.lectura_actual = 0
+            
+            ultima_pm = OrdenTrabajo.query.filter_by(codigo_equipo=eq.codigo, es_pm='Sí', estado='Finalizada').order_by(OrdenTrabajo.fecha.desc()).first()
+            if ultima_pm:
+                eq.proxima_pm = ultima_pm.lectura + eq.frecuencia_base
+            else:
+                eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
+                
+        db.session.commit()
+        flash('¡Base de Datos inicializada con el Excel Completo!', 'success')
+        return redirect(url_for('dashboard'))
+
+    except Exception as e:
+        db.session.rollback()
+        return f"Error leyendo las pestañas del Excel: {str(e)}"
 
 if __name__ == '__main__':
     puerto = int(os.environ.get('PORT', 5000))
