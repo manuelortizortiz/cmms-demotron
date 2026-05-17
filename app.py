@@ -18,7 +18,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # ==========================================
-# FUNCIONES DE LIMPIEZA Y BÚSQUEDA INDUSTRIAL
+# FUNCIONES DE LIMPIEZA Y ESCANER RECURSIVO
 # ==========================================
 def clean_int(val, default=0):
     if val is None or pd.isna(val):
@@ -38,21 +38,25 @@ def clean_float(val, default=0.0):
 
 def buscar_foto_global(codigo):
     """
-    Escanea recursivamente static/equipos_real buscando el código del equipo
-    en cualquier subcarpeta (barredora, camion aljibe, excavadora, etc.)
+    Escanea dinámicamente static/equipos_real recorriendo cualquier subcarpeta
+    (barredora, camion aljibe, excavadora, etc.) para encontrar la foto de la máquina.
     """
     if not codigo:
         return None
-    base_dir = "static/equipos_real"
+    base_dir = os.path.join(app.root_path, 'static', 'equipos_real')
     if not os.path.exists(base_dir):
-        return None
+        base_dir = "static/equipos_real"
+        if not os.path.exists(base_dir):
+            return None
+            
     codigo_limpio = str(codigo).strip().lower()
     for root, dirs, files in os.walk(base_dir):
         for f in files:
             nombre, ext = os.path.splitext(f)
             if nombre.lower().strip() == codigo_limpio and ext.lower() in ['.jpg', '.jpeg', '.png']:
-                # Retorna la ruta web limpia con barras normales
-                return "/" + os.path.join(root, f).replace("\\", "/")
+                abs_path = os.path.join(root, f)
+                rel_path = os.path.relpath(abs_path, app.root_path if app.root_path in abs_path else os.getcwd())
+                return "/" + rel_path.replace("\\", "/")
     return None
 
 # ==========================================
@@ -124,24 +128,24 @@ with app.app_context():
     db.create_all()
 
 # ==========================================
-# RUTA DEL DASHBOARD ORIGINAL REPARADO
+# CENTRALIZACIÓN DEL DASHBOARD Y LISTAS DE EXCEL
 # ==========================================
 
 @app.route('/')
 @app.route('/erp')
 def dashboard():
     equipos_db = Equipo.query.all()
+    mantenciones_db = OrdenTrabajo.query.order_by(OrdenTrabajo.fecha.desc()).all()
+    compras_db = CompraRepuesto.query.order_by(CompraRepuesto.fecha.desc()).all()
+    lecturas_db = HistorialLectura.query.order_by(HistorialLectura.fecha.desc()).all()
+
     equipos, taller, criticos = [], [], []
-    
-    proximos_count = 0
-    operativos_count = 0
+    proximos_count, operativos_count = 0, 0
     conteo_estado = {'Operativo': 0, 'Fuera de Servicio': 0, 'Taller': 0}
     conteo_ubicacion = {}
 
     for e in equipos_db:
-        # Lógica de escaneo de imágenes subdivididas por tipo de equipo
         foto_url = buscar_foto_global(e.codigo)
-
         eq_data = {
             'codigo': e.codigo, 'tipo_equipo': e.tipo_equipo, 'marca': e.marca, 'modelo': e.modelo,
             'ubicacion': e.ubicacion or 'Sin Ubicación', 'responsable': e.responsable or 'No Asignado',
@@ -150,7 +154,6 @@ def dashboard():
         }
         equipos.append(eq_data)
         
-        # Mapeo de gráficos
         status_limpio = 'Fuera de Servicio' if e.estado_base in ['Fuera de Servicio', 'No operativo'] else e.estado_base
         if status_limpio in conteo_estado:
             conteo_estado[status_limpio] += 1
@@ -158,50 +161,64 @@ def dashboard():
         if e.ubicacion:
             conteo_ubicacion[e.ubicacion] = conteo_ubicacion.get(e.ubicacion, 0) + 1
             
-        # FILTRO EXCEL BLINDADO: Entran a taller SOLO los que dicen 'Taller' y NO están Fuera de Servicio (Evita CD-103)
+        # CONTROL ESTADO CRÍTICO: CD-103 vendido NO ENTRA en taller bajo ninguna circunstancia
         if e.estado_base == 'Taller' and e.estado_base not in ['Fuera de Servicio', 'No operativo']:
             taller.append(eq_data)
             
-        # FILTRO CRÍTICOS: Entran los que tienen semáforo rojo o están dados de baja
         if e.semaforo == 'red' or e.estado_base in ['Fuera de Servicio', 'No operativo']:
             criticos.append(eq_data)
-        
-        if e.semaforo == 'yellow':
+        elif e.semaforo == 'yellow':
             proximos_count += 1
             
         if e.estado_base == 'Operativo':
             operativos_count += 1
 
-    # FILTRO SOLICITADO: Mostrar en el gráfico SOLO ubicaciones con más de 5 equipos
+    # FILTRO SOLICITADO: Solo frentes con más de 5 equipos en el gráfico
     conteo_ubicacion_filtrado = {k: v for k, v in conteo_ubicacion.items() if v > 5}
-
-    total_equipos = len(equipos_db)
     ot_abiertas = OrdenTrabajo.query.filter_by(estado='Abierta').count()
     costo_compras = db.session.query(db.func.sum(CompraRepuesto.costo_pm_clp)).scalar() or 0.0
 
     kpis = {
         'atrasados': len(criticos), 'total': total_equipos, 'proximos': proximos_count,
-        'ot_abiertas': ot_abiertas, 'controlados': operativos_count, 'operativos': total_equipos,
-        'controlado_pct': round((operativos_count / total_equipos * 100)) if total_equipos > 0 else 0,
+        'ot_abiertas': ot_abiertas, 'controlados': operativos_count, 'operativos': len(equipos_db),
+        'controlado_pct': round((operativos_count / len(equipos_db) * 100)) if len(equipos_db) > 0 else 0,
         'costo_mes': int(costo_compras)
     }
     
     charts = {
-        'estado': conteo_estado, 
-        'ubicacion': conteo_ubicacion_filtrado,
+        'estado': conteo_estado, 'ubicacion': conteo_ubicacion_filtrado,
         'gestion': {'Ene': [45, 30], 'Feb': [52, 28], 'Mar': [48, 35], 'Abr': [ot_abiertas, 12]}
     }
-    
-    return render_template('index.html', kpis=kpis, charts=json.dumps(charts), equipos=equipos, criticos=criticos, taller=taller, rol="Admin")
+
+    # SERIALIZACIÓN COMPLETA DE TABLAS EXTRA DE EXCEL (SANEAMIENTO PREVENTIVO FECHAS)
+    todas_mantenciones = [{
+        'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'codigo': m.codigo_equipo,
+        'tipo': m.tipo_mantencion, 'lectura': m.lectura, 'es_pm': m.es_pm, 'folio': m.folio,
+        'lugar': m.lugar, 'proveedor': m.proveedor, 'costo': m.costo_mantencion_clp, 'estado': m.estado
+    } for m in mantenciones_db]
+
+    todas_compras = [{
+        'fecha': c.fecha.strftime('%d/%m/%Y') if c.fecha else 'S/F', 'oc': c.oc, 'codigo': c.codigo_equipo,
+        'descripcion': c.descripcion, 'proveedor': c.proveedor, 'costo': c.costo_pm_clp, 'estado': c.estado_oc
+    } for c in compras_db]
+
+    todas_lecturas = [{
+        'fecha': l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else 'S/F', 'codigo': l.codigo_equipo,
+        'valor': l.horometro if l.horometro > 0 else l.kilometraje, 'tipo': 'HORAS' if l.horometro > 0 else 'KM',
+        'ubicacion': l.obra_ubicacion, 'responsable': l.responsable, 'obs': l.observacion
+    } for l in lecturas_db]
+
+    return render_template('index.html', kpis=kpis, charts=json.dumps(charts), equipos=equipos, 
+                           criticos=criticos, taller=taller, mantenciones=todas_mantenciones, 
+                           compras=todas_compras, lecturas=todas_lecturas, rol="Admin")
 
 # ==========================================
-# RUTA DE LA FICHA TÉCNICA SANEADA (NO ERROR 500)
+# RUTA DE LA FICHA TÉCNICA SANADA RECURSIVA
 # ==========================================
 
 @app.route('/equipo/<codigo>', methods=['GET', 'POST'])
 def ficha_equipo(codigo):
     equipo = Equipo.query.filter_by(codigo=codigo).first_or_404()
-    
     if request.method == 'POST':
         equipo.ubicacion = request.form.get('ubicacion')
         equipo.estado_base = request.form.get('estado_base')
@@ -213,44 +230,35 @@ def ficha_equipo(codigo):
     lecturas_db = HistorialLectura.query.filter_by(codigo_equipo=codigo).order_by(HistorialLectura.id.desc()).all()
     compras_db = CompraRepuesto.query.filter_by(codigo_equipo=codigo).order_by(CompraRepuesto.id.desc()).all()
 
-    mantenciones = []
-    for m in mantenciones_db:
-        f_str = m.fecha.strftime('%d/%m/%Y') if m.fecha else 'Sin Fecha'
-        mantenciones.append({
-            'fecha': f_str, 'folio': m.folio or 'S/F', 'tipo_mantencion': m.tipo_mantencion or 'Servicio',
-            'lectura': m.lectura, 'lugar': m.lugar or 'Taller', 'costo': m.costo_mantencion_clp, 'estado': m.estado or 'Finalizada'
-        })
+    mantenciones = [{
+        'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'folio': m.folio or 'S/F',
+        'tipo_mantencion': m.tipo_mantencion, 'lectura': m.lectura, 'lugar': m.lugar, 'costo': m.costo_mantencion_clp, 'estado': m.estado
+    } for m in mantenciones_db]
 
-    lecturas = []
-    for l in lecturas_db:
-        f_str = l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else 'Sin Fecha'
-        lecturas.append({
-            'fecha': f_str, 'valor': l.horometro if equipo.control_base == 'HORAS' else l.kilometraje,
-            'obra_ubicacion': l.obra_ubicacion or 'Faena', 'responsable': l.responsable or 'Operador'
-        })
+    lecturas = [{
+        'fecha': l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else 'S/F',
+        'valor': l.horometro if equipo.control_base == 'HORAS' else l.kilometraje,
+        'obra_ubicacion': l.obra_ubicacion, 'responsable': l.responsable
+    } for l in lecturas_db]
 
-    compras = []
-    for c in compras_db:
-        f_str = c.fecha.strftime('%d/%m/%Y') if c.fecha else 'Sin Fecha'
-        compras.append({
-            'fecha': f_str, 'oc': c.oc or 'N/A', 'descripcion': c.descripcion or 'Insumos',
-            'proveedor': c.proveedor or 'S/P', 'costo': c.costo_pm_clp
-        })
+    compras = [{
+        'fecha': c.fecha.strftime('%d/%m/%Y') if c.fecha else 'S/F', 'oc': c.oc,
+        'descripcion': c.descripcion, 'proveedor': c.proveedor, 'costo': c.costo_pm_clp
+    } for c in compras_db]
 
     foto_url = buscar_foto_global(equipo.codigo)
 
     return render_template('ficha_equipo.html', equipo=equipo, mantenciones=mantenciones, lecturas=lecturas, compras=compras, foto_url=foto_url)
 
 # ==========================================
-# INYECTOR COMPLETO MAESTRO EXCEL
+# INYECTOR MAESTRO AUTOMÁTICO EXCEL (.XLSX)
 # ==========================================
 
 @app.route('/admin/cargar_sql_final')
 def cargar_sql_final():
     archivo_excel = "CMMS DEMOTRON MANU ORTIZ.xlsx"
     if not os.path.exists(archivo_excel):
-        return f"Error: No se encuentra el archivo maestro '{archivo_excel}' en la raíz."
-
+        return f"Error: No se encuentra el archivo maestro '{archivo_excel}'."
     try:
         with db.engine.connect() as conn:
             conn.execute(db.text("DROP TABLE IF EXISTS compra_repuesto CASCADE;"))
@@ -258,7 +266,6 @@ def cargar_sql_final():
             conn.execute(db.text("DROP TABLE IF EXISTS historial_lectura CASCADE;"))
             conn.execute(db.text("DROP TABLE IF EXISTS equipo CASCADE;"))
             conn.commit()
-        
         db.create_all()
 
         # 1. EQUIPOS
@@ -266,12 +273,9 @@ def cargar_sql_final():
         for _, row in df_eq.iterrows():
             if not row.iloc[0]: continue
             eq = Equipo(
-                codigo=str(row.iloc[0]).strip(), tipo_equipo=row.iloc[1], marca=row.iloc[2], 
-                modelo=str(row.iloc[3]).strip() if row.iloc[3] else None,
-                ano=clean_int(row.iloc[4], None), ubicacion=row.iloc[5], responsable=row.iloc[6],
-                estado_base=str(row.iloc[7]).strip() if row.iloc[7] else 'Operativo',
-                control_base=str(row.iloc[8]).strip().upper() if row.iloc[8] else 'HORAS',
-                frecuencia_base=clean_int(row.iloc[9], 250), promedio_diario=clean_float(row.iloc[10], 0.0)
+                codigo=str(row.iloc[0]).strip(), tipo_equipo=row.iloc[1], marca=row.iloc[2], modelo=str(row.iloc[3]).strip() if row.iloc[3] else None,
+                ano=clean_int(row.iloc[4], None), ubicacion=row.iloc[5], responsable=row.iloc[6], estado_base=str(row.iloc[7]).strip() if row.iloc[7] else 'Operativo',
+                control_base=str(row.iloc[8]).strip().upper() if row.iloc[8] else 'HORAS', frecuencia_base=clean_int(row.iloc[9], 250), promedio_diario=clean_float(row.iloc[10], 0.0)
             )
             db.session.add(eq)
             db.session.commit()
@@ -281,14 +285,10 @@ def cargar_sql_final():
         for _, row in df_lec.iterrows():
             if not row.iloc[1]: continue
             f_val = str(row.iloc[0]).split()[0]
-            try:
-                fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
-            except:
-                fecha_dt = datetime.now()
-            
+            try: fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
+            except: fecha_dt = datetime.now()
             lec = HistorialLectura(
-                fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(),
-                horometro=clean_int(row.iloc[2], 0), kilometraje=clean_int(row.iloc[3], 0),
+                fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(), horometro=clean_int(row.iloc[2], 0), kilometraje=clean_int(row.iloc[3], 0),
                 obra_ubicacion=row.iloc[4], responsable=row.iloc[5], observacion=row.iloc[6]
             )
             db.session.add(lec)
@@ -299,16 +299,11 @@ def cargar_sql_final():
         for _, row in df_man.iterrows():
             if not row.iloc[1]: continue
             f_val = str(row.iloc[0]).split()[0]
-            try:
-                fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
-            except:
-                fecha_dt = datetime.now()
-            
+            try: fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
+            except: fecha_dt = datetime.now()
             ot = OrdenTrabajo(
-                fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(), tipo_mantencion=row.iloc[2],
-                lectura=clean_int(row.iloc[3], 0), es_pm=row.iloc[4], folio=str(row.iloc[5]),
-                lugar=row.iloc[6], proveedor=row.iloc[7], costo_mantencion_clp=clean_float(row.iloc[8], 0.0),
-                estado=row.iloc[9] if row.iloc[9] else 'Finalizada'
+                fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(), tipo_mantencion=row.iloc[2], lectura=clean_int(row.iloc[3], 0),
+                es_pm=row.iloc[4], folio=str(row.iloc[5]), lugar=row.iloc[6], proveedor=row.iloc[7], costo_mantencion_clp=clean_float(row.iloc[8], 0.0), estado=row.iloc[9] if row.iloc[9] else 'Finalizada'
             )
             db.session.add(ot)
             db.session.commit()
@@ -318,11 +313,8 @@ def cargar_sql_final():
         for _, row in df_com.iterrows():
             if not row.iloc[2]: continue
             f_val = str(row.iloc[0]).split()[0]
-            try:
-                fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
-            except:
-                fecha_dt = datetime.now()
-            
+            try: fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
+            except: fecha_dt = datetime.now()
             comp = CompraRepuesto(
                 fecha=fecha_dt, oc=str(row.iloc[1]), codigo_equipo=str(row.iloc[2]).strip(), descripcion=row.iloc[3],
                 proveedor=row.iloc[4], costo_pm_clp=clean_float(row.iloc[5], 0.0), regla=row.iloc[6], estado_oc=row.iloc[7]
@@ -330,23 +322,17 @@ def cargar_sql_final():
             db.session.add(comp)
             db.session.commit()
 
-        # LOGICA CONTROL BASE ASOCIATIVA
+        # CONSOLIDACIÓN TÉCNICA CORRELATIVA
         for eq in Equipo.query.all():
             ultima_lectura = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
-            if ultima_lectura:
-                eq.lectura_actual = ultima_lectura.horometro if eq.control_base == 'HORAS' else ultima_lectura.kilometraje
-            else:
-                eq.lectura_actual = 0
+            if ultima_lectura: eq.lectura_actual = ultima_lectura.horometro if eq.control_base == 'HORAS' else ultima_lectura.kilometraje
+            else: eq.lectura_actual = 0
             
             ultima_pm = OrdenTrabajo.query.filter_by(codigo_equipo=eq.codigo, es_pm='Sí', estado='Finalizada').order_by(OrdenTrabajo.fecha.desc()).first()
-            if ultima_pm:
-                eq.proxima_pm = ultima_pm.lectura + eq.frecuencia_base
-            else:
-                eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
-                
+            if ultima_pm: eq.proxima_pm = ultima_pm.lectura + eq.frecuencia_base
+            else: eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
         db.session.commit()
         return redirect(url_for('dashboard'))
-
     except Exception as e:
         db.session.rollback()
         return f"Error leyendo las pestañas del Excel: {str(e)}"
