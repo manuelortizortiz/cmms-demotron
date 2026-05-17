@@ -24,7 +24,6 @@ def clean_int(val, default=0):
     if val is None or pd.isna(val):
         return default
     try:
-        # Elimina espacios y maneja decimales si vienen como flotantes en Excel
         s = str(val).strip().split('.')[0]
         return int(s)
     except ValueError:
@@ -48,7 +47,7 @@ class Equipo(db.Model):
     codigo = db.Column(db.String(50), unique=True, nullable=False)
     tipo_equipo = db.Column(db.String(100))
     marca = db.Column(db.String(50))
-    modelo = db.Column(db.String(50))
+    modelo = db.Column(db.String(100)) # Configurado explícitamente como texto de alta capacidad
     ano = db.Column(db.Integer)
     ubicacion = db.Column(db.String(100))
     responsable = db.Column(db.String(100))
@@ -175,7 +174,7 @@ def ficha_equipo(codigo):
     return render_template('ficha_equipo.html', equipo=equipo, mantenciones=mantenciones, lecturas=lecturas, compras=compras)
 
 # ==========================================
-# INYECTOR COMPLETO CON BLINDAJE DE TEXTO
+# INYECTOR COMPLETO CON BORRADO ESTRUCTURAL FORZADO
 # ==========================================
 
 @app.route('/admin/cargar_sql_final')
@@ -185,7 +184,14 @@ def cargar_sql_final():
         return f"Error: No se encuentra el archivo maestro '{archivo_excel}' en la raíz del servidor."
 
     try:
-        db.drop_all()
+        # COMANDO DE FUERZA BRUTA: Pulveriza las tablas viejas de PostgreSQL ignorando bloqueos
+        db.session.execute(db.text("DROP TABLE IF EXISTS equipo CASCADE;"))
+        db.session.execute(db.text("DROP TABLE IF EXISTS historial_lectura CASCADE;"))
+        db.session.execute(db.text("DROP TABLE IF EXISTS orden_trabajo CASCADE;"))
+        db.session.execute(db.text("DROP TABLE IF EXISTS compra_repuesto CASCADE;"))
+        db.session.commit()
+        
+        # Reconstruye los cimientos con los tipos de datos correctos
         db.create_all()
 
         # 1. PESTAÑA: EQUIPOS
@@ -196,7 +202,7 @@ def cargar_sql_final():
                 codigo=str(row.iloc[0]).strip(), 
                 tipo_equipo=row.iloc[1], 
                 marca=row.iloc[2], 
-                modelo=row.iloc[3],
+                modelo=str(row.iloc[3]).strip() if row.iloc[3] else None, # Fuerza la conversión a String limpio
                 ano=clean_int(row.iloc[4], None), 
                 ubicacion=row.iloc[5], 
                 responsable=row.iloc[6],
@@ -278,7 +284,7 @@ def cargar_sql_final():
             db.session.add(comp)
         db.session.commit()
 
-        # LÓGICA DE ACTUALIZACIÓN CORRELATIVA EN VIVO
+        # SÍNCRONIZACIÓN CORRELATIVA INTELIGENTE EN VIVO
         for eq in Equipo.query.all():
             ultima_lectura = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if ultima_lectura:
