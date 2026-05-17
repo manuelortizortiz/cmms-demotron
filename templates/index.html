@@ -191,7 +191,11 @@ td { padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
                 <td>{{ c.proveedor }}</td>
                 <td style="font-weight:bold; color:var(--azul2);">{{ c.costo_str }}</td>
                 <td>{{ c.regla }}</td>
-                <td><span class="pill {% if 'Cancelada' in c.estado %}red{% else %}green{% endif %}">{{ c.estado }}</span></td>
+                <td>
+                  <span class="pill {% if c.estado and 'Cancelada' in c.estado %}red{% else %}green{% endif %}">
+                    {{ c.estado }}
+                  </span>
+                </td>
               </tr>
               {% endfor %}
             </tbody>
