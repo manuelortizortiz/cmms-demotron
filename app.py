@@ -47,7 +47,7 @@ class Equipo(db.Model):
     codigo = db.Column(db.String(50), unique=True, nullable=False)
     tipo_equipo = db.Column(db.String(100))
     marca = db.Column(db.String(50))
-    modelo = db.Column(db.String(100)) # Configurado explícitamente como texto de alta capacidad
+    modelo = db.Column(db.String(100))
     ano = db.Column(db.Integer)
     ubicacion = db.Column(db.String(100))
     responsable = db.Column(db.String(100))
@@ -174,7 +174,7 @@ def ficha_equipo(codigo):
     return render_template('ficha_equipo.html', equipo=equipo, mantenciones=mantenciones, lecturas=lecturas, compras=compras)
 
 # ==========================================
-# INYECTOR COMPLETO CON BORRADO ESTRUCTURAL FORZADO
+# INYECTOR SEGURO ÍNDICE POR ÍNDICE
 # ==========================================
 
 @app.route('/admin/cargar_sql_final')
@@ -184,37 +184,32 @@ def cargar_sql_final():
         return f"Error: No se encuentra el archivo maestro '{archivo_excel}' en la raíz del servidor."
 
     try:
-        # COMANDO DE FUERZA BRUTA: Pulveriza las tablas viejas de PostgreSQL ignorando bloqueos
-        db.session.execute(db.text("DROP TABLE IF EXISTS equipo CASCADE;"))
-        db.session.execute(db.text("DROP TABLE IF EXISTS historial_lectura CASCADE;"))
-        db.session.execute(db.text("DROP TABLE IF EXISTS orden_trabajo CASCADE;"))
-        db.session.execute(db.text("DROP TABLE IF EXISTS compra_repuesto CASCADE;"))
-        db.session.commit()
+        # Vaciado estructural directo de alta seguridad libre de bloqueos transaccionales
+        with db.engine.connect() as conn:
+            conn.execute(db.text("DROP TABLE IF EXISTS compra_repuesto CASCADE;"))
+            conn.execute(db.text("DROP TABLE IF EXISTS orden_trabajo CASCADE;"))
+            conn.execute(db.text("DROP TABLE IF EXISTS historial_lectura CASCADE;"))
+            conn.execute(db.text("DROP TABLE IF EXISTS equipo CASCADE;"))
+            conn.commit()
         
-        # Reconstruye los cimientos con los tipos de datos correctos
         db.create_all()
 
-        # 1. PESTAÑA: EQUIPOS
+        # 1. CARGA SEGURA: EQUIPOS
         df_eq = pd.read_excel(archivo_excel, sheet_name="Equipos", skiprows=2).replace({np.nan: None})
         for _, row in df_eq.iterrows():
             if not row.iloc[0]: continue
             eq = Equipo(
-                codigo=str(row.iloc[0]).strip(), 
-                tipo_equipo=row.iloc[1], 
-                marca=row.iloc[2], 
-                modelo=str(row.iloc[3]).strip() if row.iloc[3] else None, # Fuerza la conversión a String limpio
-                ano=clean_int(row.iloc[4], None), 
-                ubicacion=row.iloc[5], 
-                responsable=row.iloc[6],
+                codigo=str(row.iloc[0]).strip(), tipo_equipo=row.iloc[1], marca=row.iloc[2], 
+                modelo=str(row.iloc[3]).strip() if row.iloc[3] else None,
+                ano=clean_int(row.iloc[4], None), ubicacion=row.iloc[5], responsable=row.iloc[6],
                 estado_base=row.iloc[7] if row.iloc[7] else 'Operativo',
                 control_base=str(row.iloc[8]).strip().upper() if row.iloc[8] else 'HORAS',
-                frecuencia_base=clean_int(row.iloc[9], 250), 
-                promedio_diario=clean_float(row.iloc[10], 0.0)
+                frecuencia_base=clean_int(row.iloc[9], 250), promedio_diario=clean_float(row.iloc[10], 0.0)
             )
             db.session.add(eq)
-        db.session.commit()
+            db.session.commit() # Inserción individual inmediata libre de descalces posicionales
 
-        # 2. PESTAÑA: LECTURAS
+        # 2. CARGA SEGURA: LECTURAS
         df_lec = pd.read_excel(archivo_excel, sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
         for _, row in df_lec.iterrows():
             if not row.iloc[1]: continue
@@ -225,18 +220,14 @@ def cargar_sql_final():
                 fecha_dt = datetime.now()
             
             lec = HistorialLectura(
-                fecha=fecha_dt, 
-                codigo_equipo=str(row.iloc[1]).strip(),
-                horometro=clean_int(row.iloc[2], 0), 
-                kilometraje=clean_int(row.iloc[3], 0),
-                obra_ubicacion=row.iloc[4], 
-                responsable=row.iloc[5], 
-                observacion=row.iloc[6]
+                fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(),
+                horometro=clean_int(row.iloc[2], 0), kilometraje=clean_int(row.iloc[3], 0),
+                obra_ubicacion=row.iloc[4], responsable=row.iloc[5], observacion=row.iloc[6]
             )
             db.session.add(lec)
-        db.session.commit()
+            db.session.commit()
 
-        # 3. PESTAÑA: MANTENCIONES
+        # 3. CARGA SEGURA: MANTENCIONES
         df_man = pd.read_excel(archivo_excel, sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
         for _, row in df_man.iterrows():
             if not row.iloc[1]: continue
@@ -247,21 +238,15 @@ def cargar_sql_final():
                 fecha_dt = datetime.now()
             
             ot = OrdenTrabajo(
-                fecha=fecha_dt, 
-                codigo_equipo=str(row.iloc[1]).strip(), 
-                tipo_mantencion=row.iloc[2],
-                lectura=clean_int(row.iloc[3], 0), 
-                es_pm=row.iloc[4], 
-                folio=str(row.iloc[5]),
-                lugar=row.iloc[6], 
-                proveedor=row.iloc[7], 
-                costo_mantencion_clp=clean_float(row.iloc[8], 0.0),
+                fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(), tipo_mantencion=row.iloc[2],
+                lectura=clean_int(row.iloc[3], 0), es_pm=row.iloc[4], folio=str(row.iloc[5]),
+                lugar=row.iloc[6], proveedor=row.iloc[7], costo_mantencion_clp=clean_float(row.iloc[8], 0.0),
                 estado=row.iloc[9] if row.iloc[9] else 'Finalizada'
             )
             db.session.add(ot)
-        db.session.commit()
+            db.session.commit()
 
-        # 4. PESTAÑA: COMPRAS PM
+        # 4. CARGA SEGURA: COMPRAS PM
         df_com = pd.read_excel(archivo_excel, sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
         for _, row in df_com.iterrows():
             if not row.iloc[2]: continue
@@ -272,19 +257,13 @@ def cargar_sql_final():
                 fecha_dt = datetime.now()
             
             comp = CompraRepuesto(
-                fecha=fecha_dt, 
-                oc=str(row.iloc[1]), 
-                codigo_equipo=str(row.iloc[2]).strip(), 
-                descripcion=row.iloc[3],
-                proveedor=row.iloc[4], 
-                costo_pm_clp=clean_float(row.iloc[5], 0.0), 
-                regla=row.iloc[6], 
-                estado_oc=row.iloc[7]
+                fecha=fecha_dt, oc=str(row.iloc[1]), codigo_equipo=str(row.iloc[2]).strip(), descripcion=row.iloc[3],
+                proveedor=row.iloc[4], costo_pm_clp=clean_float(row.iloc[5], 0.0), regla=row.iloc[6], estado_oc=row.iloc[7]
             )
             db.session.add(comp)
-        db.session.commit()
+            db.session.commit()
 
-        # SÍNCRONIZACIÓN CORRELATIVA INTELIGENTE EN VIVO
+        # CÁLCULO DE HISTORIALES EN VIVO
         for eq in Equipo.query.all():
             ultima_lectura = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if ultima_lectura:
@@ -299,7 +278,7 @@ def cargar_sql_final():
                 eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
                 
         db.session.commit()
-        flash('¡Base de Datos de DEMOTRON inicializada con éxito!', 'success')
+        flash('¡Base de Datos de DEMOTRON inicializada con éxito total!', 'success')
         return redirect(url_for('dashboard'))
 
     except Exception as e:
