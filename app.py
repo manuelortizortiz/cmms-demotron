@@ -18,11 +18,13 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # ==========================================
-# FUNCIONES MATRICIALES DE FORMATO Y BLINDAJE
+# PROCESADORES NUMÉRICOS INDUSTRIALES
 # ==========================================
 def clean_int(val, default=0):
     if val is None or pd.isna(val):
         return default
+    if isinstance(val, (int, float, np.number)):
+        return int(val)
     try:
         return int(str(val).strip().split('.')[0])
     except ValueError:
@@ -31,8 +33,17 @@ def clean_int(val, default=0):
 def clean_float(val, default=0.0):
     if val is None or pd.isna(val):
         return default
+    if isinstance(val, (int, float, np.number)):
+        return float(val)
     try:
-        return float(str(val).strip().replace('$', '').replace('.', '').replace(',', '.'))
+        s = str(val).strip().replace('$', '').replace(' ', '')
+        if s.count('.') == 1 and ',' not in s:
+            return float(s)
+        if '.' in s and ',' in s:
+            s = s.replace('.', '').replace(',', '.')
+        elif ',' in s:
+            s = s.replace(',', '.')
+        return float(s)
     except ValueError:
         return default
 
@@ -54,8 +65,11 @@ def format_clp(val):
     except:
         return "$ 0"
 
-def buscar_foto_global(codigo):
-    if not codigo:
+# ==========================================
+# ESCÁNER FOTOGRÁFICO POR TIPO DE MAQUINARIA
+# ==========================================
+def buscar_foto_por_tipo(tipo_equipo):
+    if not tipo_equipo:
         return None
     base_dir = os.path.join(app.root_path, 'static', 'equipos_real')
     if not os.path.exists(base_dir):
@@ -63,20 +77,31 @@ def buscar_foto_global(codigo):
         if not os.path.exists(base_dir):
             return None
             
-    codigo_limpio = str(codigo).strip().lower()
+    tipo_limpio = str(tipo_equipo).strip().lower()
+    remplazos = {"á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ñ": "n", " ": "_", "-": "_"}
+    tipo_normalizado = "".join(remplazos.get(c, c) for c in tipo_limpio)
+    
+    tipo_espacio_limpio = tipo_limpio
+    for k, v in remplazos.items():
+        if k not in [" ", "-"]:
+            tipo_espacio_limpio = tipo_espacio_limpio.replace(k, v)
+
     for root, dirs, files in os.walk(base_dir):
         for f in files:
             nombre, ext = os.path.splitext(f)
-            if nombre.lower().strip() == codigo_limpio and ext.lower() in ['.jpg', '.jpeg', '.png']:
-                abs_path = os.path.join(root, f).replace("\\", "/")
-                idx = abs_path.find('static/')
-                if idx != -1:
-                    return "/" + abs_path[idx:]
-                return "/static/equipos_real/" + f
+            nombre_limpio = nombre.lower().strip()
+            nombre_normalizado = "".join(remplazos.get(c, c) for c in nombre_limpio)
+            
+            if ext.lower() in ['.jpg', '.jpeg', '.png']:
+                if nombre_limpio == tipo_limpio or nombre_normalizado == tipo_normalizado or nombre_limpio == tipo_espacio_limpio:
+                    abs_path = os.path.join(root, f).replace("\\", "/")
+                    idx = abs_path.find('static/')
+                    if idx != -1:
+                        return "/" + abs_path[idx:]
     return None
 
 # ==========================================
-# MODELOS DE BASE DE DATOS PROTEGIDOS
+# MODELOS DE BASE DE DATOS
 # ==========================================
 
 class Equipo(db.Model):
@@ -95,7 +120,6 @@ class Equipo(db.Model):
     lectura_actual = db.Column(db.Integer, default=0)
     proxima_pm = db.Column(db.Integer, default=0)
 
-    # BLINDAJE ABSOLUTO: Evita quiebres por valores nulos en el cálculo
     @property
     def margen(self):
         prox = self.proxima_pm if self.proxima_pm is not None else 0
@@ -147,7 +171,7 @@ with app.app_context():
     db.create_all()
 
 # ==========================================
-# RUTA CORE: INTERFAZ DE GESTIÓN CENTRAL
+# DESPLIEGUE MODULAR CENTRALIZADO
 # ==========================================
 
 @app.route('/')
@@ -164,7 +188,7 @@ def dashboard():
     conteo_ubicacion = {}
 
     for e in equipos_db:
-        foto_url = buscar_foto_global(e.codigo)
+        foto_url = buscar_foto_por_tipo(e.tipo_equipo)
         eq_data = {
             'codigo': e.codigo, 'tipo_equipo': e.tipo_equipo, 'marca': e.marca, 'modelo': e.modelo,
             'ubicacion': e.ubicacion or 'Sin Ubicación', 'responsable': e.responsable or 'No Asignado',
@@ -182,7 +206,7 @@ def dashboard():
         if e.ubicacion:
             conteo_ubicacion[e.ubicacion] = conteo_ubicacion.get(e.ubicacion, 0) + 1
             
-        # CD-103 vendido (Fuera de Servicio) queda automáticamente fuera de taller
+        # CD-103 vendido (Fuera de Servicio) sale estrictamente de las tarjetas de taller activo
         if e.estado_base == 'Taller' and e.estado_base not in ['Fuera de Servicio', 'No operativo']:
             taller.append(eq_data)
             
@@ -211,7 +235,6 @@ def dashboard():
         'gestion': {'Ene': [25, 18], 'Feb': [32, 24], 'Mar': [41, 38], 'Abr': [ot_abiertas, 15]}
     }
 
-    # Desglose formateado seguro contra celdas vacías de Excel
     todas_mantenciones = [{
         'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'codigo': m.codigo_equipo,
         'tipo': m.tipo_mantencion, 'lectura_str': format_num(m.lectura), 'es_pm': m.es_pm, 'folio': m.folio,
@@ -235,7 +258,7 @@ def dashboard():
                            compras=todas_compras, lecturas=todas_lecturas, rol="Admin")
 
 # ==========================================
-# RUTA DE LA FICHA TÉCNICA
+# RUTA DE LA FICHA TÉCNICA SANADA
 # ==========================================
 
 @app.route('/equipo/<codigo>', methods=['GET', 'POST'])
@@ -246,7 +269,7 @@ def ficha_equipo(codigo):
         equipo.estado_base = request.form.get('estado_base')
         equipo.proxima_pm = clean_int(request.form.get('proxima_pm'), 0)
         db.session.commit()
-        return redirect(url_for('ficha_equipo', codigo=codigo))
+        return redirect(url_for('ficha_equipo', code=codigo))
 
     mantenciones_db = OrdenTrabajo.query.filter_by(codigo_equipo=codigo).order_by(OrdenTrabajo.id.desc()).all()
     lecturas_db = HistorialLectura.query.filter_by(codigo_equipo=codigo).order_by(HistorialLectura.id.desc()).all()
@@ -269,7 +292,7 @@ def ficha_equipo(codigo):
         'descripcion': c.descripcion, 'proveedor': c.proveedor, 'costo_str': format_clp(c.costo_pm_clp)
     } for c in compras_db]
 
-    foto_url = buscar_foto_global(equipo.codigo)
+    foto_url = buscar_foto_por_tipo(equipo.tipo_equipo)
 
     eq_master = {
         'codigo': equipo.codigo, 'tipo_equipo': equipo.tipo_equipo, 'marca': equipo.marca, 'modelo': equipo.modelo,
@@ -281,14 +304,14 @@ def ficha_equipo(codigo):
     return render_template('ficha_equipo.html', equipo=eq_master, mantenciones=mantenciones, lecturas=lecturas, compras=compras, foto_url=foto_url)
 
 # ==========================================
-# INYECTOR COMPLETO SEGURO DESDE EL EXCEL
+# RE-INYECTOR MATRICIAL COMPLETO EXCEL
 # ==========================================
 
 @app.route('/admin/cargar_sql_final')
 def cargar_sql_final():
     archivo_excel = "CMMS DEMOTRON MANU ORTIZ.xlsx"
     if not os.path.exists(archivo_excel):
-        return f"Error: No se encuentra el archivo maestro '{archivo_excel}' en la raíz."
+        return f"Error: No se encuentra el archivo maestro '{archivo_excel}'."
     try:
         with db.engine.connect() as conn:
             conn.execute(db.text("DROP TABLE IF EXISTS compra_repuesto CASCADE;"))
@@ -352,7 +375,7 @@ def cargar_sql_final():
             db.session.add(comp)
             db.session.commit()
 
-        # CONSOLIDACIÓN TÉCNICA PROTEGIDA
+        # CONSOLIDACIÓN TÉCNICA FINAL
         for eq in Equipo.query.all():
             ultima_lectura = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if ultima_lectura: eq.lectura_actual = ultima_lectura.horometro if eq.control_base == 'HORAS' else ultima_lectura.kilometraje
