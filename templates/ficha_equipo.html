@@ -112,7 +112,7 @@ td{ padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
         <h3>📈 LOG HISTÓRICO DE LECTURAS</h3>
         <div class="tablewrap">
           <table>
-            <thead><tr><th>Fecha</th><th>Valor Capturado</th><th>Ubicación / Frente</th><th>Responsable</th></tr></thead>
+            <thead><tr><th>Fecha Captura</th><th>Valor Capturado</th><th>Ubicación / Frente</th><th>Responsable</th></tr></thead>
             <tbody>
               {% for l in lecturas %}
               <tr><td>{{ l.fecha }}</td><td style="font-weight: bold; color: var(--azul2);">{{ l.valor_str }}</td><td>📍 {{ l.obra_ubicacion }}</td><td>👤 {{ l.responsable }}</td></tr>
