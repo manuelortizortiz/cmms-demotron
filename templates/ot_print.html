@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Orden de Trabajo {{ ot.folio }} - DEMOTRON</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Roboto', sans-serif; font-size: 12px; color: #1E293B; margin: 0; padding: 0; background: #fff; }
+        .hoja-a4 { width: 210mm; min-height: 297mm; padding: 15mm; margin: 0 auto; background: white; box-sizing: border-box; }
+        
+        /* Cabecera Corporativa */
+        .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #082b5f; padding-bottom: 10px; margin-bottom: 20px; }
+        .logo-box { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 35px; height: 35px; background-color: #F59E0B; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; color: #082b5f; }
+        .logo-text { font-size: 24px; font-weight: 900; color: #082b5f; letter-spacing: 2px; margin: 0; }
+        .logo-sub { font-size: 10px; color: #64748B; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .ot-title-box { text-align: right; }
+        .ot-title { font-size: 20px; font-weight: 900; color: #082b5f; margin: 0 0 5px 0; text-transform: uppercase; }
+        .ot-folio { font-size: 16px; font-weight: 700; color: #EF4444; background: #FEE2E2; padding: 4px 10px; border-radius: 4px; display: inline-block; border: 1px solid #FCA5A5; }
+
+        /* Sección de Datos */
+        .seccion-titulo { background-color: #082b5f; color: white; padding: 4px 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; margin-top: 15px; }
+        .datos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .dato-item { border: 1px solid #CBD5E1; padding: 6px; display: flex; justify-content: space-between; background-color: #F8FAFC; }
+        .dato-label { font-weight: 700; color: #475569; font-size: 10px; text-transform: uppercase; }
+        .dato-valor { font-weight: 700; color: #0f172a; font-size: 11px; }
+
+        /* Tablas */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        th, td { border: 1px solid #94A3B8; padding: 6px; font-size: 11px; }
+        th { background-color: #E2E8F0; color: #082b5f; font-weight: 700; text-transform: uppercase; text-align: left; }
+        
+        .check-box { width: 12px; height: 12px; border: 1px solid #475569; display: inline-block; vertical-align: middle; margin-right: 5px; }
+        
+        /* Observaciones y Firmas */
+        .obs-box { border: 1px solid #94A3B8; height: 80px; padding: 8px; color: #64748B; font-style: italic; }
+        .firmas-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 50px; }
+        .firma-box { text-align: center; }
+        .firma-line { border-top: 1px solid #000; margin-bottom: 5px; width: 80%; margin-left: auto; margin-right: auto; }
+        .firma-label { font-size: 10px; font-weight: 700; color: #082b5f; text-transform: uppercase; }
+
+        @media print {
+            body { background: white; }
+            .hoja-a4 { width: 100%; padding: 0; margin: 0; border: none; box-shadow: none; }
+            .btn-imprimir { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <button class="btn-imprimir" onclick="window.print()" style="position: fixed; bottom: 20px; right: 20px; background: #082b5f; color: white; padding: 10px 20px; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; font-family: 'Roboto'; box-shadow: 0 4px 6px rgba(0,0,0,0.3); font-size: 14px;">🖨️ Imprimir / Guardar PDF</button>
+
+    <div class="hoja-a4">
+        <div class="header">
+            <div class="logo-box">
+                <div class="logo-icon">D</div>
+                <div>
+                    <h1 class="logo-text">DEMOTRON</h1>
+                    <p class="logo-sub">Gestión de Maquinarias CMMS</p>
+                </div>
+            </div>
+            <div class="ot-title-box">
+                <h2 class="ot-title">Orden de Trabajo</h2>
+                <div class="ot-folio">{{ ot.folio }}</div>
+            </div>
+        </div>
+
+        <div class="seccion-titulo">I. Identificación del Equipo y Solicitud</div>
+        <div class="datos-grid">
+            <div class="dato-item"><span class="dato-label">Fecha OT:</span><span class="dato-valor">{{ fecha_actual }}</span></div>
+            <div class="dato-item"><span class="dato-label">Tipo de Equipo:</span><span class="dato-valor">{{ equipo.tipo_equipo }}</span></div>
+            <div class="dato-item"><span class="dato-label">Código Interno:</span><span class="dato-valor" style="color:#082b5f; font-size: 14px;">{{ equipo.codigo }}</span></div>
+            <div class="dato-item"><span class="dato-label">Marca / Modelo:</span><span class="dato-valor">{{ equipo.marca }} {{ equipo.modelo }}</span></div>
+            <div class="dato-item"><span class="dato-label">Obra o Taller:</span><span class="dato-valor">{{ equipo.ubicacion }}</span></div>
+            <div class="dato-item"><span class="dato-label">Lectura Actual:</span><span class="dato-valor">{{ equipo.lectura_actual }} {{ equipo.control_base }}</span></div>
+            <div class="dato-item"><span class="dato-label">Responsable / Operador:</span><span class="dato-valor">{{ equipo.responsable }}</span></div>
+            <div class="dato-item"><span class="dato-label">Tipo Intervención:</span><span class="dato-valor">{{ ot.tipo_mantencion }}</span></div>
+        </div>
+
+        <div class="seccion-titulo">II. Tareas a Realizar (Checklist de Mecánico)</div>
+        <table>
+            <thead><tr><th style="width: 50%;">Tarea / Revisión</th><th style="width: 50%;">Tarea / Revisión</th></tr></thead>
+            <tbody>
+                <tr><td><div class="check-box"></div> Revisión niveles de aceite motor</td><td><div class="check-box"></div> Engrase general de pasadores / articulaciones</td></tr>
+                <tr><td><div class="check-box"></div> Cambio de filtros (Aire, Petróleo, Aceite)</td><td><div class="check-box"></div> Revisión sistema eléctrico y luces</td></tr>
+                <tr><td><div class="check-box"></div> Revisión tren delantero y frenos</td><td><div class="check-box"></div> Chequeo de fugas hidráulicas y mangueras</td></tr>
+                <tr><td><div class="check-box"></div> Chequeo de correas y tensores</td><td><div class="check-box"></div> Pruebas de funcionamiento general en vacío</td></tr>
+            </tbody>
+        </table>
+
+        <div class="seccion-titulo">III. Filtros, Lubricantes e Insumos Requeridos</div>
+        <table>
+            <thead><tr><th style="width: 15%;">Cant. / Und.</th><th style="width: 30%;">Código Repuesto</th><th style="width: 55%;">Descripción del Insumo / Filtro</th></tr></thead>
+            <tbody>
+                <tr><td style="height: 16px;"></td><td></td><td></td></tr>
+                <tr><td style="height: 16px;"></td><td></td><td></td></tr>
+                <tr><td style="height: 16px;"></td><td></td><td></td></tr>
+                <tr><td style="height: 16px;"></td><td></td><td></td></tr>
+                <tr><td style="height: 16px;"></td><td></td><td></td></tr>
+                <tr><td style="height: 16px;"></td><td></td><td></td></tr>
+                <tr><td style="height: 16px;"></td><td></td><td></td></tr>
+                <tr><td style="height: 16px;"></td><td></td><td></td></tr>
+                <tr><td style="height: 16px;"></td><td></td><td></td></tr>
+                <tr><td style="height: 16px;"></td><td></td><td></td></tr>
+                <tr><td style="height: 16px;"></td><td></td><td></td></tr>
+                <tr><td style="height: 16px;"></td><td></td><td></td></tr>
+            </tbody>
+        </table>
+
+        <div class="seccion-titulo">IV. Observaciones Técnicas Adicionales</div>
+        <div class="obs-box">Describa aquí hallazgos adicionales, piezas que requieran reemplazo a futuro o comentarios del estado general de la máquina...</div>
+
+        <div class="firmas-grid">
+            <div class="firma-box">
+                <div class="firma-line"></div>
+                <div class="firma-label">Firma Mecánico</div>
+                <div style="font-size: 9px; color: #64748B; margin-top: 3px;">Nombre y RUT</div>
+            </div>
+            <div class="firma-box">
+                <div class="firma-line"></div>
+                <div class="firma-label">V°B° Supervisor Terreno</div>
+                <div style="font-size: 9px; color: #64748B; margin-top: 3px;">Validación de Trabajo</div>
+            </div>
+            <div class="firma-box">
+                <div class="firma-line"></div>
+                <div class="firma-label">V°B° Jefe de Faena / Taller</div>
+                <div style="font-size: 9px; color: #64748B; margin-top: 3px;">Cierre OT</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
