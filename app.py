@@ -18,9 +18,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# ==========================================
-# PROCESADORES NUMÉRICOS BLINDADOS
-# ==========================================
 def clean_int(val, default=0):
     try:
         if val is None: return default
@@ -56,23 +53,23 @@ def format_clp(val):
         return f"$ {int(float(s)):,}".replace(",", ".")
     except: return "$ 0"
 
-# ==========================================
-# MAPEO HOMOGÉNEO DE IMÁGENES
-# ==========================================
+# REGLA ESTRICTA DE IMÁGENES
 def buscar_foto_por_tipo(tipo_equipo):
     if not tipo_equipo: return None
-    base_dir = os.path.join(app.root_path, 'static', 'equipos_real')
-    if not os.path.exists(base_dir): base_dir = "static/equipos_real"
-            
     tipo_limpio = str(tipo_equipo).strip().lower()
     
-    if "camioneta" in tipo_limpio:
+    if "tracto" in tipo_limpio or "tractocamion" in tipo_limpio:
+        return "/static/equipos_real/tractocamion.png"
+    elif "man" in tipo_limpio and "tolva" in tipo_limpio:
+        return "/static/equipos_real/camion_man_tolva.png"
+    elif "camioneta" in tipo_limpio:
         return "/static/equipos_real/maxus_t60.png"
     elif "pintura" in tipo_limpio or "slurry" in tipo_limpio or "plano" in tipo_limpio:
         return "/static/equipos_real/camion_liviano.png"
-    elif "tracto" in tipo_limpio or "tractocamion" in tipo_limpio:
-        return "/static/equipos_real/tracto_camion.jpg"
 
+    # Fallback normalizador
+    base_dir = os.path.join(app.root_path, 'static', 'equipos_real')
+    if not os.path.exists(base_dir): base_dir = "static/equipos_real"
     remplazos = {"á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ñ": "n", " ": "_", "-": "_"}
     target = "".join(remplazos.get(c, c) for c in tipo_limpio)
 
@@ -88,10 +85,6 @@ def buscar_foto_por_tipo(tipo_equipo):
                         idx = abs_path.find('static/')
                         if idx != -1: return "/" + abs_path[idx:]
     return None
-
-# ==========================================
-# MODELOS DE BASE DE DATOS
-# ==========================================
 
 class Equipo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -159,10 +152,6 @@ class CompraRepuesto(db.Model):
 with app.app_context():
     db.create_all()
 
-# ==========================================
-# RUTAS DE DESPLIEGUE CON RESCATE DE ERRORES
-# ==========================================
-
 @app.route('/', strict_slashes=False)
 @app.route('/erp', strict_slashes=False)
 def dashboard():
@@ -195,9 +184,7 @@ def dashboard():
                 'codigo': e.codigo, 'tipo_equipo': e.tipo_equipo, 'marca': e.marca, 'modelo': e.modelo,
                 'ubicacion': e.ubicacion or 'Sin Ubicación', 'responsable': e.responsable or 'No Asignado',
                 'control_base': e.control_base, 'lectura_actual_str': format_num(e.lectura_actual),
-                'proxima_pm_str': format_num(e.proxima_pm), 
-                'margen': e.margen, 
-                'margen_str': format_num(e.margen),
+                'proxima_pm_str': format_num(e.proxima_pm), 'margen': e.margen, 'margen_str': format_num(e.margen),
                 'estado_base': e.estado_base, 'semaforo': e.semaforo, 'foto_url': foto_url
             }
             equipos.append(eq_data)
@@ -209,7 +196,8 @@ def dashboard():
             if e.ubicacion: conteo_ubicacion[e.ubicacion] = conteo_ubicacion.get(e.ubicacion, 0) + 1
             if e.estado_base == 'Taller' and e.estado_base not in ['Fuera de Servicio', 'No operativo']: taller.append(eq_data)
             
-            if e.semaforo == 'red' or e.estado_base in ['Fuera de Servicio', 'No operativo']: 
+            # FILTRO ESTRICTO: Atrasados que NO están fuera de servicio
+            if e.margen < 0 and e.estado_base not in ['Fuera de Servicio', 'No operativo']: 
                 criticos.append(eq_data)
             if e.semaforo == 'yellow': 
                 proximos_count += 1
@@ -228,15 +216,18 @@ def dashboard():
 
         kpis = {
             'atrasados': len(criticos), 'total': total_equipos, 'proximos': proximos_count,
-            'ot_abiertas': ot_abiertas, 'controlados': total_equipos - len(criticos),
-            'controlado_pct': round(((total_equipos - len(criticos)) / total_equipos * 100)) if total_equipos > 0 else 0,
+            'ot_abiertas': ot_abiertas, 'controlados': total_equipos - conteo_estado.get('Fuera de Servicio', 0),
+            'controlado_pct': round(((total_equipos - conteo_estado.get('Fuera de Servicio', 0)) / total_equipos * 100)) if total_equipos > 0 else 0,
             'costo_mes_str': format_clp(costo_compras)
         }
         
         charts = { 'estado': conteo_estado, 'ubicacion': conteo_ubicacion_filtrado, 'compras_mensuales': compras_mensuales }
 
+        # Exportamos fechas en formato ISO para que el Calendario JS las pueda pintar
         todas_mantenciones = [{
-            'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'codigo': m.codigo_equipo,
+            'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 
+            'fecha_iso': m.fecha.strftime('%Y-%m-%d') if m.fecha else '',
+            'codigo': m.codigo_equipo,
             'tipo': m.tipo_mantencion, 'lectura_str': format_num(m.lectura), 'es_pm': m.es_pm, 'folio': m.folio,
             'lugar': m.lugar, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado
         } for m in mantenciones_db]
@@ -262,7 +253,6 @@ def dashboard():
                                
     except Exception as e:
         return f"<h1 style='color:red;'>Error crítico en Dashboard:</h1><p>{str(e)}</p>"
-
 
 @app.route('/equipo/<codigo>', methods=['GET', 'POST'], strict_slashes=False)
 def ficha_equipo(codigo):
@@ -293,7 +283,6 @@ def ficha_equipo(codigo):
     } for c in compras_db]
 
     foto_url = buscar_foto_por_tipo(equipo.tipo_equipo)
-    
     eq_master = {
         'codigo': equipo.codigo, 'tipo_equipo': equipo.tipo_equipo, 'marca': equipo.marca, 'modelo': equipo.modelo,
         'ubicacion': equipo.ubicacion, 'proxima_pm': equipo.proxima_pm, 'estado_base': equipo.estado_base,
@@ -302,7 +291,6 @@ def ficha_equipo(codigo):
         'margen_str': format_num(equipo.margen)
     }
     return render_template('ficha_equipo.html', equipo=eq_master, mantenciones=mantenciones, lecturas=lecturas, compras=compras, foto_url=foto_url)
-
 
 @app.route('/admin/cargar_sql_final', strict_slashes=False)
 def cargar_sql_final():
