@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DEMOTRON ERP CMMS V8</title>
+    <title>DEMOTRON ERP CMMS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -47,10 +47,10 @@
 
     <aside class="w-[260px] bg-brand-sidebar text-white flex flex-col flex-shrink-0 shadow-xl z-20 hidden lg:flex">
         <div class="h-20 flex items-center px-6 border-b border-slate-800">
-            <div class="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center mr-3 shadow-[0_0_15px_rgba(250,204,21,0.3)] flex-shrink-0">
+            <div class="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center mr-3 flex-shrink-0">
                 <i class="fa-solid fa-layer-group text-slate-950 text-sm"></i>
             </div>
-            <span class="font-bold text-base tracking-wide whitespace-nowrap">DEMOTRON <span class="text-xs text-yellow-400 block -mt-1 font-semibold">ERP CMMS V8</span></span>
+            <span class="font-bold text-base tracking-wide whitespace-nowrap">DEMOTRON <span class="text-xs text-yellow-400 block -mt-1 font-semibold">ERP CMMS</span></span>
         </div>
         
         <div class="flex-1 overflow-y-auto py-6 px-4">
@@ -128,105 +128,60 @@
             
             <div id="mod-dashboard" class="seccion-modulo active">
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-6">
                     <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 card-hover transition-all">
-                        <h3 class="text-xs font-bold uppercase tracking-wider text-brand-textMuted mb-3">Estado de Equipos</h3>
-                        <div class="flex items-center justify-between">
-                            <div class="relative w-20 h-20 flex-shrink-0">
-                                <canvas id="chartEstado"></canvas>
-                                <div class="absolute inset-0 flex flex-col items-center justify-center">
-                                    <span class="text-base font-bold text-brand-textMain leading-none">{{ kpis.total }}</span>
-                                    <span class="text-[9px] text-brand-textMuted font-medium">Total</span>
-                                </div>
-                            </div>
-                            <div class="text-[11px] space-y-1 flex-1 pl-4 font-medium">
-                                <div class="flex justify-between"><span>Operativos</span><span class="font-bold text-brand-green">{{ kpis.controlados }}</span></div>
-                                <div class="flex justify-between"><span>Atrasados</span><span class="font-bold text-brand-red">{{ kpis.atrasados }}</span></div>
-                                <div class="flex justify-between"><span>Próximos</span><span class="font-bold text-brand-yellow">{{ kpis.proximos }}</span></div>
-                            </div>
-                        </div>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-brand-textMuted mb-2">Estado Operational Flota</h3>
+                        <div class="h-40 relative"><canvas id="chartEstado"></canvas></div>
                     </div>
-
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 card-hover transition-all flex flex-col justify-between">
-                        <div>
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-textMuted mb-2">Órdenes de Trabajo</h3>
-                            <div class="flex justify-between items-center bg-brand-redBg px-2.5 py-1.5 rounded-lg mb-2">
-                                <span class="text-xs font-bold text-brand-red">OT Abiertas</span>
-                                <span class="font-extrabold text-brand-red text-sm">{{ kpis.ot_abiertas }}</span>
-                            </div>
-                            <div class="text-[11px] font-medium space-y-1 px-1">
-                                <div class="flex justify-between"><span>En Proceso</span><span class="font-bold text-brand-textMain">112</span></div>
-                                <div class="flex justify-between"><span>Por Programar</span><span class="font-bold text-brand-blue">40</span></div>
-                            </div>
-                        </div>
-                        <div class="text-[10px] text-center border-t border-slate-100 pt-2 text-brand-textMuted font-semibold">
-                            Total OT generadas: <span class="text-brand-textMain font-bold">1.560</span>
-                        </div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 card-hover transition-all">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-brand-textMuted mb-2">Distribución por Ubicación (>=5)</h3>
+                        <div class="h-40 relative"><canvas id="chartUbic"></canvas></div>
                     </div>
-
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 card-hover transition-all flex flex-col justify-between">
-                        <div>
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-textMuted mb-1">Costos Mantenimiento</h3>
-                            <div class="my-2">
-                                <span class="text-xl lg:text-2xl font-extrabold text-brand-textMain tracking-tight">{{ kpis.costo_mes_str }}</span>
-                                <p class="text-[9px] text-brand-textMuted uppercase font-bold tracking-wide mt-0.5">Acumulado General (CLP)</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-1 text-[10px] font-bold text-brand-green bg-brand-greenBg px-2 py-1 rounded w-max">
-                            <i class="fa-solid fa-arrow-trend-up"></i> 17.8% vs mes anterior
-                        </div>
-                    </div>
-
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 card-hover transition-all flex flex-col justify-between">
-                        <div>
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-textMuted mb-1">Registro Lecturas</h3>
-                            <div class="my-2">
-                                <span class="text-2xl font-extrabold text-brand-textMain tracking-tight">5.040</span>
-                                <p class="text-[9px] text-brand-textMuted uppercase font-bold tracking-wide mt-0.5">Lecturas Totales</p>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2 border-t border-slate-100 pt-2 text-[10px]">
-                            <div><p class="text-brand-textMuted font-bold">ÚLTIMA CAPTURA</p><p class="font-extrabold text-brand-textMain">16/05/2025</p></div>
-                            <div><p class="text-brand-textMuted font-bold">HOY</p><p class="font-extrabold text-brand-blue">23 logs</p></div>
-                        </div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 card-hover transition-all">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-brand-textMuted mb-2">Compras Mensuales</h3>
+                        <div class="h-40 relative"><canvas id="chartComprasMensuales"></canvas></div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-6">
-                    <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                        <div class="px-5 py-3.5 border-b border-slate-200 bg-slate-50/60 flex justify-between items-center">
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-textMain">Equipos Críticos (Atrasados)</h3>
-                            <span class="text-[10px] bg-brand-redBg text-brand-red px-2 py-0.5 rounded-full font-bold">Total: {{ criticos|length }}</span>
-                        </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex justify-between items-center">
+                        <div><p class="text-[10px] font-bold text-brand-textMuted uppercase">OT Abiertas</p><p class="text-xl font-extrabold text-brand-red mt-1">{{ kpis.ot_abiertas }}</p></div>
+                        <span class="p-2 bg-brand-redBg text-brand-red rounded-lg"><i class="fa-solid fa-wrench"></i></span>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex justify-between items-center">
+                        <div><p class="text-[10px] font-bold text-brand-textMuted uppercase">Inversión PM Bodega</p><p class="text-xl font-extrabold text-brand-textMain mt-1">{{ kpis.costo_mes_str }}</p></div>
+                        <span class="p-2 bg-brand-greenBg text-brand-green rounded-lg"><i class="fa-solid fa-dollar-sign"></i></span>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex justify-between items-center">
+                        <div><p class="text-[10px] font-bold text-brand-textMuted uppercase">Eficiencia Control</p><p class="text-xl font-extrabold text-brand-green mt-1">{{ kpis.controlado_pct }}%</p></div>
+                        <span class="p-2 bg-brand-greenBg text-brand-green rounded-lg"><i class="fa-solid fa-square-check"></i></span>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex justify-between items-center">
+                        <div><p class="text-[10px] font-bold text-brand-textMuted uppercase">Lecturas Logs</p><p class="text-xl font-extrabold text-brand-blue mt-1">5.040</p></div>
+                        <span class="p-2 bg-brand-blueBg text-brand-blue rounded-lg"><i class="fa-solid fa-calculator"></i></span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-6">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 font-bold text-xs uppercase text-brand-textMain">Equipos Actualmente en Taller ({{ taller|length }})</div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left text-xs whitespace-nowrap">
-                                <thead class="bg-slate-50 text-brand-textMuted uppercase font-bold border-b border-slate-200 text-[10px]">
-                                    <tr>
-                                        <th class="px-5 py-3">Unidad / Detalle</th>
-                                        <th class="px-5 py-3 text-right">Lectura Act.</th>
-                                        <th class="px-5 py-3 text-right">Meta PM</th>
-                                        <th class="px-5 py-3 text-right">Margen</th>
-                                        <th class="px-5 py-3 text-center">Estado</th>
-                                    </tr>
+                                <thead class="bg-slate-100 font-bold border-b border-slate-200 text-[10px] text-brand-textMuted">
+                                    <tr><th class="px-4 py-2 text-center">FOTO</th><th class="px-4 py-2">CÓDIGO</th><th>DESCRIPCIÓN</th><th>UBICACIÓN</th><th class="text-center">ESTADO</th></tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100">
-                                    {% for c in criticos[:5] %}
-                                    <tr class="hover:bg-slate-50 transition-colors cursor-pointer" onclick="irAFichaEquipo('{{ c.codigo }}')">
-                                        <td class="px-5 py-2.5 flex items-center gap-3">
-                                            <div class="w-9 h-9 rounded border border-slate-200 bg-slate-50 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                                                {% if c.foto_url %}<img src="{{ c.foto_url }}" class="w-full h-full object-cover">{% else %}<i class="fa-solid fa-truck text-slate-300"></i>{% endif %}
-                                            </div>
-                                            <div>
-                                                <p class="font-bold text-brand-textMain">{{ c.codigo }}</p>
-                                                <p class="text-[10px] text-brand-textMuted font-medium">{{ c.tipo_equipo }}</p>
+                                <tbody class="divide-y divide-slate-100 font-medium">
+                                    {% for t in taller %}
+                                    <tr class="hover:bg-slate-50 cursor-pointer" onclick="irAFichaEquipo('{{ t.codigo }}')">
+                                        <td class="px-4 py-2 text-center">
+                                            <div class="w-10 h-7 rounded border border-slate-200 bg-slate-100 overflow-hidden mx-auto flex items-center justify-center">
+                                                {% if t.foto_url %}<img src="{{ t.foto_url }}" class="w-full h-full object-cover">{% else %}🚜{% endif %}
                                             </div>
                                         </td>
-                                        <td class="px-5 py-2.5 text-right font-semibold">{{ c.lectura_actual_str }}</td>
-                                        <td class="px-5 py-2.5 text-right text-brand-textMuted font-medium">{{ c.proxima_pm_str }}</td>
-                                        <td class="px-5 py-2.5 text-right font-bold text-brand-red">{{ c.margen_str }}</td>
-                                        <td class="px-5 py-2.5 text-center">
-                                            <span class="inline-flex px-2 py-0.5 rounded-full text-[9px] font-bold bg-brand-redBg text-brand-red">Atrasado</span>
-                                        </td>
+                                        <td class="px-4 py-2 font-bold text-brand-blue">{{ t.codigo }}</td>
+                                        <td class="px-4 py-2"><b>{{ t.tipo_equipo }}</b> {{ t.marca }}</td>
+                                        <td class="px-4 py-2">📍 {{ t.ubicacion }}</td>
+                                        <td class="px-4 py-2 text-center"><span class="w-2.5 h-2.5 bg-brand-yellow rounded-full inline-block"></span></td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -234,32 +189,46 @@
                         </div>
                     </div>
 
-                    <div class="flex flex-col gap-4 lg:gap-6">
-                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 card-hover transition-all flex flex-col justify-between">
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-textMuted mb-2">Distribución por Tipo</h3>
-                            <div class="h-36 relative"><canvas id="chartTipos"></canvas></div>
-                        </div>
-                        
-                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 card-hover transition-all flex-1 flex flex-col justify-between">
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-brand-textMuted mb-2">Compras Mensuales</h3>
-                            <div class="h-32 relative"><canvas id="chartComprasMensuales"></canvas></div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-4 py-3 bg-brand-redBg border-b border-slate-200 font-bold text-xs uppercase text-brand-red">Equipos Atrasados Vencidos ({{ criticos|length }})</div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs whitespace-nowrap">
+                                <thead class="bg-slate-100 font-bold border-b border-slate-200 text-[10px] text-brand-textMuted">
+                                    <tr><th class="px-4 py-2 text-center">FOTO</th><th class="px-4 py-2">CÓDIGO</th><th>DESCRIPCIÓN</th><th class="text-right">MARGEN</th><th class="text-center">ESTADO</th></tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 font-medium">
+                                    {% for c in criticos[:6] %}
+                                    <tr class="hover:bg-slate-50 cursor-pointer" onclick="irAFichaEquipo('{{ c.codigo }}')">
+                                        <td class="px-4 py-2 text-center">
+                                            <div class="w-10 h-7 rounded border border-slate-200 bg-slate-100 overflow-hidden mx-auto flex items-center justify-center">
+                                                {% if c.foto_url %}<img src="{{ c.foto_url }}" class="w-full h-full object-cover">{% else %}🚜{% endif %}
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-2 font-bold text-brand-blue">{{ c.codigo }}</td>
+                                        <td class="px-4 py-2"><b>{{ c.tipo_equipo }}</b> {{ c.marca }}</td>
+                                        <td class="px-4 py-2 text-right font-bold text-brand-red">{{ c.margen_str }}</td>
+                                        <td class="px-4 py-2 text-center"><span class="w-2.5 h-2.5 bg-brand-red rounded-full inline-block"></span></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
                 <div class="mb-2">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-xs font-bold uppercase tracking-wider text-brand-textMuted">Flota de Equipos (Muestra Aleatoria)</h3>
-                        <div class="flex gap-1.5">
-                            <button onclick="document.getElementById('carouselFlota').scrollBy({left: -200, behavior: 'smooth'})" class="w-6 h-6 rounded bg-white border border-slate-300 flex items-center justify-center hover:bg-slate-50 transition-colors text-xs"><i class="fa-solid fa-chevron-left"></i></button>
-                            <button onclick="document.getElementById('carouselFlota').scrollBy({left: 200, behavior: 'smooth'})" class="w-6 h-6 rounded bg-white border border-slate-300 flex items-center justify-center hover:bg-slate-50 transition-colors text-xs"><i class="fa-solid fa-chevron-right"></i></button>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-brand-textMuted">Catálogo de Activos Correlativos</h3>
+                        <div class="flex gap-1">
+                            <button onclick="document.getElementById('scrollFlota').scrollBy({left: -200, behavior: 'smooth'})" class="w-6 h-6 rounded bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-xs"><i class="fa-solid fa-chevron-left"></i></button>
+                            <button onclick="document.getElementById('scrollFlota').scrollBy({left: 200, behavior: 'smooth'})" class="w-6 h-6 rounded bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-xs"><i class="fa-solid fa-chevron-right"></i></button>
                         </div>
                     </div>
-                    <div id="carouselFlota" class="flex overflow-x-auto hide-scrollbar gap-4 pb-2 snap-x snap-mandatory">
-                        {% for a in equipos_aleatorios[:12] %}
-                        <div class="min-w-[130px] max-w-[130px] bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden snap-start card-hover transition-all cursor-pointer flex-shrink-0 flex flex-col justify-between" onclick="irAFichaEquipo('{{ a.codigo }}')">
-                            <div class="h-20 bg-slate-50 flex items-center justify-center overflow-hidden border-b border-slate-100">
-                                {% if a.foto_url %}<img src="{{ a.foto_url }}" class="w-full h-full object-cover">{% else %}<i class="fa-solid fa-truck-moving text-2xl text-slate-300"></i>{% endif %}
+                    <div id="scrollFlota" class="flex overflow-x-auto hide-scrollbar gap-4 pb-2 snap-x snap-mandatory">
+                        {% for a in equipos_aleatorios %}
+                        <div class="min-w-[130px] max-w-[130px] bg-white rounded-xl border border-slate-200 overflow-hidden snap-start card-hover transition-all cursor-pointer flex-shrink-0 flex flex-col justify-between" onclick="irAFichaEquipo('{{ a.codigo }}')">
+                            <div class="h-20 bg-slate-50 border-b border-slate-100 overflow-hidden flex items-center justify-center">
+                                {% if a.foto_url %}<img src="{{ a.foto_url }}" class="w-full h-full object-cover">{% else %}<i class="fa-solid fa-truck-moving text-xl text-slate-300"></i>{% endif %}
                             </div>
                             <div class="p-2 text-center">
                                 <p class="text-[10px] text-brand-blue font-bold uppercase leading-none">{{ a.codigo }}</p>
@@ -273,7 +242,6 @@
 
             <div id="mod-equipos" class="seccion-modulo">
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="px-5 py-3.5 bg-slate-50/60 border-b border-slate-200"><h3 class="text-xs font-bold uppercase tracking-wider">Maestro General de Equipos (Filtro Activo)</h3></div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-xs whitespace-nowrap">
                             <thead class="bg-slate-50 text-[10px] text-brand-textMuted uppercase font-bold border-b border-slate-200">
@@ -303,7 +271,6 @@
 
             <div id="mod-ot" class="seccion-modulo">
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="px-5 py-3.5 bg-slate-50/60 border-b border-slate-200"><h3 class="text-xs font-bold uppercase tracking-wider">Historial de Intervenciones y Órdenes de Trabajo</h3></div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-xs whitespace-nowrap">
                             <thead class="bg-slate-50 text-[10px] text-brand-textMuted uppercase font-bold border-b border-slate-200">
@@ -331,11 +298,10 @@
 
             <div id="mod-compras" class="seccion-modulo">
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="px-5 py-3.5 bg-slate-50/60 border-b border-slate-200"><h3 class="text-xs font-bold uppercase tracking-wider">Seguimiento Financiero de Adquisiciones e Insumos</h3></div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-xs whitespace-nowrap">
                             <thead class="bg-slate-50 text-[10px] text-brand-textMuted uppercase font-bold border-b border-slate-200">
-                                <tr><th class="px-5 py-3">Fecha OC</th><th class="px-5 py-3">Orden Compra</th><th class="px-5 py-3">Código Equipo</th><th>Descripción Insumo / Repuesto</th><th class="px-5 py-3">Proveedor</th><th class="px-5 py-3 text-right">Inversión CLP</th><th class="px-5 py-3">Regla Aplicación</th><th class="px-5 py-3 text-center">Estado OC</th></tr>
+                                <tr><th class="px-5 py-3">Fecha OC</th><th class="px-5 py-3">Orden Compra</th><th class="px-5 py-3">Código Equipo</th><th>Descripción Insumo</th><th class="px-5 py-3">Proveedor</th><th class="px-5 py-3 text-right">Inversión CLP</th><th class="px-5 py-3">Regla Aplicación</th><th class="px-5 py-3 text-center">Estado OC</th></tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 font-medium">
                                 {% for c in compras %}
@@ -358,7 +324,6 @@
 
             <div id="mod-lecturas" class="seccion-modulo">
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="px-5 py-3.5 bg-slate-50/60 border-b border-slate-200"><h3 class="text-xs font-bold uppercase tracking-wider">Historial Correlativo de Horómetros y Kilometrajes</h3></div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-xs whitespace-nowrap">
                             <thead class="bg-slate-50 text-[10px] text-brand-textMuted uppercase font-bold border-b border-slate-200">
@@ -388,7 +353,7 @@
             <div class="hidden md:flex items-center text-[10px] lg:text-xs text-brand-textMuted font-medium">
                 <span>ERP CMMS - Datos en tiempo real</span>
                 <span class="mx-2 text-slate-300">|</span>
-                <span>Última actualización: 18/05/2026 10:17 AM</span>
+                <span>Última actualización: 18/05/2026 10:41 AM</span>
                 <span class="mx-2 text-slate-300">|</span>
                 <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-brand-green animate-pulse"></span> Conectado a PostgreSQL</span>
             </div>
@@ -424,11 +389,10 @@
                 nav.classList.remove('text-slate-400');
             }
             
-            // Extrapolación de Cabecera dinámica
             const titulos = {
                 'dashboard': ['Dashboard', 'Resumen general del mantenimiento'],
                 'equipos': ['Parque Equipos', 'Maestro general de activos y frecuencias de mantenimiento'],
-                'ot': ['Mantenciones (OT)', 'Registro histórico de intervenciones y órdenes de trabajo'],
+                'not': ['Mantenciones (OT)', 'Registro histórico de intervenciones y órdenes de trabajo'],
                 'compras': ['Compras PM', 'Seguimiento financiero de adquisiciones e insumos de bodega'],
                 'lecturas': ['Lecturas Terreno', 'Historial correlativo de horómetros y kilometrajes capturados']
             };
@@ -440,10 +404,9 @@
         
         function irAFichaEquipo(codigo) { if(codigo) window.location.href = '/equipo/' + codigo; }
 
-        // Carga Segura de Gráficos Analíticos
         const data = {{ charts|safe }};
         window.onload = function() {
-            // 1. Gráfico Operacional Flota (Dona)
+            // 1. Gráfico Estado Equipos
             new Chart(document.getElementById('chartEstado').getContext('2d'), {
                 type: 'doughnut', cutout: '75%',
                 data: {
@@ -453,10 +416,10 @@
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
 
-            // 2. Gráfico Ubicaciones (Solo frentes con exactamente o igual a 5 equipos)
+            // 2. Gráfico Ubicaciones (Filtro estricto >= 5)
             new Chart(document.getElementById('chartUbic').getContext('2d'), {
                 type: 'bar',
-                data: { labels: Object.keys(data.ubicacion), datasets: [{ data: Object.values(data.ubicacion), backgroundColor: '#3B82F6', borderRadius: 4 }] },
+                data: { labels: Object.keys(data.ubicacion), datasets: [{ data: Object.values(data.ubicacion), backgroundColor: '#0c3f86', borderRadius: 4 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: '#F1F5F9' } } } }
             });
 
