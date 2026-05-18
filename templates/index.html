@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     
@@ -21,17 +22,26 @@
         }
     </script>
     <style>
-        body { font-family: 'Roboto', sans-serif; }
+        body { font-family: 'Roboto', sans-serif; font-weight: 400; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .seccion-modulo { display: none; }
         .seccion-modulo.active { display: block; }
         .card-hover:hover { transform: translateY(-2px); box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.05); }
-        /* Efecto Editable */
+        
         td[contenteditable="true"]:focus { outline: 2px solid #3B82F6; background: #fff; border-radius: 2px; }
+        th { font-weight: 500 !important; } 
+        
         .fc-toolbar-title { font-size: 1.2rem !important; font-weight: 500 !important; color: #1E293B; text-transform: capitalize; }
         .fc-event { cursor: pointer; border: none !important; border-left: 3px solid #3B82F6 !important; background: #EFF6FF !important; color: #1E293B !important; font-size: 10px !important; padding: 2px 4px !important; margin-bottom: 2px !important;}
-        .sortable-ghost { opacity: 0.4; background-color: #E2E8F0; }
+        .sortable-ghost { opacity: 0.4; background-color: #E2E8F0; border: 2px dashed #94A3B8; }
+        
+        /* Ocultar elementos al imprimir Reportes */
+        @media print {
+            aside, header, footer, .no-print { display: none !important; }
+            .seccion-modulo { display: block !important; }
+            .bg-white { box-shadow: none !important; border: none !important; }
+        }
     </style>
 </head>
 <body class="bg-brand-bg text-brand-textMain flex h-screen overflow-hidden antialiased">
@@ -46,129 +56,87 @@
         
         <div class="flex-1 overflow-y-auto py-6 px-4">
             <nav class="space-y-1">
-                <a id="nav-dashboard" onclick="switchTab('dashboard')" class="flex items-center gap-3 px-4 py-3 bg-blue-950/40 text-white rounded-lg border-l-4 border-blue-500 transition-all text-[13px] font-medium cursor-pointer">
-                    <i class="fa-solid fa-chart-pie w-5 text-center text-blue-400"></i> Dashboard
+                <a id="nav-dashboard" onclick="switchTab('dashboard')" class="flex items-center gap-3 px-4 py-3 bg-blue-950/40 text-white rounded-lg border-l-4 border-blue-500 transition-all text-[13px] cursor-pointer">
+                    <i class="fa-solid fa-house w-5 text-center text-blue-400"></i> Dashboard
                 </a>
-                <a id="nav-equipos" onclick="switchTab('equipos')" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-900/50 rounded-lg transition-all text-[13px] font-medium cursor-pointer">
+                <a id="nav-indicadores" onclick="switchTab('indicadores')" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-900/50 rounded-lg transition-all text-[13px] cursor-pointer">
+                    <i class="fa-solid fa-chart-pie w-5 text-center"></i> Indicadores
+                </a>
+                <a id="nav-equipos" onclick="switchTab('equipos')" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-900/50 rounded-lg transition-all text-[13px] cursor-pointer mt-4">
                     <i class="fa-solid fa-truck-monster w-5 text-center"></i> Equipos
                 </a>
-                <a id="nav-planificacion" onclick="switchTab('planificacion')" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-900/50 rounded-lg transition-all text-[13px] font-medium cursor-pointer">
+                <a id="nav-planificacion" onclick="switchTab('planificacion')" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-900/50 rounded-lg transition-all text-[13px] cursor-pointer">
                     <i class="fa-solid fa-kanban w-5 text-center"></i> Planificación
                 </a>
-                <a id="nav-calendario" onclick="switchTab('calendario')" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-900/50 rounded-lg transition-all text-[13px] font-medium cursor-pointer">
+                <a id="nav-calendario" onclick="switchTab('calendario')" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-900/50 rounded-lg transition-all text-[13px] cursor-pointer">
                     <i class="fa-regular fa-calendar-days w-5 text-center"></i> Calendario
                 </a>
-                <a id="nav-ot" onclick="switchTab('ot')" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-900/50 rounded-lg transition-all text-[13px] font-medium cursor-pointer mt-4">
+                <a id="nav-ot" onclick="switchTab('ot')" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-900/50 rounded-lg transition-all text-[13px] cursor-pointer mt-4">
                     <i class="fa-solid fa-screwdriver-wrench w-5 text-center"></i> Mantenciones (OT)
                 </a>
-                <a id="nav-compras" onclick="switchTab('compras')" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-900/50 rounded-lg transition-all text-[13px] font-medium cursor-pointer">
+                <a id="nav-compras" onclick="switchTab('compras')" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-900/50 rounded-lg transition-all text-[13px] cursor-pointer">
                     <i class="fa-solid fa-receipt w-5 text-center"></i> Compras PM
                 </a>
-                <a id="nav-lecturas" onclick="switchTab('lecturas')" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-900/50 rounded-lg transition-all text-[13px] font-medium cursor-pointer">
+                <a id="nav-lecturas" onclick="switchTab('lecturas')" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-900/50 rounded-lg transition-all text-[13px] cursor-pointer">
                     <i class="fa-solid fa-gauge-high w-5 text-center"></i> Lecturas Terreno
+                </a>
+                <a id="nav-reportes" onclick="switchTab('reportes')" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-900/50 rounded-lg transition-all text-[13px] cursor-pointer mt-4 border border-slate-700">
+                    <i class="fa-solid fa-print w-5 text-center text-slate-300"></i> Reportes
                 </a>
             </nav>
         </div>
     </aside>
 
     <div class="flex-1 flex flex-col h-screen overflow-hidden relative">
-        
         <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-10 shadow-sm flex-shrink-0">
             <div class="flex items-center gap-3">
-                <button class="lg:hidden text-slate-500 hover:text-brand-textMain"><i class="fa-solid fa-bars text-lg"></i></button>
+                <button class="lg:hidden text-slate-500"><i class="fa-solid fa-bars text-lg"></i></button>
                 <div>
-                    <h1 id="header-title" class="text-xl font-medium text-brand-textMain leading-tight">Dashboard</h1>
-                    <p id="header-subtitle" class="text-[11px] text-brand-textMuted hidden sm:block">Resumen general del mantenimiento</p>
+                    <h1 id="header-title" class="text-xl font-medium text-brand-textMain">Dashboard</h1>
+                    <p id="header-subtitle" class="text-[11px] text-brand-textMuted hidden sm:block">Resumen operativo</p>
                 </div>
             </div>
 
-            <div class="hidden md:flex items-center gap-4 lg:gap-6 divide-x divide-slate-200">
-                <div class="text-center px-2">
-                    <span class="block font-medium text-lg leading-none text-brand-textMain">{{ kpis.total }}</span>
-                    <span class="text-[9px] text-brand-textMuted uppercase font-medium tracking-wider mt-1 block">Equipos Total</span>
-                </div>
-                <div class="text-center px-2">
-                    <span class="block font-medium text-lg leading-none text-brand-green">{{ kpis.controlados }}</span>
-                    <span class="text-[9px] text-brand-textMuted uppercase font-medium tracking-wider mt-1 block">Operativos</span>
-                </div>
-                <div class="text-center px-2">
-                    <span class="block font-medium text-lg leading-none text-brand-red">{{ kpis.atrasados }}</span>
-                    <span class="text-[9px] text-brand-textMuted uppercase font-medium tracking-wider mt-1 block">Atrasados</span>
-                </div>
-                <div class="text-center px-2">
-                    <span class="block font-medium text-lg leading-none text-brand-green">{{ kpis.controlado_pct }}%</span>
-                    <span class="text-[9px] text-brand-textMuted uppercase font-medium tracking-wider mt-1 block">Controlados</span>
-                </div>
+            <div class="hidden md:block relative ml-6 flex-1 max-w-md">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="buscador-global" onkeyup="filtrarTablas(this.value)" placeholder="Buscar equipo, OT, lectura en la vista actual..." class="w-full pl-8 pr-4 py-1.5 text-[11px] border border-slate-300 rounded bg-slate-50 focus:outline-none focus:border-brand-blue focus:bg-white transition-colors">
             </div>
 
-            <div class="flex items-center gap-4">
-                <div class="flex items-center gap-3 cursor-pointer pl-4 border-l border-slate-200">
+            <div class="flex items-center gap-4 ml-auto">
+                <div class="flex items-center gap-3 pl-4 border-l border-slate-200">
                     <div class="hidden sm:block text-right">
-                        <p class="text-xs font-medium leading-none text-brand-textMain">Admin</p>
-                        <p class="text-[10px] text-brand-textMuted mt-0.5 font-normal">Administrador</p>
+                        <p class="text-xs font-medium text-brand-textMain">Admin</p>
                     </div>
-                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-medium flex items-center justify-center text-xs shadow-sm">A</div>
+                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-medium flex items-center justify-center text-xs shadow">A</div>
                 </div>
             </div>
         </header>
 
-        <main class="flex-1 overflow-y-auto p-4 lg:p-6 pb-24">
+        <main class="flex-1 overflow-y-auto p-4 lg:p-6 pb-24" id="main-content">
             
             <div id="mod-dashboard" class="seccion-modulo active">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-6">
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                        <h3 class="text-[11px] font-medium uppercase tracking-wider text-brand-textMuted mb-2">Estado Operacional Flota</h3>
-                        <div class="h-40 relative"><canvas id="chartEstado"></canvas></div>
-                    </div>
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                        <h3 class="text-[11px] font-medium uppercase tracking-wider text-brand-textMuted mb-2">Distribución por Ubicación (>=5)</h3>
-                        <div class="h-40 relative"><canvas id="chartUbic"></canvas></div>
-                    </div>
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-                        <h3 class="text-[11px] font-medium uppercase tracking-wider text-brand-textMuted mb-2">Compras Mensuales</h3>
-                        <div class="h-40 relative"><canvas id="chartComprasMensuales"></canvas></div>
-                    </div>
-                </div>
-
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex justify-between items-center">
-                        <div><p class="text-[10px] font-medium text-brand-textMuted uppercase">OT Abiertas</p><p class="text-xl font-medium text-brand-red mt-1">{{ kpis.ot_abiertas }}</p></div>
-                        <span class="p-2 bg-brand-redBg text-brand-red rounded-lg"><i class="fa-solid fa-wrench"></i></span>
-                    </div>
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex justify-between items-center">
-                        <div><p class="text-[10px] font-medium text-brand-textMuted uppercase">Inversión PM Bodega</p><p class="text-xl font-medium text-brand-textMain mt-1">{{ kpis.costo_mes_str }}</p></div>
-                        <span class="p-2 bg-brand-greenBg text-brand-green rounded-lg"><i class="fa-solid fa-dollar-sign"></i></span>
-                    </div>
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex justify-between items-center">
-                        <div><p class="text-[10px] font-medium text-brand-textMuted uppercase">Eficiencia Control</p><p class="text-xl font-medium text-brand-green mt-1">{{ kpis.controlado_pct }}%</p></div>
-                        <span class="p-2 bg-brand-greenBg text-brand-green rounded-lg"><i class="fa-solid fa-square-check"></i></span>
-                    </div>
-                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex justify-between items-center">
-                        <div><p class="text-[10px] font-medium text-brand-textMuted uppercase">Lecturas Logs</p><p class="text-xl font-medium text-brand-blue mt-1">5.040</p></div>
-                        <span class="p-2 bg-brand-blueBg text-brand-blue rounded-lg"><i class="fa-solid fa-calculator"></i></span>
-                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex justify-between items-center"><div><p class="text-[10px] font-medium text-brand-textMuted uppercase">OT Abiertas</p><p class="text-xl font-medium text-brand-red mt-1">{{ kpis.ot_abiertas }}</p></div><span class="p-2 bg-brand-redBg text-brand-red rounded-lg"><i class="fa-solid fa-wrench"></i></span></div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex justify-between items-center"><div><p class="text-[10px] font-medium text-brand-textMuted uppercase">Inversión PM Bodega</p><p class="text-xl font-medium text-brand-textMain mt-1">{{ kpis.costo_mes_str }}</p></div><span class="p-2 bg-brand-greenBg text-brand-green rounded-lg"><i class="fa-solid fa-dollar-sign"></i></span></div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex justify-between items-center"><div><p class="text-[10px] font-medium text-brand-textMuted uppercase">Eficiencia Control</p><p class="text-xl font-medium text-brand-green mt-1">{{ kpis.controlado_pct }}%</p></div><span class="p-2 bg-brand-greenBg text-brand-green rounded-lg"><i class="fa-solid fa-square-check"></i></span></div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex justify-between items-center"><div><p class="text-[10px] font-medium text-brand-textMuted uppercase">Lecturas Logs</p><p class="text-xl font-medium text-brand-blue mt-1">5.040</p></div><span class="p-2 bg-brand-blueBg text-brand-blue rounded-lg"><i class="fa-solid fa-calculator"></i></span></div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-6">
                     <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 font-medium text-[11px] uppercase text-brand-textMain">Equipos Actualmente en Taller ({{ taller|length }})</div>
+                        <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 font-medium text-[11px] uppercase text-brand-textMain flex justify-between items-center">
+                            <span>Equipos Actualmente en Taller ({{ taller|length }})</span>
+                        </div>
                         <div class="overflow-x-auto">
-                            <table class="w-full text-left text-xs whitespace-nowrap">
+                            <table class="w-full text-left text-xs whitespace-nowrap table-searchable">
                                 <thead class="bg-slate-100 font-medium border-b border-slate-200 text-[10px] text-brand-textMuted">
-                                    <tr><th class="px-4 py-2 text-center">FOTO</th><th class="px-4 py-2">CÓDIGO</th><th>DESCRIPCIÓN</th><th>UBICACIÓN</th><th class="text-center">ESTADO</th></tr>
+                                    <tr><th class="px-4 py-2 text-center">FOTO</th><th class="px-4 py-2">CÓDIGO</th><th>DESCRIPCIÓN</th><th>UBICACIÓN</th></tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100 font-normal text-slate-700">
                                     {% for t in taller %}
-                                    <tr class="hover:bg-slate-50">
-                                        <td class="px-4 py-2 text-center">
-                                            <div class="w-10 h-7 rounded border border-slate-200 bg-slate-100 overflow-hidden mx-auto flex items-center justify-center">
-                                                {% if t.foto_url %}<img src="{{ t.foto_url }}" class="w-full h-full object-cover">{% else %}🚜{% endif %}
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-2 font-medium text-brand-blue">{{ t.codigo }}</td>
-                                        <td class="px-4 py-2"><span class="font-medium text-brand-textMain">{{ t.tipo_equipo }}</span> {{ t.marca }}</td>
-                                        <td class="px-4 py-2 text-[11px]">{{ t.ubicacion }}</td>
-                                        <td class="px-4 py-2 text-center"><span class="w-2.5 h-2.5 bg-brand-yellow rounded-full inline-block"></span></td>
+                                    <tr class="hover:bg-slate-50 cursor-pointer" onclick="irAFichaEquipo('{{ t.codigo }}')">
+                                        <td class="px-4 py-2 text-center"><div class="w-10 h-7 rounded border border-slate-200 bg-slate-100 mx-auto flex items-center justify-center">{% if t.foto_url %}<img src="{{ t.foto_url }}" class="w-full h-full object-cover">{% else %}🚜{% endif %}</div></td>
+                                        <td class="px-4 py-2 font-medium text-brand-blue">{{ t.codigo }}</td><td class="px-4 py-2"><span class="font-medium text-brand-textMain">{{ t.tipo_equipo }}</span> {{ t.marca }}</td><td class="px-4 py-2 text-[11px]">{{ t.ubicacion }}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -177,53 +145,66 @@
                     </div>
 
                     <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div class="px-4 py-3 bg-brand-redBg border-b border-slate-200 font-medium text-[11px] uppercase text-brand-red">Equipos Atrasados Operativos ({{ criticos|length }})</div>
+                        <div class="px-4 py-3 bg-brand-redBg border-b border-slate-200 font-medium text-[11px] uppercase text-brand-red flex justify-between items-center">
+                            <span>Equipos Atrasados Operativos ({{ criticos|length }})</span>
+                            <button onclick="switchTab('planificacion')" class="bg-white border border-red-200 text-brand-red px-2 py-0.5 rounded text-[9px] shadow-sm hover:bg-red-50">Gestionar en Kanban</button>
+                        </div>
                         <div class="overflow-x-auto">
-                            <table class="w-full text-left text-xs whitespace-nowrap">
+                            <table class="w-full text-left text-xs whitespace-nowrap table-searchable">
                                 <thead class="bg-slate-100 font-medium border-b border-slate-200 text-[10px] text-brand-textMuted">
-                                    <tr><th class="px-4 py-2 text-center">FOTO</th><th class="px-4 py-2">CÓDIGO</th><th>DESCRIPCIÓN</th><th class="text-right">MARGEN</th><th class="text-center">ESTADO</th></tr>
+                                    <tr><th class="px-4 py-2 text-center">FOTO</th><th class="px-4 py-2">CÓDIGO</th><th>DESCRIPCIÓN</th><th class="text-right">MARGEN</th></tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100 font-normal text-slate-700">
                                     {% for c in criticos[:6] %}
-                                    <tr class="hover:bg-slate-50">
-                                        <td class="px-4 py-2 text-center">
-                                            <div class="w-10 h-7 rounded border border-slate-200 bg-slate-100 overflow-hidden mx-auto flex items-center justify-center">
-                                                {% if c.foto_url %}<img src="{{ c.foto_url }}" class="w-full h-full object-cover">{% else %}🚜{% endif %}
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-2 font-medium text-brand-blue">{{ c.codigo }}</td>
-                                        <td class="px-4 py-2"><span class="font-medium text-brand-textMain">{{ c.tipo_equipo }}</span> {{ c.marca }}</td>
-                                        <td class="px-4 py-2 text-right font-medium text-brand-red">{{ c.margen_str }}</td>
-                                        <td class="px-4 py-2 text-center"><span class="w-2.5 h-2.5 bg-brand-red rounded-full inline-block"></span></td>
+                                    <tr class="hover:bg-slate-50 cursor-pointer" onclick="irAFichaEquipo('{{ c.codigo }}')">
+                                        <td class="px-4 py-2 text-center"><div class="w-10 h-7 rounded border border-slate-200 bg-slate-100 mx-auto flex items-center justify-center">{% if c.foto_url %}<img src="{{ c.foto_url }}" class="w-full h-full object-cover">{% else %}🚜{% endif %}</div></td>
+                                        <td class="px-4 py-2 font-medium text-brand-blue">{{ c.codigo }}</td><td class="px-4 py-2"><span class="font-medium text-brand-textMain">{{ c.tipo_equipo }}</span> {{ c.marca }}</td><td class="px-4 py-2 text-right font-medium text-brand-red">{{ c.margen_str }}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="mod-indicadores" class="seccion-modulo">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-6">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 card-hover">
+                        <h3 class="text-[11px] font-medium uppercase tracking-wider text-brand-textMuted mb-4 border-b pb-2">Estado Operacional de la Flota</h3>
+                        <div class="h-56 relative"><canvas id="chartEstado"></canvas></div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 card-hover">
+                        <h3 class="text-[11px] font-medium uppercase tracking-wider text-brand-textMuted mb-4 border-b pb-2">Distribución por Ubicación (>= 5 Eq)</h3>
+                        <div class="h-56 relative"><canvas id="chartUbic"></canvas></div>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 card-hover">
+                        <h3 class="text-[11px] font-medium uppercase tracking-wider text-brand-textMuted mb-4 border-b pb-2">Compras e Inversión Mensual</h3>
+                        <div class="h-56 relative"><canvas id="chartComprasMensuales"></canvas></div>
                     </div>
                 </div>
             </div>
 
             <div id="mod-equipos" class="seccion-modulo">
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs whitespace-nowrap">
-                            <thead class="bg-slate-50 text-[10px] text-brand-textMuted uppercase font-medium border-b border-slate-200">
+                        <table class="w-full text-left text-xs whitespace-nowrap table-searchable">
+                            <thead class="bg-slate-50 text-[10px] text-brand-textMuted uppercase border-b border-slate-200">
                                 <tr><th class="px-5 py-3">Código</th><th class="px-5 py-3">Tipo Equipo</th><th class="px-5 py-3">Ubicación Actual</th><th class="px-5 py-3">Responsable</th><th class="px-5 py-3 text-center">Ctrl</th><th class="px-5 py-3 text-right">Lectura Actual</th><th class="px-5 py-3 text-right">Próxima PM</th><th class="px-5 py-3 text-right">Margen</th><th class="px-5 py-3 text-center">Estado</th></tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100 font-normal text-slate-700">
+                            <tbody class="divide-y divide-slate-100 text-slate-700">
                                 {% for e in equipos %}
                                 <tr class="hover:bg-slate-50">
-                                    <td class="px-5 py-2.5 font-medium text-brand-blue text-center">{{ e.codigo }}</td>
-                                    <td class="px-5 py-2.5 text-brand-textMain">{{ e.tipo_equipo }}</td>
+                                    <td class="px-5 py-2.5 text-brand-blue text-center cursor-pointer font-medium" onclick="irAFichaEquipo('{{ e.codigo }}')">{{ e.codigo }}</td>
+                                    <td class="px-5 py-2.5">{{ e.tipo_equipo }}</td>
                                     <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-[11px]">{{ e.ubicacion }}</td>
                                     <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5">{{ e.responsable }}</td>
                                     <td class="px-5 py-2.5 text-center"><span class="px-2 py-0.5 bg-slate-100 rounded text-[9px]">{{ e.control_base }}</span></td>
                                     <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-right">{{ e.lectura_actual_str }}</td>
                                     <td class="px-5 py-2.5 text-right text-brand-textMuted">{{ e.proxima_pm_str }}</td>
-                                    <td class="px-5 py-2.5 text-right font-medium {% if e.margen < 0 %}text-brand-red{% else %}text-brand-green{% endif %}">{{ e.margen_str }}</td>
+                                    <td class="px-5 py-2.5 text-right {% if e.margen < 0 %}text-brand-red{% else %}text-brand-green{% endif %}">{{ e.margen_str }}</td>
                                     <td class="px-5 py-2.5 text-center">
-                                        <span class="inline-flex px-2 py-0.5 rounded-full text-[9px] font-medium {% if e.semaforo == 'red' %}bg-brand-redBg text-brand-red{% elif e.semaforo == 'yellow' %}bg-brand-yellowBg text-brand-yellow{% else %}bg-brand-greenBg text-brand-green{% endif %}">{{ e.estado_base }}</span>
+                                        <span class="inline-flex px-2 py-0.5 rounded-full text-[9px] {% if e.semaforo == 'red' %}bg-brand-redBg text-brand-red{% elif e.semaforo == 'yellow' %}bg-brand-yellowBg text-brand-yellow{% else %}bg-brand-greenBg text-brand-green{% endif %}">{{ e.estado_base }}</span>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -235,68 +216,43 @@
 
             <div id="mod-planificacion" class="seccion-modulo">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-sm font-medium text-brand-textMain uppercase tracking-wider">Tablero de Gestión de Mantenimiento</h2>
-                    <button class="bg-brand-blue text-white text-xs px-4 py-2 rounded shadow hover:bg-blue-600 transition"><i class="fa-solid fa-plus mr-1"></i> Agregar OT</button>
+                    <h2 class="text-sm font-medium uppercase text-brand-textMuted tracking-wider">Tablero Operativo de Mantenimiento</h2>
+                    <button class="bg-brand-blue text-white text-xs px-4 py-2 rounded shadow hover:bg-blue-600 font-medium"><i class="fa-solid fa-plus mr-1"></i> Agregar OT</button>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col h-[calc(100vh-180px)]">
-                        <h3 class="font-medium text-[11px] uppercase text-brand-textMain mb-3 border-b-2 border-slate-300 pb-2">Pendiente</h3>
-                        <div id="kb-pendiente" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[50px]">
+                        <h3 class="font-medium text-[11px] uppercase mb-3 border-b border-slate-300 pb-2 flex justify-between">Pendiente <span class="bg-slate-200 px-1.5 rounded text-brand-textMain">{{ kanban['Pendiente']|length }}</span></h3>
+                        <div id="kb-pendiente" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[100px]">
                             {% for c in kanban['Pendiente'] %}
-                            <div class="bg-white rounded-lg shadow-sm border border-slate-200 cursor-grab card-hover overflow-hidden" data-id="{{ c.id }}" data-eq="{{ c.codigo }}">
-                                <div class="bg-slate-100 px-3 py-1.5 border-b border-slate-200 flex justify-between items-center">
-                                    <span class="text-[10px] font-medium text-brand-textMuted">CREACIÓN OT PENDIENTE</span>
-                                    <span class="text-[9px] text-brand-red font-bold">ALERTA</span>
-                                </div>
-                                <div class="p-3">
-                                    <h4 class="font-medium text-brand-blue text-sm">{{ c.codigo }}</h4>
-                                    <p class="text-[10px] text-brand-textMain mt-0.5 uppercase">{{ c.tipo }}</p>
-                                    <p class="text-[10px] text-slate-500 mt-2"><i class="fa-solid fa-location-dot"></i> {{ c.ubicacion }}</p>
-                                </div>
+                            <div class="bg-white rounded border border-slate-200 cursor-grab card-hover shadow-sm" data-eq="{{ c.codigo }}">
+                                <div class="bg-slate-100 px-3 py-1.5 text-[9px] text-brand-textMuted flex justify-between font-medium"><span>PENDIENTE</span><span class="text-brand-red">{{ c.margen }}</span></div>
+                                <div class="p-3"><h4 class="font-medium text-brand-blue text-xs mb-1">{{ c.codigo }}</h4><p class="text-[10px] text-slate-500 leading-tight">{{ c.tipo }}</p></div>
                             </div>
                             {% endfor %}
                         </div>
                     </div>
 
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col h-[calc(100vh-180px)]">
-                        <h3 class="font-medium text-[11px] uppercase text-brand-textMain mb-3 border-b-2 border-blue-500 pb-2">En Progreso</h3>
-                        <div id="kb-progreso" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[50px]">
+                        <h3 class="font-medium text-[11px] uppercase mb-3 border-b border-blue-500 pb-2 flex justify-between">En Progreso <span class="bg-blue-100 px-1.5 rounded text-brand-blue">{{ kanban['En Progreso']|length }}</span></h3>
+                        <div id="kb-progreso" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[100px]">
                             {% for c in kanban['En Progreso'] %}
-                            <div class="bg-white rounded-lg shadow-sm border border-slate-200 cursor-grab card-hover overflow-hidden" data-id="{{ c.id }}" data-eq="{{ c.codigo }}">
-                                <div class="bg-blue-50 px-3 py-1.5 border-b border-blue-100 flex justify-between items-center">
-                                    <span class="text-[10px] font-medium text-brand-blue">{{ c.tipo }}</span>
-                                    <span class="text-[9px] text-slate-500">{{ c.margen }}</span>
-                                </div>
-                                <div class="p-3">
-                                    <h4 class="font-medium text-brand-textMain text-sm">{{ c.codigo }}</h4>
-                                    <p class="text-[10px] text-slate-500 mt-2"><i class="fa-solid fa-location-dot"></i> {{ c.ubicacion }}</p>
-                                </div>
+                            <div class="bg-white rounded border border-slate-200 cursor-grab card-hover shadow-sm" data-eq="{{ c.codigo }}">
+                                <div class="bg-blue-50 px-3 py-1.5 text-[9px] text-brand-blue flex justify-between font-medium"><span>EN TALLER</span><span>{{ c.tipo }}</span></div>
+                                <div class="p-3"><h4 class="font-medium text-brand-textMain text-xs">{{ c.codigo }}</h4></div>
                             </div>
                             {% endfor %}
                         </div>
                     </div>
 
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col h-[calc(100vh-180px)]">
-                        <h3 class="font-medium text-[11px] uppercase text-brand-textMain mb-3 border-b-2 border-yellow-500 pb-2">En Revisión</h3>
-                        <div id="kb-revision" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[50px]">
-                             {% for c in kanban['En Revisión'] %}
-                            <div class="bg-white rounded-lg shadow-sm border border-slate-200 cursor-grab card-hover overflow-hidden" data-id="{{ c.id }}" data-eq="{{ c.codigo }}">
-                                <div class="bg-yellow-50 px-3 py-1.5 border-b border-yellow-100 flex justify-between items-center">
-                                    <span class="text-[10px] font-medium text-brand-yellow">{{ c.tipo }}</span>
-                                </div>
-                                <div class="p-3">
-                                    <h4 class="font-medium text-brand-textMain text-sm">{{ c.codigo }}</h4>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
+                        <h3 class="font-medium text-[11px] uppercase mb-3 border-b border-yellow-500 pb-2">En Revisión</h3>
+                        <div id="kb-revision" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[100px] border-2 border-dashed border-slate-200 rounded"></div>
                     </div>
 
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col h-[calc(100vh-180px)]">
-                        <h3 class="font-medium text-[11px] uppercase text-brand-textMain mb-3 border-b-2 border-green-500 pb-2">Completado (Imprimir OT)</h3>
-                        <div id="kb-completado" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[50px]">
-                            </div>
+                        <h3 class="font-medium text-[11px] uppercase mb-3 border-b border-green-500 pb-2">Completado (Arrastre para Imprimir)</h3>
+                        <div id="kb-completado" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[100px] border-2 border-dashed border-slate-200 rounded"></div>
                     </div>
                 </div>
             </div>
@@ -308,23 +264,24 @@
             </div>
 
             <div id="mod-ot" class="seccion-modulo">
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs whitespace-nowrap">
-                            <thead class="bg-slate-50 text-[10px] text-brand-textMuted uppercase font-medium border-b border-slate-200">
-                                <tr><th class="px-5 py-3">Fecha</th><th class="px-5 py-3">Código Equipo</th><th class="px-5 py-3">Folio OT (Auto)</th><th class="px-5 py-3">Referencia</th><th class="px-5 py-3">Obra o Taller</th><th class="px-5 py-3 text-right">Lectura</th><th class="px-5 py-3 text-right">Costo (Desde Compras)</th><th class="px-5 py-3 text-center">Estado</th></tr>
+                        <table class="w-full text-left text-xs whitespace-nowrap table-searchable">
+                            <thead class="bg-slate-50 text-[10px] text-brand-textMuted uppercase border-b border-slate-200">
+                                <tr><th class="px-5 py-3">Fecha</th><th class="px-5 py-3">Código Equipo</th><th class="px-5 py-3">Folio OT (Auto)</th><th class="px-5 py-3">Referencia</th><th class="px-5 py-3">Obra o Taller</th><th class="px-5 py-3 text-right">Lectura</th><th class="px-5 py-3 text-right">Costo (Desde Compras)</th><th class="px-5 py-3 text-center">Estado</th><th class="px-5 py-3 text-center text-[10px]">Acción</th></tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100 font-normal text-slate-700">
+                            <tbody class="divide-y divide-slate-100 text-slate-700">
                                 {% for m in mantenciones %}
                                 <tr class="hover:bg-slate-50">
-                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-brand-textMuted text-center">{{ m.fecha }}</td>
-                                    <td class="px-5 py-2.5 font-medium text-brand-blue text-center">{{ m.codigo }}</td>
-                                    <td class="px-5 py-2.5 font-medium text-brand-textMain"><b>{{ m.ot_generada }}</b></td>
+                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-center">{{ m.fecha }}</td>
+                                    <td class="px-5 py-2.5 text-brand-blue text-center cursor-pointer font-medium" onclick="irAFichaEquipo('{{ m.codigo }}')">{{ m.codigo }}</td>
+                                    <td class="px-5 py-2.5 font-medium text-brand-textMain">{{ m.ot_generada }}</td>
                                     <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-slate-500">{{ m.folio_original }}</td>
                                     <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-[11px]">{{ m.lugar }}</td>
                                     <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-right">{{ m.lectura_str }}</td>
-                                    <td class="px-5 py-2.5 text-right font-medium text-purple-700">{{ m.costo_str }}</td>
-                                    <td class="px-5 py-2.5 text-center"><span class="px-2 py-0.5 text-[9px] font-medium rounded {% if m.estado == 'Finalizada' %}bg-brand-greenBg text-brand-green{% else %}bg-brand-yellowBg text-brand-yellow{% endif %}">{{ m.estado }}</span></td>
+                                    <td class="px-5 py-2.5 text-right text-purple-700 font-medium">{{ m.costo_str }}</td>
+                                    <td class="px-5 py-2.5 text-center"><span class="px-2 py-0.5 text-[9px] rounded {% if m.estado == 'Finalizada' %}bg-brand-greenBg text-brand-green{% else %}bg-brand-yellowBg text-brand-yellow{% endif %}">{{ m.estado }}</span></td>
+                                    <td class="px-5 py-2.5 text-center"><a href="/imprimir_ot/{{ m.codigo }}" target="_blank" class="text-brand-blue hover:text-blue-800 text-[10px] underline"><i class="fa-solid fa-print"></i> Imprimir</a></td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -334,22 +291,47 @@
             </div>
 
             <div id="mod-compras" class="seccion-modulo">
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs whitespace-nowrap">
-                            <thead class="bg-slate-50 text-[10px] text-brand-textMuted uppercase font-medium border-b border-slate-200">
+                        <table class="w-full text-left text-xs whitespace-nowrap table-searchable">
+                            <thead class="bg-slate-50 text-[10px] text-brand-textMuted uppercase border-b border-slate-200">
                                 <tr><th class="px-5 py-3">Fecha OC</th><th class="px-5 py-3">Orden Compra</th><th class="px-5 py-3">Código Equipo</th><th>Descripción Insumo</th><th class="px-5 py-3">Proveedor</th><th class="px-5 py-3 text-right">Inversión CLP</th><th class="px-5 py-3 text-center">Estado OC</th></tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100 font-normal text-slate-700">
+                            <tbody class="divide-y divide-slate-100 text-slate-700">
                                 {% for c in compras %}
                                 <tr class="hover:bg-slate-50">
-                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-brand-textMuted text-center">{{ c.fecha }}</td>
-                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 font-medium text-slate-500 text-center">#{{ c.oc }}</td>
-                                    <td class="px-5 py-2.5 font-medium text-brand-blue text-center">{{ c.codigo }}</td>
-                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-brand-textMain">{{ c.descripcion }}</td>
+                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-center">{{ c.fecha }}</td>
+                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-center text-slate-500">#{{ c.oc }}</td>
+                                    <td class="px-5 py-2.5 text-brand-blue text-center cursor-pointer font-medium" onclick="irAFichaEquipo('{{ c.codigo }}')">{{ c.codigo }}</td>
+                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5">{{ c.descripcion }}</td>
                                     <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5">{{ c.proveedor }}</td>
-                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-right font-medium text-purple-600">{{ c.costo_str }}</td>
-                                    <td class="px-5 py-2.5 text-center"><span class="px-2 py-0.5 text-[9px] font-medium rounded {% if 'Cancelada' in c.estado %}bg-brand-redBg text-brand-red{% else %}bg-brand-greenBg text-brand-green{% endif %}">{{ c.estado }}</span></td>
+                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-right text-purple-600 font-medium">{{ c.costo_str }}</td>
+                                    <td class="px-5 py-2.5 text-center"><span class="px-2 py-0.5 text-[9px] rounded bg-brand-greenBg text-brand-green">{{ c.estado }}</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="mod-lecturas" class="seccion-modulo">
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs whitespace-nowrap table-searchable">
+                            <thead class="bg-slate-50 text-[10px] text-brand-textMuted uppercase border-b border-slate-200">
+                                <tr><th class="px-5 py-3">Fecha Registro</th><th class="px-5 py-3">Código Unidad</th><th class="px-5 py-3 text-right">Valor Capturado</th><th class="px-5 py-3 text-center">Unidad</th><th class="px-5 py-3">Faena / Frente</th><th class="px-5 py-3">Responsable</th><th>Observación</th></tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-slate-700">
+                                {% for l in lecturas %}
+                                <tr class="hover:bg-slate-50">
+                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-center">{{ l.fecha }}</td>
+                                    <td class="px-5 py-2.5 text-brand-blue text-center cursor-pointer font-medium" onclick="irAFichaEquipo('{{ l.codigo }}')">{{ l.codigo }}</td>
+                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-right text-brand-blue font-medium">{{ l.valor_str }}</td>
+                                    <td class="px-5 py-2.5 text-center"><span class="px-1.5 py-0.5 bg-slate-100 rounded text-[9px]">{{ l.tipo }}</span></td>
+                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-[11px]">{{ l.ubicacion }}</td>
+                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5">{{ l.responsable }}</td>
+                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 italic text-brand-textMuted">{{ l.obs }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -358,24 +340,35 @@
                 </div>
             </div>
 
-            <div id="mod-lecturas" class="seccion-modulo">
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs whitespace-nowrap">
-                            <thead class="bg-slate-50 text-[10px] text-brand-textMuted uppercase font-medium border-b border-slate-200">
-                                <tr><th class="px-5 py-3">Fecha Registro</th><th class="px-5 py-3">Código Unidad</th><th class="px-5 py-3 text-right">Valor Capturado</th><th class="px-5 py-3 text-center">Unidad</th><th class="px-5 py-3">Faena / Frente</th><th class="px-5 py-3">Responsable Terreno</th><th>Observación Técnica</th></tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100 font-normal text-slate-700">
-                                {% for l in lecturas %}
-                                <tr class="hover:bg-slate-50">
-                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-brand-textMuted text-center">{{ l.fecha }}</td>
-                                    <td class="px-5 py-2.5 font-medium text-brand-blue text-center">{{ l.codigo }}</td>
-                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-right font-medium text-brand-blue">{{ l.valor_str }}</td>
-                                    <td class="px-5 py-2.5 text-center"><span class="px-1.5 py-0.5 bg-slate-100 rounded text-[9px]">{{ l.tipo }}</span></td>
-                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-[11px]">{{ l.ubicacion }}</td>
-                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5">{{ l.responsable }}</td>
-                                    <td contenteditable="true" onblur="guardarInline(this)" class="px-5 py-2.5 text-brand-textMuted italic truncate max-w-[200px]">{{ l.obs }}</td>
-                                </tr>
+            <div id="mod-reportes" class="seccion-modulo">
+                <div class="flex justify-between items-center mb-6 no-print">
+                    <div>
+                        <h2 class="text-sm font-medium uppercase text-brand-textMain tracking-wider">Centro de Reportes</h2>
+                        <p class="text-[11px] text-brand-textMuted">Documentos estandarizados para impresión o descarga PDF.</p>
+                    </div>
+                    <button onclick="window.print()" class="bg-slate-800 text-white text-xs px-4 py-2 rounded shadow hover:bg-slate-700 font-medium"><i class="fa-solid fa-print mr-1"></i> Imprimir Vista Actual</button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden page-break">
+                        <div class="px-4 py-3 bg-brand-sidebar text-white border-b font-medium text-[11px] uppercase">Top 10 Equipos con Mayor Gasto (Compras)</div>
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100 text-[10px] text-brand-textMuted"><tr><th class="px-4 py-2">CÓDIGO</th><th>TIPO EQUIPO</th><th class="text-right px-4 py-2">INVERSIÓN TOTAL</th></tr></thead>
+                            <tbody class="divide-y divide-slate-100 text-slate-700">
+                                {% for r in reporte_costos[:10] %}
+                                <tr><td class="px-4 py-2 font-medium text-brand-textMain">{{ r.codigo }}</td><td class="px-4 py-2">{{ r.tipo }}</td><td class="px-4 py-2 text-right font-medium text-brand-red">{{ r.costo_str }}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden page-break">
+                        <div class="px-4 py-3 bg-brand-yellow text-white border-b font-medium text-[11px] uppercase">Proyección de Mantenimientos (< 200 Hrs/Km)</div>
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100 text-[10px] text-brand-textMuted"><tr><th class="px-4 py-2">CÓDIGO</th><th>TIPO EQUIPO</th><th class="text-right px-4 py-2">MARGEN RESTANTE</th></tr></thead>
+                            <tbody class="divide-y divide-slate-100 text-slate-700">
+                                {% for p in reportes_prox[:10] %}
+                                <tr><td class="px-4 py-2 font-medium text-brand-textMain">{{ p.codigo }}</td><td class="px-4 py-2">{{ p.tipo_equipo }}</td><td class="px-4 py-2 text-right font-medium text-brand-yellow">{{ p.margen_str }}</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -389,93 +382,74 @@
     <script>
         function switchTab(target) {
             document.querySelectorAll('.seccion-modulo').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.menu a').forEach(el => {
-                el.classList.remove('bg-blue-950/40', 'text-white', 'border-l-4', 'border-blue-500');
-                el.classList.add('text-slate-400');
-            });
+            document.querySelectorAll('.menu a').forEach(el => { el.classList.remove('bg-blue-950/40', 'text-white', 'border-l-4', 'border-blue-500'); el.classList.add('text-slate-400'); });
+            const mod = document.getElementById('mod-' + target); const nav = document.getElementById('nav-' + target);
+            if(mod && nav) { mod.classList.add('active'); nav.classList.add('bg-blue-950/40', 'text-white', 'border-l-4', 'border-blue-500'); nav.classList.remove('text-slate-400'); }
             
-            const mod = document.getElementById('mod-' + target);
-            const nav = document.getElementById('nav-' + target);
-            if(mod && nav) { 
-                mod.classList.add('active'); 
-                nav.classList.add('bg-blue-950/40', 'text-white', 'border-l-4', 'border-blue-500');
-                nav.classList.remove('text-slate-400');
-            }
-            
-            const titulos = {
-                'dashboard': ['Dashboard', 'Resumen general del mantenimiento'],
-                'equipos': ['Equipos', 'Maestro general de activos'],
-                'planificacion': ['Planificación', 'Tablero de gestión de tareas y estados'],
-                'calendario': ['Calendario', 'Programación de mantenimientos en el mes'],
-                'ot': ['Mantenciones (OT)', 'Registro histórico de intervenciones y órdenes de trabajo'],
-                'compras': ['Compras PM', 'Seguimiento financiero de adquisiciones e insumos'],
-                'lecturas': ['Lecturas Terreno', 'Historial correlativo de horómetros y kilometrajes']
+            const t = { 
+                'dashboard': ['Dashboard', 'Resumen operativo'], 'indicadores': ['Indicadores Analíticos', 'Dashboards visuales extraídos del sistema'],
+                'equipos': ['Equipos', 'Maestro general de activos'], 'planificacion': ['Planificación', 'Tablero de gestión Kanban interactivo'],
+                'calendario': ['Calendario', 'Programación de mantenimientos en el mes'], 'ot': ['Mantenciones (OT)', 'Histórico y Generación de Órdenes de Trabajo'],
+                'compras': ['Compras PM', 'Seguimiento financiero e insumos'], 'reportes': ['Reportes Operativos', 'Centro de descargas e impresión para gerencia']
             };
-            if(titulos[target]) {
-                document.getElementById('header-title').innerText = titulos[target][0];
-                document.getElementById('header-subtitle').innerText = titulos[target][1];
-            }
-
+            if(t[target]) { document.getElementById('header-title').innerText = t[target][0]; document.getElementById('header-subtitle').innerText = t[target][1]; }
             if(target === 'calendario') setTimeout(initCalendario, 100);
+            
+            // Limpia buscador al cambiar pestaña
+            document.getElementById('buscador-global').value = '';
+            filtrarTablas('');
         }
 
-        // FUNCIÓN DE EDICIÓN INLINE BÁSICA
-        function guardarInline(elemento) {
-            // Aquí iría el fetch() para guardar en BD. Por ahora da feedback visual.
-            elemento.style.backgroundColor = "#e0f2fe";
-            setTimeout(() => elemento.style.backgroundColor = "transparent", 500);
+        // BUSCADOR GLOBAL INTELIGENTE
+        function filtrarTablas(query) {
+            query = query.toLowerCase();
+            const activeMod = document.querySelector('.seccion-modulo.active');
+            if(!activeMod) return;
+            const filas = activeMod.querySelectorAll('.table-searchable tbody tr');
+            filas.forEach(fila => {
+                fila.style.display = fila.innerText.toLowerCase().includes(query) ? '' : 'none';
+            });
         }
 
-        // LÓGICA DEL KANBAN DRAG & DROP
+        function guardarInline(el) { el.style.backgroundColor = "#e0f2fe"; setTimeout(() => el.style.backgroundColor = "transparent", 500); }
+        function irAFichaEquipo(codigo) { if(codigo) window.location.href = '/equipo/' + codigo; }
+
+        // SORTABLE KANBAN CON LANZAMIENTO DE OT PARA IMPRESIÓN
         const kbCols = ['kb-pendiente', 'kb-progreso', 'kb-revision', 'kb-completado'];
         kbCols.forEach(col => {
             new Sortable(document.getElementById(col), {
-                group: 'kanban',
-                animation: 150,
-                ghostClass: 'sortable-ghost',
+                group: 'kanban', animation: 150, ghostClass: 'sortable-ghost',
                 onEnd: function (evt) {
                     if(evt.to.id === 'kb-completado') {
-                        // Generar alerta de Impresión de OT cuando cae en Completado
                         const eq = evt.item.getAttribute('data-eq');
-                        alert(`OT Finalizada para el equipo ${eq}.\nGenerando documento PDF OT-DMT... para imprimir.`);
+                        // Al soltar la tarjeta en completado, abre la OT en una nueva ventana para imprimir
+                        window.open('/imprimir_ot/' + eq, '_blank'); 
+                        evt.item.style.borderLeft = "3px solid #10B981";
                     }
                 }
             });
         });
 
-        // LÓGICA DEL CALENDARIO (FullCalendar)
-        const mantencionesData = {{ mantenciones|tojson }};
-        let calendar;
+        // FULLCALENDAR OPERATIVO
+        const mData = {{ mantenciones|tojson }};
+        let cal;
         function initCalendario() {
-            if(calendar) { calendar.render(); return; }
-            const calendarEl = document.getElementById('calendar');
-            
-            const eventos = mantencionesData.filter(m => m.fecha_iso).map(m => ({
-                title: m.codigo + ' (' + m.ot_generada + ')',
-                start: m.fecha_iso,
-                extendedProps: { lugar: m.lugar }
-            }));
-
-            calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                initialDate: '2026-05-01', // Acorde a los datos
-                headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,dayGridWeek' },
-                events: eventos,
-                locale: 'es',
-                eventContent: function(arg) {
-                    return { html: `<div class="p-1 leading-tight"><b class="block text-brand-blue">${arg.event.title}</b><i class="text-[9px] text-slate-500">📍 ${arg.event.extendedProps.lugar || 'Taller'}</i></div>` };
-                }
+            if(cal) { cal.render(); return; }
+            const evts = mData.filter(m => m.fecha_iso).map(m => ({ title: m.codigo + ' (' + m.ot_generada + ')', start: m.fecha_iso, extendedProps: { l: m.lugar } }));
+            cal = new FullCalendar.Calendar(document.getElementById('calendar'), {
+                initialView: 'dayGridMonth', initialDate: '2026-05-01', headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth' }, events: evts, locale: 'es',
+                eventContent: function(a) { return { html: `<div class="p-1 leading-none"><b class="block text-brand-blue">${a.event.title}</b><i class="text-[9px] text-slate-500">${a.event.extendedProps.l || 'Taller'}</i></div>` }; }
             });
-            calendar.render();
+            cal.render();
         }
 
-        // GRÁFICOS
-        const data = {{ charts|safe }};
+        // CHARTS MOVIDOS A LA PESTAÑA INDICADORES
+        const d = {{ charts|safe }};
         window.onload = function() {
             Chart.defaults.font.family = "'Roboto', sans-serif";
-            new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '75%', data: { labels: ['Operativos', 'Atrasados', 'Próximos'], datasets: [{ data: [data.estado.Operativo||0, data.estado['Fuera de Servicio']||0, data.estado.Taller||0], backgroundColor: ['#10B981', '#EF4444', '#F59E0B'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
-            new Chart(document.getElementById('chartUbic'), { type: 'bar', data: { labels: Object.keys(data.ubicacion), datasets: [{ data: Object.values(data.ubicacion), backgroundColor: '#0c3f86', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: '#F1F5F9' } } } } });
-            new Chart(document.getElementById('chartComprasMensuales'), { type: 'line', data: { labels: Object.keys(data.compras_mensuales), datasets: [{ data: Object.values(data.compras_mensuales), borderColor: '#8B5CF6', backgroundColor: 'rgba(139, 92, 246, 0.05)', borderWidth: 2.5, fill: true, tension: 0.3, pointRadius: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { display: false } } } });
+            new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '70%', data: { labels: ['Operativos', 'Atrasados', 'Próximos'], datasets: [{ data: [d.estado.Operativo||0, d.estado['Fuera de Servicio']||0, d.estado.Taller||0], backgroundColor: ['#10B981', '#EF4444', '#F59E0B'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } } });
+            new Chart(document.getElementById('chartUbic'), { type: 'bar', data: { labels: Object.keys(d.ubicacion), datasets: [{ data: Object.values(d.ubicacion), backgroundColor: '#0c3f86', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: '#F1F5F9' } } } } });
+            new Chart(document.getElementById('chartComprasMensuales'), { type: 'line', data: { labels: Object.keys(d.compras_mensuales), datasets: [{ label: 'Inversión Total', data: Object.values(d.compras_mensuales), borderColor: '#8B5CF6', backgroundColor: 'rgba(139, 92, 246, 0.1)', borderWidth: 2.5, fill: true, tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } } } } });
         };
     </script>
 </body>
