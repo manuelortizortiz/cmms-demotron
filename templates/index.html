@@ -1,361 +1,498 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DEMOTRON ERP CMMS - Control Industrial</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-:root{
-  --azul-deep:#082b5f; --borde-excel:#BFBFBF; --texto:#000000; --rojo:#FF0000; --amarillo:#FFFF00; --verde:#00B050; --gris-cabecera:#D9D9D9;
-}
-*{box-sizing:border-box}
-body{ margin:0; background:#ffffff; color:var(--texto); font-family: Calibri, sans-serif; font-size: 11px; }
-.topbar{ height:50px; background:#fff; border-bottom:1px solid #BFBFBF; display:flex; align-items:center; padding:0 15px; position:sticky; top:0; z-index:100; }
-.logo{ font-size:20px; font-weight:bold; color:var(--azul-deep); margin-right:20px; text-transform: uppercase; letter-spacing: 2px; }
-.menu{ display:flex; gap:0px; flex:1; }
-.menu a{ color:#000; text-decoration:none; padding:15px 15px; font-weight:bold; font-size:12px; cursor:pointer; }
-.menu a.active{ color:var(--azul-deep); border-bottom: 3px solid var(--azul-deep); }
-.wrap{ padding:15px }
-.seccion-modulo { display: none; }
-.seccion-modulo.active { display: block; }
-
-/* Estructuración Excel */
-.excel-table { border-collapse: collapse; width: 100%; margin-bottom: 15px; table-layout: fixed; }
-.excel-table th, .excel-table td { border: 1px solid var(--borde-excel); padding: 4px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.excel-table th { background-color: var(--gris-cabecera); text-align: left; font-weight: bold; color: #000; }
-.circulo { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 1px solid #000; }
-.circulo.red { background-color: var(--rojo); }
-.circulo.yellow { background-color: var(--amarillo); }
-
-/* Fila de Gráficos Superiores */
-.charts-excel-row { display: flex; gap: 12px; margin-bottom: 20px; }
-.chart-excel-cell { flex: 1; border: 1px solid var(--borde-excel); background-color: #fff; height: 220px; padding: 8px; }
-.chart-excel-cell h4 { margin: 0 0 5px; font-size: 11px; text-transform: uppercase; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 2px; }
-.canvasBox { height: 180px; position: relative; width: 100%; }
-
-/* Tarjeta Buscador Ficha Interactiva */
-.panel-buscador { border: 2px solid var(--azul-deep); padding: 15px; background: #fff; margin-bottom: 20px; }
-.buscar { width: 220px; height: 30px; border: 1px solid var(--borde-excel); padding: 0 10px; font-family: inherit; font-size: 12px; }
-.buscador-split { display: grid; grid-template-columns: 1fr 1.5fr; gap: 15px; margin-top: 15px; }
-
-/* Bloques de Listas Cortas Con Fotos */
-.flex-row { display: flex; gap: 15px; margin-bottom: 15px; }
-.flex-cell { flex: 1; }
-.img-box { width: 55px; height: 40px; border: 1px solid var(--borde-excel); overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f5f5f5; margin: 0 auto; }
-.img-box img { width: 100%; height: 100%; object-fit: cover; }
-
-/* Scroll Horizontal Inferior */
-.scroll-horizontal { display: flex; gap: 12px; overflow-x: auto; padding: 10px; border: 1px solid var(--borde-excel); background: #ffffff; }
-.card-scroll { min-width: 130px; max-width: 130px; border: 1px solid var(--borde-excel); background: #fff; padding: 6px; text-align: center; cursor: pointer; }
-.img-scroll { width: 100%; height: 70px; border-bottom: 1px solid var(--borde-excel); margin-bottom: 4px; overflow: hidden; }
-.img-scroll img { width: 100%; height: 100%; object-fit: cover; }
-
-.text-center { text-align: center; }
-.text-right { text-align: right; }
-.bold { font-weight: bold; }
-</style>
-</head>
-<body>
-
-<header class="topbar">
-  <div class="logo">DEMOTRON</div>
-  <nav class="menu">
-    <a id="nav-dashboard" class="active" onclick="switchTab('dashboard')">Dashboard</a>
-    <a id="nav-equipos" onclick="switchTab('equipos')">Parque Equipos</a>
-    <a id="nav-ot" onclick="switchTab('ot')">Mantenciones (OT)</a>
-    <a id="nav-compras" onclick="switchTab('compras')">Compras PM</a>
-    <a id="nav-lecturas" onclick="switchTab('lecturas')">Lecturas Terreno</a>
-  </nav>
-</header>
-
-<main class="wrap">
-  <div id="dynamic-content">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEMOTRON ERP CMMS V8</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <div id="mod-dashboard" class="seccion-modulo active">
-      
-      <div class="charts-excel-row">
-        <div class="chart-excel-cell"><h4>ESTADO OPERACIONAL DE LA FLOTA</h4><div class="canvasBox"><canvas id="donut"></canvas></div></div>
-        <div class="chart-excel-cell"><h4>UBICACIÓN DE EQUIPOS (=5)</h4><div class="canvasBox"><canvas id="ubic"></canvas></div></div>
-        <div class="chart-excel-cell"><h4>COMPRAS MENSUALES</h4><div class="canvasBox"><canvas id="gestion"></canvas></div></div>
-      </div>
-
-      <div class="panel-buscador">
-        <span class="bold" style="font-size: 12px; text-transform: uppercase;">Selecciona un equipo:</span>
-        <select id="selectorEquipo" class="buscar" style="margin-left: 10px;" onchange="actualizarBuscadorFicha(this.value)">
-          <option value="">-- Busque o Seleccione Unidad --</option>
-          {% for e in equipos %}
-            <option value="{{ e.codigo }}">{{ e.codigo }} - {{ e.tipo_equipo }}</option>
-          {% endfor %}
-        </select>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            bg: '#F8FAFC',
+                            textMain: '#0F172A',
+                            textMuted: '#64748B',
+                            sidebar: '#020617',
+                            green: '#10B981',
+                            greenBg: '#EFFAF5',
+                            red: '#EF4444',
+                            redBg: '#FEE2E2',
+                            yellow: '#F59E0B',
+                            yellowBg: '#FEF3C7',
+                            blue: '#3B82F6',
+                            blueBg: '#EFF6FF',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Segoe UI', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Ocultar scrollbar visualmente pero permitir scroll horizontal */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        <div class="buscador-split" id="bloqueFichaInteractiva" style="display: none;">
-          <div>
-            <table class="excel-table" style="margin-bottom:0;">
-              <thead><tr><th colspan="2" style="background-color:#404040; color:#fff;">INFORMACIÓN GENERAL</th></tr></thead>
-              <tbody>
-                <tr><td class="bold" style="width:110px;">Código</td><td id="f-codigo" class="bold"></td></tr>
-                <tr><td class="bold">Tipo Equipo</td><td id="f-tipo"></td></tr>
-                <tr><td class="bold">Marca / Modelo</td><td id="f-marca"></td></tr>
-                <tr><td class="bold">Ubicación</td><td id="f-ubicacion"></td></tr>
-                <tr><td class="bold">Responsable</td><td id="f-responsable"></td></tr>
-                <tr><td class="bold">Lectura Actual</td><td id="f-lectura" class="text-right"></td></tr>
-                <tr><td class="bold">Próximo PM</td><td id="f-proximo" class="text-right"></td></tr>
-                <tr><td class="bold">Margen Técnico</td><td id="f-margen" class="text-right bold"></td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div style="max-height: 185px; overflow-y: auto; border: 1px solid var(--borde-excel);">
-            <table class="excel-table" style="margin-bottom:0;">
-              <thead><tr><th style="width:80px;">FECHA</th><th style="width:70px;">FOLIO</th><th>INTERVENCIÓN TÉCNICA</th><th style="width:90px;">COSTO</th><th>ESTADO</th></tr></thead>
-              <tbody id="f-tabla-mantenciones"></tbody>
-            </table>
-          </div>
+        /* Animaciones suaves */
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
+    </style>
+</head>
+<body class="bg-brand-bg text-brand-textMain flex h-screen overflow-hidden antialiased">
+
+    <aside class="w-[260px] bg-brand-sidebar text-white flex-col hidden lg:flex flex-shrink-0 shadow-xl z-20">
+        <div class="h-20 flex items-center px-6 border-b border-slate-800">
+            <div class="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center mr-3 shadow-[0_0_15px_rgba(250,204,21,0.4)]">
+                <i class="fa-solid fa-layer-group text-brand-sidebar"></i>
+            </div>
+            <span class="font-bold text-lg tracking-wide">DEMOTRON <span class="text-xs text-yellow-400 block -mt-1">ERP CMMS V8</span></span>
         </div>
-      </div>
-
-      <div class="flex-row">
-        <div class="flex-cell">
-          <table class="excel-table">
-            <thead>
-              <tr><th colspan="5" style="background-color: #404040; color:#fff;">EQUIPOS EN TALLER</th></tr>
-              <tr><th style="width:70px; text-align:center;">FOTO</th><th style="width:70px; text-align:center;">CÓDIGO</th><th>TIPO MAQUINARIA</th><th>UBICACIÓN ACTUAL</th><th style="width:40px; text-align:center;">SEM</th></tr>
-            </thead>
-            <tbody>
-              {% for t in taller %}
-              <tr>
-                <td class="text-center">
-                  <div class="img-box">
-                    {% if t.foto_url %}<img src="{{ t.foto_url }}" alt="Img">{% else %}<span style="font-size:18px;">🚜</span>{% endif %}
-                  </div>
-                </td>
-                <td class="bold text-center">{{ t.codigo }}</td>
-                <td>{{ t.tipo_equipo }}</td>
-                <td>{{ t.ubicacion }}</td>
-                <td class="text-center"><span class="circulo yellow"></span></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        
+        <div class="flex-1 overflow-y-auto py-6 px-4">
+            <p class="text-xs text-slate-400 uppercase tracking-widest font-semibold mb-4 px-2">Principal</p>
+            <nav class="space-y-2">
+                <a href="#" class="flex items-center gap-3 px-4 py-3 bg-blue-900/30 text-white rounded-lg border-l-4 border-blue-500 transition-colors text-sm font-medium">
+                    <i class="fa-solid fa-chart-line w-5 text-center text-blue-400"></i>
+                    Dashboard
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-lg transition-colors text-sm font-medium">
+                    <i class="fa-solid fa-truck-monster w-5 text-center"></i>
+                    Equipos
+                </a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-lg transition-colors text-sm font-medium">
+                    <i class="fa-solid fa-gauge-high w-5 text-center"></i>
+                    Lecturas
+                </a>
+            </nav>
         </div>
+    </aside>
 
-        <div class="flex-cell">
-          <table class="excel-table">
-            <thead>
-              <tr><th colspan="5" style="background-color: var(--rojo); color:#fff;">EQUIPOS ATRASADOS</th></tr>
-              <tr><th style="width:70px; text-align:center;">FOTO</th><th style="width:70px; text-align:center;">CÓDIGO</th><th>TIPO MAQUINARIA</th><th style="width:80px; text-align:right;">MARGEN</th><th style="width:40px; text-align:center;">SEM</th></tr>
-            </thead>
-            <tbody>
-              {% for c in criticos %}
-              <tr>
-                <td class="text-center">
-                  <div class="img-box">
-                    {% if c.foto_url %}<img src="{{ c.foto_url }}" alt="Img">{% else %}<span style="font-size:18px;">🚜</span>{% endif %}
-                  </div>
-                </td>
-                <td class="bold text-center">{{ c.codigo }}</td>
-                <td>{{ c.tipo_equipo }}</td>
-                <td class="text-right bold" style="color:var(--rojo);">{{ c.margen_str }}</td>
-                <td class="text-center"><span class="circulo red"></span></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+    <div class="flex-1 flex flex-col h-screen overflow-hidden relative">
+        
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-10 shadow-sm flex-shrink-0">
+            <div class="flex items-center gap-4">
+                <button class="lg:hidden text-slate-500 hover:text-brand-textMain">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <div>
+                    <h1 class="text-xl lg:text-2xl font-bold text-brand-textMain leading-tight">Dashboard</h1>
+                    <p class="text-xs text-brand-textMuted hidden sm:block">Resumen general del mantenimiento</p>
+                </div>
+            </div>
 
-      <table class="excel-table" style="margin-bottom:2px;"><thead><tr><th>CATÁLOGO ALEATORIO DE FLOTA (SCROLL HORIZONTAL)</th></tr></thead></table>
-      <div class="scroll-horizontal">
-        {% for a in equipos_aleatorios %}
-        <div class="card-scroll" onclick="irAFichaEquipo('{{ a.codigo }}')">
-          <div class="img-scroll">
-            {% if a.foto_url %}<img src="{{ a.foto_url }}" alt="Img">{% else %}<span style="line-height:70px; font-size:20px;">🚜</span>{% endif %}
-          </div>
-          <div class="bold" style="color:var(--azul-deep);">{{ a.codigo }}</div>
-          <div style="color:#555; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ a.tipo_equipo }}</div>
-        </div>
-        {% endfor %}
-      </div>
+            <div class="hidden md:flex items-center gap-6 divide-x divide-slate-200">
+                <div class="text-center px-4">
+                    <span class="block font-bold text-lg leading-none">255</span>
+                    <span class="text-[10px] text-brand-textMuted uppercase font-semibold">Equipos Total</span>
+                </div>
+                <div class="text-center px-4">
+                    <span class="block font-bold text-lg leading-none text-brand-green">197</span>
+                    <span class="text-[10px] text-brand-textMuted uppercase font-semibold">Operativos</span>
+                </div>
+                <div class="text-center px-4">
+                    <span class="block font-bold text-lg leading-none text-brand-red">28</span>
+                    <span class="text-[10px] text-brand-textMuted uppercase font-semibold">Atrasados</span>
+                </div>
+                <div class="text-center px-4">
+                    <span class="block font-bold text-lg leading-none text-brand-yellow">47</span>
+                    <span class="text-[10px] text-brand-textMuted uppercase font-semibold">Próximos</span>
+                </div>
+                <div class="text-center px-4">
+                    <span class="block font-bold text-lg leading-none text-brand-green">85.8%</span>
+                    <span class="text-[10px] text-brand-textMuted uppercase font-semibold">Controlados</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-5">
+                <div class="relative cursor-pointer">
+                    <i class="fa-regular fa-bell text-xl text-slate-500"></i>
+                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white">12</span>
+                </div>
+                <div class="flex items-center gap-3 cursor-pointer pl-4 border-l border-slate-200">
+                    <div class="hidden sm:block text-right">
+                        <p class="text-sm font-bold leading-none text-brand-textMain">Admin</p>
+                        <p class="text-xs text-brand-textMuted">Administrador</p>
+                    </div>
+                    <div class="w-9 h-9 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 font-bold">
+                        A
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto p-4 lg:p-6 pb-24">
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">
+                
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 card-hover transition-all">
+                    <h3 class="text-sm font-bold text-brand-textMain mb-4 flex items-center gap-2"><i class="fa-solid fa-chart-pie text-slate-400"></i> Estado de Equipos</h3>
+                    <div class="flex items-center">
+                        <div class="relative w-24 h-24 flex-shrink-0">
+                            <canvas id="chartEstado"></canvas>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span class="text-lg font-bold text-brand-textMain leading-none">255</span>
+                                <span class="text-[10px] text-brand-textMuted">Total</span>
+                            </div>
+                        </div>
+                        <div class="ml-4 space-y-2 flex-1">
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-brand-green"></span> Operativos</span>
+                                <span class="font-bold">197 <span class="text-brand-textMuted font-normal">(77.3%)</span></span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-brand-red"></span> Atrasados</span>
+                                <span class="font-bold text-brand-red">28 <span class="text-brand-textMuted font-normal">(11.0%)</span></span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-brand-yellow"></span> Próximos</span>
+                                <span class="font-bold text-brand-yellow">47 <span class="text-brand-textMuted font-normal">(18.4%)</span></span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-slate-300"></span> S/L</span>
+                                <span class="font-bold text-slate-500">27 <span class="text-brand-textMuted font-normal">(10.6%)</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 card-hover transition-all flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold text-brand-textMain mb-4 flex items-center gap-2"><i class="fa-solid fa-wrench text-slate-400"></i> Órdenes de Trabajo</h3>
+                        <ul class="space-y-3">
+                            <li class="flex justify-between items-center bg-brand-redBg px-3 py-2 rounded-lg">
+                                <span class="text-xs font-semibold text-brand-red">OT Abiertas</span>
+                                <span class="font-bold text-brand-red">628</span>
+                            </li>
+                            <li class="flex justify-between items-center px-3">
+                                <span class="text-xs text-brand-yellow font-medium">En Proceso</span>
+                                <span class="font-bold text-brand-textMain">112</span>
+                            </li>
+                            <li class="flex justify-between items-center px-3">
+                                <span class="text-xs text-brand-blue font-medium">Por Programar</span>
+                                <span class="font-bold text-brand-textMain">40</span>
+                            </li>
+                            <li class="flex justify-between items-center px-3">
+                                <span class="text-xs text-brand-green font-medium">Finalizadas</span>
+                                <span class="font-bold text-brand-textMain">780</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-center text-brand-textMuted">
+                        Total OT generadas: <span class="font-bold text-brand-textMain">1,560</span>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 card-hover transition-all flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold text-brand-textMain mb-2 flex items-center gap-2"><i class="fa-solid fa-money-bill-wave text-brand-green"></i> Costos Mantenimiento</h3>
+                        <div class="my-3">
+                            <span class="text-2xl lg:text-3xl font-bold text-brand-textMain tracking-tight">$163.770.977</span>
+                            <p class="text-[10px] text-brand-textMuted uppercase mt-1">Costo acumulado (CLP)</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mt-4 text-xs">
+                            <div class="bg-slate-50 p-2 rounded">
+                                <p class="text-brand-textMuted mb-1">Este mes</p>
+                                <p class="font-bold text-brand-textMain">$24.580.250</p>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded">
+                                <p class="text-brand-textMuted mb-1">Mes anterior</p>
+                                <p class="font-bold text-brand-textMain">$138.390.727</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center gap-1 text-xs font-bold text-brand-green bg-brand-greenBg px-2 py-1.5 rounded inline-block w-max">
+                        <i class="fa-solid fa-arrow-trend-up"></i> 17.8% vs mes anterior
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 card-hover transition-all flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold text-brand-textMain mb-2 flex items-center gap-2"><i class="fa-solid fa-tachometer-fast text-brand-blue"></i> Registro Lecturas</h3>
+                        <div class="my-4">
+                            <span class="text-3xl font-bold text-brand-textMain tracking-tight">5,040</span>
+                            <p class="text-[10px] text-brand-textMuted uppercase mt-1">Lecturas registradas totales</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mt-4 border-t border-slate-100 pt-4">
+                        <div>
+                            <p class="text-[10px] text-brand-textMuted uppercase font-semibold">Última lectura</p>
+                            <p class="text-sm font-bold text-brand-textMain mt-0.5">16/05/2025</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-brand-textMuted uppercase font-semibold">Lecturas hoy</p>
+                            <p class="text-sm font-bold text-brand-blue mt-0.5">23 capturas</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-6">
+                
+                <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                    <div class="px-5 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
+                        <h3 class="text-sm font-bold text-brand-textMain"><i class="fa-solid fa-triangle-exclamation text-brand-red mr-2"></i> Equipos Críticos (Atrasados)</h3>
+                        <button class="text-xs text-brand-blue font-semibold hover:underline">Ver todos (28)</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-slate-50 text-xs text-brand-textMuted uppercase font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="px-5 py-3">Unidad / Detalle</th>
+                                    <th class="px-5 py-3 text-right">Lectura Act.</th>
+                                    <th class="px-5 py-3 text-right">Meta PM</th>
+                                    <th class="px-5 py-3 text-right">Margen</th>
+                                    <th class="px-5 py-3 text-center">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="px-5 py-3 flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                            <i class="fa-solid fa-truck text-slate-400"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-brand-textMain">CD-102</p>
+                                            <p class="text-xs text-brand-textMuted">Camión MAN Tolva</p>
+                                        </div>
+                                    </td>
+                                    <td class="px-5 py-3 text-right font-medium">10,250 hrs</td>
+                                    <td class="px-5 py-3 text-right text-brand-textMuted">10,000 hrs</td>
+                                    <td class="px-5 py-3 text-right font-bold text-brand-red">-250 hrs</td>
+                                    <td class="px-5 py-3 text-center">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-brand-redBg text-brand-red">Atrasado</span>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="px-5 py-3 flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                            <i class="fa-solid fa-snowplow text-slate-400"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-brand-textMain">EQP-01</p>
+                                            <p class="text-xs text-brand-textMuted">Motoniveladora Sin Marca</p>
+                                        </div>
+                                    </td>
+                                    <td class="px-5 py-3 text-right font-medium">1,320 hrs</td>
+                                    <td class="px-5 py-3 text-right text-brand-textMuted">1,000 hrs</td>
+                                    <td class="px-5 py-3 text-right font-bold text-brand-red">-320 hrs</td>
+                                    <td class="px-5 py-3 text-center">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-brand-redBg text-brand-red">Atrasado</span>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="px-5 py-3 flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                            <i class="fa-solid fa-tractor text-slate-400"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-brand-textMain">VD-014</p>
+                                            <p class="text-xs text-brand-textMuted">Rodillo Vibratorio</p>
+                                        </div>
+                                    </td>
+                                    <td class="px-5 py-3 text-right font-medium">5,980 hrs</td>
+                                    <td class="px-5 py-3 text-right text-brand-textMuted">5,500 hrs</td>
+                                    <td class="px-5 py-3 text-right font-bold text-brand-red">-480 hrs</td>
+                                    <td class="px-5 py-3 text-center">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-brand-redBg text-brand-red">Atrasado</span>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="px-5 py-3 flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                            <i class="fa-solid fa-truck-pickup text-slate-400"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-brand-textMain">VD-028</p>
+                                            <p class="text-xs text-brand-textMuted">Camioneta Maxus T-60</p>
+                                        </div>
+                                    </td>
+                                    <td class="px-5 py-3 text-right font-medium">12,450 hrs</td>
+                                    <td class="px-5 py-3 text-right text-brand-textMuted">12,000 hrs</td>
+                                    <td class="px-5 py-3 text-right font-bold text-brand-red">-450 hrs</td>
+                                    <td class="px-5 py-3 text-center">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-brand-redBg text-brand-red">Atrasado</span>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="px-5 py-3 flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                            <i class="fa-solid fa-truck-moving text-slate-400"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-brand-textMain">CD-105</p>
+                                            <p class="text-xs text-brand-textMuted">Camión Liviano 3/4</p>
+                                        </div>
+                                    </td>
+                                    <td class="px-5 py-3 text-right font-medium">98,450 km</td>
+                                    <td class="px-5 py-3 text-right text-brand-textMuted">90,000 km</td>
+                                    <td class="px-5 py-3 text-right font-bold text-brand-red">-8,450 km</td>
+                                    <td class="px-5 py-3 text-center">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-brand-redBg text-brand-red">Atrasado</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-4 lg:gap-6">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 card-hover transition-all">
+                        <h3 class="text-sm font-bold text-brand-textMain mb-2">Distribución por Tipo</h3>
+                        <div class="h-40 relative">
+                            <canvas id="chartTipos"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 card-hover transition-all flex-1">
+                        <h3 class="text-sm font-bold text-brand-textMain mb-4">Métricas Globales</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-brand-greenBg p-2.5 rounded-lg border border-brand-green/20">
+                                <span class="block text-brand-green font-bold text-lg leading-none">85.8%</span>
+                                <span class="text-[10px] text-brand-green font-semibold uppercase">Controlados</span>
+                            </div>
+                            <div class="bg-brand-redBg p-2.5 rounded-lg border border-brand-red/20">
+                                <span class="block text-brand-red font-bold text-lg leading-none">11.0%</span>
+                                <span class="text-[10px] text-brand-red font-semibold uppercase">Atrasados</span>
+                            </div>
+                            <div class="bg-brand-yellowBg p-2.5 rounded-lg border border-brand-yellow/20">
+                                <span class="block text-brand-yellow font-bold text-lg leading-none">18.4%</span>
+                                <span class="text-[10px] text-brand-yellow font-semibold uppercase">Próximos</span>
+                            </div>
+                            <div class="bg-purple-50 p-2.5 rounded-lg border border-purple-200">
+                                <span class="block text-purple-600 font-bold text-lg leading-none">628</span>
+                                <span class="text-[10px] text-purple-600 font-semibold uppercase">OT Abiertas</span>
+                            </div>
+                            <div class="bg-brand-blueBg p-2.5 rounded-lg border border-brand-blue/20">
+                                <span class="block text-brand-blue font-bold text-lg leading-none">197</span>
+                                <span class="text-[10px] text-brand-blue font-semibold uppercase">Eq. Operativos</span>
+                            </div>
+                            <div class="bg-brand-greenBg p-2.5 rounded-lg border border-brand-green/20">
+                                <span class="block text-brand-green font-bold text-lg leading-none">77.3%</span>
+                                <span class="text-[10px] text-brand-green font-semibold uppercase">Disponibilidad</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="mb-4">
+                <div class="flex justify-between items-end mb-3">
+                    <h3 class="text-sm font-bold text-brand-textMain uppercase tracking-wide"><i class="fa-regular fa-images text-slate-400 mr-2"></i> Flota de Equipos (Galería)</h3>
+                    <div class="flex gap-2">
+                        <button onclick="document.getElementById('carousel').scrollBy({left: -200, behavior: 'smooth'})" class="w-7 h-7 rounded-full bg-white border border-slate-300 flex items-center justify-center hover:bg-slate-50 hover:text-brand-blue transition-colors shadow-sm"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                        <button onclick="document.getElementById('carousel').scrollBy({left: 200, behavior: 'smooth'})" class="w-7 h-7 rounded-full bg-white border border-slate-300 flex items-center justify-center hover:bg-slate-50 hover:text-brand-blue transition-colors shadow-sm"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                    </div>
+                </div>
+                
+                <div id="carousel" class="flex overflow-x-auto hide-scrollbar gap-4 pb-4 snap-x snap-mandatory">
+                    <script>
+                        const equipos = [
+                            {cod: 'CD-102', nom: 'Camioneta Maxus T-60'}, {cod: 'EQP-01', nom: 'Excavadora Genérica'},
+                            {cod: 'VD-014', nom: 'Camión Aljibe 20.000 Lts'}, {cod: 'VD-028', nom: 'Camión Liviano 3/4'},
+                            {cod: 'CD-105', nom: 'Camión MAN Tolva'}, {cod: 'EQP-05', nom: 'Motoniveladora S/M'},
+                            {cod: 'EQP-07', nom: 'Cargador Frontal Gen.'}, {cod: 'EQP-20', nom: 'Planta Áridos Móvil'},
+                            {cod: 'EQP-11', nom: 'Rodillo Vibratorio'}, {cod: 'CD-120', nom: 'Camión Pluma'}
+                        ];
+                        
+                        equipos.forEach(eq => {
+                            document.write(`
+                            <div class="min-w-[140px] max-w-[140px] bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden snap-start card-hover transition-all cursor-pointer flex-shrink-0">
+                                <div class="h-24 bg-slate-100 flex items-center justify-center border-b border-slate-100">
+                                    <i class="fa-solid fa-truck-moving text-3xl text-slate-300"></i>
+                                </div>
+                                <div class="p-3 text-center">
+                                    <p class="text-xs text-brand-textMuted font-bold uppercase">${eq.cod}</p>
+                                    <p class="text-[10px] text-brand-textMain font-medium mt-1 leading-tight h-7 overflow-hidden text-ellipsis">${eq.nom}</p>
+                                </div>
+                            </div>
+                            `);
+                        });
+                    </script>
+                </div>
+            </div>
+
+        </main>
+        
+        <footer class="absolute bottom-0 w-full h-12 bg-slate-50 border-t border-slate-200 flex items-center justify-between px-4 lg:px-6 z-10">
+            <div class="hidden md:flex items-center text-[10px] lg:text-xs text-brand-textMuted font-medium">
+                <span>ERP CMMS - Datos en tiempo real</span>
+                <span class="mx-2 text-slate-300">|</span>
+                <span>Última actualización: 18/05/2026 10:09 AM</span>
+                <span class="mx-2 text-slate-300">|</span>
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-brand-green animate-pulse"></span> Conectado a PostgreSQL</span>
+            </div>
+            
+            <div class="flex items-center justify-center w-full md:w-auto absolute left-0 right-0 md:static pointer-events-none">
+                <div class="flex items-center gap-2 px-4 py-1 bg-white border border-slate-200 rounded-full shadow-sm pointer-events-auto">
+                    <div class="w-4 h-4 bg-yellow-400 rounded-sm flex items-center justify-center">
+                        <i class="fa-solid fa-layer-group text-[8px] text-brand-sidebar"></i>
+                    </div>
+                    <span class="text-xs font-bold text-brand-textMain">Demotron maquinarias CMMS Manuel Ortiz 2026</span>
+                </div>
+            </div>
+            
+            <div class="hidden sm:block">
+                <select class="bg-transparent border border-slate-300 text-brand-textMuted text-xs rounded px-2 py-1 outline-none font-medium cursor-pointer hover:border-slate-400">
+                    <option>Empresa: DEMOTRON</option>
+                </select>
+            </div>
+        </footer>
 
     </div>
 
-    <div id="mod-equipos" class="seccion-modulo">
-      <table class="excel-table">
-        <thead>
-          <tr><th colspan="9" style="background-color:#404040; color:#fff; text-align:center;">MAESTRO GENERAL DE EQUIPOS REGISTRADOS</th></tr>
-          <tr><th>CÓDIGO</th><th>TIPO EQUIPO</th><th>UBICACIÓN</th><th>RESPONSABLE</th><th style="width:60px;">CTRL</th><th style="width:80px;">LECTURA</th><th style="width:80px;">PRÓX. PM</th><th style="width:80px;">MARGEN</th><th style="width:40px; text-align:center;">SEM</th></tr>
-        </thead>
-        <tbody>
-          {% for e in equipos %}
-          <tr>
-            <td class="bold text-center">{{ e.codigo }}</td>
-            <td>{{ e.tipo_equipo }}</td>
-            <td>{{ e.ubicacion }}</td>
-            <td>{{ e.responsable }}</td>
-            <td class="text-center">{{ e.control_base }}</td>
-            <td class="text-right">{{ e.lectura_actual_str }}</td>
-            <td class="text-right">{{ e.proxima_pm_str }}</td>
-            <td class="text-right bold" style="color:{% if e.margen < 0 %}var(--rojo){% else %}var(--verde){% endif %};">{{ e.margen_str }}</td>
-            <td class="text-center"><span class="circulo {{ e.semaforo }}"></span></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    <script>
+        // Configuración Global Chart.js
+        Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
+        Chart.defaults.color = '#64748B';
+        
+        // 1. Gráfico Estado Equipos (Dona)
+        const ctxEstado = document.getElementById('chartEstado').getContext('2d');
+        new Chart(ctxEstado, {
+            type: 'doughnut',
+            data: {
+                labels: ['Operativos', 'Atrasados', 'Próximos', 'Sin Lectura'],
+                datasets: [{
+                    data: [197, 28, 47, 27],
+                    backgroundColor: ['#10B981', '#EF4444', '#F59E0B', '#CBD5E1'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: { legend: { display: false }, tooltip: { bodyFont: { size: 11 } } }
+            }
+        });
 
-    <div id="mod-ot" class="seccion-modulo">
-      <table class="excel-table">
-        <thead>
-          <tr><th colspan="9" style="background-color:#404040; color:#fff; text-align:center;">HOJA DE REGISTRO DE MANTENCIONES (MANTENCIONES)</th></tr>
-          <tr><th>FECHA</th><th>CÓDIGO</th><th>TIPO INTERVENCIÓN</th><th style="width:80px;">LECTURA</th><th style="width:50px;">PM</th><th>FOLIO</th><th>LUGAR</th><th>PROVEEDOR</th><th>COSTO</th></tr>
-        </thead>
-        <tbody>
-          {% for m in mantenciones %}
-          <tr>
-            <td class="text-center">{{ m.fecha }}</td>
-            <td class="bold text-center">{{ m.codigo }}</td>
-            <td>{{ m.tipo }}</td>
-            <td class="text-right">{{ m.lectura_str }}</td>
-            <td class="text-center">{{ m.es_pm }}</td>
-            <td>{{ m.folio }}</td>
-            <td>{{ m.lugar }}</td>
-            <td>{{ m.proveedor }}</td>
-            <td class="text-right bold">{{ m.costo_str }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <div id="mod-compras" class="seccion-modulo">
-      <table class="excel-table">
-        <thead>
-          <tr><th colspan="8" style="background-color:#404040; color:#fff; text-align:center;">SEGUIMIENTO FINANCIERO DE ADQUISICIONES (COMPRAS PM)</th></tr>
-          <tr><th>FECHA</th><th>OC</th><th>CÓDIGO</th><th>DESCRIPCIÓN</th><th>PROVEEDOR</th><th>COSTO CLP</th><th>REGLA</th><th>ESTADO OC</th></tr>
-        </thead>
-        <tbody>
-          {% for c in compras %}
-          <tr>
-            <td class="text-center">{{ c.fecha }}</td>
-            <td class="bold text-center">{{ c.oc }}</td>
-            <td class="bold text-center">{{ c.codigo }}</td>
-            <td>{{ c.descripcion }}</td>
-            <td>{{ c.proveedor }}</td>
-            <td class="text-right bold" style="color:var(--azul-deep);">{{ c.costo_str }}</td>
-            <td>{{ c.regla }}</td>
-            <td>{{ c.estado }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <div id="mod-lecturas" class="seccion-modulo">
-      <table class="excel-table">
-        <thead>
-          <tr><th colspan="7" style="background-color:#404040; color:#fff; text-align:center;">HISTORIAL DE LOGS Y HORÓMETROS (LECTURAS)</th></tr>
-          <tr><th>FECHA</th><th>CÓDIGO</th><th style="width:90px;">VALOR</th><th style="width:50px;">UNID</th><th>FRENTE / OBRA</th><th>RESPONSABLE</th><th>OBSERVACIÓN</th></tr>
-        </thead>
-        <tbody>
-          {% for l in lecturas %}
-          <tr>
-            <td class="text-center">{{ l.fecha }}</td>
-            <td class="bold text-center">{{ l.codigo }}</td>
-            <td class="text-right bold" style="color:var(--azul-deep);">{{ l.valor_str }}</td>
-            <td class="text-center">{{ l.tipo }}</td>
-            <td>{{ l.ubicacion }}</td>
-            <td>{{ l.responsable }}</td>
-            <td>{{ l.obs }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-  </div>
-</main>
-
-<script>
-function switchTab(target) {
-  document.querySelectorAll('.seccion-modulo').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.menu a').forEach(el => el.classList.remove('active'));
-  const mod = document.getElementById('mod-' + target);
-  const nav = document.getElementById('nav-' + target);
-  if(mod && nav) { mod.classList.add('active'); nav.classList.add('active'); }
-}
-function irAFichaEquipo(codigo) { if(codigo) window.location.href = '/equipo/' + codigo; }
-
-const busquedaData = {{ busqueda_json|safe }};
-
-function actualizarBuscadorFicha(codigo) {
-  const bloque = document.getElementById('bloqueFichaInteractiva');
-  if(!codigo || !busquedaData[codigo]) { bloque.style.display = 'none'; return; }
-  
-  const item = busquedaData[codigo];
-  document.getElementById('f-codigo').innerText = item.info.codigo;
-  document.getElementById('f-tipo').innerText = item.info.tipo_equipo;
-  document.getElementById('f-marca').innerText = item.info.marca + ' ' + item.info.modelo;
-  document.getElementById('f-ubicacion').innerText = item.info.ubicacion;
-  document.getElementById('f-responsable').innerText = item.info.responsable;
-  document.getElementById('f-lectura').innerText = item.info.lectura_actual_str;
-  document.getElementById('f-proximo').innerText = item.info.proxima_pm_str;
-  
-  const margenCelda = document.getElementById('f-margen');
-  margenCelda.innerText = item.info.margen_str;
-  margenCelda.style.color = item.info.margen < 0 ? '#FF0000' : '#00B050';
-
-  const tbody = document.getElementById('f-tabla-mantenciones');
-  tbody.innerHTML = '';
-  if(item.mantenciones.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="color:#64748b; padding:6px;">No registra intervenciones históricas.</td></tr>';
-  } else {
-    item.mantenciones.forEach(m => {
-      tbody.innerHTML += `<tr><td class="text-center">${m.fecha}</td><td class="code text-center">#${m.folio}</td><td><b>${m.tipo}</b></td><td class="bold text-right">${m.costo}</td><td class="text-center">${m.estado}</td></tr>`;
-    });
-  }
-  bloque.style.display = 'grid';
-}
-
-const data = {{ charts|safe }};
-const commonOptions = { 
-    responsive: true, maintainAspectRatio: false, 
-    plugins: { legend: { display: false } },
-    scales: { x: { grid: { display: false }, ticks: { font: { size: 9 } } }, y: { grid: { color: '#E0E0E0' }, ticks: { font: { size: 9 } } } }
-};
-
-function renderCharts() {
-  chart('donut', 'doughnut', Object.keys(data.estado), Object.values(data.estado), ['#00B050', '#FF0000', '#FFFF00']);
-  chart('ubic', 'bar', Object.keys(data.ubicacion), Object.values(data.ubicacion), ['#0c3f86']);
-  
-  const elG = document.getElementById('gestion');
-  if(elG) {
-    if(Chart.getChart('gestion')) Chart.getChart('gestion').destroy();
-    new Chart(elG, {
-      type: 'line',
-      data: {
-        labels: Object.keys(data.compras_mensuales),
-        datasets: [{
-          label: 'OC Mensual',
-          data: Object.values(data.compras_mensuales),
-          borderColor: '#0c3f86', backgroundColor: 'rgba(12, 63, 134, 0.08)',
-          borderWidth: 2, fill: true, tension: 0.3
-        }]
-      },
-      options: commonOptions
-    });
-  }
-}
-
-function chart(id, type, labels, values, colors){
-  const el = document.getElementById(id); if(!el) return;
-  if(Chart.getChart(id)) Chart.getChart(id).destroy();
-  let options = commonOptions;
-  if(type === 'doughnut') {
-      options = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } } };
-  }
-  new Chart(el, { type: type, data: { labels: labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 1, borderColor: '#BFBFBF' }] }, options: options });
-}
-window.onload = renderCharts;
-</script>
+        // 2. Gráfico Distribución por Tipo (Dona)
+        const ctxTipos = document.getElementById('chartTipos').getContext('2d');
+        new Chart(ctxTipos, {
+            type: 'doughnut',
+            data: {
+                labels: ['Camiones', 'Maq. Pesada', 'Auxiliares', 'Otros'],
+                datasets: [{
+                    data: [85, 95, 45, 30],
+                    backgroundColor: ['#3B82F6', '#6366F1', '#8B5CF6', '#A78BFA'],
+                    borderWidth: 2, borderColor: '#ffffff',
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: { 
+                    legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, padding: 15, font: { size: 10, weight: 'bold' } } },
+                }
+            }
+        });
+    </script>
 </body>
 </html>
