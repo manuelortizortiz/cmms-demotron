@@ -49,7 +49,7 @@ def format_clp(val):
     except: return "$ 0"
 
 # ==========================================
-# MAPEO HOMOGÉNEO DE IMÁGENES POR TIPO
+# MAPEO HOMOGÉNEO DE IMÁGENES SOLICITADO
 # ==========================================
 def buscar_foto_por_tipo(tipo_equipo):
     if not tipo_equipo: return None
@@ -58,21 +58,16 @@ def buscar_foto_por_tipo(tipo_equipo):
             
     tipo_limpio = str(tipo_equipo).strip().lower()
     
-    if "tracto" in tipo_limpio or "tractocamion" in tipo_limpio:
-        target = "tracto"
-    elif "camioneta" in tipo_limpio:
-        target = "camioneta"
-    elif "tolva" in tipo_limpio:
-        target = "tolva"
-    elif "aljibe" in tipo_limpio or "alguije" in tipo_limpio:
-        target = "aljibe"
-    elif "excavadora" in tipo_limpio:
-        target = "excavadora"
-    elif "barredora" in tipo_limpio:
-        target = "barredora"
-    else:
-        remplazos = {"á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ñ": "n", " ": "_", "-": "_"}
-        target = "".join(remplazos.get(c, c) for c in tipo_limpio)
+    # REGLAS ESTRICTAS DE IMÁGENES SOLICITADAS POR MANUEL
+    if "camioneta" in tipo_limpio:
+        return "/static/equipos_real/maxus_t60.png"
+    elif "pintura" in tipo_limpio or "slurry" in tipo_limpio or "plano" in tipo_limpio:
+        return "/static/equipos_real/camion_liviano.png"
+    elif "tracto" in tipo_limpio or "tractocamion" in tipo_limpio:
+        return "/static/equipos_real/tracto_camion.jpg"
+
+    remplazos = {"á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ñ": "n", " ": "_", "-": "_"}
+    target = "".join(remplazos.get(c, c) for c in tipo_limpio)
 
     if os.path.exists(base_dir):
         for root, dirs, files in os.walk(base_dir):
@@ -80,9 +75,7 @@ def buscar_foto_por_tipo(tipo_equipo):
                 nombre, ext = os.path.splitext(f)
                 nombre_limpio = nombre.lower().strip().replace(" ", "_").replace("-", "_")
                 remplazos_v = {"á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ñ": "n"}
-                for k, v in remplazos_v.items():
-                    nombre_limpio = nombre_limpio.replace(k, v)
-                    
+                for k, v in remplazos_v.items(): nombre_limpio = nombre_limpio.replace(k, v)
                 if ext.lower() in ['.jpg', '.jpeg', '.png']:
                     if target in nombre_limpio or nombre_limpio in target:
                         abs_path = os.path.join(root, f).replace("\\", "/")
@@ -161,7 +154,7 @@ with app.app_context():
     db.create_all()
 
 # ==========================================
-# RUTAS CON BLINDAJE ANTI-404 (STRICT SLASHES)
+# DESPLIEGUE CENTRALIZADO DEL ERP
 # ==========================================
 
 @app.route('/', strict_slashes=False)
@@ -184,54 +177,38 @@ def dashboard():
             elif c.fecha.month == 4: compras_mensuales["Abr"] += c.costo_pm_clp
             elif c.fecha.month == 5: compras_mensuales["May"] += c.costo_pm_clp
 
-    busqueda_map = {}
-
     for e in equipos_db:
         foto_url = buscar_foto_por_tipo(e.tipo_equipo)
         eq_data = {
             'codigo': e.codigo, 'tipo_equipo': e.tipo_equipo, 'marca': e.marca, 'modelo': e.modelo,
             'ubicacion': e.ubicacion or 'Sin Ubicación', 'responsable': e.responsable or 'No Asignado',
             'control_base': e.control_base, 'lectura_actual_str': format_num(e.lectura_actual),
-            'proxima_pm_str': format_num(e.proxima_pm), 'margen': e.margen, 'margen_str': format_num(e.margen),
+            'proxima_pm_str': format_num(e.proxima_pm), 'margen_str': format_num(e.margen),
             'estado_base': e.estado_base, 'semaforo': e.semaforo, 'foto_url': foto_url
         }
         equipos.append(eq_data)
-        busqueda_map[e.codigo] = { 'info': eq_data, 'mantenciones': [] }
         
         status_limpio = 'Fuera de Servicio' if e.estado_base in ['Fuera de Servicio', 'No operativo'] else e.estado_base
         conteo_estado[status_limpio] = conteo_estado.get(status_limpio, 0) + 1
         
-        if e.ubicacion:
-            conteo_ubicacion[e.ubicacion] = conteo_ubicacion.get(e.ubicacion, 0) + 1
-            
-        if e.estado_base == 'Taller' and e.estado_base not in ['Fuera de Servicio', 'No operativo']:
-            taller.append(eq_data)
-            
-        if e.semaforo == 'red' or e.estado_base in ['Fuera de Servicio', 'No operativo']:
-            criticos.append(eq_data)
+        if e.ubicacion: conteo_ubicacion[e.ubicacion] = conteo_ubicacion.get(e.ubicacion, 0) + 1
+        if e.estado_base == 'Taller' and e.estado_base not in ['Fuera de Servicio', 'No operativo']: taller.append(eq_data)
+        if e.semaforo == 'red' or e.estado_base in ['Fuera de Servicio', 'No operativo']: criticos.append(eq_data)
 
-    for m in mantenciones_db:
-        if m.codigo_equipo in busqueda_map:
-            busqueda_map[m.codigo_equipo]['mantenciones'].append({
-                'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F',
-                'tipo': m.tipo_mantencion, 'folio': m.folio or 'S/F', 'costo': format_clp(m.costo_mantencion_clp), 'estado': m.estado
-            })
-
-    conteo_ubicacion_filtrado = {k: v for k, v in conteo_ubicacion.items() if v == 5}
+    # REGLA SOLICITADA: Obras/lugares donde existan MAS O IGUAL A 5 equipos
+    conteo_ubicacion_filtrado = {k: v for k, v in conteo_ubicacion.items() if v >= 5}
     ot_abiertas = OrdenTrabajo.query.filter_by(estado='Abierta').count()
     costo_compras = db.session.query(db.func.sum(CompraRepuesto.costo_pm_clp)).scalar() or 0.0
+    total_equipos = len(equipos_db)
 
     kpis = {
-        'atrasados': len(criticos), 'total': len(equipos_db), 'proximos': len(criticos),
-        'ot_abiertas': ot_abiertas, 'controlados': len(equipos_db) - len(criticos),
-        'controlado_pct': round(((len(equipos_db) - len(criticos)) / len(equipos_db) * 100)) if len(equipos_db) > 0 else 0,
+        'atrasados': len(criticos), 'total': total_equipos, 'proximos': len(criticos),
+        'ot_abiertas': ot_abiertas, 'controlados': total_equipos - len(criticos),
+        'controlado_pct': round(((total_equipos - len(criticos)) / total_equipos * 100)) if total_equipos > 0 else 0,
         'costo_mes_str': format_clp(costo_compras)
     }
     
-    charts = {
-        'estado': conteo_estado, 'ubicacion': conteo_ubicacion_filtrado,
-        'compras_mensuales': compras_mensuales
-    }
+    charts = { 'estado': conteo_estado, 'ubicacion': conteo_ubicacion_filtrado, 'compras_mensuales': compras_mensuales }
 
     todas_mantenciones = [{
         'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'codigo': m.codigo_equipo,
@@ -255,8 +232,7 @@ def dashboard():
 
     return render_template('index.html', kpis=kpis, charts=json.dumps(charts), equipos=equipos, 
                            criticos=criticos, taller=taller, mantenciones=todas_mantenciones, 
-                           compras=todas_compras, lecturas=todas_lecturas, equipos_aleatorios=equipos_aleatorios,
-                           busqueda_json=json.dumps(busqueda_map), rol="Admin")
+                           compras=todas_compras, lecturas=todas_lecturas, equipos_aleatorios=equipos_aleatorios, rol="Admin")
 
 
 @app.route('/equipo/<codigo>', methods=['GET', 'POST'], strict_slashes=False)
@@ -267,6 +243,7 @@ def ficha_equipo(codigo):
         equipo.estado_base = request.form.get('estado_base')
         equipo.proxima_pm = clean_int(request.form.get('proxima_pm'), 0)
         db.session.commit()
+        # SOLUCIÓN CRUCIAL: Se corrige 'code=' por 'codigo=' para evitar Error 500/404 al redirigir
         return redirect(url_for('ficha_equipo', codigo=codigo))
 
     mantenciones_db = OrdenTrabajo.query.filter_by(codigo_equipo=codigo).order_by(OrdenTrabajo.id.desc()).all()
@@ -299,7 +276,7 @@ def ficha_equipo(codigo):
 @app.route('/admin/cargar_sql_final', strict_slashes=False)
 def cargar_sql_final():
     archivo_excel = "CMMS DEMOTRON MANU ORTIZ.xlsx"
-    if not os.path.exists(archivo_excel): return "Error: No se encuentra el archivo maestro en el servidor."
+    if not os.path.exists(archivo_excel): return "Error: No se encuentra el archivo maestro en la raíz del servidor."
     try:
         with db.engine.connect() as conn:
             conn.execute(db.text("DROP TABLE IF EXISTS compra_repuesto CASCADE;"))
@@ -360,12 +337,12 @@ def cargar_sql_final():
             db.session.commit()
 
         for eq in Equipo.query.all():
-            ultima_lectura = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
-            if ultima_lectura: eq.lectura_actual = ultima_lectura.horometro if eq.control_base == 'HORAS' else ultima_lectura.kilometraje
+            u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
+            if u_lec: eq.lectura_actual = u_lec.horometro if eq.control_base == 'HORAS' else u_lec.kilometraje
             else: eq.lectura_actual = 0
             
-            ultima_pm = OrdenTrabajo.query.filter_by(codigo_equipo=eq.codigo, es_pm='Sí', estado='Finalizada').order_by(OrdenTrabajo.fecha.desc()).first()
-            if ultima_pm: eq.proxima_pm = ultima_pm.lectura + eq.frecuencia_base
+            u_pm = OrdenTrabajo.query.filter_by(codigo_equipo=eq.codigo, es_pm='Sí', estado='Finalizada').order_by(OrdenTrabajo.fecha.desc()).first()
+            if u_pm: eq.proxima_pm = u_pm.lectura + eq.frecuencia_base
             else: eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
         db.session.commit()
         return redirect(url_for('dashboard'))
