@@ -19,37 +19,45 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # ==========================================
-# PROCESADORES NUMÉRICOS INDUSTRIALES
+# PROCESADORES NUMÉRICOS BLINDADOS
 # ==========================================
 def clean_int(val, default=0):
-    if val is None or pd.isna(val): return default
-    if isinstance(val, (int, float, np.number)): return int(val)
-    try: return int(str(val).strip().split('.')[0])
+    try:
+        if val is None: return default
+        s = str(val).strip()
+        if s.lower() in ['', 'nan', 'none']: return default
+        return int(float(s))
     except: return default
 
 def clean_float(val, default=0.0):
-    if val is None or pd.isna(val): return default
-    if isinstance(val, (int, float, np.number)): return float(val)
     try:
+        if val is None: return default
+        if isinstance(val, (int, float)): return float(val)
         s = str(val).strip().replace('$', '').replace(' ', '')
+        if s.lower() in ['', 'nan', 'none']: return default
         if s.count('.') == 1 and ',' not in s: return float(s)
-        if '.' in s and ',' in s: s = s.replace('.', '').replace(',', '.')
-        elif ',' in s: s = s.replace(',', '.')
+        s = s.replace('.', '').replace(',', '.')
         return float(s)
     except: return default
 
 def format_num(val):
-    if val is None or pd.isna(val): return "0"
-    try: return f"{int(float(str(val).strip())):,}".replace(",", ".")
+    try:
+        if val is None: return "0"
+        s = str(val).strip()
+        if s.lower() in ['', 'nan', 'none']: return "0"
+        return f"{int(float(s)):,}".replace(",", ".")
     except: return "0"
 
 def format_clp(val):
-    if val is None or pd.isna(val): return "$ 0"
-    try: return f"$ {int(float(str(val).strip())):,}".replace(",", ".")
+    try:
+        if val is None: return "$ 0"
+        s = str(val).strip()
+        if s.lower() in ['', 'nan', 'none']: return "$ 0"
+        return f"$ {int(float(s)):,}".replace(",", ".")
     except: return "$ 0"
 
 # ==========================================
-# MAPEO HOMOGÉNEO DE IMÁGENES SOLICITADO
+# MAPEO HOMOGÉNEO DE IMÁGENES
 # ==========================================
 def buscar_foto_por_tipo(tipo_equipo):
     if not tipo_equipo: return None
@@ -58,7 +66,7 @@ def buscar_foto_por_tipo(tipo_equipo):
             
     tipo_limpio = str(tipo_equipo).strip().lower()
     
-    # REGLAS ESTRICTAS DE IMÁGENES SOLICITADAS POR MANUEL
+    # REGLAS MANUALES SOLICITADAS
     if "camioneta" in tipo_limpio:
         return "/static/equipos_real/maxus_t60.png"
     elif "pintura" in tipo_limpio or "slurry" in tipo_limpio or "plano" in tipo_limpio:
@@ -74,8 +82,7 @@ def buscar_foto_por_tipo(tipo_equipo):
             for f in files:
                 nombre, ext = os.path.splitext(f)
                 nombre_limpio = nombre.lower().strip().replace(" ", "_").replace("-", "_")
-                remplazos_v = {"á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ñ": "n"}
-                for k, v in remplazos_v.items(): nombre_limpio = nombre_limpio.replace(k, v)
+                for k, v in remplazos.items(): nombre_limpio = nombre_limpio.replace(k, v)
                 if ext.lower() in ['.jpg', '.jpeg', '.png']:
                     if target in nombre_limpio or nombre_limpio in target:
                         abs_path = os.path.join(root, f).replace("\\", "/")
@@ -154,85 +161,106 @@ with app.app_context():
     db.create_all()
 
 # ==========================================
-# DESPLIEGUE CENTRALIZADO DEL ERP
+# RUTAS DE DESPLIEGUE CON RESCATE DE ERRORES
 # ==========================================
 
 @app.route('/', strict_slashes=False)
 @app.route('/erp', strict_slashes=False)
 def dashboard():
-    equipos_db = Equipo.query.all()
-    mantenciones_db = OrdenTrabajo.query.order_by(OrdenTrabajo.fecha.desc()).all()
-    compras_db = CompraRepuesto.query.order_by(CompraRepuesto.fecha.desc()).all()
-    lecturas_db = HistorialLectura.query.order_by(HistorialLectura.fecha.desc()).all()
+    try:
+        equipos_db = Equipo.query.all()
+        mantenciones_db = OrdenTrabajo.query.order_by(OrdenTrabajo.fecha.desc()).all()
+        compras_db = CompraRepuesto.query.order_by(CompraRepuesto.fecha.desc()).all()
+        lecturas_db = HistorialLectura.query.order_by(HistorialLectura.fecha.desc()).all()
 
-    equipos, taller, criticos = [], [], []
-    conteo_estado = {'Operativo': 0, 'Fuera de Servicio': 0, 'Taller': 0}
-    conteo_ubicacion = {}
+        equipos, taller, criticos = [], [], []
+        conteo_estado = {'Operativo': 0, 'Fuera de Servicio': 0, 'Taller': 0}
+        conteo_ubicacion = {}
+        proximos_count = 0
 
-    compras_mensuales = {"Feb": 0.0, "Mar": 0.0, "Abr": 0.0, "May": 0.0}
-    for c in compras_db:
-        if c.fecha and c.fecha.year == 2026:
-            if c.fecha.month == 2: compras_mensuales["Feb"] += c.costo_pm_clp
-            elif c.fecha.month == 3: compras_mensuales["Mar"] += c.costo_pm_clp
-            elif c.fecha.month == 4: compras_mensuales["Abr"] += c.costo_pm_clp
-            elif c.fecha.month == 5: compras_mensuales["May"] += c.costo_pm_clp
+        compras_mensuales = {"Feb": 0.0, "Mar": 0.0, "Abr": 0.0, "May": 0.0}
+        for c in compras_db:
+            if c.fecha and c.fecha.year == 2026:
+                costo = c.costo_pm_clp or 0.0
+                if c.fecha.month == 2: compras_mensuales["Feb"] += costo
+                elif c.fecha.month == 3: compras_mensuales["Mar"] += costo
+                elif c.fecha.month == 4: compras_mensuales["Abr"] += costo
+                elif c.fecha.month == 5: compras_mensuales["May"] += costo
 
-    for e in equipos_db:
-        foto_url = buscar_foto_por_tipo(e.tipo_equipo)
-        eq_data = {
-            'codigo': e.codigo, 'tipo_equipo': e.tipo_equipo, 'marca': e.marca, 'modelo': e.modelo,
-            'ubicacion': e.ubicacion or 'Sin Ubicación', 'responsable': e.responsable or 'No Asignado',
-            'control_base': e.control_base, 'lectura_actual_str': format_num(e.lectura_actual),
-            'proxima_pm_str': format_num(e.proxima_pm), 'margen_str': format_num(e.margen),
-            'estado_base': e.estado_base, 'semaforo': e.semaforo, 'foto_url': foto_url
+        busqueda_map = {}
+
+        for e in equipos_db:
+            foto_url = buscar_foto_por_tipo(e.tipo_equipo)
+            eq_data = {
+                'codigo': e.codigo, 'tipo_equipo': e.tipo_equipo, 'marca': e.marca, 'modelo': e.modelo,
+                'ubicacion': e.ubicacion or 'Sin Ubicación', 'responsable': e.responsable or 'No Asignado',
+                'control_base': e.control_base, 'lectura_actual_str': format_num(e.lectura_actual),
+                'proxima_pm_str': format_num(e.proxima_pm), 'margen_str': format_num(e.margen),
+                'estado_base': e.estado_base, 'semaforo': e.semaforo, 'foto_url': foto_url
+            }
+            equipos.append(eq_data)
+            busqueda_map[e.codigo] = { 'info': eq_data, 'mantenciones': [] }
+            
+            status_limpio = 'Fuera de Servicio' if e.estado_base in ['Fuera de Servicio', 'No operativo'] else e.estado_base
+            conteo_estado[status_limpio] = conteo_estado.get(status_limpio, 0) + 1
+            
+            if e.ubicacion: conteo_ubicacion[e.ubicacion] = conteo_ubicacion.get(e.ubicacion, 0) + 1
+            if e.estado_base == 'Taller' and e.estado_base not in ['Fuera de Servicio', 'No operativo']: taller.append(eq_data)
+            
+            if e.semaforo == 'red' or e.estado_base in ['Fuera de Servicio', 'No operativo']: 
+                criticos.append(eq_data)
+            if e.semaforo == 'yellow': 
+                proximos_count += 1
+
+        for m in mantenciones_db:
+            if m.codigo_equipo in busqueda_map:
+                busqueda_map[m.codigo_equipo]['mantenciones'].append({
+                    'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F',
+                    'tipo': m.tipo_mantencion, 'folio': m.folio or 'S/F', 'costo': format_clp(m.costo_mantencion_clp), 'estado': m.estado
+                })
+
+        conteo_ubicacion_filtrado = {k: v for k, v in conteo_ubicacion.items() if v >= 5}
+        ot_abiertas = OrdenTrabajo.query.filter_by(estado='Abierta').count()
+        costo_compras = db.session.query(db.func.sum(CompraRepuesto.costo_pm_clp)).scalar() or 0.0
+        total_equipos = len(equipos_db)
+
+        kpis = {
+            'atrasados': len(criticos), 'total': total_equipos, 'proximos': proximos_count,
+            'ot_abiertas': ot_abiertas, 'controlados': total_equipos - len(criticos),
+            'controlado_pct': round(((total_equipos - len(criticos)) / total_equipos * 100)) if total_equipos > 0 else 0,
+            'costo_mes_str': format_clp(costo_compras)
         }
-        equipos.append(eq_data)
         
-        status_limpio = 'Fuera de Servicio' if e.estado_base in ['Fuera de Servicio', 'No operativo'] else e.estado_base
-        conteo_estado[status_limpio] = conteo_estado.get(status_limpio, 0) + 1
-        
-        if e.ubicacion: conteo_ubicacion[e.ubicacion] = conteo_ubicacion.get(e.ubicacion, 0) + 1
-        if e.estado_base == 'Taller' and e.estado_base not in ['Fuera de Servicio', 'No operativo']: taller.append(eq_data)
-        if e.semaforo == 'red' or e.estado_base in ['Fuera de Servicio', 'No operativo']: criticos.append(eq_data)
+        charts = { 'estado': conteo_estado, 'ubicacion': conteo_ubicacion_filtrado, 'compras_mensuales': compras_mensuales }
 
-    # REGLA SOLICITADA: Obras/lugares donde existan MAS O IGUAL A 5 equipos
-    conteo_ubicacion_filtrado = {k: v for k, v in conteo_ubicacion.items() if v >= 5}
-    ot_abiertas = OrdenTrabajo.query.filter_by(estado='Abierta').count()
-    costo_compras = db.session.query(db.func.sum(CompraRepuesto.costo_pm_clp)).scalar() or 0.0
-    total_equipos = len(equipos_db)
+        todas_mantenciones = [{
+            'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'codigo': m.codigo_equipo,
+            'tipo': m.tipo_mantencion, 'lectura_str': format_num(m.lectura), 'es_pm': m.es_pm, 'folio': m.folio,
+            'lugar': m.lugar, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado
+        } for m in mantenciones_db]
 
-    kpis = {
-        'atrasados': len(criticos), 'total': total_equipos, 'proximos': len(criticos),
-        'ot_abiertas': ot_abiertas, 'controlados': total_equipos - len(criticos),
-        'controlado_pct': round(((total_equipos - len(criticos)) / total_equipos * 100)) if total_equipos > 0 else 0,
-        'costo_mes_str': format_clp(costo_compras)
-    }
-    
-    charts = { 'estado': conteo_estado, 'ubicacion': conteo_ubicacion_filtrado, 'compras_mensuales': compras_mensuales }
+        todas_compras = [{
+            'fecha': c.fecha.strftime('%d/%m/%Y') if c.fecha else 'S/F', 'oc': c.oc, 'codigo': c.codigo_equipo,
+            'descripcion': c.descripcion, 'proveedor': c.proveedor, 'costo_str': format_clp(c.costo_pm_clp), 'estado': c.estado_oc or 'Aprobada'
+        } for c in compras_db]
 
-    todas_mantenciones = [{
-        'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'codigo': m.codigo_equipo,
-        'tipo': m.tipo_mantencion, 'lectura_str': format_num(m.lectura), 'es_pm': m.es_pm, 'folio': m.folio,
-        'lugar': m.lugar, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado
-    } for m in mantenciones_db]
+        todas_lecturas = [{
+            'fecha': l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else 'S/F', 'codigo': l.codigo_equipo,
+            'valor_str': format_num(l.horometro if l.horometro > 0 else l.kilometraje),
+            'tipo': 'HORAS' if l.horometro > 0 else 'KM', 'ubicacion': l.obra_ubicacion, 'responsable': l.responsable, 'obs': l.observacion
+        } for l in lecturas_db]
 
-    todas_compras = [{
-        'fecha': c.fecha.strftime('%d/%m/%Y') if c.fecha else 'S/F', 'oc': c.oc, 'codigo': c.codigo_equipo,
-        'descripcion': c.descripcion, 'proveedor': c.proveedor, 'costo_str': format_clp(c.costo_pm_clp), 'estado': c.estado_oc or 'Aprobada'
-    } for c in compras_db]
+        equipos_aleatorios = list(equipos)
+        random.shuffle(equipos_aleatorios)
 
-    todas_lecturas = [{
-        'fecha': l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else 'S/F', 'codigo': l.codigo_equipo,
-        'valor_str': format_num(l.horometro if l.horometro > 0 else l.kilometraje),
-        'tipo': 'HORAS' if l.horometro > 0 else 'KM', 'ubicacion': l.obra_ubicacion, 'responsable': l.responsable, 'obs': l.observacion
-    } for l in lecturas_db]
-
-    equipos_aleatorios = list(equipos)
-    random.shuffle(equipos_aleatorios)
-
-    return render_template('index.html', kpis=kpis, charts=json.dumps(charts), equipos=equipos, 
-                           criticos=criticos, taller=taller, mantenciones=todas_mantenciones, 
-                           compras=todas_compras, lecturas=todas_lecturas, equipos_aleatorios=equipos_aleatorios, rol="Admin")
+        return render_template('index.html', kpis=kpis, charts=json.dumps(charts), equipos=equipos, 
+                               criticos=criticos, taller=taller, mantenciones=todas_mantenciones, 
+                               compras=todas_compras, lecturas=todas_lecturas, equipos_aleatorios=equipos_aleatorios,
+                               busqueda_json=json.dumps(busqueda_map), rol="Admin")
+                               
+    except Exception as e:
+        # En caso de fallo crítico en cálculos, el servidor arrojará el texto del error en vez de colgarse
+        return f"<h1 style='color:red;'>Error crítico en Dashboard:</h1><p>{str(e)}</p>"
 
 
 @app.route('/equipo/<codigo>', methods=['GET', 'POST'], strict_slashes=False)
@@ -243,7 +271,6 @@ def ficha_equipo(codigo):
         equipo.estado_base = request.form.get('estado_base')
         equipo.proxima_pm = clean_int(request.form.get('proxima_pm'), 0)
         db.session.commit()
-        # SOLUCIÓN CRUCIAL: Se corrige 'code=' por 'codigo=' para evitar Error 500/404 al redirigir
         return redirect(url_for('ficha_equipo', codigo=codigo))
 
     mantenciones_db = OrdenTrabajo.query.filter_by(codigo_equipo=codigo).order_by(OrdenTrabajo.id.desc()).all()
@@ -286,6 +313,7 @@ def cargar_sql_final():
             conn.commit()
         db.create_all()
 
+        # 1. EQUIPOS - COMMIT INTERNO REPARADO
         df_eq = pd.read_excel(archivo_excel, sheet_name="Equipos", skiprows=2).replace({np.nan: None})
         for _, row in df_eq.iterrows():
             if not row.iloc[0]: continue
@@ -295,8 +323,9 @@ def cargar_sql_final():
                 control_base=str(row.iloc[8]).strip().upper() if row.iloc[8] else 'HORAS', frecuencia_base=clean_int(row.iloc[9], 250), promedio_diario=clean_float(row.iloc[10], 0.0)
             )
             db.session.add(eq)
-            db.session.commit()
+            db.session.commit() # SELLA LA FILA PARA EVITAR ERROR DE PSYGOPG2
 
+        # 2. LECTURAS - COMMIT INTERNO REPARADO
         df_lec = pd.read_excel(archivo_excel, sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
         for _, row in df_lec.iterrows():
             if not row.iloc[1]: continue
@@ -310,6 +339,7 @@ def cargar_sql_final():
             db.session.add(lec)
             db.session.commit()
 
+        # 3. MANTENCIONES - COMMIT INTERNO REPARADO (CAUSANTE DEL ERROR 500)
         df_man = pd.read_excel(archivo_excel, sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
         for _, row in df_man.iterrows():
             if not row.iloc[1]: continue
@@ -321,8 +351,9 @@ def cargar_sql_final():
                 es_pm=row.iloc[4], folio=str(row.iloc[5]), lugar=row.iloc[6], proveedor=row.iloc[7], costo_mantencion_clp=clean_float(row.iloc[8], 0.0), estado=row.iloc[9] if row.iloc[9] else 'Finalizada'
             )
             db.session.add(ot)
-            db.session.commit()
+            db.session.commit() # SELLA LA FILA AQUÍ Y EVITA EL SALTO DE CABLES
 
+        # 4. COMPRAS PM - COMMIT INTERNO REPARADO
         df_com = pd.read_excel(archivo_excel, sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
         for _, row in df_com.iterrows():
             if not row.iloc[2]: continue
@@ -346,9 +377,10 @@ def cargar_sql_final():
             else: eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
         db.session.commit()
         return redirect(url_for('dashboard'))
+        
     except Exception as e:
         db.session.rollback()
-        return f"Error leyendo las pestañas del Excel: {str(e)}"
+        return f"<h1 style='color:red;'>Error técnico al inyectar el Excel:</h1><p>{str(e)}</p>"
 
 if __name__ == '__main__':
     puerto = int(os.environ.get('PORT', 5000))
