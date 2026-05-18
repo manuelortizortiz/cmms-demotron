@@ -191,7 +191,6 @@ def dashboard():
         for e in equipos_db:
             foto_url = buscar_foto_por_tipo(e.tipo_equipo)
             
-            # EL BUG ESTABA AQUÍ: Faltaba la variable 'margen': e.margen para que el HTML pudiera leerla
             eq_data = {
                 'codigo': e.codigo, 'tipo_equipo': e.tipo_equipo, 'marca': e.marca, 'modelo': e.modelo,
                 'ubicacion': e.ubicacion or 'Sin Ubicación', 'responsable': e.responsable or 'No Asignado',
@@ -295,7 +294,6 @@ def ficha_equipo(codigo):
 
     foto_url = buscar_foto_por_tipo(equipo.tipo_equipo)
     
-    # TAMBIÉN SE BLINDA AQUÍ POR SEGURIDAD
     eq_master = {
         'codigo': equipo.codigo, 'tipo_equipo': equipo.tipo_equipo, 'marca': equipo.marca, 'modelo': equipo.modelo,
         'ubicacion': equipo.ubicacion, 'proxima_pm': equipo.proxima_pm, 'estado_base': equipo.estado_base,
@@ -306,4 +304,84 @@ def ficha_equipo(codigo):
     return render_template('ficha_equipo.html', equipo=eq_master, mantenciones=mantenciones, lecturas=lecturas, compras=compras, foto_url=foto_url)
 
 
-@app.route('/admin/cargar_sql_final', strict_slashes=
+@app.route('/admin/cargar_sql_final', strict_slashes=False)
+def cargar_sql_final():
+    archivo_excel = "CMMS DEMOTRON MANU ORTIZ.xlsx"
+    if not os.path.exists(archivo_excel): return "Error: No se encuentra el archivo maestro en la raíz del servidor."
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(db.text("DROP TABLE IF EXISTS compra_repuesto CASCADE;"))
+            conn.execute(db.text("DROP TABLE IF EXISTS orden_trabajo CASCADE;"))
+            conn.execute(db.text("DROP TABLE IF EXISTS historial_lectura CASCADE;"))
+            conn.execute(db.text("DROP TABLE IF EXISTS equipo CASCADE;"))
+            conn.commit()
+        db.create_all()
+
+        df_eq = pd.read_excel(archivo_excel, sheet_name="Equipos", skiprows=2).replace({np.nan: None})
+        for _, row in df_eq.iterrows():
+            if not row.iloc[0]: continue
+            eq = Equipo(
+                codigo=str(row.iloc[0]).strip(), tipo_equipo=row.iloc[1], marca=row.iloc[2], modelo=str(row.iloc[3]).strip() if row.iloc[3] else None,
+                ano=clean_int(row.iloc[4], None), ubicacion=row.iloc[5], responsable=row.iloc[6], estado_base=str(row.iloc[7]).strip() if row.iloc[7] else 'Operativo',
+                control_base=str(row.iloc[8]).strip().upper() if row.iloc[8] else 'HORAS', frecuencia_base=clean_int(row.iloc[9], 250), promedio_diario=clean_float(row.iloc[10], 0.0)
+            )
+            db.session.add(eq)
+            db.session.commit()
+
+        df_lec = pd.read_excel(archivo_excel, sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
+        for _, row in df_lec.iterrows():
+            if not row.iloc[1]: continue
+            f_val = str(row.iloc[0]).split()[0]
+            try: fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
+            except: fecha_dt = datetime.now()
+            lec = HistorialLectura(
+                fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(), horometro=clean_int(row.iloc[2], 0), kilometraje=clean_int(row.iloc[3], 0),
+                obra_ubicacion=row.iloc[4], responsable=row.iloc[5], observacion=row.iloc[6]
+            )
+            db.session.add(lec)
+            db.session.commit()
+
+        df_man = pd.read_excel(archivo_excel, sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
+        for _, row in df_man.iterrows():
+            if not row.iloc[1]: continue
+            f_val = str(row.iloc[0]).split()[0]
+            try: fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
+            except: fecha_dt = datetime.now()
+            ot = OrdenTrabajo(
+                fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(), tipo_mantencion=row.iloc[2], lectura=clean_int(row.iloc[3], 0),
+                es_pm=row.iloc[4], folio=str(row.iloc[5]), lugar=row.iloc[6], proveedor=row.iloc[7], costo_mantencion_clp=clean_float(row.iloc[8], 0.0), estado=row.iloc[9] if row.iloc[9] else 'Finalizada'
+            )
+            db.session.add(ot)
+            db.session.commit()
+
+        df_com = pd.read_excel(archivo_excel, sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
+        for _, row in df_com.iterrows():
+            if not row.iloc[2]: continue
+            f_val = str(row.iloc[0]).split()[0]
+            try: fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
+            except: fecha_dt = datetime.now()
+            comp = CompraRepuesto(
+                fecha=fecha_dt, oc=str(row.iloc[1]), codigo_equipo=str(row.iloc[2]).strip(), descripcion=row.iloc[3],
+                proveedor=row.iloc[4], costo_pm_clp=clean_float(row.iloc[5], 0.0), regla=row.iloc[6], estado_oc=row.iloc[7]
+            )
+            db.session.add(comp)
+            db.session.commit()
+
+        for eq in Equipo.query.all():
+            u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
+            if u_lec: eq.lectura_actual = u_lec.horometro if eq.control_base == 'HORAS' else u_lec.kilometraje
+            else: eq.lectura_actual = 0
+            
+            u_pm = OrdenTrabajo.query.filter_by(codigo_equipo=eq.codigo, es_pm='Sí', estado='Finalizada').order_by(OrdenTrabajo.fecha.desc()).first()
+            if u_pm: eq.proxima_pm = u_pm.lectura + eq.frecuencia_base
+            else: eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
+        db.session.commit()
+        return redirect(url_for('dashboard'))
+        
+    except Exception as e:
+        db.session.rollback()
+        return f"<h1 style='color:red;'>Error técnico al inyectar el Excel:</h1><p>{str(e)}</p>"
+
+if __name__ == '__main__':
+    puerto = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=puerto, debug=True)
