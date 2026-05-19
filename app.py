@@ -169,10 +169,7 @@ def dashboard():
 
         reporte_costos = sorted([{'codigo': c, 'tipo': next((e['tipo_equipo'] for e in equipos if e['codigo'] == c), ''), 'costo_str': format_clp(v), 'costo_raw': v} for c, v in costos_por_equipo.items() if v > 0], key=lambda x: x['costo_raw'], reverse=True)
 
-        # LÓGICA REAL DEL KANBAN (Conectada a la BD)
         kanban_tareas = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Completado': []}
-        
-        # 1. Los atrasados sin OT son "Pendientes"
         equipos_con_ot_abierta = [m.codigo_equipo for m in ots_db if m.estado not in ['Finalizada', 'Completado']]
         for c in criticos:
             if c['codigo'] not in equipos_con_ot_abierta:
@@ -190,13 +187,10 @@ def dashboard():
                 'lugar': m.lugar, 'costo_str': format_clp(costo_ot_clp), 'estado': m.estado
             }
             todas_mantenciones.append(mant_data)
-            
-            # 2. Las OT activas van al Kanban real
             if m.estado in ['En Proceso', 'En Progreso', 'Abierta']:
                 kanban_tareas['En Progreso'].append({'codigo': m.codigo_equipo, 'tipo': m.folio, 'margen': mant_data['fecha']})
             elif m.estado == 'En Revisión':
                 kanban_tareas['En Revisión'].append({'codigo': m.codigo_equipo, 'tipo': m.folio, 'margen': mant_data['fecha']})
-
         todas_mantenciones.reverse()
 
         costo_compras = db.session.query(db.func.sum(CompraRepuesto.costo_pm_clp)).scalar() or 0.0
@@ -224,7 +218,6 @@ def dashboard():
     except Exception as e:
         return f"<h1 style='color:red;'>Error crítico:</h1><p>{str(e)}</p>"
 
-# RUTA AJAX PARA GUARDADO EN VIVO TABLAS
 @app.route('/update_inline', methods=['POST'])
 def update_inline():
     try:
@@ -235,29 +228,23 @@ def update_inline():
             db.session.commit()
             return jsonify({"status": "success"})
         return jsonify({"status": "error"}), 404
-    except Exception as e: return jsonify({"status": "error"}), 500
+    except: return jsonify({"status": "error"}), 500
 
-# RUTA AJAX PARA KANBAN EN TIEMPO REAL
 @app.route('/update_kanban', methods=['POST'])
 def update_kanban():
     data = request.json
-    codigo = data.get('codigo')
-    columna_destino = data.get('estado') # 'Pendiente', 'En Proceso', 'En Revisión', 'Finalizada'
-
+    codigo = data.get('codigo'); columna_destino = data.get('estado')
     ot_activa = OrdenTrabajo.query.filter(OrdenTrabajo.codigo_equipo == codigo, OrdenTrabajo.estado != 'Finalizada').first()
 
     if columna_destino == 'Finalizada':
         if ot_activa: ot_activa.estado = 'Finalizada'
     elif columna_destino in ['En Proceso', 'En Revisión']:
-        if ot_activa:
-            ot_activa.estado = columna_destino
+        if ot_activa: ot_activa.estado = columna_destino
         else:
-            # Si no tenía OT y lo movieron a progreso, crear la OT
             ultimo_ot = OrdenTrabajo.query.order_by(OrdenTrabajo.id.desc()).first()
             siguiente = (ultimo_ot.id + 1) if ultimo_ot else 1
             nueva_ot = OrdenTrabajo(fecha=datetime.now(), codigo_equipo=codigo, estado=columna_destino, folio=f"OT-DMT-0{1820 + siguiente}", tipo_mantencion="Mantenimiento Preventivo")
             db.session.add(nueva_ot)
-    
     db.session.commit()
     return jsonify({"status": "success"})
 
@@ -268,8 +255,16 @@ def ficha_equipo(codigo):
     motor_texto = equipo.n_motor if equipo.n_motor and str(equipo.n_motor).lower() not in ["none", "nan", ""] else "No Registrado"
     patente_texto = equipo.patente if equipo.patente and str(equipo.patente).lower() not in ["none", "nan", ""] else "S/P"
     desc_tecnica = f"Unidad {equipo.tipo_equipo} marca {equipo.marca} {equipo.modelo}. Identificación de chasis (VIN): {vin_texto}. Número de Motor: {motor_texto}. Placa Patente: {patente_texto}. Equipo sujeto a pauta de mantenimiento cada {equipo.frecuencia_base} {equipo.control_base}."
-    mantenciones = [{'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'tipo': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado} for m in OrdenTrabajo.query.filter_by(codigo_equipo=codigo).order_by(OrdenTrabajo.id.desc()).all()]
-    return render_template('ficha_equipo.html', eq=equipo, desc_tecnica=desc_tecnica, foto_url=buscar_foto_por_tipo(equipo.tipo_equipo), mants=mantenciones)
+    
+    mants_db = OrdenTrabajo.query.filter_by(codigo_equipo=codigo).order_by(OrdenTrabajo.id.desc()).all()
+    compras_db = CompraRepuesto.query.filter_by(codigo_equipo=codigo).order_by(CompraRepuesto.fecha.desc()).all()
+    lecturas_db = HistorialLectura.query.filter_by(codigo_equipo=codigo).order_by(HistorialLectura.fecha.desc()).limit(5).all()
+
+    mants = [{'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'tipo': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'folio': m.folio} for m in mants_db]
+    compras = [{'fecha': c.fecha.strftime('%d/%m/%Y'), 'oc': c.oc, 'descripcion': c.descripcion, 'costo_str': format_clp(c.costo_pm_clp), 'proveedor': c.proveedor} for c in compras_db]
+    lecturas = [{'fecha': l.fecha.strftime('%d/%m/%Y %H:%M'), 'valor': format_num(l.horometro if l.horometro > 0 else l.kilometraje), 'tipo': 'HORAS' if l.horometro > 0 else 'KM', 'obs': l.observacion} for l in lecturas_db]
+
+    return render_template('ficha_equipo.html', eq=equipo, desc_tecnica=desc_tecnica, foto_url=buscar_foto_por_tipo(equipo.tipo_equipo), mants=mants, compras=compras, lecturas=lecturas)
 
 @app.route('/imprimir_ot/<codigo>', strict_slashes=False)
 def imprimir_ot(codigo):
@@ -288,20 +283,33 @@ def cargar_sql_final():
             conn.commit()
         db.create_all()
 
+        # CARGA DEL ARCHIVO PRINCIPAL
         df_eq = pd.read_excel(archivo_excel, sheet_name="Equipos", skiprows=2).replace({np.nan: None})
-        vin_col = next((c for c in df_eq.columns if 'vin' in str(c).lower() or 'chasis' in str(c).lower()), None)
-        motor_col = next((c for c in df_eq.columns if 'motor' in str(c).lower()), None)
-        patente_col = next((c for c in df_eq.columns if 'patente' in str(c).lower() or 'placa' in str(c).lower()), None)
-
         for _, row in df_eq.iterrows():
             if not row.iloc[0]: continue
-            vin_val = str(row[vin_col]) if vin_col and not pd.isna(row[vin_col]) else ""
-            motor_val = str(row[motor_col]) if motor_col and not pd.isna(row[motor_col]) else ""
-            pat_val = str(row[patente_col]) if patente_col and not pd.isna(row[patente_col]) else ""
-            eq = Equipo(codigo=str(row.iloc[0]).strip(), tipo_equipo=row.iloc[1], marca=row.iloc[2], modelo=str(row.iloc[3]).strip() if row.iloc[3] else None, ano=clean_int(row.iloc[4], None), ubicacion=row.iloc[5], responsable=row.iloc[6], estado_base=str(row.iloc[7]).strip() if row.iloc[7] else 'Operativo', control_base=str(row.iloc[8]).strip().upper() if row.iloc[8] else 'HORAS', frecuencia_base=clean_int(row.iloc[9], 250), promedio_diario=clean_float(row.iloc[10], 0.0), vin=vin_val, n_motor=motor_val, patente=pat_val)
+            eq = Equipo(codigo=str(row.iloc[0]).strip(), tipo_equipo=row.iloc[1], marca=row.iloc[2], modelo=str(row.iloc[3]).strip() if row.iloc[3] else None, ano=clean_int(row.iloc[4], None), ubicacion=row.iloc[5], responsable=row.iloc[6], estado_base=str(row.iloc[7]).strip() if row.iloc[7] else 'Operativo', control_base=str(row.iloc[8]).strip().upper() if row.iloc[8] else 'HORAS', frecuencia_base=clean_int(row.iloc[9], 250), promedio_diario=clean_float(row.iloc[10], 0.0))
             db.session.add(eq)
             db.session.commit()
 
+        # LECTURA DEL SEGUNDO EXCEL / CSV (DATOS TÉCNICOS)
+        archivo_detalles = None
+        if os.path.exists("detalles de equipo.csv"): archivo_detalles = "detalles de equipo.csv"
+        elif os.path.exists("detalles de equipo.xlsx"): archivo_detalles = "detalles de equipo.xlsx"
+
+        if archivo_detalles:
+            df_det = pd.read_csv(archivo_detalles) if archivo_detalles.endswith('.csv') else pd.read_excel(archivo_detalles)
+            df_det.columns = [str(c).strip() for c in df_det.columns]
+            for _, row in df_det.iterrows():
+                cod = str(row.get('Código', row.get('Codigo', ''))).strip()
+                if not cod or cod == 'nan': continue
+                eq = Equipo.query.filter_by(codigo=cod).first()
+                if eq:
+                    eq.patente = str(row.get('Placa', row.get('Patente', eq.patente)))
+                    eq.vin = str(row.get('N° Chasis', row.get('VIN', eq.vin)))
+                    eq.n_motor = str(row.get('N° Motor', row.get('Motor', eq.n_motor)))
+            db.session.commit()
+
+        # CARGA DEL RESTO DE DATOS
         df_lec = pd.read_excel(archivo_excel, sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
         for _, row in df_lec.iterrows():
             if not row.iloc[1]: continue
