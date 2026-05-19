@@ -11,29 +11,24 @@
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales-all.global.min.js"></script>
     
-    <script>
-        tailwind.config = { theme: { extend: { colors: { brand: {
-            bg: '#F1F5F9', textMain: '#1E293B', textMuted: '#64748B', sidebar: '#082b5f',
-            green: '#10B981', red: '#EF4444', yellow: '#F59E0B', blue: '#3B82F6',
-        }}}}}
-    </script>
     <style>
-        body { font-family: 'Roboto', sans-serif; font-size: 14px; color: #1E293B; }
+        body { font-family: 'Roboto', sans-serif; font-size: 13px; background-color: #F1F5F9; margin: 0; }
         .seccion { display: none; } .seccion.active { display: block; }
-        .nav-link { color: #cbd5e1; display: block; padding: 14px 24px; cursor: pointer; font-size: 14px; font-weight: 400; transition: all 0.2s; border-left: 4px solid transparent; }
+        .nav-link { color: #cbd5e1; display: block; padding: 14px 24px; cursor: pointer; transition: all 0.2s; border-left: 4px solid transparent; }
         .nav-link:hover { background: #103a7a; color: white; }
         .nav-link.active { background: #103a7a; color: white; border-left: 4px solid #F59E0B; font-weight: 500; }
         .card-custom { background: white; border-radius: 18px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .table-custom th { text-transform: uppercase; font-size: 11px; color: #64748b; padding: 14px; border-bottom: 1px solid #e2e8f0; }
-        .table-custom td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
-        #calendar { min-height: 700px; }
+        .table-custom th { text-transform: uppercase; font-size: 10px; color: #64748b; padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        .table-custom td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+        #calendar { min-height: 600px; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
-    <aside class="w-64 bg-[#082b5f] text-white flex flex-col shadow-2xl">
+    <aside class="w-60 bg-[#082b5f] text-white flex flex-col shadow-2xl z-20">
         <div class="h-28 bg-white flex flex-col items-center justify-center border-b border-slate-700 py-3">
-            <img src="/static/Logo Azul.png" class="h-10 object-contain">
-            <span class="text-[10px] text-slate-500 uppercase mt-1">Maquinarias</span>
+            <img src="/static/Logo Azul.png" class="h-10 object-contain" onerror="this.outerHTML='<h2 class=\'text-lg font-bold text-brand-sidebar\'>DEMOTRON</h2>'">
+            <span class="text-[9px] text-slate-500 uppercase mt-1">Maquinarias</span>
         </div>
         <nav class="flex-1 py-4 overflow-y-auto">
             <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard</a>
@@ -42,7 +37,7 @@
             <a onclick="switchTab('datos', this)" class="nav-link">Datos de Equipos</a>
             <a onclick="switchTab('plan', this)" class="nav-link">Planificación</a>
             <a onclick="switchTab('cal', this)" class="nav-link">Calendario</a>
-            <a onclick="switchTab('ot', this)" class="nav-link">Mantenciones (OT)</a>
+            <a onclick="switchTab('ot', this)" class="nav-link mt-4 border-t border-white/10 pt-4">Mantenciones (OT)</a>
             <a onclick="switchTab('compras', this)" class="nav-link">Compras PM</a>
             <a onclick="switchTab('prov', this)" class="nav-link">Proveedores</a>
             <a onclick="switchTab('lec', this)" class="nav-link">Lecturas Terreno</a>
@@ -51,39 +46,67 @@
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="h-20 bg-white border-b flex items-center justify-between px-8">
-            <h1 id="title" class="text-xl font-bold text-slate-700 uppercase tracking-tight">Dashboard</h1>
-            <div class="flex items-center gap-8">
-                <div class="text-center"><span class="block text-2xl font-bold">{{ kpis.total }}</span><span class="text-[10px] text-slate-400 uppercase">Equipos</span></div>
-                <div class="text-center"><span class="block text-2xl font-bold text-green-600">{{ kpis.operativos }}</span><span class="text-[10px] text-slate-400 uppercase">Operativos</span></div>
-                <div class="text-center"><span class="block text-2xl font-bold text-red-500">{{ kpis.atrasados }}</span><span class="text-[10px] text-slate-400 uppercase">Atrasados</span></div>
-                <div class="text-center"><span class="block text-2xl font-bold text-yellow-500">{{ kpis.proximos }}</span><span class="text-[10px] text-slate-400 uppercase">Próximos</span></div>
-            </div>
+        <header class="h-16 bg-white border-b flex items-center justify-between px-8">
+            <h1 id="title" class="text-md font-medium text-slate-700 uppercase">Dashboard</h1>
+            <input type="text" onkeyup="filtrarTablas(this.value)" placeholder="Buscar en la vista actual..." class="text-xs border rounded-full px-4 py-1.5 w-64 bg-slate-50">
         </header>
 
-        <div class="flex-1 overflow-y-auto p-8 space-y-8">
-            <div id="dash" class="seccion active space-y-8">
-                <div class="grid grid-cols-3 gap-8">
-                    <div class="card-custom p-6"><canvas id="chartEstado" height="200"></canvas></div>
-                    <div class="card-custom p-6"><canvas id="chartUbic" height="200"></canvas></div>
-                    <div class="card-custom p-6"><canvas id="chartComprasMensuales" height="200"></canvas></div>
+        <div class="flex-1 overflow-y-auto p-8 space-y-6">
+            <div id="dash" class="seccion active space-y-6">
+                <div class="grid grid-cols-5 gap-4">
+                    <div class="card-custom p-4 text-center"><p class="text-[9px] uppercase text-slate-400">Equipos</p><p class="text-xl font-bold">{{ kpis.total }}</p></div>
+                    <div class="card-custom p-4 text-center"><p class="text-[9px] uppercase text-slate-400">Operativos</p><p class="text-xl font-bold text-green-600">{{ kpis.operativos }}</p></div>
+                    <div class="card-custom p-4 text-center"><p class="text-[9px] uppercase text-slate-400">Fuera Serv.</p><p class="text-xl font-bold text-slate-600">{{ kpis.fuera }}</p></div>
+                    <div class="card-custom p-4 text-center"><p class="text-[9px] uppercase text-slate-400">Atrasados</p><p class="text-xl font-bold text-red-500">{{ kpis.atrasados }}</p></div>
+                    <div class="card-custom p-4 text-center"><p class="text-[9px] uppercase text-slate-400">Próximos</p><p class="text-xl font-bold text-yellow-600">{{ kpis.proximos }}</p></div>
                 </div>
-                <div class="card-custom">
-                    <div class="flex gap-4 p-4 overflow-x-auto hide-scrollbar" id="scrollFlota">
-                        {% for a in equipos_aleatorios %}
-                        <div class="min-w-[140px] bg-white border rounded-lg p-2 text-center" onclick="irAFichaEquipo('{{ a.codigo }}')">
-                            <div class="h-20 mb-2 flex items-center justify-center">{% if a.foto_url %}<img src="{{ a.foto_url }}" class="h-full object-contain">{% else %}🚜{% endif %}</div>
-                            <p class="text-xs font-bold">{{ a.codigo }}</p>
-                        </div>
-                        {% endfor %}
-                    </div>
+                <div class="grid grid-cols-3 gap-6">
+                    <div class="card-custom p-4 h-48"><canvas id="chartEstado"></canvas></div>
+                    <div class="card-custom p-4 h-48"><canvas id="chartUbic"></canvas></div>
+                    <div class="card-custom p-4 h-48"><canvas id="chartComprasMensuales"></canvas></div>
                 </div>
+                <div class="card-custom p-4"><div class="flex gap-4 overflow-x-auto hide-scrollbar" id="scrollFlota">{% for a in equipos_aleatorios %}<div class="min-w-[120px] p-2 text-center cursor-pointer" onclick="irAFichaEquipo('{{ a.codigo }}')"><div class="h-16 mb-1 flex items-center justify-center">{% if a.foto_url %}<img src="{{ a.foto_url }}" class="h-full object-contain">{% else %}🚜{% endif %}</div><p class="text-[10px] font-bold">{{ a.codigo }}</p></div>{% endfor %}</div></div>
             </div>
-            </div>
+
+            <div id="ind" class="seccion"><div class="card-custom p-6"><h3 class="text-sm font-medium mb-4">Indicadores Gerenciales</h3><div class="grid grid-cols-5 gap-3 text-center">{% for k,v in kpis.items() %}<div class="bg-slate-50 p-3 rounded">{{k}}<br><span class="text-lg font-bold">{{v}}</span></div>{% endfor %}</div></div></div>
+            <div id="eq" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Código</th><th>Tipo</th><th>Ubicación</th><th>Responsable</th><th>Estado</th></tr></thead><tbody>{% for e in eqs %}<tr><td class="font-bold text-blue-600" onclick="irAFichaEquipo('{{ e.codigo }}')">{{ e.codigo }}</td><td>{{ e.tipo }}</td><td contenteditable="true">{{ e.ubicacion }}</td><td contenteditable="true">{{ e.responsable }}</td><td>{{ e.estado }}</td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="datos" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Equipo</th><th>VIN</th><th>Motor</th><th>Patente</th></tr></thead><tbody>{% for e in eqs %}<tr><td class="font-bold">{{ e.codigo }}</td><td contenteditable="true">{{ e.vin }}</td><td contenteditable="true">{{ e.motor }}</td><td contenteditable="true">{{ e.patente }}</td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="plan" class="seccion"><div class="grid grid-cols-4 gap-4"><div class="card-custom p-4"><h3 class="text-xs uppercase mb-2">Pendiente</h3><div id="kb-pendiente" class="min-h-[200px]">{% for c in kanban['Pendiente'] %}<div class="bg-white border p-2 mb-2 shadow-sm" data-eq="{{ c.codigo }}">{{ c.codigo }}</div>{% endfor %}</div></div><div class="bg-slate-100 p-4 rounded-xl border"></div><div class="bg-slate-100 p-4 rounded-xl border"></div><div id="kb-completado" class="bg-green-50 p-4 rounded-xl border min-h-[200px]"></div></div></div>
+            <div id="cal" class="seccion"><div class="card-custom p-4"><div id="calendar"></div></div></div>
+            <div id="ot" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Fecha</th><th>Equipo</th><th>Folio</th><th>Costo</th></tr></thead><tbody>{% for m in mantenciones %}<tr><td>{{ m.fecha }}</td><td>{{ m.codigo }}</td><td>{{ m.ot_generada }}</td><td>{{ m.costo_str }}</td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="compras" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Fecha</th><th>OC</th><th>Equipo</th><th>Inversión</th></tr></thead><tbody>{% for c in compras %}<tr><td>{{ c.fecha }}</td><td>#{{ c.oc }}</td><td>{{ c.codigo }}</td><td>{{ c.costo_str }}</td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="prov" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Proveedor</th><th>Inversión</th></tr></thead><tbody>{% for p in proveedores %}<tr><td>{{ p.nombre }}</td><td>{{ p.monto_str }}</td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="lec" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Fecha</th><th>Equipo</th><th>Captura</th></tr></thead><tbody>{% for l in lecturas %}<tr><td>{{ l.fecha }}</td><td>{{ l.codigo }}</td><td>{{ l.valor_str }}</td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="rep" class="seccion"><div class="card-custom p-6"><h3>Reportes</h3></div></div>
+        </div>
     </main>
 
     <script>
-        // JS para switches y gráficos...
+        function switchTab(t, el) {
+            document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById(t).classList.add('active'); el.classList.add('active');
+            document.getElementById('title').innerText = el.innerText;
+            if(t==='cal') setTimeout(() => calendar.render(), 100);
+        }
+        function filtrarTablas(q) {
+            q = q.toLowerCase();
+            document.querySelectorAll('.table-searchable tbody tr').forEach(r => r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none');
+        }
+        function irAFichaEquipo(c) { window.location.href = '/equipo/'+c; }
+        
+        // Kanban
+        new Sortable(document.getElementById('kb-pendiente'), { group: 'kanban' });
+        new Sortable(document.getElementById('kb-completado'), { group: 'kanban', onEnd: (e) => { if(e.to.id==='kb-completado') window.open('/imprimir_ot/'+e.item.dataset.eq); }});
+
+        // Gráficos y Calendario
+        const d = {{ charts|safe }};
+        window.onload = function() {
+            new Chart(document.getElementById('chartEstado'), { type: 'doughnut', data: { labels: ['Op','Fuera','Atr'], datasets: [{ data: [d.estado.Operativo||0, d.estado['Fuera de Servicio']||0, d.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'] }] }, options: { maintainAspectRatio:false }});
+            
+            const calendarEl = document.getElementById('calendar');
+            window.calendar = new FullCalendar.Calendar(calendarEl, { initialView: 'dayGridMonth', locale: 'es', events: [] });
+        };
     </script>
 </body>
 </html>
