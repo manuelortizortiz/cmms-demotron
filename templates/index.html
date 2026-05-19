@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>DEMOTRON ERP CMMS</title>
+    <link rel="icon" type="image/png" href="/static/ISOTIPO DEMOTRON.png">
+    
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -33,7 +35,6 @@
         .table-custom thead th { background-color: #f8fafc; text-transform: uppercase; font-size: 11px; font-weight: 500; color: #64748b; padding: 12px 15px; border-bottom: 1px solid #e2e8f0; }
         .table-custom tbody td { padding: 10px 15px; border-bottom: 1px solid #f1f5f9; color: #334155; }
 
-        /* Efecto Editable y Guardado Exitoso */
         td[contenteditable="true"]:focus { outline: 2px solid #3B82F6; background: #fff; border-radius: 2px; }
         .guardado-exito { animation: flashGreen 1s; }
         @keyframes flashGreen { 0% { background-color: #10B981; color: white; } 100% { background-color: transparent; } }
@@ -83,26 +84,11 @@
             </div>
 
             <div class="flex items-center gap-6 divide-x divide-slate-200">
-                <div class="text-center px-4">
-                    <span class="block text-xl font-bold text-brand-sidebar">{{ kpis.total }}</span>
-                    <span class="text-[10px] text-slate-500 uppercase font-medium">Equipos</span>
-                </div>
-                <div class="text-center px-4">
-                    <span class="block text-xl font-bold text-brand-green">{{ kpis.operativos }}</span>
-                    <span class="text-[10px] text-slate-500 uppercase font-medium">Operativos</span>
-                </div>
-                <div class="text-center px-4">
-                    <span class="block text-xl font-bold text-slate-400">{{ kpis.fuera }}</span>
-                    <span class="text-[10px] text-slate-500 uppercase font-medium">Fuera Servicio</span>
-                </div>
-                <div class="text-center px-4">
-                    <span class="block text-xl font-bold text-brand-red">{{ kpis.atrasados }}</span>
-                    <span class="text-[10px] text-slate-500 uppercase font-medium">Atrasados</span>
-                </div>
-                <div class="text-center px-4 border-r pr-6">
-                    <span class="block text-xl font-bold text-brand-yellow">{{ kpis.proximos }}</span>
-                    <span class="text-[10px] text-slate-500 uppercase font-medium">Próximos</span>
-                </div>
+                <div class="text-center px-4"><span class="block text-xl font-bold text-brand-sidebar">{{ kpis.total }}</span><span class="text-[10px] text-slate-500 uppercase font-medium">Equipos</span></div>
+                <div class="text-center px-4"><span class="block text-xl font-bold text-brand-green">{{ kpis.operativos }}</span><span class="text-[10px] text-slate-500 uppercase font-medium">Operativos</span></div>
+                <div class="text-center px-4"><span class="block text-xl font-bold text-slate-400">{{ kpis.fuera }}</span><span class="text-[10px] text-slate-500 uppercase font-medium">Fuera Servicio</span></div>
+                <div class="text-center px-4"><span class="block text-xl font-bold text-brand-red">{{ kpis.atrasados }}</span><span class="text-[10px] text-slate-500 uppercase font-medium">Atrasados</span></div>
+                <div class="text-center px-4 border-r pr-6"><span class="block text-xl font-bold text-brand-yellow">{{ kpis.proximos }}</span><span class="text-[10px] text-slate-500 uppercase font-medium">Próximos</span></div>
                 <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-brand-sidebar font-medium shadow-sm ml-2">A</div>
             </div>
         </header>
@@ -110,7 +96,6 @@
         <div class="flex-1 overflow-y-auto p-6 space-y-6">
             
             <div id="dash" class="seccion active space-y-6">
-                
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="card-custom p-5"><h3 class="text-[11px] text-slate-500 uppercase mb-4 font-medium">Estado Flota</h3><div class="h-48 relative"><canvas id="chartEstado"></canvas></div></div>
                     <div class="card-custom p-5"><h3 class="text-[11px] text-slate-500 uppercase mb-4 font-medium">Ubicaciones (>=5)</h3><div class="h-48 relative"><canvas id="chartUbic"></canvas></div></div>
@@ -151,29 +136,6 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="card-custom p-5">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Catálogo de Activos Correlativos</h3>
-                        <div class="flex gap-2">
-                            <button onclick="document.getElementById('scrollFlota').scrollBy({left: -200, behavior: 'smooth'})" class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center hover:bg-slate-200 text-slate-500"><i class="fa-solid fa-chevron-left"></i></button>
-                            <button onclick="document.getElementById('scrollFlota').scrollBy({left: 200, behavior: 'smooth'})" class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center hover:bg-slate-200 text-slate-500"><i class="fa-solid fa-chevron-right"></i></button>
-                        </div>
-                    </div>
-                    <div id="scrollFlota" class="flex overflow-x-auto hide-scrollbar gap-4 pb-2 snap-x snap-mandatory">
-                        {% for a in equipos_aleatorios %}
-                        <div class="min-w-[140px] max-w-[140px] bg-slate-50 rounded-xl border border-slate-200 overflow-hidden snap-start card-hover cursor-pointer flex-shrink-0 flex flex-col justify-between" onclick="irAFichaEquipo('{{ a.codigo }}')">
-                            <div class="h-20 bg-white border-b border-slate-100 overflow-hidden flex items-center justify-center p-2">
-                                {% if a.foto_url %}<img src="{{ a.foto_url }}" class="w-full h-full object-contain">{% else %}<i class="fa-solid fa-truck-moving text-2xl text-slate-300"></i>{% endif %}
-                            </div>
-                            <div class="p-3 text-center">
-                                <p class="text-xs text-brand-blue font-bold uppercase leading-none mb-1">{{ a.codigo }}</p>
-                                <p class="text-[10px] text-slate-500 mt-1 truncate">{{ a.tipo_equipo }}</p>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
             </div>
 
             <div id="ind" class="seccion">
@@ -185,7 +147,6 @@
                         <div class="bg-brand-sidebar text-white p-4 rounded-xl shadow-sm">Fuera Servicio<br><span class="text-2xl font-bold">{{ kpis.fuera }}</span></div>
                         <div class="bg-brand-sidebar text-white p-4 rounded-xl shadow-sm">Atrasados<br><span class="text-2xl font-bold text-red-400">{{ kpis.atrasados }}</span></div>
                         <div class="bg-brand-sidebar text-white p-4 rounded-xl shadow-sm">Próximos<br><span class="text-2xl font-bold text-yellow-400">{{ kpis.proximos }}</span></div>
-                        
                         <div class="bg-slate-100 p-4 rounded-xl border">En Taller<br><span class="text-xl font-medium text-slate-700">{{ kpis.en_taller }}</span></div>
                         <div class="bg-slate-100 p-4 rounded-xl border">OT Abiertas<br><span class="text-xl font-medium text-slate-700">{{ kpis.ot_abiertas }}</span></div>
                         <div class="bg-slate-100 p-4 rounded-xl border">% Disp.<br><span class="text-xl font-medium text-green-600">{{ kpis.controlado_pct }}%</span></div>
@@ -195,84 +156,19 @@
                 </div>
             </div>
 
-            <div id="eq" class="seccion">
-                <div class="card-custom">
-                    <div class="overflow-x-auto">
-                        <table class="w-full table-custom table-searchable">
-                            <thead><tr><th>Código</th><th>Tipo Equipo</th><th>Ubicación Actual</th><th>Responsable</th><th class="text-center">Ctrl</th><th class="text-right">Lectura Actual</th><th class="text-right">Próxima PM</th><th class="text-right">Margen</th><th class="text-center">Estado</th></tr></thead>
-                            <tbody class="divide-y divide-slate-100 text-slate-700">
-                                {% for e in eqs %}
-                                <tr class="hover:bg-slate-50 cursor-pointer">
-                                    <td class="font-medium text-brand-blue" onclick="irAFichaEquipo('{{ e.codigo }}')">{{ e.codigo }}</td>
-                                    <td>{{ e.tipo_equipo }}</td>
-                                    <td contenteditable="true" onblur="guardarInline(this, '{{ e.codigo }}', 'ubicacion')">{{ e.ubicacion }}</td>
-                                    <td contenteditable="true" onblur="guardarInline(this, '{{ e.codigo }}', 'responsable')">{{ e.responsable }}</td>
-                                    <td class="text-center"><span class="px-2 py-0.5 border rounded text-[10px]">{{ e.ctrl }}</span></td>
-                                    <td class="text-right">{{ e.lectura }}</td>
-                                    <td class="text-right text-slate-400">{{ e.proxima }}</td>
-                                    <td class="text-right font-medium {% if e.margen < 0 %}text-red-500{% else %}text-green-500{% endif %}">{{ e.margen_str }}</td>
-                                    <td class="text-center">
-                                        <span class="inline-flex px-2 py-0.5 rounded text-[10px] {% if e.semaforo == 'red' %}bg-red-50 text-red-600 border border-red-200{% elif e.semaforo == 'yellow' %}bg-yellow-50 text-yellow-600 border border-yellow-200{% else %}bg-green-50 text-green-600 border border-green-200{% endif %}">{{ e.estado_base }}</span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            <div id="eq" class="seccion"><div class="card-custom"><div class="overflow-x-auto"><table class="w-full table-custom table-searchable"><thead><tr><th>Código</th><th>Tipo Equipo</th><th>Ubicación Actual</th><th>Responsable</th><th class="text-center">Ctrl</th><th class="text-right">Lectura Actual</th><th class="text-right">Próxima PM</th><th class="text-right">Margen</th><th class="text-center">Estado</th></tr></thead><tbody class="divide-y divide-slate-100 text-slate-700">{% for e in eqs %}<tr class="hover:bg-slate-50 cursor-pointer"><td class="font-medium text-brand-blue" onclick="irAFichaEquipo('{{ e.codigo }}')">{{ e.codigo }}</td><td>{{ e.tipo_equipo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{ e.codigo }}', 'ubicacion')">{{ e.ubicacion }}</td><td contenteditable="true" onblur="guardarInline(this, '{{ e.codigo }}', 'responsable')">{{ e.responsable }}</td><td class="text-center"><span class="px-2 py-0.5 border rounded text-[10px]">{{ e.ctrl }}</span></td><td class="text-right">{{ e.lectura }}</td><td class="text-right text-slate-400">{{ e.proxima }}</td><td class="text-right font-medium {% if e.margen < 0 %}text-red-500{% else %}text-green-500{% endif %}">{{ e.margen_str }}</td><td class="text-center"><span class="inline-flex px-2 py-0.5 rounded text-[10px] {% if e.semaforo == 'red' %}bg-red-50 text-red-600 border border-red-200{% elif e.semaforo == 'yellow' %}bg-yellow-50 text-yellow-600 border border-yellow-200{% else %}bg-green-50 text-green-600 border border-green-200{% endif %}">{{ e.estado_base }}</span></td></tr>{% endfor %}</tbody></table></div></div></div>
 
-            <div id="datos" class="seccion">
-                <div class="card-custom">
-                    <div class="px-5 py-4 bg-slate-50 border-b text-xs font-medium text-slate-600 uppercase flex justify-between items-center">
-                        <span>Ficha Técnica y Pautas</span>
-                        <span class="text-[9px] bg-blue-100 text-blue-600 px-2 py-1 rounded">Haga clic en el texto azul para editar y guardar</span>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full table-custom table-searchable">
-                            <thead><tr><th>Equipo</th><th>N° Chasis (VIN)</th><th>N° Motor</th><th>Patente</th><th>Pauta</th></tr></thead>
-                            <tbody class="divide-y divide-slate-100 text-slate-600">
-                                {% for e in eqs %}
-                                <tr class="hover:bg-slate-50">
-                                    <td class="font-medium text-brand-sidebar cursor-pointer" onclick="irAFichaEquipo('{{ e.codigo }}')">{{ e.codigo }} <span class="text-[10px] text-slate-400 block">{{ e.tipo_equipo }}</span></td>
-                                    <td contenteditable="true" onblur="guardarInline(this, '{{ e.codigo }}', 'vin')" class="text-blue-600 italic cursor-text hover:bg-blue-50 p-2 rounded transition-colors">{{ e.vin }}</td>
-                                    <td contenteditable="true" onblur="guardarInline(this, '{{ e.codigo }}', 'motor')" class="text-blue-600 italic cursor-text hover:bg-blue-50 p-2 rounded transition-colors">{{ e.motor }}</td>
-                                    <td contenteditable="true" onblur="guardarInline(this, '{{ e.codigo }}', 'patente')" class="text-blue-600 italic cursor-text hover:bg-blue-50 p-2 rounded transition-colors">{{ e.patente }}</td>
-                                    <td class="text-xs">Cada {{ e.frec }} {{ e.ctrl }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            <div id="datos" class="seccion"><div class="card-custom"><div class="px-5 py-4 bg-slate-50 border-b text-xs font-medium text-slate-600 uppercase flex justify-between items-center"><span>Ficha Técnica y Pautas</span><span class="text-[9px] bg-blue-100 text-blue-600 px-2 py-1 rounded">Haga clic en el texto azul para editar y guardar</span></div><div class="overflow-x-auto"><table class="w-full table-custom table-searchable"><thead><tr><th>Equipo</th><th>N° Chasis (VIN)</th><th>N° Motor</th><th>Patente</th><th>Pauta</th></tr></thead><tbody class="divide-y divide-slate-100 text-slate-600">{% for e in eqs %}<tr class="hover:bg-slate-50"><td class="font-medium text-brand-sidebar cursor-pointer" onclick="irAFichaEquipo('{{ e.codigo }}')">{{ e.codigo }} <span class="text-[10px] text-slate-400 block">{{ e.tipo_equipo }}</span></td><td contenteditable="true" onblur="guardarInline(this, '{{ e.codigo }}', 'vin')" class="text-blue-600 italic cursor-text hover:bg-blue-50 p-2 rounded transition-colors">{{ e.vin }}</td><td contenteditable="true" onblur="guardarInline(this, '{{ e.codigo }}', 'motor')" class="text-blue-600 italic cursor-text hover:bg-blue-50 p-2 rounded transition-colors">{{ e.motor }}</td><td contenteditable="true" onblur="guardarInline(this, '{{ e.codigo }}', 'patente')" class="text-blue-600 italic cursor-text hover:bg-blue-50 p-2 rounded transition-colors">{{ e.patente }}</td><td class="text-xs">Cada {{ e.frec }} {{ e.ctrl }}</td></tr>{% endfor %}</tbody></table></div></div></div>
 
-            <div id="plan" class="seccion">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div class="bg-slate-50 p-4 rounded-xl border flex flex-col h-[calc(100vh-180px)]"><h3 class="font-medium text-xs uppercase mb-3 border-b pb-2 text-slate-600">Pendiente</h3><div id="kb-pendiente" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[100px]">{% for c in kanban['Pendiente'] %}<div class="bg-white rounded-xl border p-4 cursor-grab shadow-sm" data-eq="{{ c.codigo }}"><h4 class="font-medium text-brand-sidebar text-sm mb-1">{{ c.codigo }}</h4><p class="text-xs text-slate-500">{{ c.tipo }}</p><p class="text-xs text-red-500 mt-2 font-medium">Atraso: {{ c.margen }}</p></div>{% endfor %}</div></div>
-                    <div class="bg-slate-50 p-4 rounded-xl border flex flex-col h-[calc(100vh-180px)]"><h3 class="font-medium text-xs uppercase mb-3 border-b border-blue-500 pb-2 text-blue-700">En Progreso</h3><div id="kb-progreso" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[100px]">{% for c in kanban['En Progreso'] %}<div class="bg-white rounded-xl border p-4 cursor-grab shadow-sm" data-eq="{{ c.codigo }}"><h4 class="font-medium text-brand-sidebar text-sm mb-1">{{ c.codigo }}</h4><p class="text-xs text-slate-500">{{ c.tipo }}</p></div>{% endfor %}</div></div>
-                    <div class="bg-slate-50 p-4 rounded-xl border flex flex-col h-[calc(100vh-180px)]"><h3 class="font-medium text-xs uppercase mb-3 border-b border-yellow-500 pb-2 text-yellow-700">En Revisión</h3><div id="kb-revision" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[100px]"></div></div>
-                    <div class="bg-slate-50 p-4 rounded-xl border flex flex-col h-[calc(100vh-180px)]"><h3 class="font-medium text-xs uppercase mb-3 border-b border-green-500 pb-2 text-green-700">Completado (Soltar = OT)</h3><div id="kb-completado" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[100px]"></div></div>
-                </div>
-            </div>
+            <div id="plan" class="seccion"><div class="grid grid-cols-1 md:grid-cols-4 gap-4"><div class="bg-slate-50 p-4 rounded-xl border flex flex-col min-h-[400px]"><h3 class="font-medium text-xs uppercase mb-3 border-b pb-2 text-slate-600">Pendiente</h3><div id="kb-pendiente" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[100px]" data-status="Pendiente">{% for c in kanban['Pendiente'] %}<div class="bg-white rounded-xl border p-4 cursor-grab shadow-sm" data-eq="{{ c.codigo }}"><h4 class="font-medium text-brand-sidebar text-sm mb-1">{{ c.codigo }}</h4><p class="text-xs text-slate-500">{{ c.tipo }}</p><p class="text-xs text-red-500 mt-2 font-medium">Atraso: {{ c.margen }}</p></div>{% endfor %}</div></div><div class="bg-slate-50 p-4 rounded-xl border flex flex-col min-h-[400px]"><h3 class="font-medium text-xs uppercase mb-3 border-b border-blue-500 pb-2 text-blue-700">En Proceso</h3><div id="kb-progreso" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[100px]" data-status="En Proceso">{% for c in kanban['En Progreso'] %}<div class="bg-white rounded-xl border p-4 cursor-grab shadow-sm" data-eq="{{ c.codigo }}"><h4 class="font-medium text-brand-sidebar text-sm mb-1">{{ c.codigo }}</h4><p class="text-xs text-slate-500">{{ c.tipo }}</p></div>{% endfor %}</div></div><div class="bg-slate-50 p-4 rounded-xl border flex flex-col min-h-[400px]"><h3 class="font-medium text-xs uppercase mb-3 border-b border-yellow-500 pb-2 text-yellow-700">En Revisión</h3><div id="kb-revision" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[100px]" data-status="En Revisión">{% for c in kanban['En Revisión'] %}<div class="bg-white rounded-xl border p-4 cursor-grab shadow-sm" data-eq="{{ c.codigo }}"><h4 class="font-medium text-brand-sidebar text-sm mb-1">{{ c.codigo }}</h4></div>{% endfor %}</div></div><div class="bg-slate-50 p-4 rounded-xl border flex flex-col min-h-[400px]"><h3 class="font-medium text-xs uppercase mb-3 border-b border-green-500 pb-2 text-green-700">Finalizada (Cerrar OT)</h3><div id="kb-completado" class="space-y-3 overflow-y-auto hide-scrollbar flex-1 pb-4 min-h-[100px]" data-status="Finalizada"></div></div></div></div>
 
-            <div id="cal" class="seccion"><div class="card-custom p-5 h-[calc(100vh-140px)] flex flex-col"><div id="calendar" class="flex-1 text-sm"></div></div></div>
+            <div id="cal" class="seccion h-full overflow-y-auto pb-10"><div class="card-custom p-5 m-2"><div id="calendar" style="min-height: 800px; width: 100%;"></div></div></div>
 
             <div id="ot" class="seccion"><div class="card-custom"><div class="overflow-x-auto"><table class="w-full table-custom table-searchable"><thead><tr><th>Fecha</th><th>Código Equipo</th><th>Folio OT (Auto)</th><th>Obra / Taller</th><th class="text-right">Lectura</th><th class="text-right">Costo Automático</th><th class="text-center">Estado</th><th class="text-center">Acción</th></tr></thead><tbody class="divide-y divide-slate-100 text-slate-600">{% for m in mantenciones %}<tr class="hover:bg-slate-50"><td class="text-center text-slate-500">{{ m.fecha }}</td><td class="font-medium text-brand-sidebar text-center cursor-pointer" onclick="irAFichaEquipo('{{ m.codigo }}')">{{ m.codigo }}</td><td class="font-medium text-slate-800">{{ m.ot_generada }}</td><td class="text-[11px]">{{ m.lugar }}</td><td class="text-right">{{ m.lectura_str }}</td><td class="text-right text-purple-700 font-medium">{{ m.costo_str }}</td><td class="text-center"><span class="px-2 py-0.5 text-[9px] rounded border bg-slate-50">{{ m.estado }}</span></td><td class="text-center"><a href="/imprimir_ot/{{ m.codigo }}" target="_blank" class="text-brand-blue hover:underline text-xs">Imprimir</a></td></tr>{% endfor %}</tbody></table></div></div></div>
-
             <div id="compras" class="seccion"><div class="card-custom"><div class="overflow-x-auto"><table class="w-full table-custom table-searchable"><thead><tr><th>Fecha OC</th><th>Orden Compra</th><th>Código Equipo</th><th>Descripción Insumo</th><th>Proveedor</th><th class="text-right">Inversión CLP</th><th class="text-center">Estado OC</th></tr></thead><tbody class="divide-y divide-slate-100 text-slate-600">{% for c in compras %}<tr class="hover:bg-slate-50"><td class="text-center text-slate-500">{{ c.fecha }}</td><td class="text-center text-slate-400">#{{ c.oc }}</td><td class="text-brand-sidebar text-center font-medium" onclick="irAFichaEquipo('{{ c.codigo }}')">{{ c.codigo }}</td><td>{{ c.descripcion }}</td><td>{{ c.proveedor }}</td><td class="text-right text-purple-600 font-medium">{{ c.costo_str }}</td><td class="text-center"><span class="px-2 py-0.5 text-[9px] rounded border bg-green-50 text-green-600 border-green-200">{{ c.estado }}</span></td></tr>{% endfor %}</tbody></table></div></div></div>
-
             <div id="prov" class="seccion"><div class="card-custom max-w-4xl mx-auto"><div class="overflow-x-auto"><table class="w-full table-custom table-searchable"><thead><tr><th>Proveedor</th><th class="text-center">OCs Emitidas</th><th class="text-right">Inversión Total</th></tr></thead><tbody class="divide-y divide-slate-100 text-slate-600">{% for p in proveedores %}<tr class="hover:bg-slate-50"><td class="font-medium">{{ p.nombre }}</td><td class="text-center">{{ p.cantidad }}</td><td class="text-right font-medium text-purple-700">{{ p.monto_str }}</td></tr>{% endfor %}</tbody></table></div></div></div>
-
             <div id="lec" class="seccion"><div class="card-custom"><div class="overflow-x-auto"><table class="w-full table-custom table-searchable"><thead><tr><th>Fecha Registro</th><th>Código Unidad</th><th class="text-right">Valor Capturado</th><th class="text-center">Unidad</th><th>Faena / Frente</th><th>Responsable</th><th>Observación</th></tr></thead><tbody class="divide-y divide-slate-100 text-slate-600">{% for l in lecturas %}<tr class="hover:bg-slate-50"><td class="text-center text-slate-500">{{ l.fecha }}</td><td class="text-brand-sidebar text-center font-medium" onclick="irAFichaEquipo('{{ l.codigo }}')">{{ l.codigo }}</td><td class="text-right text-blue-600 font-medium">{{ l.valor_str }}</td><td class="text-center"><span class="px-1.5 py-0.5 border border-slate-200 rounded text-[9px]">{{ l.tipo }}</span></td><td class="text-[11px]">{{ l.ubicacion }}</td><td>{{ l.responsable }}</td><td class="italic text-slate-400">{{ l.obs }}</td></tr>{% endfor %}</tbody></table></div></div></div>
-
-            <div id="rep" class="seccion">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="card-custom overflow-hidden"><div class="px-5 py-4 bg-[#082b5f] text-white text-xs uppercase font-medium">Top 10 Gastos (Costos)</div><table class="w-full table-custom"><thead><tr><th>Código</th><th>Tipo</th><th class="text-right">Total</th></tr></thead><tbody class="divide-y divide-slate-100 text-slate-600">{% for r in reporte_costos[:10] %}<tr><td class="font-medium">{{ r.codigo }}</td><td>{{ r.tipo }}</td><td class="text-right font-medium text-purple-700">{{ r.costo_str }}</td></tr>{% endfor %}</tbody></table></div>
-                    <div class="card-custom overflow-hidden"><div class="px-5 py-4 bg-yellow-500 text-white text-xs uppercase font-medium">Proyección Críticos (< 200)</div><table class="w-full table-custom"><thead><tr><th>Código</th><th>Tipo</th><th class="text-right">Margen</th></tr></thead><tbody class="divide-y divide-slate-100 text-slate-600">{% for p in reportes_prox[:10] %}<tr><td class="font-medium">{{ p.codigo }}</td><td>{{ p.tipo_equipo }}</td><td class="text-right font-medium text-yellow-600">{{ p.margen_str }}</td></tr>{% endfor %}</tbody></table></div>
-                </div>
-            </div>
-
+            <div id="rep" class="seccion"><div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="card-custom overflow-hidden"><div class="px-5 py-4 bg-[#082b5f] text-white text-xs uppercase font-medium">Top 10 Gastos (Costos)</div><table class="w-full table-custom"><thead><tr><th>Código</th><th>Tipo</th><th class="text-right">Total</th></tr></thead><tbody class="divide-y divide-slate-100 text-slate-600">{% for r in reporte_costos[:10] %}<tr><td class="font-medium">{{ r.codigo }}</td><td>{{ r.tipo }}</td><td class="text-right font-medium text-purple-700">{{ r.costo_str }}</td></tr>{% endfor %}</tbody></table></div><div class="card-custom overflow-hidden"><div class="px-5 py-4 bg-yellow-500 text-white text-xs uppercase font-medium">Proyección Críticos (< 200)</div><table class="w-full table-custom"><thead><tr><th>Código</th><th>Tipo</th><th class="text-right">Margen</th></tr></thead><tbody class="divide-y divide-slate-100 text-slate-600">{% for p in reportes_prox[:10] %}<tr><td class="font-medium">{{ p.codigo }}</td><td>{{ p.tipo_equipo }}</td><td class="text-right font-medium text-yellow-600">{{ p.margen_str }}</td></tr>{% endfor %}</tbody></table></div></div></div>
         </div>
     </main>
 
@@ -282,10 +178,9 @@
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.getElementById(target).classList.add('active'); el.classList.add('active');
             
-            const t = { 'dash': 'Dashboard', 'ind': 'Indicadores Analíticos', 'eq': 'Equipos', 'datos': 'Datos de Equipos', 'plan': 'Planificación Kanban', 'cal': 'Calendario Mensual', 'ot': 'Mantenciones (OT)', 'compras': 'Compras PM', 'prov': 'Proveedores', 'lec': 'Lecturas Terreno', 'rep': 'Reportes Generales' };
+            const t = { 'dash': 'Dashboard', 'ind': 'Indicadores Analíticos', 'eq': 'Equipos', 'datos': 'Datos Técnicos', 'plan': 'Planificación Kanban', 'cal': 'Calendario Mensual', 'ot': 'Mantenciones (OT)', 'compras': 'Compras PM', 'prov': 'Proveedores', 'lec': 'Lecturas Terreno', 'rep': 'Reportes Generales' };
             document.getElementById('title').innerText = t[target] || 'Dashboard';
             if(target === 'cal') setTimeout(initCalendario, 100);
-            
             document.getElementById('buscador-global').value = ''; filtrarTablas('');
         }
 
@@ -297,7 +192,7 @@
             filas.forEach(fila => { fila.style.display = fila.innerText.toLowerCase().includes(query) ? '' : 'none'; });
         }
 
-        // GUARDADO EN VIVO (AJAX) - LA MAGIA DEL VIN/MOTOR
+        // GUARDADO INLINE
         function guardarInline(el, codigo, campo) {
             const valor = el.innerText.trim();
             el.classList.add('guardado-exito');
@@ -308,16 +203,23 @@
                 setTimeout(() => el.classList.remove('guardado-exito'), 1000);
             });
         }
-
         function irAFichaEquipo(codigo) { if(codigo) window.location.href = '/equipo/' + codigo; }
 
+        // KANBAN UPDATE A BASE DE DATOS
         const kbCols = ['kb-pendiente', 'kb-progreso', 'kb-revision', 'kb-completado'];
         kbCols.forEach(col => {
             new Sortable(document.getElementById(col), {
                 group: 'kanban', animation: 150, ghostClass: 'sortable-ghost',
                 onEnd: function (evt) {
-                    if(evt.to.id === 'kb-completado') {
-                        const eq = evt.item.getAttribute('data-eq');
+                    const eq = evt.item.getAttribute('data-eq');
+                    const nuevo_estado = evt.to.getAttribute('data-status');
+                    
+                    fetch('/update_kanban', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ codigo: eq, estado: nuevo_estado })
+                    });
+                    
+                    if(nuevo_estado === 'Finalizada') {
                         window.open('/imprimir_ot/' + eq, '_blank'); 
                         evt.item.style.borderLeft = "3px solid #10B981";
                     }
@@ -325,25 +227,25 @@
             });
         });
 
+        // CALENDARIO EN ESPAÑOL
         const mData = {{ mantenciones|tojson }}; let cal;
         function initCalendario() {
             if(cal) { cal.render(); return; }
             const evts = mData.filter(m => m.fecha_iso).map(m => ({ title: m.codigo + ' (' + m.ot_generada + ')', start: m.fecha_iso, extendedProps: { l: m.lugar } }));
             cal = new FullCalendar.Calendar(document.getElementById('calendar'), {
-                initialView: 'dayGridMonth', initialDate: '2026-05-01', headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth' }, events: evts, locale: 'es',
-                eventContent: function(a) { return { html: `<div class="p-1"><b class="block text-brand-sidebar truncate">${a.event.title}</b><i class="text-[9px] text-slate-500">${a.event.extendedProps.l || 'Taller'}</i></div>` }; }
+                initialView: 'dayGridMonth', initialDate: '2026-05-01', locale: 'es',
+                headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth' }, events: evts,
+                eventContent: function(a) { return { html: `<div class="p-1"><b class="block text-brand-sidebar truncate">${a.event.title}</b><i class="text-[10px] text-slate-500">${a.event.extendedProps.l || 'Taller'}</i></div>` }; }
             });
             cal.render();
         }
 
+        // GRAFICOS
         const d = {{ charts|safe }};
         window.onload = function() {
             Chart.defaults.font.family = "'Roboto', sans-serif";
-            // Estado Flota (con Leyenda a la derecha)
             new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '65%', data: { labels: ['Operativos', 'Fuera de Servicio', 'Atrasados'], datasets: [{ data: [d.estado.Operativo||0, d.estado['Fuera de Servicio']||0, d.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'], borderWidth:0 }] }, options: { maintainAspectRatio:false, plugins:{legend:{display: true, position:'right', labels:{boxWidth:12, font:{size:11}}}} }});
-            // Ubicaciones
             new Chart(document.getElementById('chartUbic'), { type: 'bar', data: { labels: Object.keys(d.ubicacion), datasets: [{ data: Object.values(d.ubicacion), backgroundColor: '#082b5f', borderRadius: 4 }] }, options: { maintainAspectRatio:false, scales:{x:{grid:{display:false}, ticks:{font:{size:10}}}, y:{grid:{color:'#F1F5F9'}}} , plugins:{legend:{display:false}} }});
-            // Compras Mensuales (Barra Horizontal)
             new Chart(document.getElementById('chartComprasMensuales'), { type: 'bar', data: { labels: Object.keys(d.compras_mensuales), datasets: [{ label: 'Inversión', data: Object.values(d.compras_mensuales), backgroundColor: '#3B82F6', borderRadius: 4 }] }, options: { indexAxis: 'y', maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}}, y:{grid:{color:'#F1F5F9'}}} }});
         };
     </script>
