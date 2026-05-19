@@ -6,59 +6,96 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: 'Roboto', sans-serif; background-color: #F1F5F9; }
-        .card-custom { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        body { font-family: 'Roboto', sans-serif; background-color: #F1F5F9; font-size: 13px; }
+        .card-custom { background: white; border-radius: 18px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden; }
+        .table-custom th { text-transform: uppercase; font-size: 10px; color: #64748b; padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        .table-custom td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; }
     </style>
 </head>
 <body class="p-8">
 
-    <div class="max-w-5xl mx-auto space-y-6">
+    <div class="max-w-6xl mx-auto space-y-6">
         <a href="/" class="text-blue-600 hover:underline text-sm font-medium">← Volver al Dashboard</a>
 
-        <div class="card-custom p-6 flex flex-col md:flex-row gap-8 items-center">
-            <div class="w-48 h-32 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center p-4">
-                {% if foto_url %}<img src="{{ foto_url }}" class="h-full object-contain">{% else %}<span class="text-4xl">🚜</span>{% endif %}
-            </div>
-            <div class="flex-1">
-                <div class="flex items-center gap-3 mb-2">
-                    <h1 class="text-3xl font-bold text-[#082b5f]">{{ eq.codigo }}</h1>
-                    <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full border border-green-200">{{ eq.estado_base }}</span>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="lg:col-span-2 card-custom p-6">
+                <div class="flex flex-col md:flex-row gap-6 items-start">
+                    <div class="w-48 h-32 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center p-4">
+                        {% if foto_url %}<img src="{{ foto_url }}" class="h-full object-contain">{% else %}<span class="text-4xl">🚜</span>{% endif %}
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <h1 class="text-3xl font-bold text-[#082b5f]">{{ eq.codigo }}</h1>
+                            <span class="px-3 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-full border border-green-200 uppercase">{{ eq.estado_base }}</span>
+                        </div>
+                        <h2 class="text-lg font-medium text-slate-700 mb-4">{{ eq.tipo_equipo }} | {{ eq.marca }} {{ eq.modelo }}</h2>
+                        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded text-sm text-slate-700 leading-relaxed italic">
+                            {{ desc_tecnica }}
+                        </div>
+                    </div>
                 </div>
-                <h2 class="text-lg font-medium text-slate-700 mb-4">{{ eq.tipo_equipo }} | {{ eq.marca }} {{ eq.modelo }}</h2>
-                
-                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded text-sm text-slate-700 leading-relaxed italic">
-                    {{ desc_tecnica }}
+            </div>
+
+            <div class="card-custom p-6">
+                <h3 class="text-[10px] font-bold text-slate-500 uppercase mb-4 border-b pb-2">Identificación Técnica</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between border-b pb-2"><span class="text-[10px] text-slate-400 uppercase">Patente</span><span class="font-bold text-slate-800">{{ eq.patente or 'S/P' }}</span></div>
+                    <div class="flex justify-between border-b pb-2"><span class="text-[10px] text-slate-400 uppercase">Año</span><span class="font-bold text-slate-800">{{ eq.ano or 'N/A' }}</span></div>
+                    <div class="flex justify-between border-b pb-2"><span class="text-[10px] text-slate-400 uppercase">VIN (Chasis)</span><span class="font-bold text-blue-700 text-xs">{{ eq.vin or 'S/I' }}</span></div>
+                    <div class="flex justify-between border-b pb-2"><span class="text-[10px] text-slate-400 uppercase">N° Motor</span><span class="font-bold text-blue-700 text-xs">{{ eq.n_motor or 'S/I' }}</span></div>
+                    <div class="flex justify-between"><span class="text-[10px] text-slate-400 uppercase">Frec. Mantención</span><span class="font-bold text-slate-800">{{ eq.frecuencia_base }} {{ eq.control_base }}</span></div>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-6">
-            <div class="card-custom p-5 text-center"><p class="text-xs text-slate-400 uppercase font-medium mb-1">Lectura Actual</p><p class="text-2xl font-bold text-slate-800">{{ eq.lectura_actual }} {{ eq.control_base }}</p></div>
-            <div class="card-custom p-5 text-center"><p class="text-xs text-slate-400 uppercase font-medium mb-1">Próximo Mantenimiento</p><p class="text-2xl font-bold text-slate-800">{{ eq.proxima_pm }} {{ eq.control_base }}</p></div>
-            <div class="card-custom p-5 text-center"><p class="text-xs text-slate-400 uppercase font-medium mb-1">Margen Operativo</p><p class="text-2xl font-bold {% if eq.margen < 0 %}text-red-500{% else %}text-green-500{% endif %}">{{ eq.margen }} {{ eq.control_base }}</p></div>
-        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div class="card-custom overflow-hidden">
+                <div class="px-5 py-3 bg-[#082b5f] text-white border-b font-medium uppercase text-[10px]">Historial de Mantenciones (OT)</div>
+                <div class="overflow-y-auto max-h-[300px]">
+                    <table class="w-full table-custom">
+                        <thead><tr><th>Fecha</th><th>Tipo</th><th class="text-right">Costo</th><th class="text-center">Estado</th></tr></thead>
+                        <tbody>
+                            {% for m in mants %}
+                            <tr><td>{{ m.fecha }}</td><td>{{ m.tipo }}</td><td class="text-right font-medium text-purple-700">{{ m.costo_str }}</td><td class="text-center"><span class="px-2 py-0.5 bg-slate-100 rounded text-[9px]">{{ m.estado }}</span></td></tr>
+                            {% endfor %}
+                            {% if not mants %}<tr><td colspan="4" class="text-center py-4 italic text-slate-400">Sin historial</td></tr>{% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-        <div class="card-custom overflow-hidden">
-            <div class="px-5 py-3 bg-slate-50 border-b font-medium text-slate-600 uppercase text-xs">Historial de Intervenciones (OT)</div>
-            <table class="w-full text-left text-sm">
-                <thead class="bg-slate-100 text-[10px] text-slate-500 uppercase border-b border-slate-200">
-                    <tr><th class="px-5 py-3">Fecha</th><th class="px-5 py-3">Intervención</th><th class="text-right px-5 py-3">Costo</th><th class="px-5 py-3 text-center">Estado</th><th class="px-5 py-3 text-center">Imprimir</th></tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 text-slate-600">
-                    {% for m in mants %}
-                    <tr class="hover:bg-slate-50">
-                        <td class="px-5 py-3">{{ m.fecha }}</td><td class="px-5 py-3">{{ m.tipo }}</td><td class="text-right px-5 py-3 font-medium text-purple-700">{{ m.costo_str }}</td>
-                        <td class="text-center px-5 py-3"><span class="px-2 py-1 bg-slate-100 rounded text-[10px] border">{{ m.estado }}</span></td>
-                        <td class="text-center px-5 py-3"><a href="/imprimir_ot/{{ eq.codigo }}" target="_blank" class="text-blue-500 hover:underline text-xs">Generar PDF</a></td>
-                    </tr>
-                    {% endfor %}
-                    {% if mants|length == 0 %}
-                    <tr><td colspan="5" class="text-center py-6 text-slate-400 italic">No registra intervenciones históricas.</td></tr>
-                    {% endif %}
-                </tbody>
-            </table>
+            <div class="card-custom overflow-hidden">
+                <div class="px-5 py-3 bg-blue-600 text-white border-b font-medium uppercase text-[10px]">Últimas 5 Lecturas</div>
+                <div class="overflow-y-auto max-h-[300px]">
+                    <table class="w-full table-custom">
+                        <thead><tr><th>Fecha</th><th class="text-right">Valor</th><th>Observación</th></tr></thead>
+                        <tbody>
+                            {% for l in lecturas %}
+                            <tr><td>{{ l.fecha }}</td><td class="text-right font-bold text-blue-600">{{ l.valor }} {{ l.tipo }}</td><td class="italic text-slate-400">{{ l.obs }}</td></tr>
+                            {% endfor %}
+                            {% if not lecturas %}<tr><td colspan="3" class="text-center py-4 italic text-slate-400">Sin lecturas</td></tr>{% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="card-custom col-span-1 md:col-span-2 overflow-hidden">
+                <div class="px-5 py-3 bg-green-600 text-white border-b font-medium uppercase text-[10px]">Órdenes de Compra (OC) Relacionadas</div>
+                <div class="overflow-y-auto max-h-[300px]">
+                    <table class="w-full table-custom">
+                        <thead><tr><th>Fecha</th><th>OC</th><th>Proveedor</th><th>Descripción</th><th class="text-right">Inversión</th></tr></thead>
+                        <tbody>
+                            {% for c in compras %}
+                            <tr><td>{{ c.fecha }}</td><td class="font-medium text-slate-700">#{{ c.oc }}</td><td>{{ c.proveedor }}</td><td>{{ c.descripcion }}</td><td class="text-right font-bold text-purple-700">{{ c.costo_str }}</td></tr>
+                            {% endfor %}
+                            {% if not compras %}<tr><td colspan="5" class="text-center py-4 italic text-slate-400">Sin compras asignadas</td></tr>{% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
-
 </body>
 </html>
