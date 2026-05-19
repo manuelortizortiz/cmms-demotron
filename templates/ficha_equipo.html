@@ -1,130 +1,64 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DEMOTRON - Historial Técnico {{ equipo.codigo }}</title>
-<style>
-:root{
-  --azul:#082b5f; --azul2:#0c3f86; --azul3:#1261d6; --fondo:#f4f6fa; --borde:#e6ebf2;
-  --texto:#12203a; --rojo:#ef3f45; --amarillo:#f7b500; --verde:#35b96b; --shadow:0 6px 18px rgba(9,30,66,.08);
-}
-*{box-sizing:border-box}
-body{ margin:0; background:var(--fondo); color:var(--texto); font-family:"Segoe UI",sans-serif; }
-.topbar{ height:64px; background:#fff; border-bottom:1px solid var(--borde); display:flex; align-items:center; padding:0 24px; box-shadow:0 2px 8px rgba(9,30,66,.04); }
-.logo{ font-size:24px; font-weight:950; letter-spacing:5px; color:var(--azul); }
-.wrap{ padding:20px 24px }
-.grid-ficha{ display:grid; grid-template-columns:1fr 2fr; gap:20px; }
-.panel{ background:#fff; border:1px solid var(--borde); border-radius:10px; box-shadow:var(--shadow); padding:20px; margin-bottom: 20px; }
-.panel h2{ margin:0 0 6px; color:#0b1d3d; font-size:22px; }
-.panel h3{ margin:0 0 14px; color:var(--azul2); font-size:14px; border-bottom:2px solid var(--fondo); padding-bottom:6px; font-weight:700; text-transform: uppercase; }
-.form-group { margin-bottom: 12px; }
-.form-group label { display:block; font-size:11px; font-weight:700; margin-bottom:4px; color:#475569; text-transform:uppercase; }
-.form-control { width:100%; height:38px; border:1px solid var(--borde); border-radius:6px; padding:0 10px; font-family:inherit; font-size:13.5px; }
-.btn{ border:0; border-radius:6px; padding:8px 14px; background:var(--azul); color:#fff; font-weight:700; cursor:pointer; text-decoration:none; display:inline-block; font-size:13px; }
-.btn.verde{ background:var(--verde) }
-.btn.secundario{ background:#e2e8f0; color:#334155; margin-right:8px; }
-.pill{ border-radius:999px; padding:4px 10px; font-weight:900; font-size:11px; display:inline-block; }
-.pill.red{ background:#ffe1e3; color:#dc2626 }
-.pill.yellow{ background:#fff4cc; color:#a16207 }
-.pill.green { background:#dcfce7; color:#15803d }
-.tablewrap{ overflow-x:auto; width: 100%; }
-table{ width:100%; border-collapse:collapse; font-size:13px; text-align: left; }
-th{ padding:10px; border-bottom:2px solid var(--borde); color:#475569; font-size:11px; text-transform: uppercase; }
-td{ padding:10px; border-bottom:1px solid #eef2f7; vertical-align:middle; }
-.code{ color:var(--azul); font-weight:700; }
-.kpi-mini{ background:var(--fondo); padding:10px 14px; border-radius:8px; margin-bottom:10px; }
-.kpi-mini small{ font-size:10px; font-weight:800; color:#64748b; display:block; text-transform:uppercase; }
-.kpi-mini span{ font-size:16px; font-weight:800; color:var(--texto); }
-.img-ficha-maquina { width: 100%; height: 180px; background: #e2e8f0; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--borde); }
-.img-ficha-maquina img { width: 100%; height: 100%; object-fit: cover; }
-</style>
+    <meta charset="UTF-8">
+    <title>Ficha Técnica: {{ eq.codigo }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Roboto', sans-serif; background-color: #F1F5F9; }
+        .card-custom { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+    </style>
 </head>
-<body>
-<header class="topbar"><div class="logo">DEMOTRON</div></header>
-<main class="wrap">
-  <div style="margin-bottom: 15px;"><a href="/erp" class="btn secundario">◀ Volver al Dashboard General</a></div>
-  <div class="grid-ficha">
-    <div>
-      <div class="panel">
-        <div class="img-ficha-maquina">
-          {% if foto_url %}
-            <img src="{{ foto_url }}" alt="Foto {{ equipo.tipo_equipo }}">
-          {% else %}
-            <span style="font-size:48px;">🚜</span>
-          {% endif %}
+<body class="p-8">
+
+    <div class="max-w-5xl mx-auto space-y-6">
+        <a href="/" class="text-blue-600 hover:underline text-sm font-medium">← Volver al Dashboard</a>
+
+        <div class="card-custom p-6 flex flex-col md:flex-row gap-8 items-center">
+            <div class="w-48 h-32 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center p-4">
+                {% if foto_url %}<img src="{{ foto_url }}" class="h-full object-contain">{% else %}<span class="text-4xl">🚜</span>{% endif %}
+            </div>
+            <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                    <h1 class="text-3xl font-bold text-[#082b5f]">{{ eq.codigo }}</h1>
+                    <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full border border-green-200">{{ eq.estado_base }}</span>
+                </div>
+                <h2 class="text-lg font-medium text-slate-700 mb-4">{{ eq.tipo_equipo }} | {{ eq.marca }} {{ eq.modelo }}</h2>
+                
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded text-sm text-slate-700 leading-relaxed italic">
+                    {{ desc_tecnica }}
+                </div>
+            </div>
         </div>
-        <h2>UNIDAD: {{ equipo.codigo }}</h2>
-        <p style="color:#64748b; margin:0 0 15px 0; font-size:13px;">{{ equipo.tipo_equipo }} · {{ equipo.marca }} {{ equipo.modelo }}</p>
-        <form action="/equipo/{{ equipo.codigo }}" method="POST">
-          <div class="form-group"><label>Ubicación Geográfica</label><input type="text" name="ubicacion" class="form-control" value="{{ equipo.ubicacion or '' }}"></div>
-          <div class="form-group"><label>Próxima PM Objetivo</label><input type="number" name="proxima_pm" class="form-control" value="{{ equipo.proxima_pm or 0 }}"></div>
-          <div class="form-group">
-            <label>Estado Maestro</label>
-            <select name="estado_base" class="form-control">
-              <option value="Operativo" {% if equipo.estado_base == 'Operativo' %}selected{% endif %}>Operativo</option>
-              <option value="Taller" {% if equipo.estado_base == 'Taller' %}selected{% endif %}>En Taller</option>
-              <option value="Fuera de Servicio" {% if equipo.estado_base == 'Fuera de Servicio' %}selected{% endif %}>Fuera de Servicio</option>
-            </select>
-          </div>
-          <button type="submit" class="btn verde" style="width: 100%; margin-top: 10px;">Actualizar Ficha Maestra</button>
-        </form>
-      </div>
-      <div class="panel">
-        <h3>Indicadores Base</h3>
-        <div class="kpi-mini"><small>Unidad de Control</small><span>{{ equipo.control_base }}</span></div>
-        <div class="kpi-mini"><small>Lectura Actual</small><span>{{ equipo.lectura_actual_str }}</span></div>
-        <div class="kpi-mini"><small>Margen Técnico</small><span style="color:{% if equipo.margen < 0 %}var(--rojo){% else %}var(--verde){% endif %};">{{ equipo.margen_str }}</span></div>
-      </div>
+
+        <div class="grid grid-cols-3 gap-6">
+            <div class="card-custom p-5 text-center"><p class="text-xs text-slate-400 uppercase font-medium mb-1">Lectura Actual</p><p class="text-2xl font-bold text-slate-800">{{ eq.lectura_actual }} {{ eq.control_base }}</p></div>
+            <div class="card-custom p-5 text-center"><p class="text-xs text-slate-400 uppercase font-medium mb-1">Próximo Mantenimiento</p><p class="text-2xl font-bold text-slate-800">{{ eq.proxima_pm }} {{ eq.control_base }}</p></div>
+            <div class="card-custom p-5 text-center"><p class="text-xs text-slate-400 uppercase font-medium mb-1">Margen Operativo</p><p class="text-2xl font-bold {% if eq.margen < 0 %}text-red-500{% else %}text-green-500{% endif %}">{{ eq.margen }} {{ eq.control_base }}</p></div>
+        </div>
+
+        <div class="card-custom overflow-hidden">
+            <div class="px-5 py-3 bg-slate-50 border-b font-medium text-slate-600 uppercase text-xs">Historial de Intervenciones (OT)</div>
+            <table class="w-full text-left text-sm">
+                <thead class="bg-slate-100 text-[10px] text-slate-500 uppercase border-b border-slate-200">
+                    <tr><th class="px-5 py-3">Fecha</th><th class="px-5 py-3">Intervención</th><th class="text-right px-5 py-3">Costo</th><th class="px-5 py-3 text-center">Estado</th><th class="px-5 py-3 text-center">Imprimir</th></tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-600">
+                    {% for m in mants %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-5 py-3">{{ m.fecha }}</td><td class="px-5 py-3">{{ m.tipo }}</td><td class="text-right px-5 py-3 font-medium text-purple-700">{{ m.costo_str }}</td>
+                        <td class="text-center px-5 py-3"><span class="px-2 py-1 bg-slate-100 rounded text-[10px] border">{{ m.estado }}</span></td>
+                        <td class="text-center px-5 py-3"><a href="/imprimir_ot/{{ eq.codigo }}" target="_blank" class="text-blue-500 hover:underline text-xs">Generar PDF</a></td>
+                    </tr>
+                    {% endfor %}
+                    {% if mants|length == 0 %}
+                    <tr><td colspan="5" class="text-center py-6 text-slate-400 italic">No registra intervenciones históricas.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
     </div>
-    <div>
-      <div class="panel">
-        <h3>🛠 HISTORIAL DE MANTENCIONES Y ORDENES DE TRABAJO</h3>
-        <div class="tablewrap">
-          <table>
-            <thead><tr><th>Fecha</th><th>Folio</th><th>Tipo Mantención</th><th>Lectura</th><th>Lugar</th><th>Estado</th></tr></thead>
-            <tbody>
-              {% for m in mantenciones %}
-              <tr><td>{{ m.fecha }}</td><td class="code">#{{ m.folio }}</td><td><b>{{ m.tipo_mantencion }}</b></td><td>{{ m.lectura_str }}</td><td>📍 {{ m.lugar }}</td><td><span class="pill {% if m.estado == 'Abierta' %}yellow{% else %}green{% endif %}">{{ m.estado }}</span></td></tr>
-              {% else %}
-              <tr><td colspan="6" style="color:#64748b; padding:10px;">No registra órdenes de trabajo históricas.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="panel">
-        <h3>🛒 COMPRAS DE REPUESTOS ASOCIADOS A LA UNIDAD</h3>
-        <div class="tablewrap">
-          <table>
-            <thead><tr><th>Fecha</th><th>OC / Documento</th><th>Detalle Repuesto</th><th>Proveedor</th><th>Costo Total</th></tr></thead>
-            <tbody>
-              {% for c in compras %}
-              <tr><td>{{ c.fecha }}</td><td class="code">{{ c.oc }}</td><td>{{ c.descripcion }}</td><td>{{ c.proveedor }}</td><td style="font-weight: bold;">{{ c.costo_str }}</td></tr>
-              {% else %}
-              <tr><td colspan="5" style="color:#64748b; padding:10px;">No registra compras asignadas.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="panel">
-        <h3>📈 LOG HISTÓRICO DE LECTURAS</h3>
-        <div class="tablewrap">
-          <table>
-            <thead><tr><th>Fecha Captura</th><th>Valor Capturado</th><th>Ubicación / Frente</th><th>Responsable</th></tr></thead>
-            <tbody>
-              {% for l in lecturas %}
-              <tr><td>{{ l.fecha }}</td><td style="font-weight: bold; color: var(--azul2);">{{ l.valor_str }}</td><td>📍 {{ l.obra_ubicacion }}</td><td>👤 {{ l.responsable }}</td></tr>
-              {% else %}
-              <tr><td colspan="4" style="color:#64748b; padding:10px;">No registra historial de lecturas.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-</main>
+
 </body>
 </html>
