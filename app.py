@@ -85,6 +85,7 @@ class Equipo(db.Model):
     estado_base = db.Column(db.String(50))      
     control_base = db.Column(db.String(50))     
     frecuencia_base = db.Column(db.Integer)    
+    promedio_diario = db.Column(db.Float) # <--- AQUÍ ESTÁ LA COLUMNA RESTAURADA
     lectura_actual = db.Column(db.Integer, default=0)
     proxima_pm = db.Column(db.Integer, default=0)
     vin = db.Column(db.String(100), default="")
@@ -216,7 +217,6 @@ def dashboard():
 def ficha_equipo(codigo):
     equipo = Equipo.query.filter_by(codigo=codigo).first_or_404()
     
-    # Generación Automática de la Descripción Técnica del Equipo (incluyendo VIN y Motor)
     vin_texto = equipo.vin if equipo.vin and equipo.vin != "None" else "No Registrado"
     motor_texto = equipo.n_motor if equipo.n_motor and equipo.n_motor != "None" else "No Registrado"
     patente_texto = equipo.patente if equipo.patente and equipo.patente != "None" else "S/P"
