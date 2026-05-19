@@ -51,17 +51,19 @@ def format_clp(val):
 
 def buscar_foto_por_tipo(tipo_equipo):
     if not tipo_equipo: return None
-    tipo_limpio = str(tipo_equipo).strip().lower()
+    t = str(tipo_equipo).lower()
     
-    if "tracto" in tipo_limpio or "tractocamion" in tipo_limpio: return "/static/equipos_real/tractocamion.png"
-    elif "man" in tipo_limpio and "tolva" in tipo_limpio: return "/static/equipos_real/camion_man_tolva.png"
-    elif "camioneta" in tipo_limpio: return "/static/equipos_real/maxus_t60.png"
-    elif "pintura" in tipo_limpio or "slurry" in tipo_limpio or "plano" in tipo_limpio: return "/static/equipos_real/camion_liviano.png"
+    if "man" in t and "tolva" in t: return "/static/equipos_real/camion_man_tolva.png"
+    if "tracto" in t: return "/static/equipos_real/tractocamion.png"
+    if "camioneta" in t: return "/static/equipos_real/maxus_t60.png"
+    if "minibus" in t or "mini bus" in t: return "/static/equipos_real/minibus.png"
+    if any(x in t for x in ["liviano", "pintura", "slurry", "plano"]): return "/static/equipos_real/camion_liviano.png"
 
     base_dir = os.path.join(app.root_path, 'static', 'equipos_real')
     if not os.path.exists(base_dir): base_dir = "static/equipos_real"
     remplazos = {"á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ñ": "n", " ": "_", "-": "_"}
-    target = "".join(remplazos.get(c, c) for c in tipo_limpio)
+    target = "".join(remplazos.get(c, c) for c in t)
+
     if os.path.exists(base_dir):
         for root, dirs, files in os.walk(base_dir):
             for f in files:
@@ -85,7 +87,7 @@ class Equipo(db.Model):
     estado_base = db.Column(db.String(50))      
     control_base = db.Column(db.String(50))     
     frecuencia_base = db.Column(db.Integer)    
-    promedio_diario = db.Column(db.Float) # <--- AQUÍ ESTÁ LA COLUMNA RESTAURADA
+    promedio_diario = db.Column(db.Float)
     lectura_actual = db.Column(db.Integer, default=0)
     proxima_pm = db.Column(db.Integer, default=0)
     vin = db.Column(db.String(100), default="")
@@ -150,7 +152,7 @@ def dashboard():
         for e in eqs_db:
             foto_url = buscar_foto_por_tipo(e.tipo_equipo)
             eq_data = {
-                'codigo': e.codigo, 'tipo': e.tipo_equipo, 'marca': e.marca, 'modelo': e.modelo, 'ubicacion': e.ubicacion or 'Sin Ubicación',
+                'codigo': e.codigo, 'tipo_equipo': e.tipo_equipo, 'marca': e.marca, 'modelo': e.modelo, 'ubicacion': e.ubicacion or 'Sin Ubicación',
                 'responsable': e.responsable or 'No Asignado', 'ctrl': e.control_base, 'lectura': format_num(e.lectura_actual),
                 'proxima': format_num(e.proxima_pm), 'margen': e.margen, 'margen_str': format_num(e.margen), 'estado': e.estado_base,
                 'semaforo': e.semaforo, 'foto_url': foto_url, 'vin': e.vin, 'motor': e.n_motor, 'patente': e.patente, 'frec': e.frecuencia_base
@@ -165,11 +167,11 @@ def dashboard():
             if e.semaforo == 'yellow': proximos_count += 1
             if e.margen < 200 and e.estado_base not in ['Fuera de Servicio', 'No operativo']: reportes_prox.append(eq_data)
 
-        reporte_costos = sorted([{'codigo': c, 'tipo': next((e['tipo'] for e in equipos if e['codigo'] == c), ''), 'costo_str': format_clp(v), 'costo_raw': v} for c, v in costos_por_equipo.items() if v > 0], key=lambda x: x['costo_raw'], reverse=True)
+        reporte_costos = sorted([{'codigo': c, 'tipo': next((e['tipo_equipo'] for e in equipos if e['codigo'] == c), ''), 'costo_str': format_clp(v), 'costo_raw': v} for c, v in costos_por_equipo.items() if v > 0], key=lambda x: x['costo_raw'], reverse=True)
 
         kanban_tareas = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Completado': []}
         for c in criticos:
-            kanban_tareas['Pendiente'].append({'id': f"TASK-{c['codigo']}", 'codigo': c['codigo'], 'tipo': c['tipo'], 'margen': c['margen_str'], 'ubicacion': c['ubicacion'], 'estado': 'Pendiente'})
+            kanban_tareas['Pendiente'].append({'id': f"TASK-{c['codigo']}", 'codigo': c['codigo'], 'tipo': c['tipo_equipo'], 'margen': c['margen_str'], 'ubicacion': c['ubicacion'], 'estado': 'Pendiente'})
 
         todas_mantenciones = []; contador_ot = 1821
         for m in ots_db:
@@ -213,19 +215,40 @@ def dashboard():
     except Exception as e:
         return f"<h1 style='color:red;'>Error crítico:</h1><p>{str(e)}</p>"
 
+# ==========================================
+# RUTA AJAX PARA GUARDADO EN VIVO
+# ==========================================
+@app.route('/update_inline', methods=['POST'])
+def update_inline():
+    try:
+        data = request.json
+        codigo = data.get('codigo')
+        campo = data.get('campo')
+        valor = data.get('valor')
+        
+        equipo = Equipo.query.filter_by(codigo=codigo).first()
+        if equipo:
+            if campo == 'vin': equipo.vin = valor
+            elif campo == 'motor': equipo.n_motor = valor
+            elif campo == 'patente': equipo.patente = valor
+            elif campo == 'ubicacion': equipo.ubicacion = valor
+            elif campo == 'responsable': equipo.responsable = valor
+            db.session.commit()
+            return jsonify({"status": "success"})
+        return jsonify({"status": "error", "message": "Equipo no encontrado"}), 404
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route('/equipo/<codigo>', strict_slashes=False)
 def ficha_equipo(codigo):
     equipo = Equipo.query.filter_by(codigo=codigo).first_or_404()
-    
-    vin_texto = equipo.vin if equipo.vin and equipo.vin != "None" else "No Registrado"
-    motor_texto = equipo.n_motor if equipo.n_motor and equipo.n_motor != "None" else "No Registrado"
-    patente_texto = equipo.patente if equipo.patente and equipo.patente != "None" else "S/P"
-    
+    vin_texto = equipo.vin if equipo.vin and str(equipo.vin).lower() not in ["none", "nan", ""] else "No Registrado"
+    motor_texto = equipo.n_motor if equipo.n_motor and str(equipo.n_motor).lower() not in ["none", "nan", ""] else "No Registrado"
+    patente_texto = equipo.patente if equipo.patente and str(equipo.patente).lower() not in ["none", "nan", ""] else "S/P"
     desc_tecnica = f"Unidad {equipo.tipo_equipo} marca {equipo.marca} {equipo.modelo}. Identificación de chasis (VIN): {vin_texto}. Número de Motor: {motor_texto}. Placa Patente: {patente_texto}. Equipo sujeto a pauta de mantenimiento cada {equipo.frecuencia_base} {equipo.control_base}."
-
     mantenciones = [{'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'tipo': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado} for m in OrdenTrabajo.query.filter_by(codigo_equipo=codigo).order_by(OrdenTrabajo.id.desc()).all()]
     foto_url = buscar_foto_por_tipo(equipo.tipo_equipo)
-    
     return render_template('ficha_equipo.html', eq=equipo, desc_tecnica=desc_tecnica, foto_url=foto_url, mants=mantenciones)
 
 @app.route('/imprimir_ot/<codigo>', strict_slashes=False)
@@ -246,11 +269,19 @@ def cargar_sql_final():
         db.create_all()
 
         df_eq = pd.read_excel(archivo_excel, sheet_name="Equipos", skiprows=2).replace({np.nan: None})
+        
+        # BÚSQUEDA INTELIGENTE
+        vin_col = next((c for c in df_eq.columns if 'vin' in str(c).lower() or 'chasis' in str(c).lower()), None)
+        motor_col = next((c for c in df_eq.columns if 'motor' in str(c).lower()), None)
+        patente_col = next((c for c in df_eq.columns if 'patente' in str(c).lower() or 'placa' in str(c).lower()), None)
+
         for _, row in df_eq.iterrows():
             if not row.iloc[0]: continue
-            vin_val = str(row.get('VIN', '')) if 'VIN' in df_eq.columns else ""
-            motor_val = str(row.get('Motor', '')) if 'Motor' in df_eq.columns else ""
-            pat_val = str(row.get('Patente', '')) if 'Patente' in df_eq.columns else ""
+            
+            vin_val = str(row[vin_col]) if vin_col and not pd.isna(row[vin_col]) else ""
+            motor_val = str(row[motor_col]) if motor_col and not pd.isna(row[motor_col]) else ""
+            pat_val = str(row[patente_col]) if patente_col and not pd.isna(row[patente_col]) else ""
+
             eq = Equipo(codigo=str(row.iloc[0]).strip(), tipo_equipo=row.iloc[1], marca=row.iloc[2], modelo=str(row.iloc[3]).strip() if row.iloc[3] else None, ano=clean_int(row.iloc[4], None), ubicacion=row.iloc[5], responsable=row.iloc[6], estado_base=str(row.iloc[7]).strip() if row.iloc[7] else 'Operativo', control_base=str(row.iloc[8]).strip().upper() if row.iloc[8] else 'HORAS', frecuencia_base=clean_int(row.iloc[9], 250), promedio_diario=clean_float(row.iloc[10], 0.0), vin=vin_val, n_motor=motor_val, patente=pat_val)
             db.session.add(eq)
             db.session.commit()
