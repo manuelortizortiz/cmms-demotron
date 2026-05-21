@@ -73,7 +73,7 @@ class OrdenTrabajo(db.Model):
     tipo_ot = db.Column(db.String(50), default="Preventiva")
     tipo_mantencion = db.Column(db.String(100))
     lectura = db.Column(db.Integer, default=0)
-    es_pm = db.Column(db.String(20)) # <--- COLUMNA RESTAURADA
+    es_pm = db.Column(db.String(20))
     folio = db.Column(db.String(50))
     lugar = db.Column(db.String(100))
     costo_mantencion_clp = db.Column(db.Float, default=0.0)
@@ -81,11 +81,23 @@ class OrdenTrabajo(db.Model):
 
 class HistorialLectura(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    fecha = db.Column(db.DateTime); codigo_equipo = db.Column(db.String(50)); horometro = db.Column(db.Integer, default=0); kilometraje = db.Column(db.Integer, default=0); obra_ubicacion = db.Column(db.String(100)); responsable = db.Column(db.String(100)); observacion = db.Column(db.String(250))
+    fecha = db.Column(db.DateTime)
+    codigo_equipo = db.Column(db.String(50))
+    horometro = db.Column(db.Integer, default=0)
+    kilometraje = db.Column(db.Integer, default=0)
+    obra_ubicacion = db.Column(db.String(100))
+    responsable = db.Column(db.String(100))
+    observacion = db.Column(db.String(250))
 
 class CompraRepuesto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    fecha = db.Column(db.DateTime); oc = db.Column(db.String(100)); codigo_equipo = db.Column(db.String(50)); descripcion = db.Column(db.String(250)); proveedor = db.Column(db.String(100)); costo_pm_clp = db.Column(db.Float, default=0.0); estado_oc = db.Column(db.String(100))
+    fecha = db.Column(db.DateTime)
+    oc = db.Column(db.String(100))
+    codigo_equipo = db.Column(db.String(50))
+    descripcion = db.Column(db.String(250))
+    proveedor = db.Column(db.String(100))
+    costo_pm_clp = db.Column(db.Float, default=0.0)
+    estado_oc = db.Column(db.String(100))
 
 # --- INICIALIZACIÓN DE TABLAS Y USUARIO ADMIN ---
 with app.app_context(): 
@@ -147,7 +159,7 @@ def buscar_foto_por_tipo(tipo_equipo):
     return None
 
 # ==========================================
-# RUTAS DE LOGIN Y AUTENTICACIÓN
+# RUTAS DE LOGIN
 # ==========================================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -177,7 +189,8 @@ def logout():
 @app.route('/erp', strict_slashes=False)
 def dashboard():
     try:
-        eqs_db = Equipo.query.all(); ots_db = OrdenTrabajo.query.order_by(OrdenTrabajo.id.desc()).all()
+        eqs_db = Equipo.query.all()
+        ots_db = OrdenTrabajo.query.order_by(OrdenTrabajo.id.desc()).all()
         compras_db = CompraRepuesto.query.order_by(CompraRepuesto.fecha.desc()).all()
         lecturas_db = HistorialLectura.query.order_by(HistorialLectura.fecha.desc()).all()
         logs_db = LogActividad.query.order_by(LogActividad.id.desc()).limit(100).all()
@@ -186,7 +199,14 @@ def dashboard():
         conteo_estado = {'Operativo': 0, 'Fuera de Servicio': 0, 'Taller': 0}
         
         for e in eqs_db:
-            eq_data = {'codigo': e.codigo, 'tipo': e.tipo_equipo, 'ubicacion': e.ubicacion or '', 'responsable': e.responsable or '', 'ctrl': e.control_base, 'lectura': format_num(e.lectura_actual), 'proxima': format_num(e.proxima_pm), 'margen': e.margen, 'margen_str': format_num(e.margen), 'estado': e.estado_base, 'foto_url': buscar_foto_por_tipo(e.tipo_equipo), 'vin': e.vin, 'motor': e.n_motor, 'patente': e.patente}
+            eq_data = {
+                'codigo': e.codigo, 'tipo': e.tipo_equipo, 'ubicacion': e.ubicacion or '',
+                'responsable': e.responsable or '', 'ctrl': e.control_base,
+                'lectura': format_num(e.lectura_actual), 'proxima': format_num(e.proxima_pm),
+                'margen': e.margen, 'margen_str': format_num(e.margen), 'estado': e.estado_base,
+                'foto_url': buscar_foto_por_tipo(e.tipo_equipo), 'vin': e.vin,
+                'motor': e.n_motor, 'patente': e.patente
+            }
             equipos.append(eq_data)
             status_limpio = 'Fuera de Servicio' if e.estado_base in ['Fuera de Servicio', 'No operativo'] else e.estado_base
             conteo_estado[status_limpio] = conteo_estado.get(status_limpio, 0) + 1
@@ -198,18 +218,28 @@ def dashboard():
         equipos_con_ot = [ot.codigo_equipo for ot in ots_activas]
 
         for ot in ots_activas:
-            kanban_tareas[ot.estado].append({'codigo': ot.codigo_equipo, 'tipo': ot.folio, 'margen': ot.fecha.strftime('%d/%m/%Y'), 'estado': ot.estado})
+            kanban_tareas[ot.estado].append({
+                'codigo': ot.codigo_equipo, 'tipo': ot.folio,
+                'margen': ot.fecha.strftime('%d/%m/%Y'), 'estado': ot.estado
+            })
 
         for c in criticos:
             if c['codigo'] not in equipos_con_ot:
-                kanban_tareas['Pendiente'].append({'codigo': c['codigo'], 'tipo': c['tipo'], 'margen': c['margen_str'], 'estado': 'Pendiente'})
+                kanban_tareas['Pendiente'].append({
+                    'codigo': c['codigo'], 'tipo': c['tipo'],
+                    'margen': c['margen_str'], 'estado': 'Pendiente'
+                })
 
         todas_mantenciones = [{'fecha': m.fecha.strftime('%d/%m/%Y'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'lugar': m.lugar, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'tipo_ot': m.tipo_ot} for m in ots_db]
         todas_compras = [{'fecha': c.fecha.strftime('%d/%m/%Y'), 'oc': c.oc, 'codigo': c.codigo_equipo, 'descripcion': c.descripcion, 'proveedor': c.proveedor, 'costo_str': format_clp(c.costo_pm_clp), 'estado': c.estado_oc} for c in compras_db]
         todas_lecturas = [{'fecha': l.fecha.strftime('%d/%m/%Y %H:%M'), 'codigo': l.codigo_equipo, 'valor_str': format_num(l.horometro if l.horometro>0 else l.kilometraje), 'tipo': 'HR' if l.horometro>0 else 'KM', 'ubicacion': l.obra_ubicacion, 'responsable': l.responsable, 'obs': l.observacion} for l in lecturas_db]
         logs_list = [{'fecha': l.fecha.strftime('%d/%m/%Y %H:%M:%S'), 'usuario': l.usuario, 'accion': l.accion} for l in logs_db]
 
-        kpis = {'total': len(eqs_db), 'operativos': conteo_estado.get('Operativo',0), 'fuera': conteo_estado.get('Fuera de Servicio',0), 'atrasados': len(criticos), 'ot_abiertas': len(ots_activas), 'costo_mes_str': format_clp(sum(c.costo_pm_clp or 0 for c in compras_db))}
+        kpis = {
+            'total': len(eqs_db), 'operativos': conteo_estado.get('Operativo',0),
+            'fuera': conteo_estado.get('Fuera de Servicio',0), 'atrasados': len(criticos),
+            'ot_abiertas': len(ots_activas), 'costo_mes_str': format_clp(sum(c.costo_pm_clp or 0 for c in compras_db))
+        }
 
         return render_template('index.html', kpis=kpis, eqs=equipos, criticos=criticos, taller=taller, mantenciones=todas_mantenciones, compras=todas_compras, lecturas=todas_lecturas, kanban=kanban_tareas, logs=logs_list, current_user=session['username'])
     except Exception as e: return f"Error crítico: {str(e)}"
@@ -217,7 +247,8 @@ def dashboard():
 @app.route('/update_kanban', methods=['POST'])
 def update_kanban():
     data = request.json
-    codigo = data.get('codigo'); columna_destino = data.get('estado')
+    codigo = data.get('codigo')
+    columna_destino = data.get('estado')
     ot_activa = OrdenTrabajo.query.filter(OrdenTrabajo.codigo_equipo == codigo, OrdenTrabajo.estado.in_(['Pendiente', 'En Progreso', 'En Revisión'])).first()
 
     if ot_activa:
@@ -250,6 +281,118 @@ def update_inline():
 @app.route('/equipo/<codigo>', strict_slashes=False)
 def ficha_equipo(codigo):
     equipo = Equipo.query.filter_by(codigo=codigo).first_or_404()
-    vin_texto = equipo.vin if equipo.vin and str(equipo.vin).lower() not in ["none", "nan", ""] else "No Registrado"
-    motor_texto = equipo.n_motor if equipo.n_motor and str(equipo.n_motor).lower() not in ["none", "nan", ""] else "No Registrado"
-    patente_texto = equipo.patente if equipo.patente and str(equipo
+    
+    vin_list = ["none", "nan", ""]
+    vin_texto = equipo.vin if equipo.vin and str(equipo.vin).lower() not in vin_list else "No Registrado"
+    motor_texto = equipo.n_motor if equipo.n_motor and str(equipo.n_motor).lower() not in vin_list else "No Registrado"
+    patente_texto = equipo.patente if equipo.patente and str(equipo.patente).lower() not in vin_list else "S/P"
+    
+    desc_tecnica = f"Unidad {equipo.tipo_equipo} marca {equipo.marca} {equipo.modelo}. Identificación de chasis (VIN): {vin_texto}. Número de Motor: {motor_texto}. Placa Patente: {patente_texto}. Equipo sujeto a pauta de mantenimiento cada {equipo.frecuencia_base} {equipo.control_base}."
+    
+    mants_db = OrdenTrabajo.query.filter_by(codigo_equipo=codigo).order_by(OrdenTrabajo.id.desc()).all()
+    compras_db = CompraRepuesto.query.filter_by(codigo_equipo=codigo).order_by(CompraRepuesto.fecha.desc()).all()
+    lecturas_db = HistorialLectura.query.filter_by(codigo_equipo=codigo).order_by(HistorialLectura.fecha.desc()).limit(5).all()
+
+    mants = [{'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'tipo': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'folio': m.folio} for m in mants_db]
+    compras = [{'fecha': c.fecha.strftime('%d/%m/%Y'), 'oc': c.oc, 'descripcion': c.descripcion, 'costo_str': format_clp(c.costo_pm_clp), 'proveedor': c.proveedor} for c in compras_db]
+    lecturas = [{'fecha': l.fecha.strftime('%d/%m/%Y %H:%M'), 'valor': format_num(l.horometro if l.horometro > 0 else l.kilometraje), 'tipo': 'HORAS' if l.horometro > 0 else 'KM', 'obs': l.observacion} for l in lecturas_db]
+
+    return render_template('ficha_equipo.html', eq=equipo, desc_tecnica=desc_tecnica, foto_url=buscar_foto_por_tipo(equipo.tipo_equipo), mants=mants, compras=compras, lecturas=lecturas)
+
+@app.route('/imprimir_ot/<codigo>', strict_slashes=False)
+def imprimir_ot(codigo):
+    equipo = Equipo.query.filter_by(codigo=codigo).first_or_404()
+    ot = OrdenTrabajo.query.filter_by(codigo_equipo=codigo).order_by(OrdenTrabajo.id.desc()).first()
+    ot_data = {'folio': ot.folio if (ot and ot.folio and str(ot.folio).lower() != 'none') else f"OT-DMT-0{random.randint(2000, 9000)}", 'tipo_mantencion': ot.tipo_mantencion if ot else "MANTENIMIENTO PREVENTIVO"}
+    return render_template('ot_print.html', equipo=equipo, ot=ot_data, fecha_actual=datetime.now().strftime("%d/%m/%Y"))
+
+# ==========================================
+# CARGA DE SQL SIN CASCADE PARA RENDER (SQLITE)
+# ==========================================
+@app.route('/admin/cargar_sql_final', strict_slashes=False)
+def cargar_sql_final():
+    if 'user_id' not in session: return redirect(url_for('login'))
+    
+    archivo_excel = "CMMS DEMOTRON MANU ORTIZ.xlsx"
+    if not os.path.exists(archivo_excel): return "Error: Falta Excel principal."
+    
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(db.text("DROP TABLE IF EXISTS compra_repuesto;"))
+            conn.execute(db.text("DROP TABLE IF EXISTS orden_trabajo;"))
+            conn.execute(db.text("DROP TABLE IF EXISTS historial_lectura;"))
+            conn.execute(db.text("DROP TABLE IF EXISTS equipo;"))
+            conn.commit()
+            
+        db.create_all()
+
+        # 1. CARGAMOS EQUIPOS BÁSICOS
+        df_eq = pd.read_excel(archivo_excel, sheet_name="Equipos", skiprows=2).replace({np.nan: None})
+        for _, row in df_eq.iterrows():
+            if not row.iloc[0]: continue
+            eq = Equipo(codigo=str(row.iloc[0]).strip(), tipo_equipo=row.iloc[1], marca=row.iloc[2], modelo=str(row.iloc[3]).strip() if row.iloc[3] else None, ano=clean_int(row.iloc[4], None), ubicacion=row.iloc[5], responsable=row.iloc[6], estado_base=str(row.iloc[7]).strip() if row.iloc[7] else 'Operativo', control_base=str(row.iloc[8]).strip().upper() if row.iloc[8] else 'HORAS', frecuencia_base=clean_int(row.iloc[9], 250))
+            db.session.add(eq)
+        db.session.commit()
+
+        # 2. CARGAMOS LOS DETALLES TÉCNICOS (VIN, MOTOR) DESDE EL CSV/XLSX
+        archivo_detalles = "detalles de equipo.xlsx - Hoja1.csv"
+        if os.path.exists(archivo_detalles):
+            df_det = pd.read_csv(archivo_detalles)
+            df_det.columns = [str(c).strip() for c in df_det.columns]
+            for _, row in df_det.iterrows():
+                cod = str(row.get('Código', row.get('Codigo', ''))).strip()
+                eq = Equipo.query.filter_by(codigo=cod).first()
+                if eq:
+                    eq.patente = str(row.get('Placa', ''))
+                    eq.vin = str(row.get('N° Chasis', ''))
+                    eq.n_motor = str(row.get('N° Motor', ''))
+            db.session.commit()
+
+        # 3. CARGAMOS LECTURAS, OTS Y COMPRAS
+        df_lec = pd.read_excel(archivo_excel, sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
+        for _, row in df_lec.iterrows():
+            if not row.iloc[1]: continue
+            f_val = str(row.iloc[0]).split()[0]
+            try: fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
+            except: fecha_dt = datetime.now()
+            lec = HistorialLectura(fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(), horometro=clean_int(row.iloc[2], 0), kilometraje=clean_int(row.iloc[3], 0), obra_ubicacion=row.iloc[4], responsable=row.iloc[5], observacion=row.iloc[6])
+            db.session.add(lec)
+        db.session.commit()
+
+        df_man = pd.read_excel(archivo_excel, sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
+        for _, row in df_man.iterrows():
+            if not row.iloc[1]: continue
+            f_val = str(row.iloc[0]).split()[0]
+            try: fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
+            except: fecha_dt = datetime.now()
+            ot = OrdenTrabajo(fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(), tipo_mantencion=row.iloc[2], lectura=clean_int(row.iloc[3], 0), es_pm=row.iloc[4], folio=str(row.iloc[5]), lugar=row.iloc[6], costo_mantencion_clp=clean_float(row.iloc[8], 0.0), estado=row.iloc[9] if row.iloc[9] else 'Finalizada')
+            db.session.add(ot)
+        db.session.commit()
+
+        df_com = pd.read_excel(archivo_excel, sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
+        for _, row in df_com.iterrows():
+            if not row.iloc[2]: continue
+            f_val = str(row.iloc[0]).split()[0]
+            try: fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
+            except: fecha_dt = datetime.now()
+            comp = CompraRepuesto(fecha=fecha_dt, oc=str(row.iloc[1]), codigo_equipo=str(row.iloc[2]).strip(), descripcion=row.iloc[3], proveedor=row.iloc[4], costo_pm_clp=clean_float(row.iloc[5], 0.0), estado_oc=row.iloc[7])
+            db.session.add(comp)
+        db.session.commit()
+
+        # CÁLCULO FINAL DE PRÓXIMO PM
+        for eq in Equipo.query.all():
+            u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
+            if u_lec: eq.lectura_actual = u_lec.horometro if eq.control_base == 'HORAS' else u_lec.kilometraje
+            else: eq.lectura_actual = 0
+            u_pm = OrdenTrabajo.query.filter_by(codigo_equipo=eq.codigo, es_pm='Sí', estado='Finalizada').order_by(OrdenTrabajo.fecha.desc()).first()
+            if u_pm: eq.proxima_pm = u_pm.lectura + eq.frecuencia_base
+            else: eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
+        db.session.commit()
+
+        registrar_log("Reinició la base de datos desde los archivos Excel y CSV")
+        return redirect(url_for('dashboard'))
+
+    except Exception as e: return f"<h1 style='color:red;'>Error técnico al inyectar:</h1><p>{str(e)}</p>"
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
