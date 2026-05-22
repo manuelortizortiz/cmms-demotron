@@ -3,84 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <title>Orden de Trabajo {{ ot.folio }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Roboto', sans-serif; font-size: 11px; color: #000; margin: 0; padding: 0; background: #fff; }
         .hoja-a4 { width: 210mm; min-height: 297mm; padding: 15mm; margin: 0 auto; box-sizing: border-box; }
-        
         .header-grid { display: grid; grid-template-columns: 25% 45% 30%; border: 2px solid #082b5f; margin-bottom: 20px; align-items: center; }
         .header-logo { padding: 10px; border-right: 2px solid #082b5f; text-align: center; }
-        .header-title { padding: 10px; text-align: center; font-size: 20px; font-weight: 900; color: #082b5f; border-right: 2px solid #082b5f; letter-spacing: 1px; }
-        .header-folio { padding: 10px; text-align: center; font-weight: bold; color: #ef4444; font-size: 14px; }
-
+        .header-title { padding: 10px; text-align: center; font-size: 18px; font-weight: bold; color: #082b5f; border-right: 2px solid #082b5f; }
+        .header-folio { padding: 10px; text-align: center; font-weight: bold; color: #ef4444; font-size: 12px; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 15px; border: 2px solid #082b5f; }
-        th, td { border: 1px solid #082b5f; padding: 6px 8px; }
+        th, td { border: 1px solid #082b5f; padding: 5px 8px; }
         th { background-color: #082b5f; color: white; font-weight: bold; text-align: left; font-size: 10px; text-transform: uppercase; }
         .label-cell { font-weight: bold; background-color: #e2e8f0; width: 20%; font-size: 10px; }
-        
-        .check-box { width: 12px; height: 12px; border: 1px solid #000; display: inline-block; vertical-align: middle; margin-right: 5px; }
-        .obs-box { border: 2px solid #082b5f; height: 100px; padding: 10px; margin-bottom: 30px; }
-
-        .firmas { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; text-align: center; margin-top: 60px; }
+        .obs-box { border: 2px solid #082b5f; height: 80px; padding: 10px; margin-bottom: 30px; }
+        .firmas { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; text-align: center; margin-top: 50px; }
         .firma-linea { border-top: 1px solid #000; width: 80%; margin: 0 auto 5px auto; }
         .firma-texto { font-size: 10px; font-weight: bold; text-transform: uppercase; }
-
-        @media print { 
-            body { background: white; } 
-            .hoja-a4 { width: 100%; padding: 0; } 
-            .no-print { display: none !important; } 
-        }
+        .caja-texto-libre { border: 1px solid #082b5f; padding: 10px; min-height: 100px; white-space: pre-wrap; font-family: monospace; font-size: 10px; margin-bottom: 15px; }
+        @media print { body { background: white; } .hoja-a4 { width: 100%; padding: 0; } .no-print { display: none !important; } }
     </style>
 </head>
-<body onload="window.print()"> <button class="no-print" onclick="window.print()" style="position: fixed; bottom: 20px; right: 20px; background: #082b5f; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">🖨️ Imprimir / Guardar PDF</button>
-
+<body onload="window.print()">
+    
     <div class="hoja-a4">
         <div class="header-grid">
-            <div class="header-logo"><img src="/static/Logo Azul.png" style="max-height: 40px;" alt="Demotron"></div>
+            <div class="header-logo"><img src="/static/ISOTIPO DEMOTRON.png" style="max-height: 40px;" alt="Demotron"></div>
             <div class="header-title">ORDEN DE TRABAJO</div>
-            <div class="header-folio">FOLIO N°:<br><span style="font-size: 18px;">{{ ot.folio }}</span></div>
+            <div class="header-folio">FOLIO N°:<br><span style="font-size: 16px;">{{ ot.folio }}</span></div>
         </div>
 
         <table>
             <tr><td class="label-cell">FECHA OT</td><td>{{ fecha_actual }}</td><td class="label-cell">TIPO EQUIPO</td><td>{{ equipo.tipo_equipo }}</td></tr>
-            <tr><td class="label-cell">PATENTE / N° INTERNO</td><td style="font-weight: bold; font-size: 14px;">{{ equipo.patente }} / {{ equipo.codigo }}</td><td class="label-cell">MARCA / MODELO</td><td>{{ equipo.marca }} {{ equipo.modelo }}</td></tr>
-            <tr><td class="label-cell">OBRA O TALLER</td><td>{{ equipo.ubicacion }}</td><td class="label-cell">HORÓMETRO / KM ACTUAL</td><td>{{ equipo.lectura_actual }} {{ equipo.control_base }}</td></tr>
-            <tr><td class="label-cell">OPERADOR / CHOFER</td><td>{{ equipo.responsable }}</td><td class="label-cell">TIPO INTERVENCIÓN</td><td>{{ ot.tipo_mantencion }}</td></tr>
+            <tr><td class="label-cell">PATENTE / CÓDIGO</td><td style="font-weight: bold; font-size: 12px;">{{ equipo.patente }} / {{ equipo.codigo }}</td><td class="label-cell">MARCA / MODELO</td><td>{{ equipo.marca }} {{ equipo.modelo }}</td></tr>
+            <tr><td class="label-cell">UBICACIÓN</td><td>{{ equipo.ubicacion }}</td><td class="label-cell">LECTURA ACTUAL</td><td>{{ equipo.lectura_actual }} {{ equipo.control_base }}</td></tr>
+            <tr><td class="label-cell">OPERADOR</td><td>{{ equipo.responsable }}</td><td class="label-cell">TIPO INTERVENCIÓN</td><td>{{ ot.tipo_mantencion }}</td></tr>
         </table>
 
+        <div style="font-size: 10px; font-weight: bold; background-color: #082b5f; color: white; padding: 5px; text-transform: uppercase;">Pauta de Filtros Registrada en Sistema:</div>
+        <div class="caja-texto-libre">{{ equipo.pauta_filtros }}</div>
+
         <table>
-            <thead><tr><th colspan="4" style="text-align: center;">PAUTA ESPECÍFICA DE FILTROS ASIGNADA AL EQUIPO</th></tr></thead>
+            <thead><tr><th colspan="2" style="text-align: center;">CHECKLIST MECÁNICO (MARCAR)</th></tr></thead>
             <tbody>
-                <tr>
-                    <td class="label-cell">Filtro Aceite</td><td>{{ equipo.filtro_aceite }}</td>
-                    <td class="label-cell">Filtro Combustible</td><td>{{ equipo.filtro_petroleo }}</td>
-                </tr>
-                <tr>
-                    <td class="label-cell">Aire Primario</td><td>{{ equipo.filtro_aire_prim }}</td>
-                    <td class="label-cell">Aire Secundario</td><td>{{ equipo.filtro_aire_sec }}</td>
-                </tr>
-                <tr>
-                    <td class="label-cell">Filtro Hidráulico</td><td colspan="3">{{ equipo.filtro_hidraulico }}</td>
-                </tr>
+                <tr><td>[ ] Revisión niveles aceite motor e hidráulico</td><td>[ ] Engrase general pasadores/articulaciones</td></tr>
+                <tr><td>[ ] Cambio de filtros según pauta</td><td>[ ] Revisión sistema eléctrico y luces</td></tr>
+                <tr><td>[ ] Revisión dirección y frenos</td><td>[ ] Chequeo fugas hidráulicas, cilindros</td></tr>
             </tbody>
         </table>
 
-        <table>
-            <thead><tr><th colspan="2" style="text-align: center;">TAREAS A REALIZAR (Checklist Mecánico)</th></tr></thead>
-            <tbody>
-                <tr><td><div class="check-box"></div> Revisión niveles de aceite motor e hidráulico</td><td><div class="check-box"></div> Engrase general de pasadores y articulaciones</td></tr>
-                <tr><td><div class="check-box"></div> Cambio de filtros (Aire, Petróleo, Aceite)</td><td><div class="check-box"></div> Revisión sistema eléctrico y luces de faena</td></tr>
-                <tr><td><div class="check-box"></div> Revisión tren delantero, dirección y frenos</td><td><div class="check-box"></div> Chequeo de fugas hidráulicas, averías en cilindros y mangueras</td></tr>
-            </tbody>
-        </table>
-
-        <div style="font-size: 10px; font-weight: bold; color: #082b5f; margin-bottom: 5px;">OBSERVACIONES TÉCNICAS Y REQUERIMIENTOS FUTUROS:</div>
+        <div style="font-size: 10px; font-weight: bold; color: #082b5f; margin-bottom: 5px;">OBSERVACIONES / TRABAJOS REALIZADOS:</div>
         <div class="obs-box"></div>
 
         <div class="firmas">
-            <div><div class="firma-linea"></div><div class="firma-texto">Firma Mecánico</div><div style="font-size: 9px; color: #666; margin-top: 3px;">Nombre y RUT</div></div>
-            <div><div class="firma-linea"></div><div class="firma-texto">V°B° Supervisor Terreno</div><div style="font-size: 9px; color: #666; margin-top: 3px;">Validación Trabajo</div></div>
-            <div><div class="firma-linea"></div><div class="firma-texto">V°B° Jefe Taller / Faena</div><div style="font-size: 9px; color: #666; margin-top: 3px;">Cierre OT</div></div>
+            <div><div class="firma-linea"></div><div class="firma-texto">Firma Mecánico</div></div>
+            <div><div class="firma-linea"></div><div class="firma-texto">V°B° Supervisor Terreno</div></div>
+            <div><div class="firma-linea"></div><div class="firma-texto">Cierre Administrativo</div></div>
         </div>
     </div>
 </body>
