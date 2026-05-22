@@ -64,12 +64,9 @@ class Equipo(db.Model):
     n_motor = db.Column(db.String(100), default="")
     patente = db.Column(db.String(50), default="")
     
-    # NUEVOS CAMPOS: FILTROS
-    filtro_aceite = db.Column(db.String(100), default="No definido")
-    filtro_petroleo = db.Column(db.String(100), default="No definido")
-    filtro_aire_prim = db.Column(db.String(100), default="No definido")
-    filtro_aire_sec = db.Column(db.String(100), default="No definido")
-    filtro_hidraulico = db.Column(db.String(100), default="No definido")
+    # NUEVOS CAMPOS AMPLIOS
+    pauta_filtros = db.Column(db.Text, default="Haga clic aquí para registrar todos los filtros (Aceite, Petróleo, Aire, etc.) y sus alternativos...")
+    planificacion_mantencion = db.Column(db.Text, default="Haga clic aquí para describir la pauta de mantención (Ej: 250 Hrs, 500 Hrs, 1000 Hrs)...")
 
     @property
     def margen(self): return (self.proxima_pm or 0) - (self.lectura_actual or 0)
@@ -98,19 +95,14 @@ class CompraRepuesto(db.Model):
 with app.app_context(): 
     db.create_all()
 
-# ==========================================
-# FUNCIONES DE APOYO Y SEGURIDAD
-# ==========================================
 def clean_string(val):
     s = str(val).strip()
-    if s.lower() in ['nan', 'none', '']: return ""
-    return s
+    return "" if s.lower() in ['nan', 'none', ''] else s
 
 def clean_int(val, default=0):
     try:
         s = clean_string(val)
-        if not s: return default
-        return int(float(s))
+        return int(float(s)) if s else default
     except: return default
 
 def clean_float(val, default=0.0):
@@ -118,8 +110,7 @@ def clean_float(val, default=0.0):
         if val is None: return default
         if isinstance(val, (int, float)): return float(val)
         s = clean_string(val).replace('$', '').replace(' ', '')
-        if not s: return default
-        return float(s.replace('.', '').replace(',', '.'))
+        return float(s.replace('.', '').replace(',', '.')) if s else default
     except: return default
 
 def format_num(val):
@@ -131,19 +122,14 @@ def format_clp(val):
     except: return "$ 0"
 
 def buscar_foto_por_tipo(tipo_equipo, marca=""):
-    t = str(tipo_equipo).lower() if tipo_equipo else ""
-    m = str(marca).lower() if marca else ""
-    
+    t = str(tipo_equipo).lower() if tipo_equipo else ""; m = str(marca).lower() if marca else ""
     if "tolva" in t: return "/static/equipos_real/camion_man_tolva.png"
     if "tracto" in t: return "/static/equipos_real/tractocamion.png"
     if "camioneta" in t: return "/static/equipos_real/maxus_t60.png"
     if "furgon" in t or "furgón" in t or "minibus" in t or "bus" in t: return "/static/equipos_real/minibus.png"
     if "slurry" in t or "liviano" in t or "pintura" in t or "plano" in t: return "/static/equipos_real/camion_liviano.png"
-    return "/static/equipos_real/tractocamion.png" # Imagen por defecto si no reconoce el nombre
+    return "/static/equipos_real/tractocamion.png"
 
-# ==========================================
-# RUTAS DEL ERP (SIN LOGIN PARA DESARROLLO)
-# ==========================================
 @app.route('/', strict_slashes=False)
 @app.route('/erp', strict_slashes=False)
 def dashboard():
@@ -191,13 +177,32 @@ def dashboard():
             eq_asignado = Equipo.query.filter_by(responsable=p.nombre).first()
             lista_operadores.append({'id': p.id, 'nombre': p.nombre, 'cargo': p.cargo, 'estado': p.estado, 'equipo_asignado': eq_asignado.codigo if eq_asignado else 'Sin Asignar', 'ubicacion': eq_asignado.ubicacion if eq_asignado else 'Desconocida'})
 
-        # COSTO SOLO DEL MES ACTUAL
-        mes_actual = datetime.now().month; anio_actual = datetime.now().year
-        costo_mes = sum(c.costo_pm_clp or 0 for c in compras_db if c.fecha and c.fecha.month == mes_actual and c.fecha.year == anio_actual)
+        # GRAFICO MENSUAL DE COSTOS (Febrero a Mes Actual)
+        mes_actual = datetime.now().month
+        nombres_meses = {2: "Feb", 3: "Mar", 4: "Abr", 5: "May", 6: "Jun", 7: "Jul", 8: "Ago", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dic"}
+        dict_costos = {2:0, 3:0, 4:0, 5:0}
+        if mes_actual not in dict_costos: dict_costos[mes_actual] = 0
 
-        kpis = {'total': len(eqs_db), 'operativos': conteo_estado.get('Operativo',0), 'fuera': conteo_estado.get('Fuera de Servicio',0), 'atrasados': len(criticos), 'ot_abiertas': len(ots_activas), 'costo_mes_str': format_clp(costo_mes)}
+        for ot in ots_db:
+            if ot.fecha and ot.fecha.year >= 2026:
+                m = ot.fecha.month
+                if m in dict_costos: dict_costos[m] += (ot.costo_mantencion_clp or 0.0)
+        for c in compras_db:
+            if c.fecha and c.fecha.year >= 2026:
+                m = c.fecha.month
+                if m in dict_costos: dict_costos[m] += (c.costo_pm_clp or 0.0)
 
-        return render_template('index.html', kpis=kpis, eqs=equipos, criticos=criticos, taller=taller, mantenciones=todas_mantenciones, compras=todas_compras, lecturas=todas_lecturas, kanban=kanban_tareas, logs=logs_list, equipos_aleatorios=equipos_aleatorios, operadores=lista_operadores, current_user="Admin Principal")
+        grafico_nombres = [nombres_meses.get(m, str(m)) for m in sorted(dict_costos.keys())]
+        grafico_valores = [dict_costos[m] for m in sorted(dict_costos.keys())]
+
+        kpis = {'total': len(eqs_db), 'operativos': conteo_estado.get('Operativo',0), 'fuera': conteo_estado.get('Fuera de Servicio',0), 'atrasados': len(criticos), 'ot_abiertas': len(ots_activas), 'costo_mes_str': format_clp(dict_costos.get(mes_actual, 0))}
+        
+        charts = {
+            'estado': conteo_estado,
+            'costos_mensuales': {'labels': grafico_nombres, 'data': grafico_valores}
+        }
+
+        return render_template('index.html', kpis=kpis, charts=charts, eqs=equipos, criticos=criticos, taller=taller, mantenciones=todas_mantenciones, compras=todas_compras, lecturas=todas_lecturas, kanban=kanban_tareas, logs=logs_list, equipos_aleatorios=equipos_aleatorios, operadores=lista_operadores, current_user="Admin Principal")
     except Exception as e: return f"Error crítico: {str(e)}"
 
 @app.route('/update_kanban', methods=['POST'])
@@ -263,16 +268,12 @@ def cargar_sql_final():
     
     try:
         with db.engine.connect() as conn:
-            conn.execute(db.text("DROP TABLE IF EXISTS compra_repuesto;"))
-            conn.execute(db.text("DROP TABLE IF EXISTS orden_trabajo;"))
-            conn.execute(db.text("DROP TABLE IF EXISTS historial_lectura;"))
-            conn.execute(db.text("DROP TABLE IF EXISTS equipo;"))
+            conn.execute(db.text("DROP TABLE IF EXISTS compra_repuesto; DROP TABLE IF EXISTS orden_trabajo; DROP TABLE IF EXISTS historial_lectura; DROP TABLE IF EXISTS equipo;"))
             conn.commit()
             
         db.create_all()
 
         df_eq = pd.read_excel(archivo_excel, sheet_name="Equipos", skiprows=2).replace({np.nan: None})
-        
         operadores_excel = df_eq.iloc[:, 6].dropna().unique()
         for op in operadores_excel:
             op_str = str(op).strip()
@@ -308,7 +309,6 @@ def cargar_sql_final():
             except: fecha_dt = datetime.now()
             lec = HistorialLectura(fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(), horometro=clean_int(row.iloc[2], 0), kilometraje=clean_int(row.iloc[3], 0), obra_ubicacion=row.iloc[4], responsable=row.iloc[5], observacion=row.iloc[6])
             db.session.add(lec)
-        db.session.commit()
 
         df_man = pd.read_excel(archivo_excel, sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
         for _, row in df_man.iterrows():
@@ -316,9 +316,8 @@ def cargar_sql_final():
             f_val = str(row.iloc[0]).split()[0]
             try: fecha_dt = datetime.strptime(f_val, "%Y-%m-%d")
             except: fecha_dt = datetime.now()
-            ot = OrdenTrabajo(fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(), tipo_mantencion=row.iloc[2], lectura=clean_int(row.iloc[3], 0), es_pm=row.iloc[4], folio=str(row.iloc[5]), lugar=row.iloc[6], costo_mantencion_clp=clean_float(row.iloc[8], 0.0), estado=row.iloc[9] if row.iloc[9] else 'Finalizada')
+            ot = OrdenTrabajo(fecha=fecha_dt, codigo_equipo=str(row.iloc[1]).strip(), tipo_mantencion=str(row.iloc[2]).strip(), lectura=clean_int(row.iloc[3], 0), es_pm=row.iloc[4], folio=str(row.iloc[5]), lugar=row.iloc[6], costo_mantencion_clp=clean_float(row.iloc[8], 0.0), estado=row.iloc[9] if row.iloc[9] else 'Finalizada')
             db.session.add(ot)
-        db.session.commit()
 
         df_com = pd.read_excel(archivo_excel, sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
         for _, row in df_com.iterrows():
@@ -328,6 +327,7 @@ def cargar_sql_final():
             except: fecha_dt = datetime.now()
             comp = CompraRepuesto(fecha=fecha_dt, oc=str(row.iloc[1]), codigo_equipo=str(row.iloc[2]).strip(), descripcion=row.iloc[3], proveedor=row.iloc[4], costo_pm_clp=clean_float(row.iloc[5], 0.0), estado_oc=row.iloc[7])
             db.session.add(comp)
+        
         db.session.commit()
 
         for eq in Equipo.query.all():
