@@ -19,18 +19,20 @@
         .label-cell { font-weight: bold; background-color: #e2e8f0; width: 20%; font-size: 10px; }
         
         .check-box { width: 12px; height: 12px; border: 1px solid #000; display: inline-block; vertical-align: middle; margin-right: 5px; }
-        
         .obs-box { border: 2px solid #082b5f; height: 100px; padding: 10px; margin-bottom: 30px; }
 
         .firmas { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; text-align: center; margin-top: 60px; }
         .firma-linea { border-top: 1px solid #000; width: 80%; margin: 0 auto 5px auto; }
         .firma-texto { font-size: 10px; font-weight: bold; text-transform: uppercase; }
 
-        @media print { body { background: white; } .hoja-a4 { width: 100%; padding: 0; } .no-print { display: none !important; } }
+        @media print { 
+            body { background: white; } 
+            .hoja-a4 { width: 100%; padding: 0; } 
+            .no-print { display: none !important; } 
+        }
     </style>
 </head>
-<body>
-    <button class="no-print" onclick="window.print()" style="position: fixed; bottom: 20px; right: 20px; background: #082b5f; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">🖨️ Imprimir OT</button>
+<body onload="window.print()"> <button class="no-print" onclick="window.print()" style="position: fixed; bottom: 20px; right: 20px; background: #082b5f; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">🖨️ Imprimir / Guardar PDF</button>
 
     <div class="hoja-a4">
         <div class="header-grid">
@@ -47,29 +49,28 @@
         </table>
 
         <table>
-            <thead><tr><th colspan="2" style="text-align: center;">TAREAS A REALIZAR (Checklist Mecánico)</th></tr></thead>
+            <thead><tr><th colspan="4" style="text-align: center;">PAUTA ESPECÍFICA DE FILTROS ASIGNADA AL EQUIPO</th></tr></thead>
             <tbody>
-                <tr><td><div class="check-box"></div> Revisión niveles de aceite motor e hidráulico</td><td><div class="check-box"></div> Engrase general de pasadores y articulaciones</td></tr>
-                <tr><td><div class="check-box"></div> Cambio de filtros (Aire, Petróleo, Aceite)</td><td><div class="check-box"></div> Revisión sistema eléctrico y luces de faena</td></tr>
-                <tr><td><div class="check-box"></div> Revisión tren delantero, dirección y frenos</td><td><div class="check-box"></div> Chequeo de fugas hidráulicas, cilindros y mangueras</td></tr>
+                <tr>
+                    <td class="label-cell">Filtro Aceite</td><td>{{ equipo.filtro_aceite }}</td>
+                    <td class="label-cell">Filtro Combustible</td><td>{{ equipo.filtro_petroleo }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Aire Primario</td><td>{{ equipo.filtro_aire_prim }}</td>
+                    <td class="label-cell">Aire Secundario</td><td>{{ equipo.filtro_aire_sec }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Filtro Hidráulico</td><td colspan="3">{{ equipo.filtro_hidraulico }}</td>
+                </tr>
             </tbody>
         </table>
 
         <table>
-            <thead><tr><th style="width: 15%; text-align: center;">CANT / UND.</th><th style="width: 30%; text-align: center;">CÓDIGO REPUESTO</th><th style="text-align: center;">DESCRIPCIÓN FILTROS, LUBRICANTES E INSUMOS</th></tr></thead>
+            <thead><tr><th colspan="2" style="text-align: center;">TAREAS A REALIZAR (Checklist Mecánico)</th></tr></thead>
             <tbody>
-                <tr><td style="height: 18px;"></td><td></td><td></td></tr>
-                <tr><td style="height: 18px;"></td><td></td><td></td></tr>
-                <tr><td style="height: 18px;"></td><td></td><td></td></tr>
-                <tr><td style="height: 18px;"></td><td></td><td></td></tr>
-                <tr><td style="height: 18px;"></td><td></td><td></td></tr>
-                <tr><td style="height: 18px;"></td><td></td><td></td></tr>
-                <tr><td style="height: 18px;"></td><td></td><td></td></tr>
-                <tr><td style="height: 18px;"></td><td></td><td></td></tr>
-                <tr><td style="height: 18px;"></td><td></td><td></td></tr>
-                <tr><td style="height: 18px;"></td><td></td><td></td></tr>
-                <tr><td style="height: 18px;"></td><td></td><td></td></tr>
-                <tr><td style="height: 18px;"></td><td></td><td></td></tr>
+                <tr><td><div class="check-box"></div> Revisión niveles de aceite motor e hidráulico</td><td><div class="check-box"></div> Engrase general de pasadores y articulaciones</td></tr>
+                <tr><td><div class="check-box"></div> Cambio de filtros (Aire, Petróleo, Aceite)</td><td><div class="check-box"></div> Revisión sistema eléctrico y luces de faena</td></tr>
+                <tr><td><div class="check-box"></div> Revisión tren delantero, dirección y frenos</td><td><div class="check-box"></div> Chequeo de fugas hidráulicas, averías en cilindros y mangueras</td></tr>
             </tbody>
         </table>
 
