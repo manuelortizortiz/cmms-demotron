@@ -5,64 +5,63 @@
     <title>Ficha Técnica: {{ eq.codigo }}</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Roboto', sans-serif; background-color: #F1F5F9; font-size: 13px; }
-        .card-custom { background: white; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); overflow: hidden; }
-        .table-custom th { text-transform: uppercase; font-size: 11px; color: #475569; padding: 12px; border-bottom: 1px solid #cbd5e1; font-weight: 700; background: #f8fafc; }
-        .table-custom td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+        body { font-family: 'Roboto', sans-serif; background-color: #F8FAFC; font-size: 13px; }
+        .card-custom { background: white; border-radius: 6px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden; }
+        .table-custom th { text-transform: uppercase; font-size: 11px; color: #475569; padding: 12px; border-bottom: 2px solid #E2E8F0; font-weight: 700; background: #F8FAFC; }
+        .table-custom td { padding: 10px 12px; border-bottom: 1px solid #F1F5F9; color: #334155; }
         div[contenteditable="true"]:focus { outline: 2px solid #082b5f; background: #fff; box-shadow: inset 0 0 5px rgba(8, 43, 95, 0.1); }
-        .guardado-exito { border-color: #10B981 !important; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5) !important; transition: all 0.5s; }
+        .guardado-exito { border-color: #10B981 !important; box-shadow: 0 0 8px rgba(16, 185, 129, 0.3) !important; transition: all 0.5s; }
     </style>
 </head>
-<body class="p-8 text-slate-800">
+<body class="p-8 text-slate-800 bg-slate-50">
 
     <div class="max-w-7xl mx-auto space-y-6">
-        <a href="/" class="text-[#082b5f] hover:underline font-bold text-xs uppercase"><i class="fas fa-arrow-left"></i> Volver al Dashboard</a>
+        <a href="/" class="text-[#082b5f] hover:underline font-bold text-xs uppercase">← Volver al ERP principal</a>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-2 card-custom p-6">
                 <div class="flex flex-col md:flex-row gap-6 items-center">
-                    <div class="w-56 h-40 rounded bg-white border border-slate-200 flex items-center justify-center p-2 shadow-sm">
-                        {% if foto_url %}<img src="{{ foto_url }}" class="h-full object-contain">{% else %}<i class="fas fa-truck text-5xl text-slate-300"></i>{% endif %}
+                    <div class="w-56 h-40 rounded bg-white border border-slate-200 flex items-center justify-center p-2">
+                        {% if foto_url %}<img src="{{ foto_url }}" class="h-full object-contain">{% else %}<span class="text-slate-300 text-xs">Sin Fotografía</span>{% endif %}
                     </div>
                     <div class="flex-1 w-full">
                         <div class="flex items-center justify-between mb-2">
-                            <h1 class="text-3xl font-bold text-[#082b5f]">{{ eq.codigo }}</h1>
+                            <h1 class="text-2xl font-bold text-[#082b5f]">{{ eq.codigo }}</h1>
                             <span class="px-3 py-1 bg-slate-100 border text-xs font-bold rounded uppercase">{{ eq.estado_base }}</span>
                         </div>
-                        <h2 class="text-sm font-bold text-slate-600 mb-6 uppercase">{{ eq.tipo_equipo }} | {{ eq.marca }} {{ eq.modelo }}</h2>
+                        <h2 class="text-xs font-bold text-slate-600 mb-6 uppercase">{{ eq.tipo_equipo }} | {{ eq.marca }} {{ eq.modelo }}</h2>
                         
                         <div class="grid grid-cols-3 gap-4 mb-2">
-                            <div class="bg-white border rounded p-3"><p class="text-[10px] uppercase font-bold text-slate-500 mb-1">Lectura Actual</p><p class="text-lg font-bold text-[#082b5f]">{{ eq.lectura_actual }} <span class="text-xs">{{ eq.control_base }}</span></p></div>
-                            <div class="bg-white border rounded p-3"><p class="text-[10px] uppercase font-bold text-slate-500 mb-1">Próxima PM</p><p class="text-lg font-bold text-[#082b5f]">{{ eq.proxima_pm }} <span class="text-xs">{{ eq.control_base }}</span></p></div>
-                            <div class="bg-white border rounded p-3"><p class="text-[10px] uppercase font-bold text-slate-500 mb-1">Margen</p><p class="text-lg font-bold {% if eq.margen < 0 %}text-red-600{% else %}text-green-600{% endif %}">{{ eq.margen }} <span class="text-xs text-slate-700">{{ eq.control_base }}</span></p></div>
+                            <div class="bg-white border rounded p-3"><p class="text-[10px] uppercase font-bold text-slate-500 mb-1">Lectura Actual</p><p class="text-lg font-bold text-[#082b5f]">{{ eq.lectura_actual }} <span class="text-xs font-medium">{{ eq.control_base }}</span></p></div>
+                            <div class="bg-white border rounded p-3"><p class="text-[10px] uppercase font-bold text-slate-500 mb-1">Próximo PM</p><p class="text-lg font-bold text-[#082b5f]">{{ eq.proxima_pm }} <span class="text-xs font-medium">{{ eq.control_base }}</span></p></div>
+                            <div class="bg-white border rounded p-3"><p class="text-[10px] uppercase font-bold text-slate-500 mb-1">Margen Tolerancia</p><p class="text-lg font-bold {% if eq.margen < 0 %}text-red-600{% else %}text-green-600{% endif %}">{{ eq.margen }} <span class="text-xs font-medium text-slate-700">{{ eq.control_base }}</span></p></div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="card-custom p-6 bg-[#082b5f] text-white">
-                <h3 class="text-xs font-bold uppercase mb-4 border-b border-white/20 pb-2">Identificación Técnica</h3>
-                <div class="space-y-3 text-sm">
-                    <div class="flex justify-between border-b border-white/10 pb-1"><span class="text-slate-300">Patente</span><span class="font-bold">{{ eq.patente or 'S/P' }}</span></div>
-                    <div class="flex justify-between border-b border-white/10 pb-1"><span class="text-slate-300">Año</span><span class="font-bold">{{ eq.ano or 'N/A' }}</span></div>
-                    <div class="flex justify-between border-b border-white/10 pb-1"><span class="text-slate-300">VIN (Chasis)</span><span class="font-mono font-bold">{{ eq.vin or 'S/I' }}</span></div>
-                    <div class="flex justify-between border-b border-white/10 pb-1"><span class="text-slate-300">N° Motor</span><span class="font-mono font-bold">{{ eq.n_motor or 'S/I' }}</span></div>
-                    <div class="flex justify-between"><span class="text-slate-300">Operador</span><span class="font-bold">{{ eq.responsable or 'Sin Asignar' }}</span></div>
+                <h3 class="text-xs font-bold uppercase mb-4 border-b border-white/20 pb-2">Identificación Técnica Especializada</h3>
+                <div class="space-y-3 text-xs">
+                    <div class="flex justify-between border-b border-white/10 pb-1"><span class="text-slate-300">Placa Patente</span><span class="font-bold">{{ eq.patente or 'S/P' }}</span></div>
+                    <div class="flex justify-between border-b border-white/10 pb-1"><span class="text-slate-300">Año de Fabricación</span><span class="font-bold">{{ eq.ano or 'N/A' }}</span></div>
+                    <div class="flex justify-between border-b border-white/10 pb-1"><span class="text-slate-300">Número de Chasis (VIN)</span><span class="font-mono font-bold">{{ eq.vin or 'S/I' }}</span></div>
+                    <div class="flex justify-between border-b border-white/10 pb-1"><span class="text-slate-300">Número de Motor de Unidad</span><span class="font-mono font-bold">{{ eq.n_motor or 'S/I' }}</span></div>
+                    <div class="flex justify-between"><span class="text-slate-300">Operador / Chofer Asignado</span><span class="font-bold">{{ eq.responsable or 'Sin Asignar' }}</span></div>
                 </div>
             </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="card-custom overflow-hidden">
-                <div class="px-5 py-3 bg-slate-100 border-b flex justify-between items-center">
-                    <span class="font-bold uppercase text-[11px] text-slate-700"><i class="fas fa-file-invoice mr-1"></i> Órdenes de Trabajo (OT)</span>
-                    <a href="/imprimir_ot/{{ eq.codigo }}" target="_blank" class="text-blue-600 hover:text-blue-800 font-bold text-[10px] uppercase"><i class="fas fa-plus"></i> Imprimir PDF</a>
+                <div class="px-5 py-3 bg-slate-50 border-b flex justify-between items-center">
+                    <span class="font-bold uppercase text-[11px] text-slate-700">Órdenes de Trabajo Emitidas</span>
+                    <a href="/imprimir_ot/{{ eq.codigo }}" target="_blank" class="text-blue-600 hover:text-blue-800 font-bold text-[10px] uppercase">Descargar Última OT (PDF)</a>
                 </div>
                 <div class="overflow-y-auto max-h-[250px]">
                     <table class="w-full table-custom">
-                        <thead><tr><th>Fecha / OT</th><th>Tipo</th><th class="text-right">Costo</th></tr></thead>
+                        <thead><tr><th>Fecha / Folio</th><th>Tipo Intervención</th><th class="text-right">Costo</th></tr></thead>
                         <tbody>
                             {% for m in mants %}
                             <tr class="hover:bg-slate-50"><td><span class="font-bold text-xs">{{ m.fecha }}</span><br><span class="text-[10px] text-slate-500">{{ m.folio }}</span></td><td class="text-xs">{{ m.tipo }}</td><td class="text-right font-bold text-[#082b5f] text-xs">{{ m.costo_str }}</td></tr>
@@ -73,10 +72,10 @@
             </div>
 
             <div class="card-custom overflow-hidden">
-                <div class="px-5 py-3 bg-slate-100 border-b"><span class="font-bold uppercase text-[11px] text-slate-700"><i class="fas fa-list-alt mr-1"></i> Últimas Lecturas Terreno</span></div>
+                <div class="px-5 py-3 bg-slate-50 border-b"><span class="font-bold uppercase text-[11px] text-slate-700">Historial de Consumos / Lecturas Terreno</span></div>
                 <div class="overflow-y-auto max-h-[250px]">
                     <table class="w-full table-custom">
-                        <thead><tr><th>Fecha</th><th class="text-right">Valor</th><th>Observación</th></tr></thead>
+                        <thead><tr><th>Fecha Registro</th><th class="text-right">Valor Capturado</th><th>Observación / Estado de Operación</th></tr></thead>
                         <tbody>
                             {% for l in lecturas %}
                             <tr class="hover:bg-slate-50"><td class="text-xs font-bold">{{ l.fecha }}</td><td class="text-right font-bold text-[#082b5f] text-sm">{{ l.valor }} <span class="text-[9px]">{{ l.tipo }}</span></td><td class="italic text-slate-500 text-[10px]">{{ l.obs }}</td></tr>
@@ -87,27 +86,28 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-10">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
             <div class="card-custom">
-                <div class="px-5 py-3 bg-[#082b5f] text-white font-bold uppercase text-xs tracking-wide">Pauta de Filtros y Alternativos</div>
-                <div class="p-5">
-                    <p class="text-[10px] text-slate-400 mb-2">Haga clic en el cuadro para registrar todos los filtros que utiliza esta unidad.</p>
-                    <div contenteditable="true" onblur="guardarHTML(this, '{{eq.codigo}}', 'pauta_filtros')" class="w-full min-h-[150px] border border-slate-300 rounded p-3 bg-slate-50 text-sm leading-relaxed whitespace-pre-wrap">{{ eq.pauta_filtros | safe }}</div>
+                <div class="px-5 py-3 bg-[#082b5f] text-white font-bold uppercase text-xs tracking-wide">Pauta Maestra de Filtros (Hasta 12+ Alternativos)</div>
+                <div class="p-5 bg-white">
+                    <p class="text-[10px] text-slate-400 mb-2">Haz clic abajo para detallar códigos de filtros de Aire (Primarios/Secundarios), Aceite, Combustibles e Hidráulicos de todas las marcas alternativas compatibles.</p>
+                    <div contenteditable="true" onblur="guardarCajaAmplia(this, '{{eq.codigo}}', 'pauta_filtros')" class="w-full min-h-[160px] border border-slate-300 rounded p-3 bg-slate-50 text-xs leading-relaxed font-mono whitespace-pre-wrap outline-none">{{ eq.pauta_filtros | safe }}</div>
                 </div>
             </div>
             
             <div class="card-custom">
-                <div class="px-5 py-3 bg-[#082b5f] text-white font-bold uppercase text-xs tracking-wide">Planificación de Mantención</div>
-                <div class="p-5">
-                    <p class="text-[10px] text-slate-400 mb-2">Haga clic en el cuadro para definir qué se cambia a las 250hrs, 500hrs, etc.</p>
-                    <div contenteditable="true" onblur="guardarHTML(this, '{{eq.codigo}}', 'planificacion_mantencion')" class="w-full min-h-[150px] border border-slate-300 rounded p-3 bg-slate-50 text-sm leading-relaxed whitespace-pre-wrap">{{ eq.planificacion_mantencion | safe }}</div>
+                <div class="px-5 py-3 bg-[#082b5f] text-white font-bold uppercase text-xs tracking-wide">Planificación y Estrategia de Mantenimiento Activa</div>
+                <div class="p-5 bg-white">
+                    <p class="text-[10px] text-slate-400 mb-2">Haz clic abajo para registrar la pauta correspondiente a los ciclos planificados (Ej: 250 Hrs, 500 Hrs o 1000 Hrs) y sus observaciones especiales de faena.</p>
+                    <div contenteditable="true" onblur="guardarCajaAmplia(this, '{{eq.codigo}}', 'planificacion_mantencion')" class="w-full min-h-[160px] border border-slate-300 rounded p-3 bg-slate-50 text-xs leading-relaxed whitespace-pre-wrap outline-none">{{ eq.planificacion_mantencion | safe }}</div>
                 </div>
             </div>
         </div>
     </div>
     
     <script>
-        function guardarHTML(el, cod, campo) {
+        // Sistema de sincronización dinámica asíncrona (AJAX Inline)
+        function guardarCajaAmplia(el, cod, campo) {
             const valor = el.innerText.trim();
             fetch('/update_inline', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: cod, campo: campo, valor: valor, tabla: 'equipo'}) })
             .then(res => res.json()).then(data => {
