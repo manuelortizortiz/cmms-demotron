@@ -32,22 +32,22 @@
 <body class="flex h-screen overflow-hidden text-slate-800">
     <aside class="w-64 bg-[#082b5f] text-white flex flex-col shadow-xl z-20">
         <div class="h-32 bg-white flex flex-col items-center justify-center border-b border-slate-200 py-4 shadow-sm">
-            <img src="/static/ISOTIPO%20DEMOTRON.png?v=5" class="h-16 object-contain mb-1">
+            <img src="/static/ISOTIPO%20DEMOTRON.png?v=5" class="h-16 object-contain mb-1" onerror="this.src='https://via.placeholder.com/150x50?text=DEMOTRON'">
             <span class="text-[11px] text-[#082b5f] font-bold uppercase tracking-widest">Maquinarias</span>
         </div>
         <nav class="flex-1 py-2 overflow-y-auto hide-scrollbar">
-            <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard Central</a>
-            <a onclick="switchTab('eq', this)" class="nav-link">Maestro de Equipos</a>
-            <a onclick="switchTab('datos', this)" class="nav-link">Datos Técnicos</a>
-            <a onclick="switchTab('plan', this)" class="nav-link">Planificación (Kanban)</a>
-            <a onclick="switchTab('cal', this)" class="nav-link">Calendario</a>
-            <a onclick="switchTab('ot', this)" class="nav-link mt-2 border-t border-white/10 pt-2">OT Preventivas</a>
-            <a onclick="switchTab('ot_corr', this)" class="nav-link">OT Correctivas (Averías)</a>
-            <a onclick="switchTab('compras', this)" class="nav-link">Compras e Insumos</a>
-            <a onclick="switchTab('bodega', this)" class="nav-link">Bodega de Filtros</a>
-            <a onclick="switchTab('lec', this)" class="nav-link">Lecturas Terreno</a>
-            <a onclick="switchTab('cond', this)" class="nav-link mt-2 border-t border-white/10 pt-2 font-bold text-blue-300">Operadores / Choferes</a>
-            <a onclick="switchTab('logs', this)" class="nav-link">Historial y Logs</a>
+            <a onclick="switchTab('dash', this)" class="nav-link active"><i class="fas fa-chart-line w-6 text-center"></i> Dashboard Central</a>
+            <a onclick="switchTab('eq', this)" class="nav-link"><i class="fas fa-truck w-6 text-center"></i> Maestro de Equipos</a>
+            <a onclick="switchTab('datos', this)" class="nav-link"><i class="fas fa-cogs w-6 text-center"></i> Datos Técnicos</a>
+            <a onclick="switchTab('plan', this)" class="nav-link"><i class="fas fa-columns w-6 text-center"></i> Planificación (Kanban)</a>
+            <a onclick="switchTab('cal', this)" class="nav-link"><i class="fas fa-calendar-alt w-6 text-center"></i> Calendario</a>
+            <a onclick="switchTab('ot', this)" class="nav-link mt-2 border-t border-white/10 pt-2"><i class="fas fa-wrench w-6 text-center"></i> OT Preventivas</a>
+            <a onclick="switchTab('ot_corr', this)" class="nav-link"><i class="fas fa-exclamation-triangle w-6 text-center"></i> OT Correctivas</a>
+            <a onclick="switchTab('compras', this)" class="nav-link"><i class="fas fa-shopping-cart w-6 text-center"></i> Compras e Insumos</a>
+            <a onclick="switchTab('bodega', this)" class="nav-link"><i class="fas fa-box w-6 text-center"></i> Bodega de Filtros</a>
+            <a onclick="switchTab('lec', this)" class="nav-link"><i class="fas fa-tachometer-alt w-6 text-center"></i> Lecturas Terreno</a>
+            <a onclick="switchTab('cond', this)" class="nav-link mt-2 border-t border-white/10 pt-2 font-bold text-blue-300"><i class="fas fa-hard-hat w-6 text-center"></i> Operadores</a>
+            <a onclick="switchTab('logs', this)" class="nav-link"><i class="fas fa-history w-6 text-center"></i> Historial y Logs</a>
         </nav>
     </aside>
 
@@ -56,12 +56,13 @@
             <div class="flex items-center gap-6">
                 <h1 id="title" class="text-base font-bold text-[#082b5f] uppercase tracking-wide">Dashboard Central</h1>
                 <div class="relative">
-                    <input type="text" id="buscador-global" onkeyup="filtrarTablas(this.value)" placeholder="Buscar registros en tabla..." class="text-xs border border-slate-300 rounded px-4 py-2 w-80 bg-slate-50 outline-none focus:border-[#082b5f] transition-all">
+                    <i class="fas fa-search absolute left-3 top-2.5 text-slate-400"></i>
+                    <input type="text" id="buscador-global" onkeyup="filtrarTablas(this.value)" placeholder="Buscar registros en tabla..." class="text-xs border border-slate-300 rounded px-9 py-2 w-80 bg-slate-50 outline-none focus:border-[#082b5f] transition-all">
                 </div>
             </div>
             <div class="flex items-center gap-4 text-xs font-bold text-slate-500 uppercase">
-                <span class="px-2 py-1 bg-slate-100 border rounded">Usuario: {{ current_user }}</span>
-                <a href="/logout" class="text-red-600 hover:underline">Cerrar Sesión</a>
+                <span class="px-2 py-1 bg-slate-100 border rounded"><i class="fas fa-user-circle mr-1"></i> Usuario: {{ current_user }}</span>
+                <a href="/logout" class="text-red-600 hover:underline"><i class="fas fa-sign-out-alt mr-1"></i> Salir</a>
             </div>
         </header>
 
@@ -77,21 +78,21 @@
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="card-custom p-5"><h3 class="text-xs font-bold text-slate-700 uppercase mb-4">Distribución Operativa Flota</h3><div class="h-48 relative"><canvas id="chartEstado"></canvas></div></div>
-                    <div class="card-custom p-5"><h3 class="text-xs font-bold text-slate-700 uppercase mb-4">Inversión Mantenimientos Mensual (CLP)</h3><div class="h-48 relative"><canvas id="chartCostosMensuales"></canvas></div></div>
+                    <div class="card-custom p-5"><h3 class="text-xs font-bold text-slate-700 uppercase mb-4"><i class="fas fa-chart-pie mr-2 text-[#082b5f]"></i> Distribución Operativa Flota</h3><div class="h-48 relative"><canvas id="chartEstado"></canvas></div></div>
+                    <div class="card-custom p-5"><h3 class="text-xs font-bold text-slate-700 uppercase mb-4"><i class="fas fa-chart-line mr-2 text-[#082b5f]"></i> Inversión Mantenimientos Mensual (CLP)</h3><div class="h-48 relative"><canvas id="chartCostosMensuales"></canvas></div></div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="card-custom"><div class="px-5 py-3 bg-slate-50 border-b border-slate-200"><span class="text-xs font-bold text-red-600 uppercase">Alertas: Unidades con Margen Negativo ({{ criticos|length }})</span></div><div class="overflow-y-auto max-h-[300px]"><table class="w-full table-custom table-searchable"><thead><tr><th>Código</th><th>Tipo Equipo</th><th class="text-right">Atraso</th></tr></thead><tbody>{% for c in criticos %}<tr><td class="font-bold text-[#082b5f] cursor-pointer hover:underline" onclick="irAFichaEquipo('{{ c.codigo }}')">{{ c.codigo }}</td><td class="text-xs">{{ c.tipo_equipo }}</td><td class="text-right text-red-600 font-bold">{{ c.margen_str }}</td></tr>{% endfor %}</tbody></table></div></div>
-                    <div class="card-custom"><div class="px-5 py-3 bg-slate-50 border-b border-slate-200"><span class="text-xs font-bold text-slate-700 uppercase">Unidades Retenidas en Taller ({{ taller|length }})</span></div><div class="overflow-y-auto max-h-[300px]"><table class="w-full table-custom table-searchable"><thead><tr><th>Código</th><th>Tipo Equipo</th><th>Estado</th></tr></thead><tbody>{% for t in taller %}<tr><td class="font-bold text-[#082b5f] cursor-pointer hover:underline" onclick="irAFichaEquipo('{{ t.codigo }}')">{{ t.codigo }}</td><td class="text-xs">{{ t.tipo_equipo }}</td><td><span class="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded text-[10px] font-bold border border-yellow-200">{{ t.estado }}</span></td></tr>{% endfor %}</tbody></table></div></div>
+                    <div class="card-custom"><div class="px-5 py-3 bg-slate-50 border-b border-slate-200"><span class="text-xs font-bold text-red-600 uppercase"><i class="fas fa-exclamation-circle mr-1"></i> Alertas: Unidades con Margen Negativo ({{ criticos|length }})</span></div><div class="overflow-y-auto max-h-[300px]"><table class="w-full table-custom table-searchable"><thead><tr><th>Código</th><th>Tipo Equipo</th><th>Marca</th><th>Modelo</th><th class="text-right">Atraso</th></tr></thead><tbody>{% for c in criticos %}<tr><td class="font-bold text-[#082b5f] cursor-pointer hover:underline" onclick="irAFichaEquipo('{{ c.codigo }}')">{{ c.codigo }}</td><td class="text-xs">{{ c.tipo }}</td><td class="text-xs">{{ c.marca }}</td><td class="text-xs">{{ c.modelo }}</td><td class="text-right text-red-600 font-bold">{{ c.margen_str }}</td></tr>{% endfor %}</tbody></table></div></div>
+                    <div class="card-custom"><div class="px-5 py-3 bg-slate-50 border-b border-slate-200"><span class="text-xs font-bold text-slate-700 uppercase"><i class="fas fa-tools mr-1"></i> Unidades Retenidas en Taller ({{ taller|length }})</span></div><div class="overflow-y-auto max-h-[300px]"><table class="w-full table-custom table-searchable"><thead><tr><th>Código</th><th>Tipo Equipo</th><th>Marca</th><th>Modelo</th><th>Estado</th></tr></thead><tbody>{% for t in taller %}<tr><td class="font-bold text-[#082b5f] cursor-pointer hover:underline" onclick="irAFichaEquipo('{{ t.codigo }}')">{{ t.codigo }}</td><td class="text-xs">{{ t.tipo }}</td><td class="text-xs">{{ t.marca }}</td><td class="text-xs">{{ t.modelo }}</td><td><span class="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded text-[10px] font-bold border border-yellow-200">{{ t.estado }}</span></td></tr>{% endfor %}</tbody></table></div></div>
                 </div>
 
                 <div class="card-custom p-6 bg-white">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">Catálogo Visual Flota Real</h3>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4"><i class="fas fa-images mr-2"></i> Catálogo Visual Flota Real</h3>
                     <div class="flex overflow-x-auto hide-scrollbar gap-4 pb-2">
                         {% for a in equipos_aleatorios %}
                         <div class="min-w-[140px] bg-slate-50 rounded border p-3 text-center cursor-pointer hover:shadow-md transition-shadow" onclick="irAFichaEquipo('{{ a.codigo }}')">
-                            <div class="h-16 flex items-center justify-center mb-2 bg-white rounded border border-slate-100">{% if a.foto_url %}<img src="{{ a.foto_url }}" class="h-full object-contain">{% else %}<span class="text-slate-300">S/F</span>{% endif %}</div>
+                            <div class="h-16 flex items-center justify-center mb-2 bg-white rounded border border-slate-100">{% if a.foto_url %}<img src="{{ a.foto_url }}" class="h-full object-contain">{% else %}<span class="text-slate-300"><i class="fas fa-truck text-2xl"></i></span>{% endif %}</div>
                             <p class="text-xs text-slate-700 font-bold uppercase">{{ a.codigo }}</p>
                         </div>
                         {% endfor %}
@@ -101,44 +102,53 @@
 
             <div id="eq" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Código</th><th>Tipo</th><th>Ubicación</th><th>Operador</th><th>Ctrl</th><th>Lectura</th><th>Margen</th><th>Estado</th></tr></thead><tbody>{% for e in eqs %}<tr><td class="font-bold text-[#082b5f] cursor-pointer" onclick="irAFichaEquipo('{{ e.codigo }}')">{{ e.codigo }}</td><td class="text-xs">{{ e.tipo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'ubicacion', 'equipo')" class="text-xs">{{ e.ubicacion }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'responsable', 'equipo')" class="font-bold text-xs">{{ e.responsable }}</td><td class="text-xs">{{ e.ctrl }}</td><td class="font-bold text-xs">{{ e.lectura }}</td><td class="font-bold text-xs {% if e.margen < 0 %}text-red-600{% else %}text-green-600{% endif %}">{{ e.margen_str }}</td><td><span class="px-2 py-0.5 bg-slate-100 border rounded text-[9px] font-bold">{{ e.estado }}</span></td></tr>{% endfor %}</tbody></table></div></div>
             
-            <div id="datos" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Equipo</th><th>N° Chasis (VIN)</th><th>N° Motor</th><th>Patente</th></tr></thead><tbody>{% for e in eqs %}<tr><td class="font-bold text-[#082b5f] cursor-pointer" onclick="irAFichaEquipo('{{ e.codigo }}')">{{ e.codigo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'vin', 'equipo')" class="font-mono text-xs">{{ e.vin }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'n_motor', 'equipo')" class="font-mono text-xs">{{ e.motor }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'patente', 'equipo')" class="font-bold text-xs">{{ e.patente }}</td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="datos" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Equipo</th><th>N° Chasis (VIN)</th><th>N° Motor</th><th>Patente</th></tr></thead><tbody>{% for e in eqs %}<tr><td class="font-bold text-[#082b5f] cursor-pointer" onclick="irAFichaEquipo('{{ e.codigo }}')">{{ e.codigo }}</td><td class="font-mono text-xs text-slate-600">{{ e.vin }}</td><td class="font-mono text-xs text-slate-600">{{ e.motor }}</td><td class="font-bold text-xs text-slate-700">{{ e.patente }}</td></tr>{% endfor %}</tbody></table></div></div>
 
             <div id="plan" class="seccion">
                 <div class="grid grid-cols-4 gap-4">
-                    <div class="bg-slate-200/60 p-4 rounded border border-slate-300 flex flex-col h-[calc(100vh-160px)]"><h3 class="font-bold text-xs uppercase mb-3 text-slate-700">Pendiente</h3><div id="kb-pendiente" class="space-y-3 overflow-y-auto hide-scrollbar flex-1" data-status="Pendiente">{% for c in kanban['Pendiente'] %}<div class="bg-white border border-slate-300 p-3 shadow-sm cursor-grab" data-eq="{{ c.codigo }}"><h4 class="font-bold text-[#082b5f] text-sm">{{ c.codigo }}</h4><p class="text-[10px] text-slate-500 mt-1">{{ c.tipo }}</p><p class="text-[10px] text-red-600 font-bold mt-1">Atraso: {{ c.margen }}</p></div>{% endfor %}</div></div>
-                    <div class="bg-blue-50/60 p-4 rounded border border-blue-200 flex flex-col h-[calc(100vh-160px)]"><h3 class="font-bold text-xs uppercase mb-3 text-blue-800">En Progreso</h3><div id="kb-progreso" class="space-y-3 overflow-y-auto hide-scrollbar flex-1" data-status="En Progreso">{% for c in kanban['En Progreso'] %}<div class="bg-white border-l-4 border-blue-500 border-t border-r border-b border-slate-200 p-3 shadow-sm cursor-grab" data-eq="{{ c.codigo }}"><h4 class="font-bold text-[#082b5f] text-sm">{{ c.codigo }}</h4><p class="text-[10px] text-slate-500 mt-1">{{ c.tipo }}</p></div>{% endfor %}</div></div>
-                    <div class="bg-yellow-50/60 p-4 rounded border border-yellow-200 flex flex-col h-[calc(100vh-160px)]"><h3 class="font-bold text-xs uppercase mb-3 text-yellow-800">En Revisión</h3><div id="kb-revision" class="space-y-3 overflow-y-auto hide-scrollbar flex-1" data-status="En Revisión">{% for c in kanban['En Revisión'] %}<div class="bg-white border-l-4 border-yellow-500 border-t border-r border-b border-slate-200 p-3 shadow-sm cursor-grab" data-eq="{{ c.codigo }}"><h4 class="font-bold text-[#082b5f] text-sm">{{ c.codigo }}</h4><p class="text-[10px] text-slate-500 mt-1">{{ c.tipo }}</p></div>{% endfor %}</div></div>
-                    <div class="bg-green-50/60 p-4 rounded border border-green-200 flex flex-col h-[calc(100vh-160px)]"><h3 class="font-bold text-xs uppercase mb-3 text-green-800">Finalizada</h3><div id="kb-completado" class="space-y-3 overflow-y-auto hide-scrollbar flex-1" data-status="Finalizada">{% for c in kanban['Completado'] %}<div class="bg-white border-l-4 border-green-500 border-t border-r border-b border-slate-200 p-3 shadow-sm" data-eq="{{ c.codigo }}"><h4 class="font-bold text-green-700 text-sm">{{ c.codigo }}</h4></div>{% endfor %}</div></div>
+                    <div class="bg-slate-200/60 p-4 rounded border border-slate-300 flex flex-col h-[calc(100vh-160px)]"><h3 class="font-bold text-xs uppercase mb-3 text-slate-700"><i class="fas fa-inbox mr-1"></i> Pendiente</h3><div id="kb-pendiente" class="space-y-3 overflow-y-auto hide-scrollbar flex-1" data-status="Pendiente">{% for c in kanban['Pendiente'] %}<div class="bg-white border border-slate-300 p-3 shadow-sm cursor-grab" data-eq="{{ c.codigo }}"><h4 class="font-bold text-[#082b5f] text-sm">{{ c.codigo }}</h4><p class="text-[10px] text-slate-500 mt-1">{{ c.tipo }}</p><p class="text-[10px] text-red-600 font-bold mt-1">Atraso: {{ c.margen }}</p></div>{% endfor %}</div></div>
+                    <div class="bg-blue-50/60 p-4 rounded border border-blue-200 flex flex-col h-[calc(100vh-160px)]"><h3 class="font-bold text-xs uppercase mb-3 text-blue-800"><i class="fas fa-spinner mr-1"></i> En Progreso</h3><div id="kb-progreso" class="space-y-3 overflow-y-auto hide-scrollbar flex-1" data-status="En Progreso">{% for c in kanban['En Progreso'] %}<div class="bg-white border-l-4 border-blue-500 border-t border-r border-b border-slate-200 p-3 shadow-sm cursor-grab" data-eq="{{ c.codigo }}"><h4 class="font-bold text-[#082b5f] text-sm">{{ c.codigo }}</h4><p class="text-[10px] text-slate-500 mt-1">{{ c.tipo }}</p></div>{% endfor %}</div></div>
+                    <div class="bg-yellow-50/60 p-4 rounded border border-yellow-200 flex flex-col h-[calc(100vh-160px)]"><h3 class="font-bold text-xs uppercase mb-3 text-yellow-800"><i class="fas fa-search mr-1"></i> En Revisión</h3><div id="kb-revision" class="space-y-3 overflow-y-auto hide-scrollbar flex-1" data-status="En Revisión">{% for c in kanban['En Revisión'] %}<div class="bg-white border-l-4 border-yellow-500 border-t border-r border-b border-slate-200 p-3 shadow-sm cursor-grab" data-eq="{{ c.codigo }}"><h4 class="font-bold text-[#082b5f] text-sm">{{ c.codigo }}</h4><p class="text-[10px] text-slate-500 mt-1">{{ c.tipo }}</p></div>{% endfor %}</div></div>
+                    <div class="bg-green-50/60 p-4 rounded border border-green-200 flex flex-col h-[calc(100vh-160px)]"><h3 class="font-bold text-xs uppercase mb-3 text-green-800"><i class="fas fa-check-circle mr-1"></i> Finalizada</h3><div id="kb-completado" class="space-y-3 overflow-y-auto hide-scrollbar flex-1" data-status="Finalizada">{% for c in kanban['Completado'] %}<div class="bg-white border-l-4 border-green-500 border-t border-r border-b border-slate-200 p-3 shadow-sm" data-eq="{{ c.codigo }}"><h4 class="font-bold text-green-700 text-sm">{{ c.codigo }}</h4></div>{% endfor %}</div></div>
                 </div>
             </div>
 
             <div id="cal" class="seccion"><div class="card-custom p-6 h-full overflow-y-auto pb-10"><div id="calendar" style="min-height: 800px; width: 100%;"></div></div></div>
             
-            <div id="ot" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Fecha</th><th>Equipo</th><th>Folio OT</th><th>Intervención</th><th>Lectura</th><th>Costo</th><th>Estado</th><th>Documento</th></tr></thead><tbody>{% for m in mantenciones %}{% if m.tipo_ot == 'Preventiva' %}<tr><td class="text-xs">{{ m.fecha }}</td><td class="font-bold text-[#082b5f] cursor-pointer" onclick="irAFichaEquipo('{{ m.codigo }}')">{{ m.codigo }}</td><td class="font-bold text-slate-700 text-xs">{{ m.ot_generada }}</td><td class="text-xs">{{ m.tipo_mantencion }}</td><td class="text-right text-xs">{{ m.lectura_str }}</td><td class="text-right text-[#082b5f] font-bold text-xs">{{ m.costo_str }}</td><td class="text-center"><span class="px-2 py-0.5 bg-slate-100 border rounded text-[9px] font-bold">{{ m.estado }}</span></td><td class="text-center"><a href="/imprimir_ot/{{ m.codigo }}" target="_blank" class="text-blue-600 hover:text-blue-800 font-bold text-xs">Imprimir</a></td></tr>{% endif %}{% endfor %}</tbody></table></div></div>
+            <div id="ot" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Fecha</th><th>Equipo</th><th>Folio OT</th><th>Intervención</th><th>Lectura</th><th>Costo</th><th>Estado</th><th>Documento</th></tr></thead><tbody>{% for m in mantenciones %}{% if m.tipo_ot == 'Preventiva' %}<tr><td class="text-xs">{{ m.fecha }}</td><td class="font-bold text-[#082b5f] cursor-pointer hover:underline" onclick="irAFichaEquipo('{{ m.codigo }}')">{{ m.codigo }}</td><td class="font-bold text-slate-700 text-xs">{{ m.ot_generada }}</td><td class="text-xs">{{ m.tipo_mantencion }}</td><td class="text-right text-xs">{{ m.lectura_str }}</td><td class="text-right text-[#082b5f] font-bold text-xs">{{ m.costo_str }}</td><td class="text-center"><span class="px-2 py-0.5 bg-slate-100 border rounded text-[9px] font-bold">{{ m.estado }}</span></td><td class="text-center"><a href="/imprimir_ot/{{ m.codigo }}" target="_blank" class="text-blue-600 hover:text-blue-800 font-bold text-xs"><i class="fas fa-print"></i> PDF</a></td></tr>{% endif %}{% endfor %}</tbody></table></div></div>
             
-            <div id="compras" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Fecha</th><th>OC</th><th>Equipo</th><th>Descripción Insumo</th><th>Inversión</th></tr></thead><tbody>{% for c in compras %}<tr><td class="text-xs">{{ c.fecha }}</td><td class="font-bold text-slate-700 text-xs">#{{ c.oc }}</td><td class="font-bold text-[#082b5f] cursor-pointer" onclick="irAFichaEquipo('{{ c.codigo }}')">{{ c.codigo }}</td><td class="text-xs">{{ c.descripcion }}</td><td class="font-bold text-[#082b5f] text-xs">{{ c.costo_str }}</td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="compras" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Fecha</th><th>OC</th><th>Equipo</th><th>Descripción Insumo</th><th>Inversión</th></tr></thead><tbody>{% for c in compras %}<tr><td class="text-xs">{{ c.fecha }}</td><td class="font-bold text-slate-700 text-xs">#{{ c.oc }}</td><td class="font-bold text-[#082b5f] cursor-pointer hover:underline" onclick="irAFichaEquipo('{{ c.codigo }}')">{{ c.codigo }}</td><td class="text-xs">{{ c.descripcion }}</td><td class="font-bold text-[#082b5f] text-xs">{{ c.costo_str }}</td></tr>{% endfor %}</tbody></table></div></div>
             
-            <div id="lec" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Fecha</th><th>Equipo</th><th>Operador</th><th>Captura</th><th>Ubicación</th><th>Obs / Averías</th></tr></thead><tbody>{% for l in lecturas %}<tr><td class="text-xs">{{ l.fecha }}</td><td class="font-bold text-[#082b5f] cursor-pointer" onclick="irAFichaEquipo('{{ l.codigo }}')">{{ l.codigo }}</td><td class="font-bold text-xs">{{ l.responsable }}</td><td class="font-bold text-[#082b5f] text-sm">{{ l.valor_str }} <span class="text-[9px]">{{ l.tipo }}</span></td><td class="text-xs">{{ l.ubicacion }}</td><td class="text-xs text-slate-500">{{ l.obs }}</td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="lec" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Fecha</th><th>Equipo</th><th>Operador</th><th>Captura</th><th>Ubicación</th><th>Obs / Averías</th></tr></thead><tbody>{% for l in lecturas %}<tr><td class="text-xs">{{ l.fecha }}</td><td class="font-bold text-[#082b5f] cursor-pointer hover:underline" onclick="irAFichaEquipo('{{ l.codigo }}')">{{ l.codigo }}</td><td class="font-bold text-xs">{{ l.responsable }}</td><td class="font-bold text-[#082b5f] text-sm">{{ l.valor_str }} <span class="text-[9px]">{{ l.tipo }}</span></td><td class="text-xs">{{ l.ubicacion }}</td><td class="text-xs text-slate-500">{{ l.obs }}</td></tr>{% endfor %}</tbody></table></div></div>
             
-            <div id="cond" class="seccion"><div class="card-custom"><div class="px-5 py-3 bg-slate-50 border-b flex justify-between items-center"><span class="text-xs font-bold uppercase text-slate-700">Base Maestra de Operadores</span></div><table class="w-full table-custom table-searchable"><thead><tr><th>Nombre Operador</th><th>Cargo Asignado</th><th>Equipo Actual</th><th>Ubicación</th><th>Estado Laboral</th></tr></thead><tbody>{% for op in operadores %}<tr><td class="font-bold text-slate-800 text-xs">{{ op.nombre }}</td><td contenteditable="true" onblur="guardarInline(this, '{{ op.id }}', 'cargo', 'personal')" class="text-xs">{{ op.cargo }}</td><td class="font-bold text-[#082b5f] cursor-pointer" onclick="irAFichaEquipo('{{ op.equipo_asignado }}')">{{ op.equipo_asignado }}</td><td class="text-xs">{{ op.ubicacion }}</td><td><select onchange="guardarEstadoPersonal('{{ op.id }}', this.value)" class="text-xs border rounded p-1 font-bold outline-none"><option value="Activo" {% if op.estado == 'Activo' %}selected{% endif %}>Activo</option><option value="Desvinculado" {% if op.estado == 'Desvinculado' %}selected{% endif %}>Desvinculado</option><option value="Vacaciones" {% if op.estado == 'Vacaciones' %}selected{% endif %}>Vacaciones</option><option value="Licencia" {% if op.estado == 'Licencia' %}selected{% endif %}>Licencia Médica</option></select></td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="cond" class="seccion"><div class="card-custom"><div class="px-5 py-3 bg-slate-50 border-b flex justify-between items-center"><span class="text-xs font-bold uppercase text-slate-700"><i class="fas fa-users mr-2"></i> Base Maestra de Operadores</span></div><table class="w-full table-custom table-searchable"><thead><tr><th>Nombre Operador</th><th>Cargo Asignado</th><th>Equipo Actual</th><th>Ubicación</th><th>Estado Laboral</th></tr></thead><tbody>{% for op in operadores %}<tr><td class="font-bold text-slate-800 text-xs">{{ op.nombre }}</td><td contenteditable="true" onblur="guardarInline(this, '{{ op.id }}', 'cargo', 'personal')" class="text-xs">{{ op.cargo }}</td><td class="font-bold text-[#082b5f] cursor-pointer hover:underline" onclick="irAFichaEquipo('{{ op.equipo_asignado }}')">{{ op.equipo_asignado }}</td><td class="text-xs">{{ op.ubicacion }}</td><td><select onchange="guardarEstadoPersonal('{{ op.id }}', this.value)" class="text-xs border rounded p-1 font-bold outline-none text-slate-700"><option value="Activo" {% if op.estado == 'Activo' %}selected{% endif %}>Activo</option><option value="Desvinculado" {% if op.estado == 'Desvinculado' %}selected{% endif %}>Desvinculado</option><option value="Vacaciones" {% if op.estado == 'Vacaciones' %}selected{% endif %}>Vacaciones</option><option value="Licencia" {% if op.estado == 'Licencia' %}selected{% endif %}>Licencia Médica</option></select></td></tr>{% endfor %}</tbody></table></div></div>
 
             <div id="logs" class="seccion"><div class="card-custom"><table class="w-full table-custom table-searchable"><thead><tr><th>Fecha / Hora</th><th>Usuario</th><th>Acción Realizada</th></tr></thead><tbody>{% for l in logs %}<tr><td class="text-xs text-slate-500">{{ l.fecha }}</td><td class="font-bold text-slate-700 text-xs">{{ l.usuario }}</td><td class="text-xs">{{ l.accion }}</td></tr>{% endfor %}</tbody></table></div></div>
             
-            <div id="bodega" class="seccion"><div class="card-custom p-16 text-center bg-white"><h2 class="text-sm font-bold text-slate-400">Módulo de Bodega en Desarrollo Estructural</h2></div></div>
-            <div id="ot_corr" class="seccion"><div class="card-custom p-16 text-center bg-white"><h2 class="text-sm font-bold text-slate-400">Módulo de Ordenes de Trabajo Correctivas en Desarrollo Estructural</h2></div></div>
+            <div id="bodega" class="seccion"><div class="card-custom p-16 text-center bg-white"><h2 class="text-sm font-bold text-slate-400"><i class="fas fa-boxes text-4xl mb-4 block text-slate-300"></i>Módulo de Bodega en Desarrollo Estructural</h2></div></div>
+            <div id="mec" class="seccion"><div class="card-custom p-16 text-center bg-white"><h2 class="text-sm font-bold text-slate-400"><i class="fas fa-users-cog text-4xl mb-4 block text-slate-300"></i>Módulo de Mecánicos en Desarrollo Estructural</h2></div></div>
+            <div id="ot_corr" class="seccion"><div class="card-custom p-16 text-center bg-white"><h2 class="text-sm font-bold text-slate-400"><i class="fas fa-exclamation-triangle text-4xl mb-4 block text-slate-300"></i>Módulo de Ordenes de Trabajo Correctivas en Desarrollo Estructural</h2></div></div>
         </div>
     </main>
 
     <script>
+        // Navegación de Pestañas
         function switchTab(t, el) {
             document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            document.getElementById(t).classList.add('active'); el.classList.add('active');
-            document.getElementById('title').innerText = el.innerText.trim();
+            document.getElementById(t).classList.add('active'); 
+            el.classList.add('active');
+            
+            // Limpia el texto de iconos para el título
+            let titleText = el.innerText.trim();
+            document.getElementById('title').innerText = titleText;
+            
             if(t==='cal') setTimeout(() => window.calendar.render(), 100);
-            document.getElementById('buscador-global').value = ''; filtrarTablas('');
+            document.getElementById('buscador-global').value = ''; 
+            filtrarTablas('');
         }
 
+        // Buscador Global en Tablas Activas
         function filtrarTablas(q) {
             q = q.toLowerCase();
             const activeMod = document.querySelector('.seccion.active');
@@ -148,9 +158,14 @@
             });
         }
 
+        // Guardado Inline Automático
         function guardarInline(el, cod, campo, tabla) {
             const valor = el.innerText.trim();
-            fetch('/update_inline', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: cod, campo: campo, valor: valor, tabla: tabla}) })
+            fetch('/update_inline', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({codigo: cod, campo: campo, valor: valor, tabla: tabla}) 
+            })
             .then(res => res.json()).then(data => {
                 if(data.status === 'success') {
                     el.classList.add('guardado-exito');
@@ -159,46 +174,111 @@
             });
         }
 
+        // Actualización de Estado (Select)
         function guardarEstadoPersonal(id, valor) {
-            fetch('/update_inline', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: id, campo: 'estado', valor: valor, tabla: 'personal'}) });
+            fetch('/update_inline', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({codigo: id, campo: 'estado', valor: valor, tabla: 'personal'}) 
+            });
         }
 
-        function irAFichaEquipo(c) { window.location.href = '/equipo/'+c; }
+        // Redirección a Ficha de Equipo
+        function irAFichaEquipo(c) { 
+            window.location.href = '/equipo/' + c; 
+        }
         
+        // Kanban Drag & Drop
         const kbCols = ['kb-pendiente', 'kb-progreso', 'kb-revision', 'kb-completado'];
         kbCols.forEach(col => {
             new Sortable(document.getElementById(col), {
-                group: 'kanban', animation: 150,
+                group: 'kanban', 
+                animation: 150,
                 onEnd: function (evt) {
                     const eq = evt.item.getAttribute('data-eq');
                     const nuevo_estado = evt.to.getAttribute('data-status');
-                    fetch('/update_kanban', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo: eq, estado: nuevo_estado }) });
-                    if(nuevo_estado === 'Finalizada') window.open('/imprimir_ot/' + eq, '_blank');
+                    fetch('/update_kanban', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ codigo: eq, estado: nuevo_estado }) 
+                    });
+                    if(nuevo_estado === 'Finalizada') {
+                        window.open('/imprimir_ot/' + eq, '_blank');
+                    }
                 }
             });
         });
 
+        // Carga de Datos y Configuración Inicial de Gráficos/Calendario
         const mData = {{ mantenciones|tojson }};
         const cData = {{ charts|tojson }};
         
         window.onload = function() {
-            // REPARACIÓN COMPLETA DEL TEXTO DEL CALENDARIO: CÓDIGO + TIPO DE MANTENCIÓN (EVITA EL NONE)
+            // Inicialización Calendario
             const evts = mData.filter(m => m.fecha_iso).map(m => ({ 
                 title: m.codigo + ' (' + (m.tipo_mantencion || 'Pauta 250 Hrs') + ')', 
                 start: m.fecha_iso 
             }));
             window.calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
-                initialView: 'dayGridMonth', locale: 'es',
+                initialView: 'dayGridMonth', 
+                locale: 'es',
                 headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth' },
-                events: evts, eventContent: function(a) { return { html: `<div class="p-1 text-[10px] font-bold text-white bg-[#082b5f] rounded px-2 py-1 shadow-sm truncate">${a.event.title}</div>` }; }
+                events: evts, 
+                eventContent: function(a) { 
+                    return { html: `<div class="p-1 text-[10px] font-bold text-white bg-[#082b5f] rounded px-2 py-1 shadow-sm truncate border border-[#0f172a] hover:bg-[#0f172a] transition-colors">${a.event.title}</div>` }; 
+                }
             });
             window.calendar.render();
 
+            // Configuración Global Chart.js
             Chart.defaults.font.family = "'Roboto', sans-serif";
-            new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '70%', data: { labels: ['Operativos', 'Fuera de Servicio', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'], borderWidth:0 }] }, options: { maintainAspectRatio:false, plugins:{legend:{display: true, position:'right', labels:{boxWidth:12, font:{size:11}}}} }});
             
-            // GRÁFICO HISTÓRICO RESTAURADO CORRECTAMENTE
-            new Chart(document.getElementById('chartCostosMensuales'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión Realizada', data: cData.costos_mensuales.data, borderColor: '#082b5f', backgroundColor: 'rgba(8, 43, 95, 0.05)', fill: true, tension: 0.2, borderWidth: 2 }] }, options: { maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}}, y:{grid:{color:'#F1F5F9'}}} }});
+            // Gráfico Estado Flota (Doughnut)
+            new Chart(document.getElementById('chartEstado'), { 
+                type: 'doughnut', 
+                cutout: '70%', 
+                data: { 
+                    labels: ['Operativos', 'Fuera de Servicio', 'Taller'], 
+                    datasets: [{ 
+                        data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], 
+                        backgroundColor: ['#10B981','#64748B','#EF4444'], 
+                        borderWidth: 0 
+                    }] 
+                }, 
+                options: { 
+                    maintainAspectRatio: false, 
+                    plugins: {
+                        legend: { display: true, position: 'right', labels: { boxWidth: 12, font: { size: 11 } } }
+                    } 
+                }
+            });
+            
+            // Gráfico Costos Mensuales (Line)
+            new Chart(document.getElementById('chartCostosMensuales'), { 
+                type: 'line', 
+                data: { 
+                    labels: cData.costos_mensuales.labels, 
+                    datasets: [{ 
+                        label: 'Inversión Realizada (CLP)', 
+                        data: cData.costos_mensuales.data, 
+                        borderColor: '#082b5f', 
+                        backgroundColor: 'rgba(8, 43, 95, 0.05)', 
+                        fill: true, 
+                        tension: 0.3, 
+                        borderWidth: 2,
+                        pointBackgroundColor: '#082b5f',
+                        pointRadius: 4
+                    }] 
+                }, 
+                options: { 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } }, 
+                    scales: {
+                        x: { grid: { display: false } }, 
+                        y: { grid: { color: '#F1F5F9' }, beginAtZero: true }
+                    } 
+                }
+            });
         };
     </script>
 </body>
