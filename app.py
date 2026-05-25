@@ -361,9 +361,10 @@ def cargar_sql_final():
             db.session.add(eq)
         db.session.commit()
 
-        archivo_detalles = "detalles de equipo.xlsx - Hoja1.csv"
+        # === CÓDIGO CORREGIDO PARA LEER EL EXCEL DIRECTAMENTE ===
+        archivo_detalles = "detalles de equipo.xlsx"
         if os.path.exists(archivo_detalles):
-            df_det = pd.read_csv(archivo_detalles)
+            df_det = pd.read_excel(archivo_detalles).replace({np.nan: None})
             df_det.columns = [str(c).strip() for c in df_det.columns]
             for _, row in df_det.iterrows():
                 cod = str(row.get('Código', row.get('Codigo', ''))).strip()
@@ -373,6 +374,7 @@ def cargar_sql_final():
                     eq.vin = clean_string(row.get('N° Chasis', ''))
                     eq.n_motor = clean_string(row.get('N° Motor', ''))
             db.session.commit()
+        # ========================================================
 
         df_lec = pd.read_excel(archivo_excel, sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
         for _, row in df_lec.iterrows():
