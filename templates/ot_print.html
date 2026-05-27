@@ -2,63 +2,22 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Orden de Trabajo {{ ot.folio }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <title>Impresión OT</title>
     <style>
-        body { font-family: 'Roboto', sans-serif; font-size: 11px; color: #000; margin: 0; padding: 0; background: #fff; }
-        .hoja-a4 { width: 210mm; min-height: 297mm; padding: 15mm; margin: 0 auto; box-sizing: border-box; }
-        .header-grid { display: grid; grid-template-columns: 25% 50% 25%; border: 2px solid #082b5f; margin-bottom: 20px; align-items: center; }
-        .header-logo { padding: 10px; border-right: 2px solid #082b5f; text-align: center; }
-        .header-title { padding: 10px; text-align: center; font-size: 16px; font-weight: bold; color: #082b5f; border-right: 2px solid #082b5f; tracking-spacing: 0.5px; }
-        .header-folio { padding: 10px; text-align: center; font-weight: bold; color: #ef4444; font-size: 11px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; border: 2px solid #082b5f; }
-        th, td { border: 1px solid #082b5f; padding: 6px 8px; }
-        th { background-color: #082b5f; color: white; font-weight: bold; text-align: left; font-size: 10px; text-transform: uppercase; }
-        .label-cell { font-weight: bold; background-color: #f1f5f9; width: 22%; font-size: 10px; color: #334155; }
-        .obs-box { border: 2px solid #082b5f; height: 120px; padding: 10px; margin-bottom: 30px; }
-        .firmas { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; text-align: center; margin-top: 60px; }
-        .firma-linea { border-top: 1px solid #000; width: 80%; margin: 0 auto 5px auto; }
-        .firma-texto { font-size: 10px; font-weight: bold; text-transform: uppercase; }
-        .caja-filtros-dinamica { border: 1px solid #082b5f; padding: 12px; min-height: 90px; white-space: pre-wrap; font-family: monospace; font-size: 10px; margin-bottom: 15px; background: #fafafa; line-height: 1.4; }
-        @media print { body { background: white; } .hoja-a4 { width: 100%; padding: 0; } .no-print { display: none !important; } }
+        body { font-family: sans-serif; font-size: 11px; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; border: 1px solid #000; }
+        th, td { border: 1px solid #000; padding: 5px; }
+        th { background: #eee; }
     </style>
 </head>
 <body onload="window.print()">
-    
-    <div class="hoja-a4">
-        <div class="header-grid">
-            <div class="header-logo"><img src="/static/ISOTIPO DEMOTRON.png" style="max-height: 35px;" alt="Demotron S.A."></div>
-            <div class="header-title">ORDEN DE TRABAJO PREVENTIVA</div>
-            <div class="header-folio">FOLIO REGISTRO:<br><span style="font-size: 15px;">{{ ot.folio }}</span></div>
-        </div>
-
-        <table>
-            <tr><td class="label-cell">FECHA EMISIÓN</td><td>{{ fecha_actual }}</td><td class="label-cell">TIPO DE EQUIPO</td><td>{{ equipo.tipo_equipo }}</td></tr>
-            <tr><td class="label-cell">PATENTE / INTERNO</td><td style="font-weight: bold; font-size: 12px; color: #082b5f;">{{ equipo.patente or 'S/P' }} / {{ equipo.codigo }}</td><td class="label-cell">MARCA / MODELO</td><td>{{ equipo.marca }} {{ equipo.modelo }}</td></tr>
-            <tr><td class="label-cell">OBRA ASIGNADA</td><td>{{ equipo.ubicacion }}</td><td class="label-cell">KILOMETRAJE / HORAS</td><td>{{ equipo.lectura_actual }} {{ equipo.control_base }}</td></tr>
-            <tr><td class="label-cell">OPERADOR MAQUINARIA</td><td>{{ equipo.responsable }}</td><td class="label-cell">CICLO PLANIFICADO</td><td>{{ ot.tipo_mantencion }}</td></tr>
-        </table>
-
-        <div style="font-size: 10px; font-weight: bold; background-color: #082b5f; color: white; padding: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Kit Completo de Filtros y Equivalentes Registrados:</div>
-        <div class="caja-filtros-dinamica">{{ equipo.pauta_filtros }}</div>
-
-        <table>
-            <thead><tr><th colspan="2" style="text-align: center;">VERIFICACIONES OBLIGATORIAS TALLER</th></tr></thead>
-            <tbody>
-                <tr><td>[ ] Reemplazo de filtros de combustible y lubricantes</td><td>[ ] Inspección estructural de fugas de fluidos o averías</td></tr>
-                <tr><td>[ ] Medición de niveles de fluidos hidráulicos y refrigerante</td><td>[ ] Control de torque de pernos y pasadores críticos</td></tr>
-                <tr><td>[ ] Engrase generalizado y articulaciones de tolva / chasis</td><td>[ ] Chequeo operativo de sistemas eléctricos de faena</td></tr>
-            </tbody>
-        </table>
-
-        <div style="font-size: 10px; font-weight: bold; color: #082b5f; margin-bottom: 5px;">OBSERVACIONES ADICIONALES DEL MECÁNICO:</div>
-        <div class="obs-box"></div>
-
-        <div class="firmas">
-            <div><div class="firma-linea"></div><div class="firma-texto">Firma Mecánico Ejecutor</div></div>
-            <div><div class="firma-linea"></div><div class="firma-texto">Supervisor de Terreno</div></div>
-            <div><div class="firma-linea"></div><div class="firma-texto">Cierre de Operaciones</div></div>
-        </div>
-    </div>
+    <h2>Orden de Trabajo: {{ ot.folio }}</h2>
+    <p>Equipo: {{ equipo.codigo }} | Tipo: {{ ot.tipo_mantencion }}</p>
+    <table>
+        <tr><th>Sistema</th><th>Fleetguard</th><th>Baldwind</th><th>Original</th><th>Donaldson</th></tr>
+        {% for f in filtros %}
+        <tr><td>{{ f.sistema }}</td><td>{{ f.fleetguard }}</td><td>{{ f.baldwind }}</td><td>{{ f.originales }}</td><td>{{ f.donaldson }}</td></tr>
+        {% endfor %}
+    </table>
 </body>
 </html>
