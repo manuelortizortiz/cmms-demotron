@@ -5,7 +5,7 @@ import numpy as np
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = 'demotron_seguridad_maxima_2026'
@@ -119,7 +119,6 @@ def dashboard():
     lecturas = HistorialLectura.query.order_by(HistorialLectura.id.desc()).all()
     operadores = Personal.query.filter_by(cargo='Operador').all()
     
-    # Costos Mensuales
     mes_actual = datetime.now().month
     costos = {2:0, 3:0, 4:0, 5:0, 6:0}
     for ot in ots:
@@ -129,7 +128,6 @@ def dashboard():
         if c.fecha and c.fecha.year == 2026 and c.fecha.month in costos:
             costos[c.fecha.month] += (c.costo_pm_clp or 0)
             
-    # Preparar KPIs
     kpis = {
         'total': len(eqs),
         'operativos': len([e for e in eqs if e.estado_base == 'Operativo']),
@@ -138,7 +136,6 @@ def dashboard():
         'costo_mes_str': format_clp(costos.get(mes_actual, 0))
     }
     
-    # Preparar diccionarios para Jinja
     equipos_dict = []
     for e in eqs:
         equipos_dict.append({
@@ -178,8 +175,6 @@ def add_record():
             fecha=datetime.now()
         )
         db.session.add(nueva)
-        
-        # Actualizar lectura en equipo
         eq = Equipo.query.filter_by(codigo=request.form.get('codigo')).first()
         if eq: eq.lectura_actual = val
 
@@ -209,14 +204,10 @@ def add_record():
 
 @app.route('/api/delete_record/<tabla>/<int:id>', methods=['POST'])
 def delete_record(tabla, id):
-    if tabla == 'lectura':
-        obj = HistorialLectura.query.get(id)
-    elif tabla == 'ot':
-        obj = OrdenTrabajo.query.get(id)
-    elif tabla == 'compra':
-        obj = CompraRepuesto.query.get(id)
-    else:
-        return jsonify({"status": "error"}), 400
+    if tabla == 'lectura': obj = HistorialLectura.query.get(id)
+    elif tabla == 'ot': obj = OrdenTrabajo.query.get(id)
+    elif tabla == 'compra': obj = CompraRepuesto.query.get(id)
+    else: return jsonify({"status": "error"}), 400
         
     if obj:
         db.session.delete(obj)
@@ -253,10 +244,11 @@ def update_inline():
 def cargar_sql_final():
     try:
         archivos = os.listdir('.')
-        excel_principal = next((f for f in archivos if "CMMS" in f.upper()), None)
-        archivo_filtros = next((f for f in archivos if "filtro" in f.lower() and f.endswith(('.xlsx', '.csv'))), None)
+        # BLINDAJE: Ignorar archivos temporales (~$) y exigir extensión
+        excel_principal = next((f for f in archivos if "CMMS" in f.upper() and f.endswith(('.xlsx', '.xls')) and not f.startswith('~$')), None)
+        archivo_filtros = next((f for f in archivos if "filtro" in f.lower() and f.endswith(('.xlsx', '.csv')) and not f.startswith('~$')), None)
 
-        if not excel_principal: return "<h1>Error:</h1> Falta el archivo principal CMMS DEMOTRON."
+        if not excel_principal: return "<h1>Error:</h1> Falta el archivo principal CMMS DEMOTRON (.xlsx)."
 
         db.session.query(OrdenTrabajo).delete()
         db.session.query(CompraRepuesto).delete()
@@ -264,8 +256,8 @@ def cargar_sql_final():
         db.session.query(Equipo).delete()
         db.session.commit()
 
-        # 1. CARGA DE EQUIPOS
-        df_eq = pd.read_excel(excel_principal, sheet_name="Equipos", skiprows=2).replace({np.nan: None})
+        # 1. CARGA DE EQUIPOS (Forzando openpyxl por seguridad)
+        df_eq = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Equipos", skiprows=2).replace({np.nan: None})
         for _, row in df_eq.iterrows():
             if not row.iloc[0]: continue
             eq = Equipo(codigo=str(row.iloc[0]).strip(), tipo_equipo=row.iloc[1], marca=row.iloc[2], 
@@ -277,7 +269,11 @@ def cargar_sql_final():
 
         # 2. CARGA INTELIGENTE DE FILTROS DESDE EL NUEVO EXCEL
         if archivo_filtros:
-            df_fil = pd.read_excel(archivo_filtros) if archivo_filtros.endswith('.xlsx') else pd.read_csv(archivo_filtros)
+            if archivo_filtros.endswith('.xlsx'):
+                df_fil = pd.read_excel(archivo_filtros, engine='openpyxl')
+            else:
+                df_fil = pd.read_csv(archivo_filtros)
+            
             df_fil = df_fil.replace({np.nan: "-"})
             
             for _, row in df_fil.iterrows():
@@ -285,15 +281,12 @@ def cargar_sql_final():
                     cod = str(row.iloc[0]).strip()
                     eq = Equipo.query.filter_by(codigo=cod).first()
                     if eq:
-                        # Extraemos las columnas de la fila omitiendo Código y CANT para armar un párrafo limpio
                         info = []
                         for col_name in df_fil.columns[1:]:
-                            if col_name.upper() != 'CANT' and row[col_name] != "-":
+                            if col_name.upper() != 'CANT' and str(row[col_name]).strip() != "-":
                                 info.append(f"{col_name}: {row[col_name]}")
                         
                         texto_filtro = " | ".join(info)
-                        
-                        # Si ya tenía texto, se lo sumamos (porque son varias filas por equipo)
                         if "Registrar" in eq.pauta_filtros: eq.pauta_filtros = texto_filtro
                         else: eq.pauta_filtros += "\n" + texto_filtro
                 except: pass
