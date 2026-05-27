@@ -64,7 +64,7 @@ class HistorialLectura(db.Model):
     codigo_equipo = db.Column(db.String(50))
     horometro = db.Column(db.Integer, default=0)
     kilometraje = db.Column(db.Integer, default=0)
-    obra_ubicacion = db.Column(db.String(100))
+    obra_ubicacion = db.Column(db.String(100)) # <- Esta es la columna que causaba el conflicto
     responsable = db.Column(db.String(100))
     observacion = db.Column(db.String(250))
 
@@ -185,7 +185,7 @@ def dashboard():
                                lecturas=todas_lecturas, kanban=kanban_tareas, logs=logs_list, 
                                equipos_aleatorios=equipos_aleatorios, operadores=operadores, current_user="Admin")
     except Exception as e:
-        return f"<h1>Error en Dashboard:</h1><pre>{str(e)}</pre><p>Por favor, revisa que todas las tablas tengan información válida o toma captura de este error.</p>"
+        return f"<h1>Error en Dashboard:</h1><pre>{str(e)}</pre>"
 
 # ==========================================
 # RUTAS DE CONTROL (CRUD TOTAL)
@@ -305,17 +305,19 @@ def imprimir_ot(codigo):
 @app.route('/admin/cargar_sql_final', strict_slashes=False)
 def cargar_sql_final():
     try:
+        # DESTRUIR Y RECONSTRUIR TABLAS PARA EVITAR CONFLICTOS DE ESQUEMA ANTIGUO
+        OrdenTrabajo.__table__.drop(db.engine, checkfirst=True)
+        CompraRepuesto.__table__.drop(db.engine, checkfirst=True)
+        HistorialLectura.__table__.drop(db.engine, checkfirst=True)
+        Equipo.__table__.drop(db.engine, checkfirst=True)
+        Personal.__table__.drop(db.engine, checkfirst=True)
+        db.create_all()
+
         archivos = os.listdir('.')
         excel_principal = next((f for f in archivos if "CMMS" in f.upper() and f.endswith(('.xlsx', '.xls')) and not f.startswith('~$')), None)
         archivo_filtros = next((f for f in archivos if "filtro" in f.lower() and f.endswith(('.xlsx', '.csv')) and not f.startswith('~$')), None)
 
         if not excel_principal: return "<h1>Error:</h1> Falta el archivo principal CMMS DEMOTRON (.xlsx)."
-
-        db.session.query(OrdenTrabajo).delete()
-        db.session.query(CompraRepuesto).delete()
-        db.session.query(HistorialLectura).delete()
-        db.session.query(Equipo).delete()
-        db.session.commit()
 
         # 1. CARGA DE EQUIPOS
         df_eq = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Equipos", skiprows=2).replace({np.nan: None})
