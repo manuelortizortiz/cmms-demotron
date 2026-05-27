@@ -2,115 +2,74 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Ficha Técnica: {{ eq.codigo }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Equipo {{ eq.codigo }}</title>
     <style>
-        body { font-family: sans-serif; background-color: #F1F5F9; font-size: 13px; color: #1E293B; }
-        .card { background: white; border: 1px solid #E2E8F0; padding: 20px; margin-bottom: 20px; }
-        .btn { padding: 6px 12px; cursor: pointer; border: none; font-weight: bold; text-transform: uppercase; font-size: 10px; }
+        body { font-family: sans-serif; background: #f0f0f0; padding: 20px; color: #333; }
+        .box { background: white; border: 1px solid #ccc; padding: 20px; margin-bottom: 20px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { background: #082b5f; color: white; padding: 8px; text-transform: uppercase; font-size: 10px; }
-        td { border: 1px solid #E2E8F0; padding: 8px; text-align: center; }
-        .input-form { border: 1px solid #CBD5E1; padding: 4px; width: 100%; }
+        th { background: #082b5f; color: white; padding: 8px; font-size: 11px; }
+        td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+        .btn { padding: 4px 8px; cursor: pointer; border: 1px solid #444; background: #eee; font-size: 10px; }
     </style>
 </head>
-<body class="p-8">
-
-    <div class="max-w-6xl mx-auto">
-        <a href="/" class="btn bg-slate-600 text-white mb-4">← Volver al Inicio</a>
-
-        <div class="card flex justify-between items-start">
-            <div>
-                <h1 class="text-3xl font-bold text-[#082b5f]">{{ eq.codigo }}</h1>
-                <p class="text-lg text-slate-600">{{ eq.tipo_equipo }} - {{ eq.marca }} {{ eq.modelo }}</p>
-                <div class="mt-4 grid grid-cols-2 gap-4">
-                    <p><strong>Operador:</strong> {{ eq.responsable or 'Sin asignar' }}</p>
-                    <p><strong>Patente:</strong> {{ eq.patente or 'S/P' }}</p>
-                    <p><strong>VIN:</strong> {{ eq.vin or 'S/I' }}</p>
-                    <p><strong>N° Motor:</strong> {{ eq.n_motor or 'S/I' }}</p>
-                </div>
-            </div>
-            <div class="w-48 h-32 bg-slate-200 border flex items-center justify-center text-slate-500 italic">
-                Imagen {{ eq.codigo }}
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            <div class="card">
-                <div class="flex justify-between items-center mb-2">
-                    <h2 class="font-bold text-[#082b5f]">MANTENCIONES</h2>
-                    <form action="/api/add_record" method="POST">
-                        <input type="hidden" name="tabla" value="ot"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
-                        <button type="submit" class="btn bg-green-600 text-white">+ Agregar</button>
-                    </form>
-                </div>
-                <table>
-                    <thead><tr><th>Fecha</th><th>Tipo</th><th>Acción</th></tr></thead>
-                    <tbody>
-                        {% for m in mants %}
-                        <tr><td>{{ m.fecha }}</td><td>{{ m.tipo }}</td><td><button onclick="borrarRegistro('ot', '{{ m.id }}')" class="btn bg-red-500 text-white">Borrar</button></td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="card">
-                <div class="flex justify-between items-center mb-2">
-                    <h2 class="font-bold text-[#082b5f]">LECTURAS (Horómetro/KM)</h2>
-                    <form action="/api/add_record" method="POST">
-                        <input type="hidden" name="tabla" value="lectura"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
-                        <button type="submit" class="btn bg-green-600 text-white">+ Agregar</button>
-                    </form>
-                </div>
-                <table>
-                    <thead><tr><th>Fecha</th><th>Valor</th><th>Acción</th></tr></thead>
-                    <tbody>
-                        {% for l in lecturas %}
-                        <tr><td>{{ l.fecha }}</td><td>{{ l.valor }}</td><td><button onclick="borrarRegistro('lectura', '{{ l.id }}')" class="btn bg-red-500 text-white">Borrar</button></td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="font-bold text-[#082b5f]">PAUTA MAESTRA DE FILTROS</h2>
-                <form action="/api/add_record" method="POST">
-                    <input type="hidden" name="tabla" value="filtro"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
-                    <button type="submit" class="btn bg-blue-600 text-white">+ Agregar Fila</button>
-                </form>
-            </div>
-            <table>
-                <thead>
-                    <tr><th>Sistema</th><th>Fleetguard</th><th>Baldwind</th><th>Original</th><th>Donaldson</th><th>Acción</th></tr>
-                </thead>
-                <tbody>
-                    {% for f in filtros %}
-                    <tr>
-                        <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'sistema', 'filtro')">{{ f.sistema }}</td>
-                        <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'fleetguard', 'filtro')">{{ f.fleetguard }}</td>
-                        <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'baldwind', 'filtro')">{{ f.baldwind }}</td>
-                        <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'originales', 'filtro')">{{ f.originales }}</td>
-                        <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'donaldson', 'filtro')">{{ f.donaldson }}</td>
-                        <td><button onclick="borrarRegistro('filtro', '{{ f.id }}')" class="btn bg-red-500 text-white">Borrar</button></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<body>
+<div class="box">
+    <h1>Ficha Técnica: {{ eq.codigo }}</h1>
+    <div style="display:flex; gap:20px;">
+        <img src="{{ url_for('static', filename='img/' + foto) }}" width="150" alt="Imagen">
+        <div>
+            <p><strong>Operador:</strong> {{ eq.responsable }}</p>
+            <p><strong>VIN:</strong> {{ eq.vin }}</p>
+            <p><strong>Motor:</strong> {{ eq.n_motor }}</p>
         </div>
     </div>
+</div>
 
-    <script>
-        function guardarInline(el, id, campo, tabla) {
-            fetch('/update_inline', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: id, campo: campo, valor: el.innerText.trim(), tabla: tabla}) });
-        }
-        function borrarRegistro(tabla, id) {
-            if(confirm('¿Eliminar registro?')) {
-                fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' }).then(() => location.reload());
-            }
-        }
-    </script>
+<div class="grid-2">
+    <div class="box">
+        <h3>Mantenciones</h3>
+        <form action="/api/add_record" method="POST"><input type="hidden" name="tabla" value="ot"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}"><button class="btn">Agregar</button></form>
+        <table>
+            <tr><th>Fecha</th><th>Tipo</th><th>Acción</th></tr>
+            {% for m in mants %}
+            <tr><td>{{ m.fecha.strftime('%Y-%m-%d') }}</td><td>{{ m.tipo_mantencion }}</td><td><button class="btn" onclick="del('ot', {{ m.id }})">Borrar</button></td></tr>
+            {% endfor %}
+        </table>
+    </div>
+    <div class="box">
+        <h3>Lecturas</h3>
+        <form action="/api/add_record" method="POST"><input type="hidden" name="tabla" value="lectura"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}"><button class="btn">Agregar</button></form>
+        <table>
+            <tr><th>Fecha</th><th>Valor</th><th>Acción</th></tr>
+            {% for l in lecturas %}
+            <tr><td>{{ l.fecha.strftime('%Y-%m-%d') }}</td><td>{{ l.horometro or l.kilometraje }}</td><td><button class="btn" onclick="del('lectura', {{ l.id }})">Borrar</button></td></tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+<div class="box">
+    <h3>Pauta Maestra de Filtros</h3>
+    <form action="/api/add_record" method="POST"><input type="hidden" name="tabla" value="filtro"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}"><button class="btn">Agregar Fila</button></form>
+    <table>
+        <tr><th>Sistema</th><th>Fleetguard</th><th>Baldwind</th><th>Original</th><th>Donaldson</th><th>Acción</th></tr>
+        {% for f in filtros %}
+        <tr>
+            <td contenteditable="true" onblur="edit(this, {{f.id}}, 'sistema', 'filtro')">{{ f.sistema }}</td>
+            <td contenteditable="true" onblur="edit(this, {{f.id}}, 'fleetguard', 'filtro')">{{ f.fleetguard }}</td>
+            <td contenteditable="true" onblur="edit(this, {{f.id}}, 'baldwind', 'filtro')">{{ f.baldwind }}</td>
+            <td contenteditable="true" onblur="guardar(this, {{f.id}}, 'originales', 'filtro')">{{ f.originales }}</td>
+            <td contenteditable="true" onblur="edit(this, {{f.id}}, 'donaldson', 'filtro')">{{ f.donaldson }}</td>
+            <td><button class="btn" onclick="del('filtro', {{f.id}})">Borrar</button></td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<script>
+    function del(t, id) { fetch('/api/delete_record/'+t+'/'+id, {method:'POST'}).then(() => location.reload()); }
+    function edit(el, id, c, t) { fetch('/update_inline', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({codigo:id, campo:c, valor:el.innerText, tabla:t})}); }
+</script>
 </body>
 </html>
