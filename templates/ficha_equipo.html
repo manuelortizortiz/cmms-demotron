@@ -3,101 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <title>Ficha Técnica: {{ eq.codigo }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: 'Roboto', sans-serif; background-color: #F8FAFC; font-size: 12px; color: #334155; }
-        .card-custom { background: white; border-radius: 4px; border: 1px solid #E2E8F0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); margin-bottom: 20px; overflow: hidden; }
-        .table-custom { width: 100%; border-collapse: collapse; }
-        .table-custom th { text-transform: uppercase; font-size: 10px; color: #fff; background: #082b5f; padding: 10px; border: 1px solid #cbd5e1; text-align: center; }
-        .table-custom td { padding: 8px; border: 1px solid #cbd5e1; text-align: center; }
-        .table-custom tr:nth-child(even) { background-color: #f8fafc; }
-        .btn { padding: 5px 10px; font-size: 10px; font-weight: bold; text-transform: uppercase; border-radius: 2px; cursor: pointer; text-decoration: none; border: none; }
-        .btn-primary { background-color: #082b5f; color: white; }
-        .btn-danger { background-color: #dc2626; color: white; }
-        .input-inline { border: 1px solid #cbd5e1; padding: 2px 4px; width: 100%; font-size: 11px; }
+        body { font-family: sans-serif; background-color: #F1F5F9; font-size: 13px; color: #1E293B; }
+        .card { background: white; border: 1px solid #E2E8F0; padding: 20px; margin-bottom: 20px; }
+        .btn { padding: 6px 12px; cursor: pointer; border: none; font-weight: bold; text-transform: uppercase; font-size: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #082b5f; color: white; padding: 8px; text-transform: uppercase; font-size: 10px; }
+        td { border: 1px solid #E2E8F0; padding: 8px; text-align: center; }
+        .input-form { border: 1px solid #CBD5E1; padding: 4px; width: 100%; }
     </style>
 </head>
-<body class="p-6">
+<body class="p-8">
 
-    <div class="max-w-7xl mx-auto">
-        <div class="mb-6"><a href="/" class="btn btn-primary">Volver al Dashboard</a></div>
+    <div class="max-w-6xl mx-auto">
+        <a href="/" class="btn bg-slate-600 text-white mb-4">← Volver al Inicio</a>
 
-        <div class="card-custom p-6">
-            <div class="flex flex-col md:flex-row gap-6">
-                <div class="w-48 h-32 border flex items-center justify-center bg-slate-50">
-                    {% if foto_url %}<img src="{{ foto_url }}" class="h-full object-contain">{% else %}SIN IMAGEN{% endif %}
+        <div class="card flex justify-between items-start">
+            <div>
+                <h1 class="text-3xl font-bold text-[#082b5f]">{{ eq.codigo }}</h1>
+                <p class="text-lg text-slate-600">{{ eq.tipo_equipo }} - {{ eq.marca }} {{ eq.modelo }}</p>
+                <div class="mt-4 grid grid-cols-2 gap-4">
+                    <p><strong>Operador:</strong> {{ eq.responsable or 'Sin asignar' }}</p>
+                    <p><strong>Patente:</strong> {{ eq.patente or 'S/P' }}</p>
+                    <p><strong>VIN:</strong> {{ eq.vin or 'S/I' }}</p>
+                    <p><strong>N° Motor:</strong> {{ eq.n_motor or 'S/I' }}</p>
                 </div>
-                <div class="flex-1">
-                    <h1 class="text-2xl font-bold text-[#082b5f] uppercase">{{ eq.codigo }}</h1>
-                    <p class="text-sm font-bold text-slate-600">{{ eq.tipo_equipo }} - {{ eq.marca }} {{ eq.modelo }}</p>
-                    <p class="mt-2 text-xs text-slate-500">{{ desc_tecnica }}</p>
-                    <div class="mt-4 flex gap-4">
-                        <div class="border px-4 py-2 bg-slate-50">Estado: <span class="font-bold">{{ eq.estado_base }}</span></div>
-                        <div class="border px-4 py-2 bg-slate-50">Lectura: <span class="font-bold">{{ eq.lectura_actual }} {{ eq.control_base }}</span></div>
-                    </div>
-                </div>
+            </div>
+            <div class="w-48 h-32 bg-slate-200 border flex items-center justify-center text-slate-500 italic">
+                Imagen {{ eq.codigo }}
             </div>
         </div>
 
-        <div class="card-custom">
-            <div class="px-5 py-3 bg-[#082b5f] text-white flex justify-between items-center">
-                <span class="font-bold uppercase text-xs">Pauta Maestra de Filtros</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div class="card">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="font-bold text-[#082b5f]">MANTENCIONES</h2>
+                    <form action="/api/add_record" method="POST">
+                        <input type="hidden" name="tabla" value="ot"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
+                        <button type="submit" class="btn bg-green-600 text-white">+ Agregar</button>
+                    </form>
+                </div>
+                <table>
+                    <thead><tr><th>Fecha</th><th>Tipo</th><th>Acción</th></tr></thead>
+                    <tbody>
+                        {% for m in mants %}
+                        <tr><td>{{ m.fecha }}</td><td>{{ m.tipo }}</td><td><button onclick="borrarRegistro('ot', '{{ m.id }}')" class="btn bg-red-500 text-white">Borrar</button></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="font-bold text-[#082b5f]">LECTURAS (Horómetro/KM)</h2>
+                    <form action="/api/add_record" method="POST">
+                        <input type="hidden" name="tabla" value="lectura"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
+                        <button type="submit" class="btn bg-green-600 text-white">+ Agregar</button>
+                    </form>
+                </div>
+                <table>
+                    <thead><tr><th>Fecha</th><th>Valor</th><th>Acción</th></tr></thead>
+                    <tbody>
+                        {% for l in lecturas %}
+                        <tr><td>{{ l.fecha }}</td><td>{{ l.valor }}</td><td><button onclick="borrarRegistro('lectura', '{{ l.id }}')" class="btn bg-red-500 text-white">Borrar</button></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="font-bold text-[#082b5f]">PAUTA MAESTRA DE FILTROS</h2>
                 <form action="/api/add_record" method="POST">
                     <input type="hidden" name="tabla" value="filtro"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
-                    <button type="submit" class="btn bg-white text-[#082b5f]">Agregar Fila</button>
+                    <button type="submit" class="btn bg-blue-600 text-white">+ Agregar Fila</button>
                 </form>
             </div>
-            <table class="table-custom">
-                <thead><tr><th>Sistema</th><th>Cant</th><th>Fleetguard</th><th>Baldwind</th><th>Original</th><th>Donaldson</th><th>Otra</th><th>Acción</th></tr></thead>
+            <table>
+                <thead>
+                    <tr><th>Sistema</th><th>Fleetguard</th><th>Baldwind</th><th>Original</th><th>Donaldson</th><th>Acción</th></tr>
+                </thead>
                 <tbody>
                     {% for f in filtros %}
                     <tr>
                         <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'sistema', 'filtro')">{{ f.sistema }}</td>
-                        <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'cant', 'filtro')">{{ f.cant }}</td>
                         <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'fleetguard', 'filtro')">{{ f.fleetguard }}</td>
                         <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'baldwind', 'filtro')">{{ f.baldwind }}</td>
                         <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'originales', 'filtro')">{{ f.originales }}</td>
                         <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'donaldson', 'filtro')">{{ f.donaldson }}</td>
-                        <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'otra', 'filtro')">{{ f.otra }}</td>
-                        <td><button onclick="borrarRegistro('filtro', '{{ f.id }}')" class="btn btn-danger">Borrar</button></td>
+                        <td><button onclick="borrarRegistro('filtro', '{{ f.id }}')" class="btn bg-red-500 text-white">Borrar</button></td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-
-        <div class="grid grid-cols-2 gap-6">
-            <div class="card-custom">
-                <div class="px-5 py-3 bg-[#082b5f] text-white font-bold uppercase text-xs">Ordenes de Trabajo</div>
-                <table class="table-custom">
-                    <thead><tr><th>Fecha</th><th>Tipo</th><th>Costo</th><th>Acción</th></tr></thead>
-                    <tbody>
-                        {% for m in mants %}
-                        <tr><td>{{ m.fecha }}</td><td>{{ m.tipo }}</td><td>{{ m.costo_str }}</td><td><button onclick="borrarRegistro('ot', '{{ m.id }}')" class="btn btn-danger">Borrar</button></td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <div class="card-custom">
-                <div class="px-5 py-3 bg-[#082b5f] text-white font-bold uppercase text-xs">Historial Lecturas</div>
-                <table class="table-custom">
-                    <thead><tr><th>Fecha</th><th>Valor</th><th>Obs</th><th>Acción</th></tr></thead>
-                    <tbody>
-                        {% for l in lecturas %}
-                        <tr><td>{{ l.fecha }}</td><td>{{ l.valor }} {{ l.tipo }}</td><td>{{ l.obs }}</td><td><button onclick="borrarRegistro('lectura', '{{ l.id }}')" class="btn btn-danger">Borrar</button></td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
     </div>
+
     <script>
-        function guardarInline(el, cod, campo, tabla) {
-            fetch('/update_inline', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: cod, campo: campo, valor: el.innerText.trim(), tabla: tabla}) });
+        function guardarInline(el, id, campo, tabla) {
+            fetch('/update_inline', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: id, campo: campo, valor: el.innerText.trim(), tabla: tabla}) });
         }
         function borrarRegistro(tabla, id) {
-            if(confirm('¿Eliminar?')) {
+            if(confirm('¿Eliminar registro?')) {
                 fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' }).then(() => location.reload());
             }
         }
