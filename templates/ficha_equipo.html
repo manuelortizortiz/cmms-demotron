@@ -7,17 +7,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; font-size: 12px; color: #334155; }
-        .card-custom { background: white; border: 1px solid #E2E8F0; margin-bottom: 24px; }
+        .card-custom { background: white; border: 1px solid #E2E8F0; margin-bottom: 24px; border-radius: 4px; }
         .header-section { background: #082b5f; color: white; padding: 12px 20px; font-weight: 700; text-transform: uppercase; font-size: 11px; display: flex; justify-content: space-between; align-items: center; }
         .table-custom { width: 100%; border-collapse: collapse; }
         .table-custom th { text-transform: uppercase; font-size: 10px; color: #475569; background: #F1F5F9; padding: 10px; border-bottom: 1px solid #E2E8F0; text-align: left; }
         .table-custom td { padding: 10px; border-bottom: 1px solid #E2E8F0; }
-        .btn { padding: 6px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; cursor: pointer; border: none; transition: background-color 0.2s; }
+        .btn { padding: 6px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; cursor: pointer; border: none; transition: background-color 0.2s; border-radius: 2px;}
         .btn-primary { background-color: #082b5f; color: white; }
         .btn-primary:hover { background-color: #1e3a8a; }
         .btn-outline { background-color: transparent; color: white; border: 1px solid white; }
         .btn-outline:hover { background-color: white; color: #082b5f; }
-        .btn-danger { background-color: #FEE2E2; color: #DC2626; padding: 4px 8px; }
+        .btn-danger { background-color: #FEE2E2; color: #DC2626; padding: 4px 8px; border: 1px solid #FECACA; }
         .btn-danger:hover { background-color: #FECACA; }
         td[contenteditable="true"]:focus { outline: 2px solid #082b5f; background: white; }
         .guardado-exito { background-color: #D1FAE5 !important; transition: background-color 0.5s; }
@@ -26,7 +26,7 @@
 <body class="p-8">
 
     <div class="max-w-7xl mx-auto">
-        <div class="mb-6"><button onclick="window.location.href='/'" class="btn btn-primary">← VOLVER AL DASHBOARD</button></div>
+        <div class="mb-6"><button onclick="window.location.href='/'" class="btn btn-primary">VOLVER AL DASHBOARD</button></div>
 
         <div class="card-custom p-6 flex flex-col md:flex-row gap-8 items-start">
             <div class="w-56 h-40 border border-slate-200 bg-slate-50 flex items-center justify-center p-2">
@@ -88,7 +88,7 @@
                 </div>
                 <div class="overflow-y-auto max-h-[300px]">
                     <table class="table-custom">
-                        <thead><tr><th>Fecha</th><th>Valor Registrado</th><th>Observaciones</th><th class="text-right">Acción</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th>Valor Registrado</th><th>Observaciones / Averías</th><th class="text-right">Acción</th></tr></thead>
                         <tbody>
                             {% for l in lecturas %}
                             <tr>
