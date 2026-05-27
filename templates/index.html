@@ -58,7 +58,7 @@
                         {% for c in criticos %}<tr><td class="font-bold text-[#082b5f] cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{c.codigo}}'">{{ c.codigo }}</td><td>{{ c.tipo }}</td><td>{{ c.modelo }}</td><td class="text-right text-red-600 font-bold">{{ c.margen_str }}</td></tr>{% endfor %}
                         </tbody></table>
                     </div>
-                    <div class="card-custom"><div class="px-5 py-3 bg-slate-50 border-b"><span class="text-xs font-bold uppercase">Unidades en Taller</span></div>
+                    <div class="card-custom"><div class="px-5 py-3 bg-slate-50 border-b"><span class="text-xs font-bold uppercase">Unidades en Taller o Averías</span></div>
                         <table class="w-full table-custom"><thead><tr><th>Código</th><th>Tipo</th><th>Estado</th></tr></thead><tbody>
                         {% for t in taller %}<tr><td class="font-bold text-[#082b5f] cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{t.codigo}}'">{{ t.codigo }}</td><td>{{ t.tipo }}</td><td><span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-[10px] font-bold border">{{ t.estado }}</span></td></tr>{% endfor %}
                         </tbody></table>
