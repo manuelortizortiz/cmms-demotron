@@ -6,116 +6,126 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: 'Roboto', sans-serif; background-color: #F8FAFC; font-size: 13px; }
-        .card-custom { background: white; border-radius: 6px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden; }
-        .table-custom th { text-transform: uppercase; font-size: 11px; color: #475569; padding: 12px; border-bottom: 2px solid #E2E8F0; font-weight: 700; background: #F8FAFC; }
-        .table-custom td { padding: 10px 12px; border-bottom: 1px solid #F1F5F9; color: #334155; }
-        div[contenteditable="true"]:focus { outline: 2px solid #082b5f; background: #fff; box-shadow: inset 0 0 5px rgba(8, 43, 95, 0.1); }
-        .guardado-exito { border-color: #10B981 !important; box-shadow: 0 0 8px rgba(16, 185, 129, 0.3) !important; transition: all 0.5s; }
+        body { font-family: 'Roboto', sans-serif; background-color: #F8FAFC; font-size: 12px; color: #334155; }
+        .card-custom { background: white; border-radius: 4px; border: 1px solid #E2E8F0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 20px;}
+        .table-custom { width: 100%; border-collapse: collapse; }
+        .table-custom th { text-transform: uppercase; font-size: 10px; color: #fff; background: #082b5f; padding: 10px; border: 1px solid #cbd5e1; text-align: center; }
+        .table-custom td { padding: 8px; border: 1px solid #cbd5e1; text-align: center; }
+        .table-custom tr:nth-child(even) { background-color: #f8fafc; }
+        td[contenteditable="true"]:focus { outline: 2px solid #3b82f6; background: #fff; }
+        .guardado-exito { background-color: #d1fae5 !important; transition: background-color 0.5s; }
+        .btn { padding: 6px 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; border: none; }
+        .btn-primary { background-color: #082b5f; color: white; }
+        .btn-primary:hover { background-color: #1e3a8a; }
+        .btn-danger { background-color: #ef4444; color: white; padding: 4px 8px; font-size: 10px; }
     </style>
 </head>
-<body class="p-8 text-slate-800 bg-slate-50">
+<body class="p-6">
 
-    <div class="max-w-7xl mx-auto space-y-6">
-        <a href="/" class="text-[#082b5f] hover:underline font-bold text-xs uppercase">← Volver al ERP principal</a>
+    <div class="max-w-7xl mx-auto">
+        <div class="mb-4">
+            <a href="/" class="btn btn-primary">Volver al ERP</a>
+        </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-2 card-custom p-6">
-                <div class="flex flex-col md:flex-row gap-6 items-center">
-                    <div class="w-56 h-40 rounded bg-white border border-slate-200 flex items-center justify-center p-2">
-                        {% if foto_url %}<img src="{{ foto_url }}" class="h-full object-contain">{% else %}<span class="text-slate-300 text-xs">Sin Fotografía</span>{% endif %}
-                    </div>
-                    <div class="flex-1 w-full">
-                        <div class="flex items-center justify-between mb-2">
-                            <h1 class="text-2xl font-bold text-[#082b5f]">{{ eq.codigo }}</h1>
-                            <span class="px-3 py-1 bg-slate-100 border text-xs font-bold rounded uppercase">{{ eq.estado_base }}</span>
-                        </div>
-                        <h2 class="text-xs font-bold text-slate-600 mb-6 uppercase">{{ eq.tipo_equipo }} | {{ eq.marca }} {{ eq.modelo }}</h2>
-                        
-                        <div class="grid grid-cols-3 gap-4 mb-2">
-                            <div class="bg-white border rounded p-3"><p class="text-[10px] uppercase font-bold text-slate-500 mb-1">Lectura Actual</p><p class="text-lg font-bold text-[#082b5f]">{{ eq.lectura_actual }} <span class="text-xs font-medium">{{ eq.control_base }}</span></p></div>
-                            <div class="bg-white border rounded p-3"><p class="text-[10px] uppercase font-bold text-slate-500 mb-1">Próximo PM</p><p class="text-lg font-bold text-[#082b5f]">{{ eq.proxima_pm }} <span class="text-xs font-medium">{{ eq.control_base }}</span></p></div>
-                            <div class="bg-white border rounded p-3"><p class="text-[10px] uppercase font-bold text-slate-500 mb-1">Margen Tolerancia</p><p class="text-lg font-bold {% if eq.margen < 0 %}text-red-600{% else %}text-green-600{% endif %}">{{ eq.margen }} <span class="text-xs font-medium text-slate-700">{{ eq.control_base }}</span></p></div>
-                        </div>
-                    </div>
+                <div class="flex items-center justify-between mb-4 border-b pb-2">
+                    <h1 class="text-2xl font-bold text-[#082b5f]">{{ eq.codigo }}</h1>
+                    <span class="px-3 py-1 bg-slate-200 border text-xs font-bold uppercase text-slate-700">{{ eq.estado_base }}</span>
+                </div>
+                <h2 class="text-sm font-bold text-slate-600 mb-4 uppercase">{{ eq.tipo_equipo }} | {{ eq.marca }} {{ eq.modelo }}</h2>
+                
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="border rounded p-3 text-center bg-slate-50"><p class="text-[10px] uppercase font-bold text-slate-500">Lectura Actual</p><p class="text-lg font-bold text-[#082b5f]">{{ eq.lectura_actual }} <span class="text-xs">{{ eq.control_base }}</span></p></div>
+                    <div class="border rounded p-3 text-center bg-slate-50"><p class="text-[10px] uppercase font-bold text-slate-500">Próximo PM</p><p class="text-lg font-bold text-[#082b5f]">{{ eq.proxima_pm }} <span class="text-xs">{{ eq.control_base }}</span></p></div>
+                    <div class="border rounded p-3 text-center bg-slate-50"><p class="text-[10px] uppercase font-bold text-slate-500">Margen</p><p class="text-lg font-bold {% if eq.margen < 0 %}text-red-600{% else %}text-green-600{% endif %}">{{ eq.margen }} <span class="text-xs">{{ eq.control_base }}</span></p></div>
                 </div>
             </div>
 
             <div class="card-custom p-6 bg-[#082b5f] text-white">
-                <h3 class="text-xs font-bold uppercase mb-4 border-b border-white/20 pb-2">Identificación Técnica Especializada</h3>
+                <h3 class="text-xs font-bold uppercase mb-4 border-b border-white/20 pb-2">Identificación Técnica</h3>
                 <div class="space-y-3 text-xs">
                     <div class="flex justify-between border-b border-white/10 pb-1"><span class="text-slate-300">Placa Patente</span><span class="font-bold">{{ eq.patente or 'S/P' }}</span></div>
-                    <div class="flex justify-between border-b border-white/10 pb-1"><span class="text-slate-300">Año de Fabricación</span><span class="font-bold">{{ eq.ano or 'N/A' }}</span></div>
-                    <div class="flex justify-between border-b border-white/10 pb-1"><span class="text-slate-300">Número de Chasis (VIN)</span><span class="font-mono font-bold">{{ eq.vin or 'S/I' }}</span></div>
-                    <div class="flex justify-between border-b border-white/10 pb-1"><span class="text-slate-300">Número de Motor de Unidad</span><span class="font-mono font-bold">{{ eq.n_motor or 'S/I' }}</span></div>
-                    <div class="flex justify-between"><span class="text-slate-300">Operador / Chofer Asignado</span><span class="font-bold">{{ eq.responsable or 'Sin Asignar' }}</span></div>
+                    <div class="flex justify-between border-b border-white/10 pb-1"><span class="text-slate-300">N° Chasis (VIN)</span><span class="font-mono font-bold text-yellow-300">{{ eq.vin or 'S/I' }}</span></div>
+                    <div class="flex justify-between border-b border-white/10 pb-1"><span class="text-slate-300">N° Motor</span><span class="font-mono font-bold text-yellow-300">{{ eq.n_motor or 'S/I' }}</span></div>
+                    <div class="flex justify-between"><span class="text-slate-300">Operador</span><span class="font-bold">{{ eq.responsable or 'Sin Asignar' }}</span></div>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="card-custom overflow-hidden">
-                <div class="px-5 py-3 bg-slate-50 border-b flex justify-between items-center">
-                    <span class="font-bold uppercase text-[11px] text-slate-700">Órdenes de Trabajo Emitidas</span>
-                    <a href="/imprimir_ot/{{ eq.codigo }}" target="_blank" class="text-blue-600 hover:text-blue-800 font-bold text-[10px] uppercase">Descargar Última OT (PDF)</a>
-                </div>
-                <div class="overflow-y-auto max-h-[250px]">
-                    <table class="w-full table-custom">
-                        <thead><tr><th>Fecha / Folio</th><th>Tipo Intervención</th><th class="text-right">Costo</th></tr></thead>
-                        <tbody>
-                            {% for m in mants %}
-                            <tr class="hover:bg-slate-50"><td><span class="font-bold text-xs">{{ m.fecha }}</span><br><span class="text-[10px] text-slate-500">{{ m.folio }}</span></td><td class="text-xs">{{ m.tipo }}</td><td class="text-right font-bold text-[#082b5f] text-xs">{{ m.costo_str }}</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <div class="card-custom">
+            <div class="px-5 py-3 bg-[#082b5f] text-white flex justify-between items-center">
+                <span class="font-bold uppercase text-xs">Pauta Maestra de Filtros</span>
+                <div>
+                    <form action="/api/add_record" method="POST" class="inline">
+                        <input type="hidden" name="tabla" value="filtro">
+                        <input type="hidden" name="codigo" value="{{ eq.codigo }}">
+                        <input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
+                        <button type="submit" class="btn bg-blue-500 hover:bg-blue-400 text-white text-[10px]">Añadir Fila</button>
+                    </form>
+                    <a href="/imprimir_pauta/{{ eq.codigo }}" target="_blank" class="btn bg-white text-[#082b5f] hover:bg-slate-200 text-[10px] ml-2">Imprimir Pauta</a>
                 </div>
             </div>
+            <div class="p-4 overflow-x-auto">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Sistema / Tipo</th>
+                            <th>Cant</th>
+                            <th>Fleetguard</th>
+                            <th>Baldwind</th>
+                            <th>Originales</th>
+                            <th>Donaldson</th>
+                            <th>Otra Alternativa</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in filtros %}
+                        <tr>
+                            <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'sistema', 'filtro')" class="font-bold text-left">{{ f.sistema }}</td>
+                            <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'cant', 'filtro')">{{ f.cant }}</td>
+                            <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'fleetguard', 'filtro')">{{ f.fleetguard }}</td>
+                            <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'baldwind', 'filtro')">{{ f.baldwind }}</td>
+                            <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'originales', 'filtro')">{{ f.originales }}</td>
+                            <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'donaldson', 'filtro')">{{ f.donaldson }}</td>
+                            <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'otra', 'filtro')">{{ f.otra }}</td>
+                            <td><button onclick="borrarRegistro('filtro', '{{ f.id }}')" class="btn btn-danger">Borrar</button></td>
+                        </tr>
+                        {% endfor %}
+                        {% if not filtros %}
+                        <tr><td colspan="8" class="text-slate-400 py-4 italic">No hay filtros registrados. Haz clic en "Añadir Fila".</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-            <div class="card-custom overflow-hidden">
-                <div class="px-5 py-3 bg-slate-50 border-b"><span class="font-bold uppercase text-[11px] text-slate-700">Historial de Consumos / Lecturas Terreno</span></div>
-                <div class="overflow-y-auto max-h-[250px]">
-                    <table class="w-full table-custom">
-                        <thead><tr><th>Fecha Registro</th><th class="text-right">Valor Capturado</th><th>Observación / Estado de Operación</th></tr></thead>
-                        <tbody>
-                            {% for l in lecturas %}
-                            <tr class="hover:bg-slate-50"><td class="text-xs font-bold">{{ l.fecha }}</td><td class="text-right font-bold text-[#082b5f] text-sm">{{ l.valor }} <span class="text-[9px]">{{ l.tipo }}</span></td><td class="italic text-slate-500 text-[10px]">{{ l.obs }}</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+        <div class="card-custom">
+            <div class="px-5 py-3 bg-[#082b5f] text-white font-bold uppercase text-xs">Planificación de Mantenimiento</div>
+            <div class="p-4">
+                <div contenteditable="true" onblur="guardarInline(this, '{{eq.codigo}}', 'planificacion_mantencion', 'equipo')" class="w-full min-h-[100px] border border-slate-300 rounded p-3 bg-slate-50 text-xs whitespace-pre-wrap outline-none">{{ eq.planificacion_mantencion | safe }}</div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
-            <div class="card-custom">
-                <div class="px-5 py-3 bg-[#082b5f] text-white font-bold uppercase text-xs tracking-wide">Pauta Maestra de Filtros (Hasta 12+ Alternativos)</div>
-                <div class="p-5 bg-white">
-                    <p class="text-[10px] text-slate-400 mb-2">Haz clic abajo para detallar códigos de filtros de Aire (Primarios/Secundarios), Aceite, Combustibles e Hidráulicos de todas las marcas alternativas compatibles.</p>
-                    <div contenteditable="true" onblur="guardarCajaAmplia(this, '{{eq.codigo}}', 'pauta_filtros')" class="w-full min-h-[160px] border border-slate-300 rounded p-3 bg-slate-50 text-xs leading-relaxed font-mono whitespace-pre-wrap outline-none">{{ eq.pauta_filtros | safe }}</div>
-                </div>
-            </div>
-            
-            <div class="card-custom">
-                <div class="px-5 py-3 bg-[#082b5f] text-white font-bold uppercase text-xs tracking-wide">Planificación y Estrategia de Mantenimiento Activa</div>
-                <div class="p-5 bg-white">
-                    <p class="text-[10px] text-slate-400 mb-2">Haz clic abajo para registrar la pauta correspondiente a los ciclos planificados (Ej: 250 Hrs, 500 Hrs o 1000 Hrs) y sus observaciones especiales de faena.</p>
-                    <div contenteditable="true" onblur="guardarCajaAmplia(this, '{{eq.codigo}}', 'planificacion_mantencion')" class="w-full min-h-[160px] border border-slate-300 rounded p-3 bg-slate-50 text-xs leading-relaxed whitespace-pre-wrap outline-none">{{ eq.planificacion_mantencion | safe }}</div>
-                </div>
-            </div>
-        </div>
     </div>
     
     <script>
-        // Sistema de sincronización dinámica asíncrona (AJAX Inline)
-        function guardarCajaAmplia(el, cod, campo) {
+        function guardarInline(el, cod, campo, tabla) {
             const valor = el.innerText.trim();
-            fetch('/update_inline', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: cod, campo: campo, valor: valor, tabla: 'equipo'}) })
+            fetch('/update_inline', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: cod, campo: campo, valor: valor, tabla: tabla}) })
             .then(res => res.json()).then(data => {
                 if(data.status === 'success') {
                     el.classList.add('guardado-exito');
                     setTimeout(() => el.classList.remove('guardado-exito'), 1000);
                 }
             });
+        }
+        function borrarRegistro(tabla, id) {
+            if(confirm('¿Seguro que deseas eliminar este registro?')) {
+                fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' })
+                .then(res => res.json()).then(data => { if(data.status === 'success') location.reload(); });
+            }
         }
     </script>
 </body>
