@@ -94,17 +94,21 @@ class CompraRepuesto(db.Model):
 with app.app_context(): db.create_all()
 
 # ==========================================
-# FUNCIONES AUXILIARES
+# FUNCIONES AUXILIARES (REVISADAS)
 # ==========================================
+def clean_string(val):
+    s = str(val).strip()
+    return "" if s.lower() in ['nan', 'none', ''] else s
+
 def clean_int(val, default=0):
-    try: return int(float(str(val).strip()))
+    try: return int(float(clean_string(val))) if clean_string(val) else default
     except: return default
 
 def clean_float(val, default=0.0):
     try:
         if val is None: return default
         if isinstance(val, (int, float)): return float(val)
-        s = str(val).strip().replace('$', '').replace(' ', '').replace('.', '').replace(',', '.')
+        s = clean_string(val).replace('$', '').replace(' ', '').replace('.', '').replace(',', '.')
         return float(s) if s else default
     except: return default
 
@@ -118,12 +122,12 @@ def format_clp(val):
 
 def buscar_foto_por_tipo(tipo_equipo, marca=""):
     t = str(tipo_equipo).lower(); m = str(marca).lower()
-    if "tolva" in t: return "/static/equipos_real/camion_man_tolva.png"
-    if "tracto" in t: return "/static/equipos_real/tractocamion.png"
-    if "camioneta" in t: return "/static/equipos_real/maxus_t60.png"
-    if any(x in t for x in ["furgon", "minibus", "bus"]): return "/static/equipos_real/minibus.png"
-    if any(x in t for x in ["liviano", "pintura", "slurry", "plano"]): return "/static/equipos_real/camion_liviano.png"
-    return "/static/equipos_real/tractocamion.png"
+    if "tolva" in t: return "/static/img/camion_man_tolva.png"
+    if "tracto" in t: return "/static/img/tractocamion.png"
+    if "camioneta" in t: return "/static/img/maxus_t60.png"
+    if any(x in t for x in ["furgon", "minibus", "bus"]): return "/static/img/minibus.png"
+    if any(x in t for x in ["liviano", "pintura", "slurry", "plano"]): return "/static/img/camion_liviano.png"
+    return "/static/img/tractocamion.png"
 
 # ==========================================
 # RUTAS PRINCIPALES
@@ -332,13 +336,6 @@ def cargar_sql_final():
                 estado=str(row.iloc[9]) if row.iloc[9] else 'Finalizada', tipo_ot='Preventiva'
             ))
 
-        df_com = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
-        for _, row in df_com.iterrows():
-            if not row.iloc[2]: continue
-            try: fecha_dt = datetime.strptime(str(row.iloc[0]).split()[0], "%Y-%m-%d")
-            except: fecha_dt = datetime.now()
-            db.session.add(CompraRepuesto(fecha=fecha_dt, oc=str(row.iloc[1]), codigo_equipo=str(row.iloc[2]).strip(), descripcion=row.iloc[3], proveedor=row.iloc[4], costo_pm_clp=clean_float(row.iloc[5], 0.0), estado_oc=str(row.iloc[7])))
-        
         db.session.commit()
 
         for eq in Equipo.query.all():
