@@ -64,7 +64,7 @@ class HistorialLectura(db.Model):
     codigo_equipo = db.Column(db.String(50))
     horometro = db.Column(db.Integer, default=0)
     kilometraje = db.Column(db.Integer, default=0)
-    obra_ubicacion = db.Column(db.String(100)) # <- Esta es la columna que causaba el conflicto
+    obra_ubicacion = db.Column(db.String(100))
     responsable = db.Column(db.String(100))
     observacion = db.Column(db.String(250))
 
@@ -88,6 +88,14 @@ def clean_string(val):
 
 def clean_int(val, default=0):
     try: return int(float(clean_string(val))) if clean_string(val) else default
+    except: return default
+
+def clean_float(val, default=0.0):
+    try:
+        if val is None: return default
+        if isinstance(val, (int, float)): return float(val)
+        s = clean_string(val).replace('$', '').replace(' ', '').replace('.', '').replace(',', '.')
+        return float(s) if s else default
     except: return default
 
 def format_num(val):
@@ -185,7 +193,7 @@ def dashboard():
                                lecturas=todas_lecturas, kanban=kanban_tareas, logs=logs_list, 
                                equipos_aleatorios=equipos_aleatorios, operadores=operadores, current_user="Admin")
     except Exception as e:
-        return f"<h1>Error en Dashboard:</h1><pre>{str(e)}</pre>"
+        return f"<h1>Error en Dashboard:</h1><pre>{str(e)}</pre><p>Por favor, revisa que todas las tablas tengan información válida o toma captura de este error.</p>"
 
 # ==========================================
 # RUTAS DE CONTROL (CRUD TOTAL)
@@ -213,7 +221,7 @@ def add_record():
             codigo_equipo=request.form.get('codigo'),
             folio=request.form.get('folio', f"OT-DMT-{random.randint(1000,9999)}"),
             tipo_mantencion=request.form.get('tipo', ''),
-            costo_mantencion_clp=clean_int(request.form.get('costo')),
+            costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0),
             estado=request.form.get('estado', 'Pendiente'),
             fecha=datetime.now()
         )
@@ -224,7 +232,7 @@ def add_record():
             codigo_equipo=request.form.get('codigo'),
             oc=request.form.get('oc', ''),
             descripcion=request.form.get('descripcion', ''),
-            costo_pm_clp=clean_int(request.form.get('costo')),
+            costo_pm_clp=clean_float(request.form.get('costo'), 0.0),
             fecha=datetime.now()
         )
         db.session.add(nueva)
@@ -262,7 +270,7 @@ def update_inline():
 
     if obj:
         if 'costo' in campo or 'lectura' in campo or 'horometro' in campo or 'kilometraje' in campo:
-            valor = clean_int(valor)
+            valor = clean_float(valor, 0.0) if 'costo' in campo else clean_int(valor)
         setattr(obj, campo, valor)
         db.session.commit()
         return jsonify({"status": "success"})
