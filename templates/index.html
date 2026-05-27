@@ -26,6 +26,7 @@
         .btn-danger:hover { background-color: #FECACA; }
         .form-input { border: 1px solid #CBD5E1; padding: 6px; font-size: 11px; width: 100%; border-radius: 2px; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .guardado-exito { background-color: #D1FAE5 !important; transition: background-color 0.5s; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -41,7 +42,9 @@
             <a onclick="switchTab('cal', this)" class="nav-link">Calendario</a>
             <a onclick="switchTab('ot', this)" class="nav-link mt-2 border-t border-white/10 pt-4">Órdenes de Trabajo</a>
             <a onclick="switchTab('compras', this)" class="nav-link">Compras e Insumos</a>
+            <a onclick="switchTab('bodega', this)" class="nav-link">Bodega de Filtros</a>
             <a onclick="switchTab('lec', this)" class="nav-link">Lecturas Terreno</a>
+            <a onclick="switchTab('ot_corr', this)" class="nav-link mt-2 border-t border-white/10 pt-4">OT Correctivas (Averías)</a>
             <a onclick="switchTab('cond', this)" class="nav-link mt-2 border-t border-white/10 pt-4 text-blue-300">Nómina de Operadores</a>
         </nav>
     </aside>
@@ -90,7 +93,9 @@
                     <div class="flex overflow-x-auto hide-scrollbar gap-4 pb-2">
                         {% for a in equipos_aleatorios %}
                         <div class="min-w-[140px] bg-slate-50 rounded border border-slate-200 p-3 text-center cursor-pointer hover:border-[#082b5f] transition-colors" onclick="window.location.href='/equipo/{{a.codigo}}'">
-                            <div class="h-16 flex items-center justify-center mb-2 bg-white border border-slate-100"><img src="{{ a.foto_url }}" class="h-full object-contain" onerror="this.style.display='none';"></div>
+                            <div class="h-16 flex items-center justify-center mb-2 bg-white border border-slate-100">
+                                <img src="{{ a.foto_url }}" class="h-full object-contain" onerror="this.style.display='none'; this.parentNode.innerHTML='<span class=\'text-slate-300 text-[10px]\'>S/I</span>';">
+                            </div>
                             <p class="text-xs text-slate-700 font-bold uppercase">{{ a.codigo }}</p>
                         </div>
                         {% endfor %}
@@ -177,7 +182,10 @@
             <div id="cond" class="seccion">
                 <div class="card-custom mb-6 bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
                     <span class="text-xs font-bold uppercase text-slate-700">BASE DE OPERADORES</span>
-                    <form action="/api/add_record" method="POST" class="m-0"><input type="hidden" name="tabla" value="personal"><input type="hidden" name="referer" value="/"><button type="submit" class="btn btn-primary">AGREGAR OPERADOR</button></form>
+                    <form action="/api/add_record" method="POST" class="m-0 flex gap-4"><input type="hidden" name="tabla" value="personal"><input type="hidden" name="referer" value="/">
+                        <input type="text" name="nombre" placeholder="Nombre del Operador" class="form-input w-64" required>
+                        <button type="submit" class="btn btn-primary h-[28px]">AGREGAR OPERADOR</button>
+                    </form>
                 </div>
                 <div class="card-custom overflow-x-auto max-h-[60vh]">
                     <table class="table-custom table-searchable"><thead><tr><th>Nombre Operador</th><th>Cargo</th><th>Estado Laboral</th><th class="text-right">Acción</th></tr></thead><tbody>
@@ -185,6 +193,9 @@
                     </tbody></table>
                 </div>
             </div>
+
+            <div id="bodega" class="seccion"><div class="card-custom p-16 text-center bg-white border-dashed"><h2 class="text-sm font-bold text-slate-400">MÓDULO DE BODEGA EN DESARROLLO ESTRUCTURAL</h2></div></div>
+            <div id="ot_corr" class="seccion"><div class="card-custom p-16 text-center bg-white border-dashed"><h2 class="text-sm font-bold text-slate-400">MÓDULO DE ORDENES DE TRABAJO CORRECTIVAS EN DESARROLLO ESTRUCTURAL</h2></div></div>
 
         </div>
     </main>
