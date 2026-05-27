@@ -130,7 +130,7 @@ def buscar_foto_por_tipo(tipo_equipo, marca=""):
     return "/static/img/tractocamion.png"
 
 # ==========================================
-# RUTAS PRINCIPALES (CON TODAS LAS PESTAÑAS)
+# RUTAS PRINCIPALES 
 # ==========================================
 @app.route('/', strict_slashes=False)
 def dashboard():
@@ -158,16 +158,13 @@ def dashboard():
             if e.estado_base == 'Taller': taller.append(eq_data)
             if e.margen < 0 and e.estado_base != 'Fuera de Servicio': criticos.append(eq_data)
 
-        # Catálogo de imágenes inferior
         equipos_aleatorios = list(equipos_dict)
         random.shuffle(equipos_aleatorios)
 
-        # Listas para el resto de pestañas
         todas_mants = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'fecha_iso': m.fecha.strftime('%Y-%m-%d') if m.fecha else '', 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'lectura_str': format_num(m.lectura)} for m in ots_db]
         todas_compras = [{'id': c.id, 'fecha': c.fecha.strftime('%d/%m/%Y') if c.fecha else 'S/F', 'oc': c.oc, 'codigo': c.codigo_equipo, 'descripcion': c.descripcion, 'costo_str': format_clp(c.costo_pm_clp)} for c in compras_db]
         todas_lecturas = [{'id': l.id, 'fecha': l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else 'S/F', 'codigo': l.codigo_equipo, 'valor_str': format_num(max(l.horometro or 0, l.kilometraje or 0)), 'tipo': 'HR' if (l.horometro and l.horometro > 0) else 'KM', 'obs': l.observacion, 'responsable': l.responsable, 'ubicacion': l.obra_ubicacion} for l in lecturas_db]
         
-        # Kanban
         kanban_tareas = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Finalizada': []}
         equipos_con_ot = []
         for ot in ots_db:
@@ -178,7 +175,6 @@ def dashboard():
             if c['codigo'] not in equipos_con_ot:
                 kanban_tareas['Pendiente'].append({'id': 0, 'codigo': c['codigo'], 'tipo': c['tipo'], 'margen': c['margen_str'], 'estado': 'Pendiente'})
 
-        # Operadores
         lista_operadores = [{'id': p.id, 'nombre': p.nombre, 'cargo': p.cargo, 'estado': p.estado} for p in operadores_db]
 
         mes_actual = datetime.now().month
@@ -206,6 +202,21 @@ def dashboard():
     except Exception as e:
         return f"Error en Dashboard: {str(e)}"
 
+@app.route('/equipo/<codigo>', strict_slashes=False)
+def ficha_equipo(codigo):
+    equipo = Equipo.query.filter_by(codigo=codigo).first_or_404()
+    foto_url = buscar_foto_por_tipo(equipo.tipo_equipo, equipo.marca)
+    
+    mants_db = OrdenTrabajo.query.filter_by(codigo_equipo=codigo).order_by(OrdenTrabajo.id.desc()).all()
+    lecturas_db = HistorialLectura.query.filter_by(codigo_equipo=codigo).order_by(HistorialLectura.fecha.desc()).limit(15).all()
+    filtros_db = FiltroEquipo.query.filter_by(codigo_equipo=codigo).all()
+
+    mants = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F', 'tipo': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'folio': m.folio} for m in mants_db]
+    lecturas = [{'id': l.id, 'fecha': l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else 'S/F', 'valor': format_num(max(l.horometro or 0, l.kilometraje or 0)), 'tipo': 'HR' if (l.horometro and l.horometro > 0) else 'KM', 'obs': l.observacion} for l in lecturas_db]
+    filtros = [{'id': f.id, 'sistema': f.sistema, 'cant': f.cant, 'fleetguard': f.fleetguard, 'baldwind': f.baldwind, 'originales': f.originales, 'donaldson': f.donaldson, 'otra': f.otra} for f in filtros_db]
+
+    return render_template('ficha_equipo.html', eq=equipo, foto_url=foto_url, mants=mants, lecturas=lecturas, filtros=filtros)
+
 # ==========================================
 # RUTAS DE CONTROL Y CRUD
 # ==========================================
@@ -232,37 +243,28 @@ def add_record():
     if tabla == 'lectura':
         val = clean_int(request.form.get('valor'))
         ctrl = request.form.get('control', 'HR')
-        nueva = HistorialLectura(
-            codigo_equipo=codigo,
-            horometro=val if ctrl == 'HR' else 0,
-            kilometraje=val if ctrl == 'KM' else 0,
-            observacion=request.form.get('observacion', ''),
+        db.session.add(HistorialLectura(
+            codigo_equipo=codigo, horometro=val if ctrl == 'HR' else 0,
+            kilometraje=val if ctrl == 'KM' else 0, observacion=request.form.get('observacion', ''),
             fecha=datetime.now()
-        )
-        db.session.add(nueva)
+        ))
         eq = Equipo.query.filter_by(codigo=codigo).first()
         if eq: eq.lectura_actual = val
 
     elif tabla == 'ot':
-        nueva = OrdenTrabajo(
-            codigo_equipo=codigo,
-            folio=request.form.get('folio', f"OT-DMT-{random.randint(1000,9999)}"),
+        db.session.add(OrdenTrabajo(
+            codigo_equipo=codigo, folio=request.form.get('folio', f"OT-DMT-{random.randint(1000,9999)}"),
             tipo_mantencion=request.form.get('tipo', 'Mantenimiento General'),
             costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0),
-            estado=request.form.get('estado', 'Pendiente'),
-            fecha=datetime.now()
-        )
-        db.session.add(nueva)
+            estado=request.form.get('estado', 'Pendiente'), fecha=datetime.now()
+        ))
 
     elif tabla == 'compra':
-        nueva = CompraRepuesto(
-            codigo_equipo=codigo,
-            oc=request.form.get('oc', f"OC-{random.randint(100,999)}"),
+        db.session.add(CompraRepuesto(
+            codigo_equipo=codigo, oc=request.form.get('oc', f"OC-{random.randint(100,999)}"),
             descripcion=request.form.get('descripcion', 'Insumos'),
-            costo_pm_clp=clean_float(request.form.get('costo'), 0.0),
-            fecha=datetime.now()
-        )
-        db.session.add(nueva)
+            costo_pm_clp=clean_float(request.form.get('costo'), 0.0), fecha=datetime.now()
+        ))
         
     elif tabla == 'filtro':
         db.session.add(FiltroEquipo(codigo_equipo=codigo, sistema="NUEVO SISTEMA"))
@@ -318,12 +320,12 @@ def update_inline():
 @app.route('/admin/cargar_sql_final', strict_slashes=False)
 def cargar_sql_final():
     try:
+        # AQUI ESTABA EL ERROR: He quitado la línea que borraba la tabla de Personal
         OrdenTrabajo.__table__.drop(db.engine, checkfirst=True)
         CompraRepuesto.__table__.drop(db.engine, checkfirst=True)
         HistorialLectura.__table__.drop(db.engine, checkfirst=True)
         FiltroEquipo.__table__.drop(db.engine, checkfirst=True)
         Equipo.__table__.drop(db.engine, checkfirst=True)
-        Personal.__table__.drop(db.engine, checkfirst=True)
         db.create_all()
 
         archivos = os.listdir('.')
@@ -347,8 +349,10 @@ def cargar_sql_final():
                         frecuencia_base=clean_int(row.iloc[9], 250))
             db.session.add(eq)
             
+        # Agrega operadores del excel solo si no existen ya en la base de datos
         for op in operadores_set:
-            db.session.add(Personal(nombre=op, cargo="Operador", estado="Activo"))
+            if not Personal.query.filter_by(nombre=op).first():
+                db.session.add(Personal(nombre=op, cargo="Operador", estado="Activo"))
         db.session.commit()
 
         if archivo_detalles:
