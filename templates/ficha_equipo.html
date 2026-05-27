@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; font-size: 12px; color: #334155; }
-        .card-custom { background: white; border: 1px solid #E2E8F0; margin-bottom: 24px; border-radius: 4px; }
+        .card-custom { background: white; border: 1px solid #E2E8F0; margin-bottom: 24px; border-radius: 4px; overflow: hidden; }
         .header-section { background: #082b5f; color: white; padding: 12px 20px; font-weight: 700; text-transform: uppercase; font-size: 11px; display: flex; justify-content: space-between; align-items: center; }
         .table-custom { width: 100%; border-collapse: collapse; }
         .table-custom th { text-transform: uppercase; font-size: 10px; color: #475569; background: #F1F5F9; padding: 10px; border-bottom: 1px solid #E2E8F0; text-align: left; }
@@ -26,7 +26,7 @@
 <body class="p-8">
 
     <div class="max-w-7xl mx-auto">
-        <div class="mb-6"><button onclick="window.location.href='/'" class="btn btn-primary">VOLVER AL DASHBOARD</button></div>
+        <div class="mb-6"><button onclick="window.location.href='/'" class="btn btn-primary">← VOLVER AL DASHBOARD</button></div>
 
         <div class="card-custom p-6 flex flex-col md:flex-row gap-8 items-start">
             <div class="w-56 h-40 border border-slate-200 bg-slate-50 flex items-center justify-center p-2">
@@ -109,7 +109,7 @@
         <div class="card-custom mt-6">
             <div class="header-section">
                 <span>PAUTA MAESTRA DE FILTROS E INSUMOS</span>
-                <form action="/api/add_record" method="POST" class="m-0 p-0">
+                <form action="/api/add_record" method="POST" class="m-0 p-0 flex gap-4">
                     <input type="hidden" name="tabla" value="filtro"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
                     <button type="submit" class="btn btn-outline">AGREGAR FILA DE FILTRO</button>
                 </form>
