@@ -2,66 +2,25 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Pauta de Filtros {{ equipo.codigo }}</title>
+    <title>Pauta Filtros {{ equipo.codigo }}</title>
     <style>
-        body { font-family: Arial, sans-serif; font-size: 11px; margin: 0; padding: 20px; background: #fff; }
-        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #082b5f; padding-bottom: 10px; }
-        .header h1 { margin: 0; color: #082b5f; font-size: 18px; text-transform: uppercase; }
-        .header h2 { margin: 5px 0 0 0; color: #333; font-size: 14px; }
-        .info-grid { display: flex; justify-content: space-between; margin-bottom: 20px; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        th, td { border: 1px solid #000; padding: 6px; text-align: center; }
-        th { background-color: #082b5f; color: white; font-size: 10px; }
-        td { font-size: 10px; }
-        .planificacion { border: 1px solid #000; padding: 10px; min-height: 100px; white-space: pre-wrap; font-family: monospace; }
-        @media print { body { padding: 0; } .no-print { display: none !important; } }
+        body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; }
+        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #000; padding: 6px; text-align: left; }
+        th { background: #eee; }
     </style>
 </head>
 <body onload="window.print()">
     <div class="header">
-        <h1>PAUTA MAESTRA DE FILTROS Y MANTENIMIENTO</h1>
-        <h2>EQUIPO: {{ equipo.codigo }}</h2>
+        <h2>PAUTA MAESTRA DE FILTROS</h2>
+        <p><strong>Equipo:</strong> {{ equipo.codigo }} - {{ equipo.tipo_equipo }} | <strong>Motor:</strong> {{ equipo.n_motor }}</p>
     </div>
-
-    <div class="info-grid">
-        <span>TIPO: {{ equipo.tipo_equipo }}</span>
-        <span>MARCA/MODELO: {{ equipo.marca }} {{ equipo.modelo }}</span>
-        <span>PATENTE: {{ equipo.patente or 'S/P' }}</span>
-        <span>FECHA IMPRESIÓN: {{ fecha_actual }}</span>
-    </div>
-
     <table>
-        <thead>
-            <tr>
-                <th>Sistema / Tipo de Filtro</th>
-                <th>Cant</th>
-                <th>Fleetguard</th>
-                <th>Baldwind</th>
-                <th>Originales</th>
-                <th>Donaldson</th>
-                <th>Otra Alternativa</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for f in filtros %}
-            <tr>
-                <td style="text-align: left; font-weight: bold;">{{ f.sistema }}</td>
-                <td>{{ f.cant }}</td>
-                <td>{{ f.fleetguard }}</td>
-                <td>{{ f.baldwind }}</td>
-                <td>{{ f.originales }}</td>
-                <td>{{ f.donaldson }}</td>
-                <td>{{ f.otra }}</td>
-            </tr>
-            {% endfor %}
-            {% if not filtros %}
-            <tr><td colspan="7">No hay registros en la pauta de este equipo.</td></tr>
-            {% endif %}
-        </tbody>
+        <tr><th>Sistema</th><th>Cant</th><th>Fleetguard</th><th>Baldwind</th><th>Originales</th><th>Donaldson</th><th>Otra Alt.</th></tr>
+        {% for f in filtros %}
+        <tr><td>{{ f.sistema }}</td><td>{{ f.cant }}</td><td>{{ f.fleetguard }}</td><td>{{ f.baldwind }}</td><td>{{ f.originales }}</td><td>{{ f.donaldson }}</td><td>{{ f.otra }}</td></tr>
+        {% endfor %}
     </table>
-
-    <h3 style="color: #082b5f; font-size: 12px;">PLANIFICACIÓN DE MANTENIMIENTO Y CICLOS</h3>
-    <div class="planificacion">{{ equipo.planificacion_mantencion }}</div>
-
 </body>
 </html>
