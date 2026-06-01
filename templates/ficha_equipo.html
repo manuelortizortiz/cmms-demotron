@@ -6,119 +6,122 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; font-size: 12px; color: #334155; }
-        .card-custom { background: white; border: 1px solid #E2E8F0; margin-bottom: 24px; border-radius: 4px; overflow: hidden; }
-        .header-section { background: #082b5f; color: white; padding: 12px 20px; font-weight: 700; text-transform: uppercase; font-size: 11px; display: flex; justify-content: space-between; align-items: center; }
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; color: #334155; }
+        .card-custom { background: white; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); padding: 24px; margin-bottom: 24px; }
+        .card-custom-nopad { background: white; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden; margin-bottom: 24px; }
+        .header-section { background: #F8FAFC; padding: 16px 24px; border-bottom: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center; }
         .table-custom { width: 100%; border-collapse: collapse; }
-        .table-custom th { text-transform: uppercase; font-size: 10px; color: #475569; background: #F1F5F9; padding: 10px; border-bottom: 1px solid #E2E8F0; text-align: left; }
-        .table-custom td { padding: 10px; border-bottom: 1px solid #E2E8F0; }
-        .btn { padding: 6px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; cursor: pointer; border: none; transition: background-color 0.2s; border-radius: 2px;}
-        .btn-primary { background-color: #082b5f; color: white; }
-        .btn-primary:hover { background-color: #1e3a8a; }
-        .btn-outline { background-color: transparent; color: white; border: 1px solid white; }
-        .btn-outline:hover { background-color: white; color: #082b5f; }
-        .btn-danger { background-color: #FEE2E2; color: #DC2626; padding: 4px 8px; border: 1px solid #FECACA; }
-        .btn-danger:hover { background-color: #FECACA; }
-        td[contenteditable="true"]:focus { outline: 2px solid #082b5f; background: white; }
-        .guardado-exito { background-color: #D1FAE5 !important; transition: background-color 0.5s; }
+        .table-custom th { font-size: 11px; color: #64748B; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; text-align: left; font-weight: 600; }
+        .table-custom td { padding: 12px 16px; border-bottom: 1px solid #F1F5F9; font-size: 12px;}
+        td[contenteditable="true"]:focus { outline: none; border-bottom: 2px solid #2563EB; background: #F8FAFC; }
+        .form-input { border: 1px solid #E2E8F0; padding: 8px 12px; border-radius: 8px; font-size: 12px; width: 100%; outline: none;}
+        .form-input:focus { border-color: #3B82F6; }
+        .btn-primary { background-color: #2563EB; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;}
+        .btn-outline { background-color: white; color: #334155; border: 1px solid #CBD5E1; padding: 6px 12px; border-radius: 8px; font-weight: 600; cursor: pointer;}
     </style>
 </head>
 <body class="p-8">
 
-    <div class="max-w-7xl mx-auto">
-        <div class="mb-6"><button onclick="window.location.href='/'" class="btn btn-primary">← VOLVER AL DASHBOARD</button></div>
+    <div class="max-w-6xl mx-auto">
+        <div class="mb-6"><a href="/" class="text-blue-600 font-bold hover:underline">← Volver al Dashboard</a></div>
 
-        <div class="card-custom p-6 flex flex-col md:flex-row gap-8 items-start">
-            <div class="w-56 h-40 border border-slate-200 bg-slate-50 flex items-center justify-center p-2">
-                <img src="{{ foto_url }}" class="h-full object-contain" onerror="this.style.display='none'; this.parentNode.innerHTML='<span class=\'text-slate-400 text-[10px] uppercase tracking-widest\'>Sin Imagen</span>';">
+        <div class="card-custom flex flex-col md:flex-row gap-8 items-start relative">
+            <div class="w-48 h-32 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center p-2">
+                <img src="{{ foto_url }}" class="h-full object-contain" onerror="this.style.display='none';">
             </div>
             <div class="flex-1 w-full">
-                <div class="flex justify-between items-start mb-4">
+                <div class="flex justify-between items-start mb-2">
                     <div>
-                        <h1 class="text-3xl font-bold text-[#082b5f] uppercase tracking-tight">{{ eq.codigo }}</h1>
-                        <h2 class="text-sm font-bold text-slate-500 uppercase tracking-wide">{{ eq.tipo_equipo }} | {{ eq.marca }} {{ eq.modelo }}</h2>
+                        <h1 class="text-3xl font-bold text-slate-800">{{ eq.codigo }}</h1>
+                        <h2 class="text-sm font-bold text-slate-500 uppercase">{{ eq.tipo_equipo }} | {{ eq.marca }} {{ eq.modelo }}</h2>
                     </div>
-                    <span class="px-4 py-1.5 bg-slate-100 border border-slate-300 text-xs font-bold uppercase text-slate-700 tracking-wider">{{ eq.estado_base }}</span>
+                    <span class="px-3 py-1 bg-slate-100 border border-slate-200 rounded-full text-xs font-bold text-slate-700">{{ eq.estado_base }}</span>
                 </div>
                 
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 text-xs border-t border-slate-100 pt-6">
-                    <div><span class="block text-[10px] text-slate-400 font-bold uppercase">Operador Asignado</span><span class="font-bold text-sm">{{ eq.responsable or 'Sin Asignar' }}</span></div>
-                    <div><span class="block text-[10px] text-slate-400 font-bold uppercase">Patente</span><span class="font-bold text-sm">{{ eq.patente or 'S/P' }}</span></div>
-                    <div><span class="block text-[10px] text-slate-400 font-bold uppercase">N° Chasis (VIN)</span><span class="font-mono font-bold text-sm text-slate-700">{{ eq.vin or 'S/I' }}</span></div>
-                    <div><span class="block text-[10px] text-slate-400 font-bold uppercase">N° Motor</span><span class="font-mono font-bold text-sm text-slate-700">{{ eq.n_motor or 'S/I' }}</span></div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 text-sm">
+                    <div><span class="block text-[10px] text-slate-400 font-bold uppercase">Operador</span><span class="font-bold">{{ eq.responsable or 'Sin Asignar' }}</span></div>
+                    <div><span class="block text-[10px] text-slate-400 font-bold uppercase">Patente</span><span class="font-bold">{{ eq.patente or 'S/P' }}</span></div>
+                    <div><span class="block text-[10px] text-slate-400 font-bold uppercase">VIN</span><span class="font-mono text-slate-600">{{ eq.vin or 'S/I' }}</span></div>
+                    <div><span class="block text-[10px] text-slate-400 font-bold uppercase">Motor</span><span class="font-mono text-slate-600">{{ eq.n_motor or 'S/I' }}</span></div>
                 </div>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            <div class="card-custom">
+            <div class="card-custom-nopad">
                 <div class="header-section">
-                    <span>REGISTRO DE MANTENCIONES</span>
-                    <form action="/api/add_record" method="POST" class="m-0 p-0">
+                    <h3 class="font-bold text-slate-800">Mantenciones (OTs)</h3>
+                </div>
+                <div class="p-4 bg-slate-50 border-b border-slate-200">
+                    <form action="/api/add_record" method="POST" class="flex gap-2">
                         <input type="hidden" name="tabla" value="ot"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
-                        <button type="submit" class="btn btn-outline">AÑADIR REGISTRO</button>
+                        <input type="text" name="tipo" placeholder="Tipo" class="form-input w-1/3" required>
+                        <input type="number" name="lectura" placeholder="Odo/Hor" class="form-input w-1/4" required>
+                        <input type="number" name="costo" placeholder="Costo CLP" class="form-input w-1/3" required>
+                        <button type="submit" class="btn-primary px-3 text-xs">+</button>
                     </form>
                 </div>
-                <div class="overflow-y-auto max-h-[300px]">
+                <div class="max-h-[300px] overflow-y-auto">
                     <table class="table-custom">
-                        <thead><tr><th>Fecha / Folio</th><th>Tipo Intervención</th><th>Costo</th><th class="text-right">Acción</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th>Tipo</th><th>Odo/Hor</th><th>Costo</th><th>Acción</th></tr></thead>
                         <tbody>
                             {% for m in mants %}
                             <tr>
-                                <td><span class="font-bold text-slate-700">{{ m.fecha }}</span><br><span class="text-[10px] text-slate-400">{{ m.folio }}</span></td>
+                                <td class="font-bold text-slate-700">{{ m.fecha }}</td>
                                 <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'tipo_mantencion', 'ot')">{{ m.tipo }}</td>
-                                <td class="font-bold text-[#082b5f]">{{ m.costo_str }}</td>
-                                <td class="text-right"><button onclick="borrarRegistro('ot', '{{ m.id }}')" class="btn btn-danger">ELIMINAR</button></td>
+                                <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'lectura', 'ot')">{{ m.lectura }}</td>
+                                <td class="font-bold text-blue-700">{{ m.costo_str }}</td>
+                                <td>
+                                    <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="text-blue-500 font-bold text-xs mr-2 hover:underline">Imprimir</a>
+                                    <button onclick="borrarRegistro('ot', '{{ m.id }}')" class="text-red-500 font-bold text-xs hover:underline">Borrar</button>
+                                </td>
                             </tr>
                             {% endfor %}
-                            {% if not mants %}<tr><td colspan="4" class="text-center italic text-slate-400 py-4">Sin registros.</td></tr>{% endif %}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <div class="card-custom">
+            <div class="card-custom-nopad">
                 <div class="header-section">
-                    <span>HISTORIAL DE LECTURAS (TERRENO)</span>
-                    <form action="/api/add_record" method="POST" class="m-0 p-0">
+                    <h3 class="font-bold text-slate-800">Lecturas de Terreno</h3>
+                </div>
+                <div class="p-4 bg-slate-50 border-b border-slate-200">
+                    <form action="/api/add_record" method="POST" class="flex gap-2">
                         <input type="hidden" name="tabla" value="lectura"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
-                        <button type="submit" class="btn btn-outline">AÑADIR LECTURA</button>
+                        <input type="number" name="valor" placeholder="Valor" class="form-input w-1/3" required>
+                        <select name="control" class="form-input w-1/4"><option value="HR">HR</option><option value="KM">KM</option></select>
+                        <input type="text" name="observacion" placeholder="Obs." class="form-input w-1/3">
+                        <button type="submit" class="btn-primary px-3 text-xs">+</button>
                     </form>
                 </div>
-                <div class="overflow-y-auto max-h-[300px]">
+                <div class="max-h-[300px] overflow-y-auto">
                     <table class="table-custom">
-                        <thead><tr><th>Fecha</th><th>Valor Registrado</th><th>Observaciones / Averías</th><th class="text-right">Acción</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th>Valor</th><th>Observación</th><th>Acción</th></tr></thead>
                         <tbody>
                             {% for l in lecturas %}
                             <tr>
                                 <td class="font-bold text-slate-700">{{ l.fecha }}</td>
-                                <td class="font-bold text-[#082b5f]">{{ l.valor }} <span class="text-[9px]">{{ l.tipo }}</span></td>
-                                <td contenteditable="true" onblur="guardarInline(this, '{{ l.id }}', 'observacion', 'lectura')" class="text-slate-500 italic">{{ l.obs }}</td>
-                                <td class="text-right"><button onclick="borrarRegistro('lectura', '{{ l.id }}')" class="btn btn-danger">ELIMINAR</button></td>
+                                <td class="font-bold text-blue-700">{{ l.valor }} <span class="text-[9px]">{{ l.tipo }}</span></td>
+                                <td contenteditable="true" onblur="guardarInline(this, '{{ l.id }}', 'observacion', 'lectura')" class="text-slate-500 text-xs">{{ l.obs }}</td>
+                                <td><button onclick="borrarRegistro('lectura', '{{ l.id }}')" class="text-red-500 font-bold text-xs hover:underline">Borrar</button></td>
                             </tr>
                             {% endfor %}
-                            {% if not lecturas %}<tr><td colspan="4" class="text-center italic text-slate-400 py-4">Sin registros.</td></tr>{% endif %}
                         </tbody>
                     </table>
                 </div>
             </div>
-
         </div>
 
-        <div class="card-custom mt-6">
+        <div class="card-custom-nopad mt-6">
             <div class="header-section">
-                <span>PAUTA MAESTRA DE FILTROS E INSUMOS</span>
-                <form action="/api/add_record" method="POST" class="m-0 p-0 flex gap-4">
-                    <input type="hidden" name="tabla" value="filtro"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
-                    <button type="submit" class="btn btn-outline">AGREGAR FILA DE FILTRO</button>
-                </form>
+                <h3 class="font-bold text-slate-800">Pauta de Filtros</h3>
+                <form action="/api/add_record" method="POST" class="m-0"><input type="hidden" name="tabla" value="filtro"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}"><button type="submit" class="btn-outline text-xs">Añadir Fila</button></form>
+                <a href="/imprimir_pauta/{{ eq.codigo }}" target="_blank" class="ml-2 btn-primary text-xs">Imprimir Pauta</a>
             </div>
             <div class="overflow-x-auto">
                 <table class="table-custom">
-                    <thead>
-                        <tr><th>Sistema / Uso</th><th>Cant</th><th>Fleetguard</th><th>Baldwind</th><th>Originales</th><th>Donaldson</th><th>Otra Alt.</th><th class="text-right">Acción</th></tr>
-                    </thead>
+                    <thead><tr><th>Sistema</th><th>Cant</th><th>Fleetguard</th><th>Baldwind</th><th>Originales</th><th>Donaldson</th><th>Otra</th><th>Acción</th></tr></thead>
                     <tbody>
                         {% for f in filtros %}
                         <tr>
@@ -129,33 +132,17 @@
                             <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'originales', 'filtro')">{{ f.originales }}</td>
                             <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'donaldson', 'filtro')">{{ f.donaldson }}</td>
                             <td contenteditable="true" onblur="guardarInline(this, '{{ f.id }}', 'otra', 'filtro')">{{ f.otra }}</td>
-                            <td class="text-right"><button onclick="borrarRegistro('filtro', '{{ f.id }}')" class="btn btn-danger">ELIMINAR</button></td>
+                            <td><button onclick="borrarRegistro('filtro', '{{ f.id }}')" class="text-red-500 font-bold text-xs hover:underline">Borrar</button></td>
                         </tr>
                         {% endfor %}
-                        {% if not filtros %}<tr><td colspan="8" class="text-center italic text-slate-400 py-6">No hay pauta de filtros registrada. Haga clic en "AGREGAR FILA DE FILTRO".</td></tr>{% endif %}
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
-
     <script>
-        function guardarInline(el, cod, campo, tabla) {
-            const valor = el.innerText.trim();
-            fetch('/update_inline', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: cod, campo: campo, valor: valor, tabla: tabla}) })
-            .then(res => res.json()).then(data => {
-                if(data.status === 'success') {
-                    el.classList.add('guardado-exito');
-                    setTimeout(() => el.classList.remove('guardado-exito'), 1000);
-                }
-            });
-        }
-        function borrarRegistro(tabla, id) {
-            if(confirm('¿Confirma que desea eliminar permanentemente este registro?')) {
-                fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' })
-                .then(res => res.json()).then(data => { if(data.status === 'success') location.reload(); });
-            }
-        }
+        function guardarInline(el, cod, campo, tabla) { fetch('/update_inline', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: cod, campo: campo, valor: el.innerText.trim(), tabla: tabla}) }); }
+        function borrarRegistro(tabla, id) { if(confirm('¿Eliminar permanentemente?')) { fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' }).then(() => location.reload()); } }
     </script>
 </body>
 </html>
