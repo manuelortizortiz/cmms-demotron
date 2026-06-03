@@ -2,41 +2,250 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Impresión OT {{ ot.folio }}</title>
+    <title>OT - {{ ot.folio }}</title>
     <style>
-        body { font-family: Arial, sans-serif; font-size: 12px; padding: 20px; }
-        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-        th { background: #eee; }
+        /* CONFIGURACIÓN DE IMPRESIÓN A4 HORIZONTAL */
+        @page { size: A4 landscape; margin: 10mm; }
+        
+        body { 
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
+            font-size: 10px; 
+            color: #333; 
+            margin: 0; 
+            padding: 0;
+            background-color: #fff;
+        }
+
+        /* Utilidades generales */
+        .w-full { width: 100%; }
+        .text-center { text-align: center; }
+        .font-bold { font-weight: bold; }
+        .uppercase { text-transform: uppercase; }
+        .flex { display: flex; }
+        .justify-between { justify-content: space-between; }
+        .items-center { align-items: center; }
+        
+        /* Líneas para escribir */
+        .line-blank { border-bottom: 1px solid #777; display: inline-block; min-height: 14px; }
+        .line-text { border-bottom: 1px solid #777; padding-bottom: 2px; }
+        
+        /* Checkboxes simulados para impresión */
+        .chk { display: inline-block; width: 10px; height: 10px; border: 1px solid #333; margin-right: 4px; vertical-align: middle; background: #fff;}
+        label { display: inline-flex; align-items: center; margin-bottom: 6px; cursor: pointer; }
+
+        /* Estructura de Cajas Demotron */
+        .box { border: 1px solid #082b5f; margin-bottom: 10px; border-radius: 2px; overflow: hidden; }
+        .box-header { background-color: #082b5f; color: white; padding: 4px 8px; font-weight: bold; font-size: 11px; text-transform: uppercase; }
+        .box-content { padding: 8px; background-color: #FAFAFA; }
+        
+        /* Tablas internas */
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #cbd5e1; padding: 4px; text-align: left; }
+        th { background-color: #e2e8f0; font-size: 9px; color: #082b5f;}
+        
+        /* Grilla principal de 3 columnas */
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 10px; }
+
+        /* Encabezado Principal */
+        .header-main { border-bottom: 3px solid #082b5f; padding-bottom: 10px; margin-bottom: 10px; }
+        .logo-img { height: 45px; object-fit: contain; margin-bottom: 4px; }
     </style>
 </head>
 <body onload="window.print()">
-    <div class="header">
-        <div>
-            <h2>ORDEN DE TRABAJO: {{ ot.folio }}</h2>
-            <p><strong>Fecha:</strong> {{ ot.fecha.strftime('%d/%m/%Y') }}</p>
+
+    <div class="header-main flex justify-between items-center">
+        <div style="width: 25%;">
+            <p style="font-size: 12px; margin: 4px 0;">Fecha: <span class="font-bold">{{ ot.fecha.strftime('%d / %m / %Y') }}</span></p>
+            <p style="font-size: 12px; margin: 4px 0;">N° OT: <span class="font-bold">{{ ot.folio }}</span></p>
         </div>
-        <img src="{{ url_for('static', filename='img/demotron azul.png') }}" style="height: 50px;" onerror="this.style.display='none';">
+        
+        <div class="text-center" style="width: 50%;">
+            <img src="{{ url_for('static', filename='img/demotron azul.png') }}" class="logo-img" alt="DEMOTRON">
+            <div style="font-size: 11px; font-weight: bold; color: #555; margin-top: 2px;">FORMULARIO DE GESTIÓN DE MANTENIMIENTO</div>
+            <div style="font-size: 16px; font-weight: bold; color: #082b5f; margin-top: 2px;">ORDEN DE TRABAJO (OT)</div>
+        </div>
+        
+        <div style="width: 25%; text-align: right;">
+            <p style="font-size: 11px; margin: 4px 0;">Código: <b>DM-OT-001</b></p>
+            <p style="font-size: 11px; margin: 4px 0;">Versión: <b>1.0</b></p>
+        </div>
     </div>
 
-    <table>
-        <tr>
-            <th>Equipo</th><td>{{ equipo.codigo }} ({{ equipo.tipo_equipo }})</td>
-            <th>Patente</th><td>{{ equipo.patente }}</td>
-        </tr>
-        <tr>
-            <th>Tipo Intervención</th><td>{{ ot.tipo_mantencion }}</td>
-            <th>Odo/Horómetro</th><td>{{ ot.lectura }}</td>
-        </tr>
-    </table>
+    <div class="grid-3">
+        
+        <div>
+            <div class="box">
+                <div class="box-header">COD. EQUIPO: {{ equipo.codigo }}</div>
+                <div class="box-content">
+                    <p class="line-text mt-0">PLACA / TAG: <b>{{ equipo.patente or '' }}</b></p>
+                    <p class="line-text">MODELO: <b>{{ equipo.marca }} {{ equipo.modelo }}</b></p>
+                    <p class="line-text mb-0">UBICACIÓN / FAENA: <b>{{ equipo.ubicacion or '' }}</b></p>
+                </div>
+            </div>
 
-    <h3 style="margin-top: 20px;">Insumos y Filtros Requeridos</h3>
-    <table>
-        <tr><th>Sistema</th><th>Cant</th><th>Fleetguard / Referencia</th></tr>
-        {% for f in filtros %}
-        <tr><td>{{ f.sistema }}</td><td>{{ f.cant }}</td><td>{{ f.fleetguard }} / {{ f.originales }}</td></tr>
-        {% endfor %}
-    </table>
+            <div class="box">
+                <div class="box-header">TIPO DE EQUIPO:</div>
+                <div class="box-content flex" style="flex-wrap: wrap; gap: 8px;">
+                    <label><div class="chk"></div> Excavadora</label>
+                    <label><div class="chk"></div> Cargador</label>
+                    <label><div class="chk"></div> Camión</label>
+                    <label><div class="chk"></div> Tractor</label>
+                    <label><div class="chk"></div> Camioneta</label>
+                    <label><div class="chk"></div> Otro: <span class="line-blank" style="width: 50px;"></span></label>
+                </div>
+            </div>
+
+            <div class="box">
+                <div class="box-header">TIPO DE MANTENIMIENTO:</div>
+                <div class="box-content">
+                    <div class="flex justify-between mb-2">
+                        <label><div class="chk" {% if 'prev' in ot.tipo_mantencion|lower %}style="background:#082b5f;"{% endif %}></div> MP (Preventivo)</label>
+                        <label><div class="chk" {% if 'corr' in ot.tipo_mantencion|lower %}style="background:#082b5f;"{% endif %}></div> MC (Correctivo)</label>
+                        <label><div class="chk"></div> MPd (Predictivo)</label>
+                    </div>
+                    <p class="mt-0">TIPO DE PAUTA: <span class="line-blank" style="width: 30px;"></span> Hrs / <span class="line-blank" style="width: 30px;"></span> Km</p>
+                    <p class="line-text mt-2">HORÓMETRO ACTUAL: <b>{{ ot.lectura if ot.lectura > 0 else '' }}</b></p>
+                    <p class="line-text">KM ACTUAL: <b>{{ ot.lectura if ot.lectura > 0 else '' }}</b></p>
+                    <p class="line-text mb-0">ÚLTIMA MANTENCIÓN: <b></b></p>
+                </div>
+            </div>
+
+            <div class="box">
+                <div class="box-header">TRABAJO A REALIZAR / REQUERIMIENTO:</div>
+                <div class="box-content" style="min-height: 80px;">
+                    <p style="margin: 0 0 16px 0; font-weight: bold;">{{ ot.tipo_mantencion }}</p>
+                    <div class="line-blank w-full mb-4"></div>
+                    <div class="line-blank w-full mb-4"></div>
+                    <div class="line-blank w-full mb-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="box">
+                <div class="box-header">ORIGEN DE FALLA / CONDICIÓN:</div>
+                <div class="box-content grid-3" style="grid-template-columns: 1fr 1fr; gap: 4px;">
+                    <label><div class="chk"></div> Mecánica</label>
+                    <label><div class="chk"></div> Eléctrica</label>
+                    <label><div class="chk"></div> Operación</label>
+                    <label><div class="chk"></div> Hidráulica</label>
+                    <label style="grid-column: span 2;"><div class="chk"></div> Otro: <span class="line-blank" style="width: 100px;"></span></label>
+                </div>
+            </div>
+
+            <div class="box">
+                <div class="box-header">LOCALIZACIÓN:</div>
+                <div class="box-content grid-3" style="grid-template-columns: 1fr 1fr; gap: 4px;">
+                    <label><div class="chk"></div> Motor</label>
+                    <label><div class="chk"></div> Sis. Hidráulico</label>
+                    <label><div class="chk"></div> Transmisión</label>
+                    <label><div class="chk"></div> Estructura</label>
+                    <label><div class="chk"></div> Frenos</label>
+                    <label><div class="chk"></div> Eléctrico</label>
+                </div>
+            </div>
+
+            <div class="box">
+                <div class="box-header" style="background-color: #475569;">CONDICIÓN DE SEGURIDAD DEL EQUIPO:</div>
+                <div class="box-content">
+                    <label><div class="chk"></div> Equipo detenido</label><br>
+                    <label><div class="chk"></div> Implementos apoyados al suelo</label><br>
+                    <label><div class="chk"></div> Freno de estacionamiento aplicado</label><br>
+                    <label><div class="chk"></div> Llave retirada</label><br>
+                    <label><div class="chk"></div> Candado de bloqueo instalado</label><br>
+                    <label><div class="chk"></div> Energías liberadas</label><br>
+                    <label style="margin-bottom: 0;"><div class="chk"></div> Área señalizada y segregada</label>
+                </div>
+            </div>
+
+            <div class="box">
+                <div class="box-header">REPUESTOS UTILIZADOS:</div>
+                <div class="box-content" style="padding: 0;">
+                    <table>
+                        <tr><th style="width: 20%;">Código</th><th>Descripción</th><th style="width: 15%;">Cant.</th></tr>
+                        <tr><td style="height: 14px;"></td><td></td><td></td></tr>
+                        <tr><td style="height: 14px;"></td><td></td><td></td></tr>
+                        <tr><td style="height: 14px;"></td><td></td><td></td></tr>
+                        <tr><td style="height: 14px;"></td><td></td><td></td></tr>
+                        <tr><td style="height: 14px;"></td><td></td><td></td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="box">
+                <div class="box-header">LUBRICANTES:</div>
+                <div class="box-content">
+                    <p class="font-bold mb-1 mt-0">Aceite Motor:</p>
+                    <p class="mb-2"><div class="chk"></div> Tipo: <span class="line-blank" style="width: 60px;"></span> Cant: <span class="line-blank" style="width: 30px;"></span> L <div class="chk ml-2"></div> Cambiado</p>
+                    
+                    <p class="font-bold mb-1 mt-2">Aceite Hidráulico:</p>
+                    <p class="mb-2"><div class="chk"></div> Tipo: <span class="line-blank" style="width: 60px;"></span> Nivel: <div class="chk ml-2"></div> OK <div class="chk"></div> Bajo</p>
+                    
+                    <p class="font-bold mb-1 mt-2">Grasa / Transmisión:</p>
+                    <p class="mb-2"><div class="chk"></div> Tipo: <span class="line-blank" style="width: 60px;"></span> Ptos: <span class="line-blank" style="width: 30px;"></span> %</p>
+                    
+                    <p class="font-bold mb-0 mt-2">Muestra de Aceite: <div class="chk ml-2"></div> Sí <div class="chk"></div> No</p>
+                </div>
+            </div>
+
+            <div class="box">
+                <div class="box-header">FILTROS:</div>
+                <div class="box-content" style="padding: 0;">
+                    <table>
+                        <tr>
+                            <th>Filtro / Sistema</th>
+                            <th style="width: 40px; text-align: center;">Camb.</th>
+                            <th style="width: 40px; text-align: center;">Rev.</th>
+                        </tr>
+                        
+                        {% for i in range(12) %}
+                            <tr>
+                                {% if i < filtros|length %}
+                                    <td style="height: 14px; font-size: 9px;"><b>{{ filtros[i].sistema }}</b> ({{ filtros[i].fleetguard if filtros[i].fleetguard != '-' else filtros[i].originales }})</td>
+                                {% else %}
+                                    <td style="height: 14px;"></td>
+                                {% endif %}
+                                <td style="text-align: center;"><div class="chk" style="margin:0;"></div></td>
+                                <td style="text-align: center;"><div class="chk" style="margin:0;"></div></td>
+                            </tr>
+                        {% endfor %}
+
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 10px; border-top: 2px solid #082b5f; padding-top: 10px;">
+        <div class="flex justify-between items-start mb-4">
+            <div style="width: 45%;">
+                <div class="flex gap-4 mb-2">
+                    <p>Tiempo Ejecución: <span class="line-blank" style="width: 40px;"></span> hrs</p>
+                    <p>Tiempo desde Bodega: <span class="line-blank" style="width: 40px;"></span> días</p>
+                </div>
+                <div class="flex gap-4">
+                    <p class="font-bold">Estado:</p>
+                    <label><div class="chk"></div> Al Día</label>
+                    <label><div class="chk"></div> En Proceso</label>
+                    <label><div class="chk"></div> Atrasado</label>
+                </div>
+            </div>
+            
+            <div style="width: 50%;">
+                <p class="font-bold mb-1 mt-0">OBSERVACIONES:</p>
+                <div class="line-blank w-full mb-3"></div>
+                <div class="line-blank w-full mb-1"></div>
+            </div>
+        </div>
+
+        <div class="flex justify-between" style="margin-top: 30px;">
+            <p>Mecánico: <span class="line-blank" style="width: 150px;"></span></p>
+            <p>Supervisor: <span class="line-blank" style="width: 150px;"></span></p>
+            <p>Auditor: <span class="line-blank" style="width: 150px;"></span></p>
+        </div>
+    </div>
+
 </body>
 </html>
