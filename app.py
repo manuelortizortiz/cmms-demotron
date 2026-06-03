@@ -5,6 +5,7 @@ import numpy as np
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text  # IMPORTANTE: Necesario para el parche seguro
 
 app = Flask(__name__)
 app.secret_key = 'demotron_seguridad_maxima_2026'
@@ -25,9 +26,9 @@ class Personal(db.Model):
     nombre = db.Column(db.String(100))
     cargo = db.Column(db.String(100), default="Operador")
     estado = db.Column(db.String(50), default="Activo")
-    equipo_asignado = db.Column(db.String(50), default="Ninguno") # NUEVA COLUMNA
+    equipo_asignado = db.Column(db.String(50), default="Ninguno")
 
-class RegistroUsoEquipo(db.Model): # NUEVO MODELO
+class RegistroUsoEquipo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fecha = db.Column(db.DateTime, default=datetime.now)
     operador = db.Column(db.String(100))
@@ -76,7 +77,7 @@ class OrdenTrabajo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fecha = db.Column(db.DateTime, default=datetime.now)
     codigo_equipo = db.Column(db.String(50))
-    tipo_ot = db.Column(db.String(50), default="Preventiva") # Distingue entre PM y Correctiva
+    tipo_ot = db.Column(db.String(50), default="Preventiva")
     tipo_mantencion = db.Column(db.String(100))
     costo_mantencion_clp = db.Column(db.Float, default=0.0)
     estado = db.Column(db.String(50), default="Pendiente")
@@ -188,7 +189,6 @@ def dashboard():
         equipos_aleatorios = list(equipos_dict)
         random.shuffle(equipos_aleatorios)
 
-        # Separar OTs en Preventivas y Correctivas
         todas_mants_prev = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'lectura_str': format_num(m.lectura)} for m in ots_db if m.tipo_ot == 'Preventiva']
         todas_mants_corr = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'lectura_str': format_num(m.lectura)} for m in ots_db if m.tipo_ot == 'Correctiva']
 
@@ -402,6 +402,14 @@ def update_inline():
 @app.route('/admin/cargar_sql_final', strict_slashes=False)
 def cargar_sql_final():
     try:
+        # PARCHE SEGURO DE ACTUALIZACIÓN DE BASE DE DATOS (Evita borrar a los operadores que agregaste manualmente)
+        try:
+            db.session.execute(text("ALTER TABLE personal ADD COLUMN equipo_asignado VARCHAR(50) DEFAULT 'Ninguno'"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback() # Ignora el error si la columna ya existe
+
+        # Recrear solo las tablas que se alimentan directamente del Excel cada vez
         OrdenTrabajo.__table__.drop(db.engine, checkfirst=True)
         CompraRepuesto.__table__.drop(db.engine, checkfirst=True)
         HistorialLectura.__table__.drop(db.engine, checkfirst=True)
