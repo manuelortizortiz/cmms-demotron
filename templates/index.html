@@ -3,42 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <title>DEMOTRON ERP CMMS</title>
-    <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
+    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <style>
         body { font-family: 'Inter', sans-serif; font-size: 13px; background-color: #F8FAFC; color: #334155; margin: 0; }
         .seccion { display: none; } .seccion.active { display: block; }
         
-        /* Miro-style Sidebar */
         .sidebar-bg { background-color: #FFFFFF; border-right: 1px solid #E2E8F0; }
         .nav-link { color: #64748B; display: block; padding: 12px 24px; cursor: pointer; transition: all 0.2s; border-radius: 0 24px 24px 0; margin-right: 16px; margin-bottom: 4px; font-weight: 600; }
         .nav-link:hover { background: #F1F5F9; color: #0F172A; }
         .nav-link.active { background: #EFF6FF; color: #1D4ED8; }
 
-        /* Miro-style Cards */
         .card-custom { background: white; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden; padding: 24px;}
         .card-custom-nopad { background: white; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden;}
         
-        /* Tables */
         .table-wrapper { width: 100%; overflow-x: auto; }
         .table-custom { width: 100%; border-collapse: collapse; min-width: 600px; }
         .table-custom th { font-size: 11px; color: #64748B; padding: 16px; border-bottom: 1px solid #E2E8F0; text-align: left; font-weight: 600; white-space: nowrap; }
         .table-custom td { padding: 14px 16px; border-bottom: 1px solid #F1F5F9; color: #334155; }
         td[contenteditable="true"]:focus { outline: none; border-bottom: 2px solid #2563EB; background: #F8FAFC; }
 
-        /* Inputs & Buttons */
         .form-input { border: 1px solid #E2E8F0; padding: 8px 12px; border-radius: 8px; font-size: 12px; width: 100%; outline: none; transition: border-color 0.2s; }
         .form-input:focus { border-color: #3B82F6; }
         .btn-primary { background-color: #2563EB; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; transition: background 0.2s; cursor: pointer; border:none;}
         .btn-primary:hover { background-color: #1D4ED8; }
-        .btn-danger { background-color: #FEE2E2; color: #DC2626; padding: 6px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; border:none;}
-        .btn-danger:hover { background-color: #FECACA; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -46,7 +38,7 @@
     
     <aside class="w-64 sidebar-bg flex flex-col z-20 shadow-sm shrink-0">
         <div class="h-24 flex items-center justify-center border-b border-slate-100 p-4">
-            <img src="{{ url_for('static', filename='img/demotron azul.png') }}" alt="Demotron Logo" class="h-full object-contain" onerror="this.outerHTML='<span class=\'text-2xl font-bold text-blue-800\'>DEMOTRON</span>';">
+            <img src="{{ url_for('static', filename='Logo Azul.png') }}" alt="Demotron Logo" class="h-full object-contain" onerror="this.outerHTML='<span class=\'text-2xl font-bold text-blue-800\'>DEMOTRON</span>';">
         </div>
         <nav class="flex-1 py-6 overflow-y-auto hide-scrollbar">
             <p class="px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Principal</p>
@@ -60,7 +52,7 @@
             <a onclick="switchTab('ot', this)" class="nav-link">Órdenes de Trabajo</a>
             <a onclick="switchTab('compras', this)" class="nav-link">Compras e Insumos</a>
             <a onclick="switchTab('lec', this)" class="nav-link">Lecturas Terreno</a>
-            <a onclick="switchTab('ot_corr', this)" class="nav-link">Averías (Correctivas)</a>
+            <a onclick="switchTab('ot_corr', this)" class="nav-link text-red-600">Averías (Correctivas)</a>
             
             <p class="px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 mt-6">Personal</p>
             <a onclick="switchTab('cond', this)" class="nav-link">Operadores</a>
@@ -90,35 +82,9 @@
                 </div>
                 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    <div class="card-custom-nopad border border-orange-200 flex flex-col">
-                        <div class="px-6 py-4 bg-orange-50 border-b border-orange-100"><h3 class="font-bold text-orange-800 text-sm">Próximos a Mantención</h3></div>
-                        <div class="flex-1 overflow-y-auto max-h-[300px] p-2">
-                            <table class="w-full text-left"><thead><tr><th class="p-2 text-xs text-slate-500">Equipo</th><th class="p-2 text-xs text-slate-500 text-right">Faltan</th></tr></thead><tbody>
-                            {% for p in proximos %}<tr><td class="p-2 font-bold text-slate-800 cursor-pointer hover:text-blue-600 border-b" onclick="window.location.href='/equipo/{{p.codigo}}'">{{ p.codigo }}</td><td class="p-2 text-right text-orange-600 font-bold border-b">{{ p.margen_str }} {{ p.ctrl }}</td></tr>{% endfor %}
-                            {% if not proximos %}<tr><td colspan="2" class="text-center text-slate-400 py-4">Sin equipos próximos a taller.</td></tr>{% endif %}
-                            </tbody></table>
-                        </div>
-                    </div>
-
-                    <div class="card-custom-nopad border border-red-200 flex flex-col">
-                        <div class="px-6 py-4 bg-red-50 border-b border-red-100"><h3 class="font-bold text-red-700 text-sm">Alertas Críticas: Atrasados</h3></div>
-                        <div class="flex-1 overflow-y-auto max-h-[300px] p-2">
-                            <table class="w-full text-left"><thead><tr><th class="p-2 text-xs text-slate-500">Equipo</th><th class="p-2 text-xs text-slate-500 text-right">Atraso</th></tr></thead><tbody>
-                            {% for c in criticos %}<tr><td class="p-2 font-bold text-slate-800 cursor-pointer hover:text-blue-600 border-b" onclick="window.location.href='/equipo/{{c.codigo}}'">{{ c.codigo }}</td><td class="p-2 text-right text-red-600 font-bold border-b">{{ c.margen_str }}</td></tr>{% endfor %}
-                            {% if not criticos %}<tr><td colspan="2" class="text-center text-slate-400 py-4">Cero atrasos críticos.</td></tr>{% endif %}
-                            </tbody></table>
-                        </div>
-                    </div>
-
-                    <div class="card-custom-nopad border border-yellow-200 flex flex-col">
-                        <div class="px-6 py-4 bg-yellow-50 border-b border-yellow-100"><h3 class="font-bold text-yellow-800 text-sm">Unidades en Taller</h3></div>
-                        <div class="flex-1 overflow-y-auto max-h-[300px] p-2">
-                            <table class="w-full text-left"><thead><tr><th class="p-2 text-xs text-slate-500">Equipo</th><th class="p-2 text-xs text-slate-500 text-right">Estado</th></tr></thead><tbody>
-                            {% for t in taller %}<tr><td class="p-2 font-bold text-slate-800 cursor-pointer hover:text-blue-600 border-b" onclick="window.location.href='/equipo/{{t.codigo}}'">{{ t.codigo }}</td><td class="p-2 text-right border-b"><span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-bold">{{ t.estado }}</span></td></tr>{% endfor %}
-                            {% if not taller %}<tr><td colspan="2" class="text-center text-slate-400 py-4">No hay unidades detenidas.</td></tr>{% endif %}
-                            </tbody></table>
-                        </div>
-                    </div>
+                    <div class="card-custom-nopad border border-orange-200 flex flex-col"><div class="px-6 py-4 bg-orange-50 border-b border-orange-100"><h3 class="font-bold text-orange-800 text-sm">Próximos a Mantención</h3></div><div class="flex-1 overflow-y-auto max-h-[300px] p-2"><table class="w-full text-left"><thead><tr><th class="p-2 text-xs text-slate-500">Equipo</th><th class="p-2 text-xs text-slate-500 text-right">Faltan</th></tr></thead><tbody>{% for p in proximos %}<tr><td class="p-2 font-bold text-slate-800 cursor-pointer hover:text-blue-600 border-b" onclick="window.location.href='/equipo/{{p.codigo}}'">{{ p.codigo }}</td><td class="p-2 text-right text-orange-600 font-bold border-b">{{ p.margen_str }} {{ p.ctrl }}</td></tr>{% endfor %}{% if not proximos %}<tr><td colspan="2" class="text-center text-slate-400 py-4">Sin equipos próximos a taller.</td></tr>{% endif %}</tbody></table></div></div>
+                    <div class="card-custom-nopad border border-red-200 flex flex-col"><div class="px-6 py-4 bg-red-50 border-b border-red-100"><h3 class="font-bold text-red-700 text-sm">Alertas Críticas: Atrasados</h3></div><div class="flex-1 overflow-y-auto max-h-[300px] p-2"><table class="w-full text-left"><thead><tr><th class="p-2 text-xs text-slate-500">Equipo</th><th class="p-2 text-xs text-slate-500 text-right">Atraso</th></tr></thead><tbody>{% for c in criticos %}<tr><td class="p-2 font-bold text-slate-800 cursor-pointer hover:text-blue-600 border-b" onclick="window.location.href='/equipo/{{c.codigo}}'">{{ c.codigo }}</td><td class="p-2 text-right text-red-600 font-bold border-b">{{ c.margen_str }}</td></tr>{% endfor %}{% if not criticos %}<tr><td colspan="2" class="text-center text-slate-400 py-4">Cero atrasos críticos.</td></tr>{% endif %}</tbody></table></div></div>
+                    <div class="card-custom-nopad border border-yellow-200 flex flex-col"><div class="px-6 py-4 bg-yellow-50 border-b border-yellow-100"><h3 class="font-bold text-yellow-800 text-sm">Unidades en Taller</h3></div><div class="flex-1 overflow-y-auto max-h-[300px] p-2"><table class="w-full text-left"><thead><tr><th class="p-2 text-xs text-slate-500">Equipo</th><th class="p-2 text-xs text-slate-500 text-right">Estado</th></tr></thead><tbody>{% for t in taller %}<tr><td class="p-2 font-bold text-slate-800 cursor-pointer hover:text-blue-600 border-b" onclick="window.location.href='/equipo/{{t.codigo}}'">{{ t.codigo }}</td><td class="p-2 text-right border-b"><span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-bold">{{ t.estado }}</span></td></tr>{% endfor %}{% if not taller %}<tr><td colspan="2" class="text-center text-slate-400 py-4">No hay unidades detenidas.</td></tr>{% endif %}</tbody></table></div></div>
                 </div>
 
                 <div class="card-custom">
@@ -151,43 +117,37 @@
             <div id="plan" class="seccion">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <p class="text-sm text-slate-500">Arrastra las tarjetas para cambiar el estado de las OTs.</p>
-                    
                     <form action="/api/add_record" method="POST" class="flex gap-2 items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm w-full md:w-auto">
-                        <input type="hidden" name="tabla" value="ot">
-                        <input type="hidden" name="referer" value="/">
-                        <input type="hidden" name="estado" value="Pendiente">
-                        <input type="hidden" name="lectura" value="0">
-                        <input type="hidden" name="costo" value="0">
-                        <input type="text" name="codigo" placeholder="Equipo (Ej: ED-52)" class="form-input w-32" required>
-                        <input type="text" name="tipo" placeholder="Motivo / Falla" class="form-input w-48" required>
+                        <input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/"><input type="hidden" name="estado" value="Pendiente"><input type="hidden" name="lectura" value="0"><input type="hidden" name="costo" value="0">
+                        <input type="text" name="codigo" placeholder="Equipo" class="form-input w-24" required><input type="text" name="tipo" placeholder="Motivo/Falla" class="form-input w-40" required>
                         <button type="submit" class="btn-primary whitespace-nowrap text-xs">Añadir a Pendiente</button>
                     </form>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-slate-700 mb-4 px-2">Pendiente</h3><div id="kb-pendiente" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="Pendiente">{% for c in kanban['Pendiente'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab relative group" data-id="{{ c.id }}"><button onclick="borrarRegistro('ot', '{{c.id}}')" class="absolute top-2 right-2 text-red-300 hover:text-red-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">×</button><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1 pr-4">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }}</p></div>{% endfor %}</div></div>
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-slate-700 mb-4 px-2">Pendiente</h3><div id="kb-pendiente" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="Pendiente">{% for c in kanban['Pendiente'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab relative group" data-id="{{ c.id }}"><button onclick="borrarRegistro('ot', '{{c.id}}')" class="absolute top-2 right-2 text-red-300 hover:text-red-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">×</button><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1 pr-4">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }} <span class="font-bold {% if c.clasificacion == 'Correctiva' %}text-red-500{% endif %}">[{{ c.clasificacion }}]</span></p></div>{% endfor %}</div></div>
                     <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-blue-800 mb-4 px-2">En Progreso</h3><div id="kb-progreso" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="En Progreso">{% for c in kanban['En Progreso'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-blue-200 cursor-grab border-l-4 border-l-blue-500 relative group" data-id="{{ c.id }}"><button onclick="borrarRegistro('ot', '{{c.id}}')" class="absolute top-2 right-2 text-red-300 hover:text-red-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">×</button><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1 pr-4">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }}</p></div>{% endfor %}</div></div>
                     <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-yellow-800 mb-4 px-2">En Revisión</h3><div id="kb-revision" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="En Revisión">{% for c in kanban['En Revisión'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-yellow-200 cursor-grab border-l-4 border-l-yellow-500 relative group" data-id="{{ c.id }}"><button onclick="borrarRegistro('ot', '{{c.id}}')" class="absolute top-2 right-2 text-red-300 hover:text-red-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">×</button><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1 pr-4">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }}</p></div>{% endfor %}</div></div>
                     <div class="bg-green-50 border border-green-100 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-green-800 mb-4 px-2">Finalizada (Últimas 10)</h3><div id="kb-completado" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="Finalizada">{% for c in kanban['Finalizada'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-green-200 border-l-4 border-l-green-500 relative group" data-id="{{ c.id }}"><button onclick="borrarRegistro('ot', '{{c.id}}')" class="absolute top-2 right-2 text-red-300 hover:text-red-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">×</button><h4 class="font-bold text-green-700">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1 pr-4">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }}</p></div>{% endfor %}</div></div>
                 </div>
             </div>
 
-            <div id="cal" class="seccion"><div class="card-custom h-[75vh]"><div id="calendar" style="height: 100%; width: 100%;"></div></div></div>
+            <div id="cal" class="seccion"><div class="card-custom-nopad p-6 flex flex-col" style="height: calc(100vh - 150px);"><div id="calendar" class="flex-1 w-full h-full"></div></div></div>
 
             <div id="ot" class="seccion">
                 <div class="card-custom mb-6 bg-slate-50">
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
                         <input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/">
                         <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input" required></div>
-                        <div class="flex-1 min-w-[150px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Tipo de Mantención</label><input type="text" name="tipo" class="form-input" required></div>
+                        <div class="flex-1 min-w-[150px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Pauta Preventiva</label><input type="text" name="tipo" class="form-input" required></div>
                         <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Odómetro/Horómetro</label><input type="number" name="lectura" class="form-input" required></div>
                         <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input" required></div>
-                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar OT</button>
+                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar OT Preventiva</button>
                     </form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
                     <table class="table-custom table-searchable"><thead><tr><th>Fecha / Folio</th><th>Equipo</th><th>Intervención</th><th>Odómetro/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>
-                    {% for m in mantenciones %}<tr>
+                    {% for m in mants_prev %}<tr>
                         <td><span class="font-bold">{{ m.fecha }}</span><br><span class="text-xs text-slate-400">{{ m.ot_generada }}</span></td>
                         <td class="font-bold text-blue-800">{{ m.codigo }}</td>
                         <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'tipo_mantencion', 'ot')">{{ m.tipo_mantencion }}</td>
@@ -239,18 +199,68 @@
                 </div>
             </div>
 
-            <div id="cond" class="seccion">
-                <div class="card-custom mb-6 bg-slate-50 flex flex-wrap justify-between items-center gap-4">
-                    <span class="font-bold text-slate-700">BASE DE OPERADORES</span>
-                    <form action="/api/add_record" method="POST" class="m-0 flex gap-4"><input type="hidden" name="tabla" value="personal"><input type="hidden" name="referer" value="/">
-                        <input type="text" name="nombre" placeholder="Nombre Completo" class="form-input w-64" required>
-                        <button type="submit" class="btn-primary whitespace-nowrap">Añadir Operador</button>
+            <div id="ot_corr" class="seccion">
+                <div class="card-custom mb-6 bg-red-50 border-red-200">
+                    <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
+                        <input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="referer" value="/">
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input" required></div>
+                        <div class="flex-1 min-w-[150px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Falla / Avería</label><input type="text" name="falla" class="form-input" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Odómetro/Horómetro</label><input type="number" name="lectura" class="form-input" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input" required></div>
+                        <button type="submit" class="btn-danger mb-1 whitespace-nowrap">Reportar Avería</button>
                     </form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
-                    <table class="table-custom table-searchable"><thead><tr><th>Nombre Operador</th><th>Cargo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>
-                    {% for op in operadores %}<tr><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'nombre', 'personal')" class="font-bold">{{ op.nombre }}</td><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'cargo', 'personal')">{{ op.cargo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'estado', 'personal')"><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ op.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('personal', '{{op.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}
+                    <table class="table-custom table-searchable"><thead><tr><th>Fecha / Folio</th><th>Equipo</th><th>Falla Reportada</th><th>Odómetro/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>
+                    {% for m in mants_corr %}<tr>
+                        <td><span class="font-bold text-red-600">{{ m.fecha }}</span><br><span class="text-xs text-slate-400">{{ m.ot_generada }}</span></td>
+                        <td class="font-bold text-blue-800">{{ m.codigo }}</td>
+                        <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'tipo_mantencion', 'ot')">{{ m.tipo_mantencion }}</td>
+                        <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'lectura', 'ot')">{{ m.lectura_str }}</td>
+                        <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'costo_mantencion_clp', 'ot')" class="font-bold">{{ m.costo_str }}</td>
+                        <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'estado', 'ot')"><span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">{{ m.estado }}</span></td>
+                        <td class="text-right min-w-[140px]">
+                            <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="btn-primary text-xs mr-2 px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded">Imprimir</a>
+                            <button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-red-500 hover:text-red-700 font-bold text-xs">Borrar</button>
+                        </td>
+                    </tr>{% endfor %}
                     </tbody></table>
+                </div>
+            </div>
+
+            <div id="cond" class="seccion space-y-6">
+                <div class="card-custom-nopad bg-white flex flex-col">
+                    <div class="px-6 py-4 bg-slate-50 border-b flex flex-wrap justify-between items-center gap-4">
+                        <h3 class="font-bold text-slate-700">NÓMINA DE OPERADORES</h3>
+                        <form action="/api/add_record" method="POST" class="m-0 flex gap-4"><input type="hidden" name="tabla" value="personal"><input type="hidden" name="referer" value="/">
+                            <input type="text" name="nombre" placeholder="Nombre Completo" class="form-input w-48" required>
+                            <input type="text" name="equipo" placeholder="Equipo Asignado" class="form-input w-32" required>
+                            <button type="submit" class="btn-primary whitespace-nowrap text-xs">Añadir Operador</button>
+                        </form>
+                    </div>
+                    <div class="table-wrapper max-h-[40vh] overflow-y-auto">
+                        <table class="table-custom table-searchable"><thead><tr><th>Nombre Operador</th><th>Equipo Asignado</th><th>Cargo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>
+                        {% for op in operadores %}<tr><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'nombre', 'personal')" class="font-bold">{{ op.nombre }}</td><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'equipo_asignado', 'personal')" class="font-bold text-blue-600">{{ op.equipo_asignado }}</td><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'cargo', 'personal')">{{ op.cargo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'estado', 'personal')"><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ op.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('personal', '{{op.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}
+                        </tbody></table>
+                    </div>
+                </div>
+
+                <div class="card-custom-nopad bg-white flex flex-col">
+                    <div class="px-6 py-4 bg-slate-50 border-b flex flex-wrap justify-between items-center gap-4">
+                        <h3 class="font-bold text-slate-700">REGISTRO DE USO DE EQUIPOS</h3>
+                        <form action="/api/add_record" method="POST" class="m-0 flex gap-2"><input type="hidden" name="tabla" value="uso_equipo"><input type="hidden" name="referer" value="/">
+                            <input type="date" name="fecha" class="form-input w-32" required>
+                            <input type="text" name="operador" placeholder="Operador" class="form-input w-40" required>
+                            <input type="text" name="codigo" placeholder="Equipo" class="form-input w-24" required>
+                            <input type="text" name="observacion" placeholder="Obs / Entrega" class="form-input w-48">
+                            <button type="submit" class="btn-primary whitespace-nowrap text-xs">Registrar Uso</button>
+                        </form>
+                    </div>
+                    <div class="table-wrapper max-h-[40vh] overflow-y-auto">
+                        <table class="table-custom table-searchable"><thead><tr><th>Fecha</th><th>Operador</th><th>Equipo Utilizado</th><th>Observación Entrega</th><th class="text-right">Acción</th></tr></thead><tbody>
+                        {% for u in usos %}<tr><td>{{ u.fecha }}</td><td class="font-bold">{{ u.operador }}</td><td class="font-bold text-blue-600">{{ u.codigo_equipo }}</td><td class="text-slate-500 italic">{{ u.observacion }}</td><td class="text-right"><button onclick="borrarRegistro('uso_equipo', '{{u.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}
+                        </tbody></table>
+                    </div>
                 </div>
             </div>
 
@@ -270,8 +280,6 @@
                 </div>
             </div>
 
-            <div id="ot_corr" class="seccion"><div class="card-custom p-16 text-center border-dashed border-2 border-slate-300"><h2 class="text-lg font-bold text-slate-400">Módulo de Averías Correctivas (Próximamente)</h2></div></div>
-
         </div>
     </main>
 
@@ -281,7 +289,8 @@
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.getElementById(t).classList.add('active'); el.classList.add('active');
             document.getElementById('title').innerText = el.innerText.trim();
-            if(t==='cal' && window.calendar) setTimeout(() => window.calendar.render(), 100);
+            // Forza render del calendario al mostrarlo para evitar fallos visuales de grid
+            if(t==='cal' && window.calendar) { setTimeout(() => window.calendar.render(), 100); }
         }
 
         function filtrarTablas(q) {
@@ -301,7 +310,8 @@
             }
         }
 
-        const mData = {{ mantenciones|tojson }};
+        const mDataPrev = {{ mants_prev|tojson }};
+        const mDataCorr = {{ mants_corr|tojson }};
         const cData = {{ charts|tojson }};
         
         window.onload = function() {
@@ -326,15 +336,20 @@
 
             try {
                 if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
-                    const evts = mData.filter(m => m.fecha_iso).map(m => ({ title: m.codigo + ' (' + m.tipo_mantencion + ')', start: m.fecha_iso, url: '/imprimir_ot/' + m.id }));
+                    let evts = [];
+                    // Preventivas (Azul)
+                    mDataPrev.filter(m => m.fecha_iso).forEach(m => { evts.push({ title: m.codigo + ' (PM)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#2563EB' }); });
+                    // Correctivas (Rojo)
+                    mDataCorr.filter(m => m.fecha_iso).forEach(m => { evts.push({ title: m.codigo + ' (Avería)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#DC2626' }); });
+                    
                     window.calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
-                        initialView: 'dayGridMonth', locale: 'es',
+                        initialView: 'dayGridMonth', locale: 'es', height: '100%', expandRows: true,
                         headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth' },
                         events: evts, eventClick: function(info) {
                             info.jsEvent.preventDefault();
                             if (info.event.url) { window.open(info.event.url, "_blank"); }
                         },
-                        eventContent: function(a) { return { html: `<div class="p-1 text-[10px] font-bold text-white bg-blue-600 rounded truncate cursor-pointer hover:bg-blue-800">${a.event.title}</div>` }; }
+                        eventContent: function(a) { return { html: `<div class="p-1 text-[10px] font-bold text-white rounded truncate cursor-pointer hover:opacity-80" style="background-color: ${a.event.backgroundColor};">${a.event.title}</div>` }; }
                     });
                 }
             } catch(e) { console.error('Error cargando Calendario', e); }
