@@ -5,7 +5,7 @@ import numpy as np
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text  # IMPORTANTE: Necesario para el parche seguro
+from sqlalchemy import text
 
 app = Flask(__name__)
 app.secret_key = 'demotron_seguridad_maxima_2026'
@@ -109,7 +109,7 @@ class CompraRepuesto(db.Model):
 with app.app_context(): db.create_all()
 
 # ==========================================
-# FUNCIONES AUXILIARES BLINDADAS
+# FUNCIONES AUXILIARES 
 # ==========================================
 def clean_string(val):
     s = str(val).strip()
@@ -144,15 +144,15 @@ def format_clp(val):
 
 def buscar_foto_por_tipo(tipo_equipo, marca=""):
     t = str(tipo_equipo).lower(); m = str(marca).lower()
-    if "tolva" in t: return "/static/img/camion_man_tolva.png"
-    if "tracto" in t: return "/static/img/tractocamion.png"
-    if "camioneta" in t: return "/static/img/maxus_t60.png"
-    if any(x in t for x in ["furgon", "minibus", "bus"]): return "/static/img/minibus.png"
-    if any(x in t for x in ["liviano", "pintura", "slurry", "plano"]): return "/static/img/camion_liviano.png"
-    return "/static/img/tractocamion.png"
+    if "tolva" in t: return "/static/equipos_real/camion_man_tolva.png"
+    if "tracto" in t: return "/static/equipos_real/tractocamion.png"
+    if "camioneta" in t: return "/static/equipos_real/maxus_t60.png"
+    if any(x in t for x in ["furgon", "minibus", "bus"]): return "/static/equipos_real/minibus.png"
+    if any(x in t for x in ["liviano", "pintura", "slurry", "plano"]): return "/static/equipos_real/camion_liviano.png"
+    return "/static/equipos_real/tractocamion.png"
 
 # ==========================================
-# RUTAS PRINCIPALES
+# RUTAS PRINCIPALES (DASHBOARD & FICHA)
 # ==========================================
 @app.route('/', strict_slashes=False)
 def dashboard():
@@ -274,11 +274,9 @@ def imprimir_pauta(codigo):
 @app.route('/update_kanban', methods=['POST'])
 def update_kanban():
     data = request.json
-    ot_id = data.get('ot_id')
-    nuevo_estado = data.get('estado')
-    ot = OrdenTrabajo.query.get(ot_id)
+    ot = OrdenTrabajo.query.get(data.get('ot_id'))
     if ot:
-        ot.estado = nuevo_estado
+        ot.estado = data.get('estado')
         db.session.commit()
     return jsonify({"status": "success"})
 
@@ -290,44 +288,18 @@ def add_record():
     if tabla == 'lectura':
         val = clean_int(request.form.get('valor'))
         ctrl = request.form.get('control', 'HR')
-        db.session.add(HistorialLectura(
-            codigo_equipo=codigo, horometro=val if ctrl == 'HR' else 0,
-            kilometraje=val if ctrl == 'KM' else 0, observacion=request.form.get('observacion', ''),
-            fecha=datetime.now()
-        ))
+        db.session.add(HistorialLectura(codigo_equipo=codigo, horometro=val if ctrl == 'HR' else 0, kilometraje=val if ctrl == 'KM' else 0, observacion=request.form.get('observacion', ''), fecha=datetime.now()))
         eq = Equipo.query.filter_by(codigo=codigo).first()
         if eq: eq.lectura_actual = val
 
     elif tabla == 'ot':
-        db.session.add(OrdenTrabajo(
-            codigo_equipo=codigo, 
-            folio=request.form.get('folio', f"OT-DMT-{random.randint(1000,9999)}"),
-            tipo_ot='Preventiva',
-            tipo_mantencion=request.form.get('tipo', 'Mantención'),
-            lectura=clean_int(request.form.get('lectura')),
-            costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0),
-            estado=request.form.get('estado', 'Pendiente'), 
-            fecha=datetime.now()
-        ))
+        db.session.add(OrdenTrabajo(codigo_equipo=codigo, folio=request.form.get('folio', f"OT-DMT-{random.randint(1000,9999)}"), tipo_ot='Preventiva', tipo_mantencion=request.form.get('tipo', 'Mantención'), lectura=clean_int(request.form.get('lectura')), costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0), estado=request.form.get('estado', 'Pendiente'), fecha=datetime.now()))
 
     elif tabla == 'ot_corr':
-        db.session.add(OrdenTrabajo(
-            codigo_equipo=codigo, 
-            folio=request.form.get('folio', f"CM-{random.randint(1000,9999)}"),
-            tipo_ot='Correctiva',
-            tipo_mantencion=request.form.get('falla', 'Avería'),
-            lectura=clean_int(request.form.get('lectura')),
-            costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0),
-            estado=request.form.get('estado', 'Pendiente'), 
-            fecha=datetime.now()
-        ))
+        db.session.add(OrdenTrabajo(codigo_equipo=codigo, folio=request.form.get('folio', f"CM-{random.randint(1000,9999)}"), tipo_ot='Correctiva', tipo_mantencion=request.form.get('falla', 'Avería'), lectura=clean_int(request.form.get('lectura')), costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0), estado=request.form.get('estado', 'Pendiente'), fecha=datetime.now()))
 
     elif tabla == 'compra':
-        db.session.add(CompraRepuesto(
-            codigo_equipo=codigo, oc=request.form.get('oc', f"OC-{random.randint(100,999)}"),
-            descripcion=request.form.get('descripcion', 'Insumos'),
-            costo_pm_clp=clean_float(request.form.get('costo'), 0.0), fecha=datetime.now()
-        ))
+        db.session.add(CompraRepuesto(codigo_equipo=codigo, oc=request.form.get('oc', f"OC-{random.randint(100,999)}"), descripcion=request.form.get('descripcion', 'Insumos'), costo_pm_clp=clean_float(request.form.get('costo'), 0.0), fecha=datetime.now()))
         
     elif tabla == 'filtro':
         db.session.add(FiltroEquipo(codigo_equipo=codigo, sistema="NUEVO SISTEMA"))
@@ -338,12 +310,7 @@ def add_record():
     elif tabla == 'uso_equipo':
         try: fecha_uso = datetime.strptime(request.form.get('fecha'), '%Y-%m-%d')
         except: fecha_uso = datetime.now()
-        db.session.add(RegistroUsoEquipo(
-            fecha=fecha_uso,
-            operador=request.form.get('operador', ''),
-            codigo_equipo=codigo,
-            observacion=request.form.get('observacion', '')
-        ))
+        db.session.add(RegistroUsoEquipo(fecha=fecha_uso, operador=request.form.get('operador', ''), codigo_equipo=codigo, observacion=request.form.get('observacion', '')))
         op = Personal.query.filter_by(nombre=request.form.get('operador')).first()
         if op: op.equipo_asignado = codigo
         
@@ -397,26 +364,17 @@ def update_inline():
     return jsonify({"status": "error"}), 404
 
 # ==========================================
-# INYECCIÓN AUTOMÁTICA DESDE EXCEL
+# INYECCIÓN AUTOMÁTICA DESDE EXCEL (MODO SINCRONIZACIÓN - NO BORRA NADA)
 # ==========================================
 @app.route('/admin/cargar_sql_final', strict_slashes=False)
 def cargar_sql_final():
     try:
-        # PARCHE SEGURO DE ACTUALIZACIÓN DE BASE DE DATOS (Evita borrar a los operadores que agregaste manualmente)
+        # 1. PARCHE DE ESTRUCTURA SEGURO
         try:
             db.session.execute(text("ALTER TABLE personal ADD COLUMN equipo_asignado VARCHAR(50) DEFAULT 'Ninguno'"))
             db.session.commit()
         except Exception:
-            db.session.rollback() # Ignora el error si la columna ya existe
-
-        # Recrear solo las tablas que se alimentan directamente del Excel cada vez
-        OrdenTrabajo.__table__.drop(db.engine, checkfirst=True)
-        CompraRepuesto.__table__.drop(db.engine, checkfirst=True)
-        HistorialLectura.__table__.drop(db.engine, checkfirst=True)
-        FiltroEquipo.__table__.drop(db.engine, checkfirst=True)
-        Equipo.__table__.drop(db.engine, checkfirst=True)
-        RegistroUsoEquipo.__table__.drop(db.engine, checkfirst=True)
-        db.create_all()
+            db.session.rollback()
 
         archivos = os.listdir('.')
         excel_principal = next((f for f in archivos if "CMMS" in f.upper() and f.endswith(('.xlsx', '.xls')) and not f.startswith('~$')), None)
@@ -425,25 +383,35 @@ def cargar_sql_final():
 
         if not excel_principal: return "Error: Falta el archivo principal CMMS DEMOTRON (.xlsx)."
 
+        # 2. CARGA DE EQUIPOS (Actualiza o Crea)
         df_eq = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Equipos", skiprows=2).replace({np.nan: None})
         operadores_set = set()
         for _, row in df_eq.iterrows():
             if not row.iloc[0]: continue
+            cod = str(row.iloc[0]).strip()
             responsable = str(row.iloc[6]).strip() if row.iloc[6] else 'Sin Asignar'
             if responsable and responsable.lower() != 'none': operadores_set.add(responsable)
             
-            eq = Equipo(codigo=str(row.iloc[0]).strip(), tipo_equipo=row.iloc[1], marca=row.iloc[2], 
-                        modelo=str(row.iloc[3]), ubicacion=row.iloc[5], responsable=responsable,
-                        estado_base=str(row.iloc[7]).strip() if row.iloc[7] else 'Operativo',
-                        control_base=str(row.iloc[8]).strip() if row.iloc[8] else 'HORAS', 
-                        frecuencia_base=clean_int(row.iloc[9], 250))
-            db.session.add(eq)
+            eq = Equipo.query.filter_by(codigo=cod).first()
+            if not eq:
+                eq = Equipo(codigo=cod)
+                db.session.add(eq)
+            
+            eq.tipo_equipo = row.iloc[1]
+            eq.marca = row.iloc[2]
+            eq.modelo = str(row.iloc[3])
+            eq.ubicacion = row.iloc[5]
+            eq.responsable = responsable
+            eq.estado_base = str(row.iloc[7]).strip() if row.iloc[7] else 'Operativo'
+            eq.control_base = str(row.iloc[8]).strip() if row.iloc[8] else 'HORAS'
+            eq.frecuencia_base = clean_int(row.iloc[9], 250)
             
         for op in operadores_set:
             if not Personal.query.filter_by(nombre=op).first():
                 db.session.add(Personal(nombre=op, cargo="Operador", estado="Activo", equipo_asignado="Varios"))
         db.session.commit()
 
+        # 3. CARGA DETALLES VIN Y MOTOR
         if archivo_detalles:
             if archivo_detalles.endswith('.xlsx'): df_det = pd.read_excel(archivo_detalles, engine='openpyxl')
             else: df_det = pd.read_csv(archivo_detalles)
@@ -457,6 +425,7 @@ def cargar_sql_final():
                     eq.n_motor = clean_string(row.get('N° Motor', ''))
             db.session.commit()
 
+        # 4. CARGA DE FILTROS (Actualiza o Crea)
         if archivo_filtros:
             if archivo_filtros.endswith('.xlsx'): df_fil = pd.read_excel(archivo_filtros, engine='openpyxl')
             else: df_fil = pd.read_csv(archivo_filtros)
@@ -464,52 +433,75 @@ def cargar_sql_final():
             for _, row in df_fil.iterrows():
                 try:
                     cod = str(row.iloc[0]).strip()
+                    sistema_f = str(row.iloc[1]).strip() if len(row)>1 else "-"
                     eq = Equipo.query.filter_by(codigo=cod).first()
                     if eq:
-                        db.session.add(FiltroEquipo(
-                            codigo_equipo=cod, sistema=str(row.iloc[1]).strip() if len(row)>1 else "-",
-                            cant=clean_int(row.iloc[2], 1) if len(row)>2 else 1, fleetguard=str(row.iloc[3]).strip() if len(row)>3 else "-",
-                            baldwind=str(row.iloc[4]).strip() if len(row)>4 else "-", originales=str(row.iloc[5]).strip() if len(row)>5 else "-",
-                            donaldson=str(row.iloc[6]).strip() if len(row)>6 else "-", otra=str(row.iloc[7]).strip() if len(row)>7 else "-"
-                        ))
+                        fil = FiltroEquipo.query.filter_by(codigo_equipo=cod, sistema=sistema_f).first()
+                        if not fil:
+                            db.session.add(FiltroEquipo(
+                                codigo_equipo=cod, sistema=sistema_f,
+                                cant=clean_int(row.iloc[2], 1) if len(row)>2 else 1, fleetguard=str(row.iloc[3]).strip() if len(row)>3 else "-",
+                                baldwind=str(row.iloc[4]).strip() if len(row)>4 else "-", originales=str(row.iloc[5]).strip() if len(row)>5 else "-",
+                                donaldson=str(row.iloc[6]).strip() if len(row)>6 else "-", otra=str(row.iloc[7]).strip() if len(row)>7 else "-"
+                            ))
                 except: pass
             db.session.commit()
 
+        # 5. LECTURAS (Solo añade si no existe en esa fecha)
         df_lec = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
         for _, row in df_lec.iterrows():
             if not row.iloc[1]: continue
-            db.session.add(HistorialLectura(fecha=parse_date(row.iloc[0]), codigo_equipo=str(row.iloc[1]).strip(), horometro=clean_int(row.iloc[2], 0), kilometraje=clean_int(row.iloc[3], 0), obra_ubicacion=row.iloc[4], responsable=row.iloc[5], observacion=row.iloc[6]))
+            fecha_dt = parse_date(row.iloc[0])
+            cod = str(row.iloc[1]).strip()
+            hor = clean_int(row.iloc[2], 0)
+            kil = clean_int(row.iloc[3], 0)
+            if not HistorialLectura.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, horometro=hor, kilometraje=kil).first():
+                db.session.add(HistorialLectura(fecha=fecha_dt, codigo_equipo=cod, horometro=hor, kilometraje=kil, obra_ubicacion=row.iloc[4], responsable=row.iloc[5], observacion=row.iloc[6]))
 
-        # Carga Preventivas
+        # 6. MANTENCIONES PREVENTIVAS (Solo añade si no existe folio/fecha+tipo)
         df_man = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
         for _, row in df_man.iterrows():
             if not row.iloc[1]: continue
-            db.session.add(OrdenTrabajo(
-                fecha=parse_date(row.iloc[0]), codigo_equipo=str(row.iloc[1]).strip(), tipo_ot='Preventiva', tipo_mantencion=str(row.iloc[2]).strip(), 
-                lectura=clean_int(row.iloc[3], 0), es_pm=str(row.iloc[4]), folio=str(row.iloc[5]), 
-                lugar=str(row.iloc[6]), costo_mantencion_clp=clean_float(row.iloc[8], 0.0), 
-                estado=str(row.iloc[9]) if row.iloc[9] else 'Finalizada'
-            ))
+            fecha_dt = parse_date(row.iloc[0])
+            cod = str(row.iloc[1]).strip()
+            tipo = str(row.iloc[2]).strip()
+            if not OrdenTrabajo.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, tipo_mantencion=tipo).first():
+                db.session.add(OrdenTrabajo(
+                    fecha=fecha_dt, codigo_equipo=cod, tipo_ot='Preventiva', tipo_mantencion=tipo, 
+                    lectura=clean_int(row.iloc[3], 0), es_pm=str(row.iloc[4]), folio=str(row.iloc[5]), 
+                    lugar=str(row.iloc[6]), costo_mantencion_clp=clean_float(row.iloc[8], 0.0), 
+                    estado=str(row.iloc[9]) if row.iloc[9] else 'Finalizada'
+                ))
 
-        # Carga Correctivas (Nueva Hoja)
+        # 7. AVERÍAS CORRECTIVAS (Carga del Historial Antiguo)
         try:
             df_corr = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Correctivas", skiprows=2).replace({np.nan: None})
             for _, row in df_corr.iterrows():
                 if not row.iloc[1]: continue
-                db.session.add(OrdenTrabajo(
-                    fecha=parse_date(row.iloc[0]), codigo_equipo=str(row.iloc[1]).strip(), tipo_ot='Correctiva', tipo_mantencion=str(row.iloc[2]).strip(), 
-                    lectura=clean_int(row.iloc[3], 0), costo_mantencion_clp=clean_float(row.iloc[4], 0.0), 
-                    estado=str(row.iloc[5]) if len(row)>5 and row.iloc[5] else 'Finalizada', folio=f"CM-{random.randint(1000,9999)}"
-                ))
+                fecha_dt = parse_date(row.iloc[0])
+                cod = str(row.iloc[1]).strip()
+                falla = str(row.iloc[2]).strip()
+                if not OrdenTrabajo.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, tipo_mantencion=falla).first():
+                    db.session.add(OrdenTrabajo(
+                        fecha=fecha_dt, codigo_equipo=cod, tipo_ot='Correctiva', tipo_mantencion=falla, 
+                        lectura=clean_int(row.iloc[3], 0), costo_mantencion_clp=clean_float(row.iloc[4], 0.0), 
+                        estado=str(row.iloc[5]) if len(row)>5 and row.iloc[5] else 'Finalizada', folio=f"CM-{random.randint(1000,9999)}"
+                    ))
         except: pass
 
+        # 8. COMPRAS
         df_com = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
         for _, row in df_com.iterrows():
             if not row.iloc[2]: continue
-            db.session.add(CompraRepuesto(fecha=parse_date(row.iloc[0]), oc=str(row.iloc[1]), codigo_equipo=str(row.iloc[2]).strip(), descripcion=row.iloc[3], proveedor=row.iloc[4], costo_pm_clp=clean_float(row.iloc[5], 0.0), estado_oc=str(row.iloc[7])))
+            fecha_dt = parse_date(row.iloc[0])
+            oc_str = str(row.iloc[1])
+            cod = str(row.iloc[2]).strip()
+            if not CompraRepuesto.query.filter_by(codigo_equipo=cod, oc=oc_str).first():
+                db.session.add(CompraRepuesto(fecha=fecha_dt, oc=oc_str, codigo_equipo=cod, descripcion=row.iloc[3], proveedor=row.iloc[4], costo_pm_clp=clean_float(row.iloc[5], 0.0), estado_oc=str(row.iloc[7])))
         
         db.session.commit()
 
+        # Recálculo de Próximos Mantenimientos
         for eq in Equipo.query.all():
             u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if u_lec: eq.lectura_actual = u_lec.horometro if eq.control_base == 'HORAS' else u_lec.kilometraje
@@ -518,7 +510,7 @@ def cargar_sql_final():
             else: eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
         db.session.commit()
 
-        return "Carga Completa y Exitosa con datos blindados. <a href='/'>Ir al Dashboard</a>"
+        return "Carga Completa y Exitosa con Sincronización Segura. (Los datos antiguos se sumaron, lo actual se protegió). <a href='/'>Ir al Dashboard</a>"
     except Exception as e:
         return f"Error Crítico durante la carga: {str(e)}"
 
