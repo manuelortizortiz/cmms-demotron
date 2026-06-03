@@ -25,6 +25,14 @@ class Personal(db.Model):
     nombre = db.Column(db.String(100))
     cargo = db.Column(db.String(100), default="Operador")
     estado = db.Column(db.String(50), default="Activo")
+    equipo_asignado = db.Column(db.String(50), default="Ninguno") # NUEVA COLUMNA
+
+class RegistroUsoEquipo(db.Model): # NUEVO MODELO
+    id = db.Column(db.Integer, primary_key=True)
+    fecha = db.Column(db.DateTime, default=datetime.now)
+    operador = db.Column(db.String(100))
+    codigo_equipo = db.Column(db.String(50))
+    observacion = db.Column(db.String(250))
 
 class Mecanico(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -68,7 +76,7 @@ class OrdenTrabajo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fecha = db.Column(db.DateTime, default=datetime.now)
     codigo_equipo = db.Column(db.String(50))
-    tipo_ot = db.Column(db.String(50), default="Preventiva")
+    tipo_ot = db.Column(db.String(50), default="Preventiva") # Distingue entre PM y Correctiva
     tipo_mantencion = db.Column(db.String(100))
     costo_mantencion_clp = db.Column(db.Float, default=0.0)
     estado = db.Column(db.String(50), default="Pendiente")
@@ -154,6 +162,7 @@ def dashboard():
         lecturas_db = HistorialLectura.query.order_by(HistorialLectura.fecha.desc()).all()
         operadores_db = Personal.query.all()
         mecanicos_db = Mecanico.query.all()
+        usos_db = RegistroUsoEquipo.query.order_by(RegistroUsoEquipo.fecha.desc()).all()
         
         equipos_dict, taller, criticos, proximos = [], [], [], []
         conteo_estado = {'Operativo': 0, 'Fuera de Servicio': 0, 'Taller': 0}
@@ -179,23 +188,25 @@ def dashboard():
         equipos_aleatorios = list(equipos_dict)
         random.shuffle(equipos_aleatorios)
 
-        todas_mants = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'lectura_str': format_num(m.lectura)} for m in ots_db]
+        # Separar OTs en Preventivas y Correctivas
+        todas_mants_prev = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'lectura_str': format_num(m.lectura)} for m in ots_db if m.tipo_ot == 'Preventiva']
+        todas_mants_corr = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'lectura_str': format_num(m.lectura)} for m in ots_db if m.tipo_ot == 'Correctiva']
+
         todas_compras = [{'id': c.id, 'fecha': c.fecha.strftime('%d/%m/%Y'), 'oc': c.oc, 'codigo': c.codigo_equipo, 'descripcion': c.descripcion, 'costo_str': format_clp(c.costo_pm_clp)} for c in compras_db]
         todas_lecturas = [{'id': l.id, 'fecha': l.fecha.strftime('%d/%m/%Y'), 'codigo': l.codigo_equipo, 'valor_str': format_num(max(l.horometro or 0, l.kilometraje or 0)), 'tipo': 'HR' if (l.horometro and l.horometro > 0) else 'KM', 'obs': l.observacion, 'responsable': l.responsable} for l in lecturas_db]
         
-        # KANBAN PROTEGIDO CONTRA HISTORIAL MASIVO
         kanban_tareas = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Finalizada': []}
         for ot in ots_db:
             if ot.estado in kanban_tareas:
-                # Si es finalizada, solo enviamos las ultimas 10 para no inundar el tablero Kanban
                 if ot.estado == 'Finalizada' and len(kanban_tareas['Finalizada']) >= 10:
                     continue
                 kanban_tareas[ot.estado].append({
-                    'id': ot.id, 'codigo': ot.codigo_equipo, 'folio': ot.folio, 'tipo': ot.tipo_mantencion, 'fecha': ot.fecha.strftime('%d/%m/%Y')
+                    'id': ot.id, 'codigo': ot.codigo_equipo, 'folio': ot.folio, 'tipo': ot.tipo_mantencion, 'fecha': ot.fecha.strftime('%d/%m/%Y'), 'clasificacion': ot.tipo_ot
                 })
 
-        lista_operadores = [{'id': p.id, 'nombre': p.nombre, 'cargo': p.cargo, 'estado': p.estado} for p in operadores_db]
+        lista_operadores = [{'id': p.id, 'nombre': p.nombre, 'cargo': p.cargo, 'estado': p.estado, 'equipo_asignado': p.equipo_asignado} for p in operadores_db]
         lista_mecanicos = [{'id': m.id, 'nombre': m.nombre, 'especialidad': m.especialidad, 'estado': m.estado} for m in mecanicos_db]
+        lista_usos = [{'id': u.id, 'fecha': u.fecha.strftime('%d/%m/%Y'), 'operador': u.operador, 'codigo_equipo': u.codigo_equipo, 'observacion': u.observacion} for u in usos_db]
 
         mes_actual = datetime.now().month
         costos = {2:0, 3:0, 4:0, 5:0, 6:0, 7:0}
@@ -217,8 +228,8 @@ def dashboard():
         }
         
         return render_template('index.html', kpis=kpis, charts=charts, eqs=equipos_dict, criticos=criticos, proximos=proximos, taller=taller,
-                               equipos_aleatorios=equipos_aleatorios, mantenciones=todas_mants, compras=todas_compras, 
-                               lecturas=todas_lecturas, kanban=kanban_tareas, operadores=lista_operadores, mecanicos=lista_mecanicos)
+                               equipos_aleatorios=equipos_aleatorios, mants_prev=todas_mants_prev, mants_corr=todas_mants_corr, compras=todas_compras, 
+                               lecturas=todas_lecturas, kanban=kanban_tareas, operadores=lista_operadores, mecanicos=lista_mecanicos, usos=lista_usos)
     except Exception as e:
         return f"Error en Dashboard: {str(e)}"
 
@@ -226,15 +237,20 @@ def dashboard():
 def ficha_equipo(codigo):
     equipo = Equipo.query.filter_by(codigo=codigo).first_or_404()
     foto_url = buscar_foto_por_tipo(equipo.tipo_equipo, equipo.marca)
-    mants_db = OrdenTrabajo.query.filter_by(codigo_equipo=codigo).order_by(OrdenTrabajo.fecha.desc()).all()
+    
+    ots = OrdenTrabajo.query.filter_by(codigo_equipo=codigo).order_by(OrdenTrabajo.fecha.desc()).all()
     lecturas_db = HistorialLectura.query.filter_by(codigo_equipo=codigo).order_by(HistorialLectura.fecha.desc()).limit(15).all()
     filtros_db = FiltroEquipo.query.filter_by(codigo_equipo=codigo).all()
+    usos_db = RegistroUsoEquipo.query.filter_by(codigo_equipo=codigo).order_by(RegistroUsoEquipo.fecha.desc()).limit(10).all()
 
-    mants = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'tipo': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'folio': m.folio, 'lectura': format_num(m.lectura)} for m in mants_db]
+    mants_prev = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'tipo': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'folio': m.folio, 'lectura': format_num(m.lectura)} for m in ots if m.tipo_ot == 'Preventiva']
+    mants_corr = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'tipo': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'folio': m.folio, 'lectura': format_num(m.lectura)} for m in ots if m.tipo_ot == 'Correctiva']
+
     lecturas = [{'id': l.id, 'fecha': l.fecha.strftime('%d/%m/%Y'), 'valor': format_num(max(l.horometro or 0, l.kilometraje or 0)), 'tipo': 'HR' if (l.horometro and l.horometro > 0) else 'KM', 'obs': l.observacion} for l in lecturas_db]
     filtros = [{'id': f.id, 'sistema': f.sistema, 'cant': f.cant, 'fleetguard': f.fleetguard, 'baldwind': f.baldwind, 'originales': f.originales, 'donaldson': f.donaldson, 'otra': f.otra} for f in filtros_db]
+    usos = [{'id': u.id, 'fecha': u.fecha.strftime('%d/%m/%Y'), 'operador': u.operador, 'obs': u.observacion} for u in usos_db]
 
-    return render_template('ficha_equipo.html', eq=equipo, foto_url=foto_url, mants=mants, lecturas=lecturas, filtros=filtros)
+    return render_template('ficha_equipo.html', eq=equipo, foto_url=foto_url, mants_prev=mants_prev, mants_corr=mants_corr, lecturas=lecturas, filtros=filtros, usos=usos)
 
 # ==========================================
 # RUTAS DE IMPRESIÓN 
@@ -286,7 +302,20 @@ def add_record():
         db.session.add(OrdenTrabajo(
             codigo_equipo=codigo, 
             folio=request.form.get('folio', f"OT-DMT-{random.randint(1000,9999)}"),
+            tipo_ot='Preventiva',
             tipo_mantencion=request.form.get('tipo', 'Mantención'),
+            lectura=clean_int(request.form.get('lectura')),
+            costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0),
+            estado=request.form.get('estado', 'Pendiente'), 
+            fecha=datetime.now()
+        ))
+
+    elif tabla == 'ot_corr':
+        db.session.add(OrdenTrabajo(
+            codigo_equipo=codigo, 
+            folio=request.form.get('folio', f"CM-{random.randint(1000,9999)}"),
+            tipo_ot='Correctiva',
+            tipo_mantencion=request.form.get('falla', 'Avería'),
             lectura=clean_int(request.form.get('lectura')),
             costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0),
             estado=request.form.get('estado', 'Pendiente'), 
@@ -304,7 +333,19 @@ def add_record():
         db.session.add(FiltroEquipo(codigo_equipo=codigo, sistema="NUEVO SISTEMA"))
         
     elif tabla == 'personal':
-        db.session.add(Personal(nombre=request.form.get('nombre', ''), cargo='Operador', estado='Activo'))
+        db.session.add(Personal(nombre=request.form.get('nombre', ''), cargo='Operador', estado='Activo', equipo_asignado=request.form.get('equipo', 'Ninguno')))
+        
+    elif tabla == 'uso_equipo':
+        try: fecha_uso = datetime.strptime(request.form.get('fecha'), '%Y-%m-%d')
+        except: fecha_uso = datetime.now()
+        db.session.add(RegistroUsoEquipo(
+            fecha=fecha_uso,
+            operador=request.form.get('operador', ''),
+            codigo_equipo=codigo,
+            observacion=request.form.get('observacion', '')
+        ))
+        op = Personal.query.filter_by(nombre=request.form.get('operador')).first()
+        if op: op.equipo_asignado = codigo
         
     elif tabla == 'mecanico':
         db.session.add(Mecanico(nombre=request.form.get('nombre', ''), especialidad=request.form.get('especialidad', 'General'), estado='Activo'))
@@ -321,6 +362,7 @@ def delete_record(tabla, id):
     elif tabla == 'filtro': obj = FiltroEquipo.query.get(id)
     elif tabla == 'personal': obj = Personal.query.get(id)
     elif tabla == 'mecanico': obj = Mecanico.query.get(id)
+    elif tabla == 'uso_equipo': obj = RegistroUsoEquipo.query.get(id)
         
     if obj:
         db.session.delete(obj)
@@ -344,6 +386,7 @@ def update_inline():
     elif tabla == 'personal': obj = Personal.query.get(cod)
     elif tabla == 'mecanico': obj = Mecanico.query.get(cod)
     elif tabla == 'filtro': obj = FiltroEquipo.query.get(cod)
+    elif tabla == 'uso_equipo': obj = RegistroUsoEquipo.query.get(cod)
 
     if obj:
         if campo in ['costo_mantencion_clp', 'costo_pm_clp', 'horometro', 'kilometraje', 'lectura', 'cant']:
@@ -364,6 +407,7 @@ def cargar_sql_final():
         HistorialLectura.__table__.drop(db.engine, checkfirst=True)
         FiltroEquipo.__table__.drop(db.engine, checkfirst=True)
         Equipo.__table__.drop(db.engine, checkfirst=True)
+        RegistroUsoEquipo.__table__.drop(db.engine, checkfirst=True)
         db.create_all()
 
         archivos = os.listdir('.')
@@ -389,7 +433,7 @@ def cargar_sql_final():
             
         for op in operadores_set:
             if not Personal.query.filter_by(nombre=op).first():
-                db.session.add(Personal(nombre=op, cargo="Operador", estado="Activo"))
+                db.session.add(Personal(nombre=op, cargo="Operador", estado="Activo", equipo_asignado="Varios"))
         db.session.commit()
 
         if archivo_detalles:
@@ -428,15 +472,28 @@ def cargar_sql_final():
             if not row.iloc[1]: continue
             db.session.add(HistorialLectura(fecha=parse_date(row.iloc[0]), codigo_equipo=str(row.iloc[1]).strip(), horometro=clean_int(row.iloc[2], 0), kilometraje=clean_int(row.iloc[3], 0), obra_ubicacion=row.iloc[4], responsable=row.iloc[5], observacion=row.iloc[6]))
 
+        # Carga Preventivas
         df_man = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
         for _, row in df_man.iterrows():
             if not row.iloc[1]: continue
             db.session.add(OrdenTrabajo(
-                fecha=parse_date(row.iloc[0]), codigo_equipo=str(row.iloc[1]).strip(), tipo_mantencion=str(row.iloc[2]).strip(), 
+                fecha=parse_date(row.iloc[0]), codigo_equipo=str(row.iloc[1]).strip(), tipo_ot='Preventiva', tipo_mantencion=str(row.iloc[2]).strip(), 
                 lectura=clean_int(row.iloc[3], 0), es_pm=str(row.iloc[4]), folio=str(row.iloc[5]), 
                 lugar=str(row.iloc[6]), costo_mantencion_clp=clean_float(row.iloc[8], 0.0), 
-                estado=str(row.iloc[9]) if row.iloc[9] else 'Finalizada', tipo_ot='Preventiva'
+                estado=str(row.iloc[9]) if row.iloc[9] else 'Finalizada'
             ))
+
+        # Carga Correctivas (Nueva Hoja)
+        try:
+            df_corr = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Correctivas", skiprows=2).replace({np.nan: None})
+            for _, row in df_corr.iterrows():
+                if not row.iloc[1]: continue
+                db.session.add(OrdenTrabajo(
+                    fecha=parse_date(row.iloc[0]), codigo_equipo=str(row.iloc[1]).strip(), tipo_ot='Correctiva', tipo_mantencion=str(row.iloc[2]).strip(), 
+                    lectura=clean_int(row.iloc[3], 0), costo_mantencion_clp=clean_float(row.iloc[4], 0.0), 
+                    estado=str(row.iloc[5]) if len(row)>5 and row.iloc[5] else 'Finalizada', folio=f"CM-{random.randint(1000,9999)}"
+                ))
+        except: pass
 
         df_com = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
         for _, row in df_com.iterrows():
