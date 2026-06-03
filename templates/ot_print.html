@@ -60,7 +60,7 @@
         </div>
         
         <div class="text-center" style="width: 50%;">
-            <img src="{{ url_for('static', filename='img/demotron azul.png') }}" class="logo-img" alt="DEMOTRON">
+            <img src="{{ url_for('static', filename='Logo Azul.png') }}" class="logo-img" alt="DEMOTRON">
             <div style="font-size: 11px; font-weight: bold; color: #555; margin-top: 2px;">FORMULARIO DE GESTIÓN DE MANTENIMIENTO</div>
             <div style="font-size: 16px; font-weight: bold; color: #082b5f; margin-top: 2px;">ORDEN DE TRABAJO (OT)</div>
         </div>
@@ -99,8 +99,8 @@
                 <div class="box-header">TIPO DE MANTENIMIENTO:</div>
                 <div class="box-content">
                     <div class="flex justify-between mb-2">
-                        <label><div class="chk" {% if 'prev' in ot.tipo_mantencion|lower %}style="background:#082b5f;"{% endif %}></div> MP (Preventivo)</label>
-                        <label><div class="chk" {% if 'corr' in ot.tipo_mantencion|lower %}style="background:#082b5f;"{% endif %}></div> MC (Correctivo)</label>
+                        <label><div class="chk" {% if 'prev' in ot.tipo_mantencion|lower or ot.tipo_ot == 'Preventiva' %}style="background:#082b5f;"{% endif %}></div> MP (Preventivo)</label>
+                        <label><div class="chk" {% if 'corr' in ot.tipo_mantencion|lower or ot.tipo_ot == 'Correctiva' %}style="background:#082b5f;"{% endif %}></div> MC (Correctivo)</label>
                         <label><div class="chk"></div> MPd (Predictivo)</label>
                     </div>
                     <p class="mt-0">TIPO DE PAUTA: <span class="line-blank" style="width: 30px;"></span> Hrs / <span class="line-blank" style="width: 30px;"></span> Km</p>
@@ -199,7 +199,6 @@
                             <th style="width: 40px; text-align: center;">Camb.</th>
                             <th style="width: 40px; text-align: center;">Rev.</th>
                         </tr>
-                        
                         {% for i in range(12) %}
                             <tr>
                                 {% if i < filtros|length %}
@@ -211,7 +210,6 @@
                                 <td style="text-align: center;"><div class="chk" style="margin:0;"></div></td>
                             </tr>
                         {% endfor %}
-
                     </table>
                 </div>
             </div>
