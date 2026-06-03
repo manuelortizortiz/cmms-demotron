@@ -3,12 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <title>DEMOTRON ERP CMMS</title>
+    <!-- Favicon -->
     <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Librerías Externas -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
         body { font-family: 'Inter', sans-serif; font-size: 13px; background-color: #F8FAFC; color: #334155; margin: 0; }
         .seccion { display: none; } .seccion.active { display: block; }
@@ -24,8 +28,9 @@
         .card-custom-nopad { background: white; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden;}
         
         /* Tables */
-        .table-custom { width: 100%; border-collapse: collapse; }
-        .table-custom th { font-size: 11px; color: #64748B; padding: 16px; border-bottom: 1px solid #E2E8F0; text-align: left; font-weight: 600; }
+        .table-wrapper { width: 100%; overflow-x: auto; }
+        .table-custom { width: 100%; border-collapse: collapse; min-width: 600px; }
+        .table-custom th { font-size: 11px; color: #64748B; padding: 16px; border-bottom: 1px solid #E2E8F0; text-align: left; font-weight: 600; white-space: nowrap; }
         .table-custom td { padding: 14px 16px; border-bottom: 1px solid #F1F5F9; color: #334155; }
         td[contenteditable="true"]:focus { outline: none; border-bottom: 2px solid #2563EB; background: #F8FAFC; }
 
@@ -41,7 +46,8 @@
 </head>
 <body class="flex h-screen overflow-hidden">
     
-    <aside class="w-64 sidebar-bg flex flex-col z-20 shadow-sm">
+    <!-- SIDEBAR -->
+    <aside class="w-64 sidebar-bg flex flex-col z-20 shadow-sm shrink-0">
         <div class="h-24 flex items-center justify-center border-b border-slate-100 p-4">
             <img src="{{ url_for('static', filename='img/demotron azul.png') }}" alt="Demotron Logo" class="h-full object-contain" onerror="this.outerHTML='<span class=\'text-2xl font-bold text-blue-800\'>DEMOTRON</span>';">
         </div>
@@ -65,78 +71,91 @@
         </nav>
     </aside>
 
-    <main class="flex-1 flex flex-col bg-[#F8FAFC]">
-        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8">
-            <h1 id="title" class="text-xl font-bold text-slate-800">Dashboard</h1>
-            <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="Buscar en esta vista..." class="form-input w-72 bg-slate-50">
+    <!-- ÁREA PRINCIPAL -->
+    <main class="flex-1 flex flex-col bg-[#F8FAFC] min-w-0">
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
+            <h1 id="title" class="text-xl font-bold text-slate-800 truncate">Dashboard</h1>
+            <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="Buscar en esta vista..." class="form-input w-64 bg-slate-50 ml-4 hidden md:block">
         </header>
 
-        <div class="flex-1 overflow-y-auto p-8 space-y-8">
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-8">
             
+            <!-- DASHBOARD -->
             <div id="dash" class="seccion active">
-                <div class="grid grid-cols-4 gap-6 mb-8">
+                <!-- KPIs Responsivos -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
                     <div class="card-custom border-t-4 border-blue-600"><p class="text-xs font-bold text-slate-500 uppercase mb-2">Total Flota</p><p class="text-3xl font-bold text-slate-800">{{ kpis.total }}</p></div>
                     <div class="card-custom border-t-4 border-green-500"><p class="text-xs font-bold text-slate-500 uppercase mb-2">Operativos</p><p class="text-3xl font-bold text-green-600">{{ kpis.operativos }}</p></div>
                     <div class="card-custom border-t-4 border-red-500"><p class="text-xs font-bold text-slate-500 uppercase mb-2">Atrasados (PM)</p><p class="text-3xl font-bold text-red-500">{{ kpis.atrasados }}</p></div>
                     <div class="card-custom border-t-4 border-blue-600"><p class="text-xs font-bold text-slate-500 uppercase mb-2">OT Pendientes</p><p class="text-3xl font-bold text-slate-800">{{ kpis.ot_abiertas }}</p></div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-6 mb-8">
-                    <div class="card-custom"><h3 class="text-sm font-bold text-slate-700 mb-4">Estado Operativo</h3><div class="h-48 relative"><canvas id="chartEstado"></canvas></div></div>
-                    <div class="card-custom"><h3 class="text-sm font-bold text-slate-700 mb-4">Inversión Mensual</h3><div class="h-48 relative"><canvas id="chartCostosMensuales"></canvas></div></div>
+                <!-- Gráficos Responsivos -->
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+                    <div class="card-custom"><h3 class="text-sm font-bold text-slate-700 mb-4">Estado Operativo</h3><div class="h-48 relative w-full"><canvas id="chartEstado"></canvas></div></div>
+                    <div class="card-custom"><h3 class="text-sm font-bold text-slate-700 mb-4">Inversión Mensual</h3><div class="h-48 relative w-full"><canvas id="chartCostosMensuales"></canvas></div></div>
                 </div>
                 
-                <div class="grid grid-cols-3 gap-6 mb-8">
-                    <div class="card-custom-nopad border border-orange-200"><div class="px-6 py-4 bg-orange-50 border-b border-orange-100"><h3 class="font-bold text-orange-800 text-sm">Próximos a Mantención (Alerta Preventiva)</h3></div>
-                        <div class="max-h-[300px] overflow-y-auto">
-                            <table class="table-custom"><thead><tr><th>Equipo</th><th class="text-right">Faltan</th></tr></thead><tbody>
-                            {% for p in proximos %}<tr><td class="font-bold text-slate-800 cursor-pointer hover:text-blue-600" onclick="window.location.href='/equipo/{{p.codigo}}'">{{ p.codigo }}</td><td class="text-right text-orange-600 font-bold">{{ p.margen_str }} {{ p.ctrl }}</td></tr>{% endfor %}
+                <!-- Tablas Responsivas -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- PRÓXIMOS A MANTENCIÓN -->
+                    <div class="card-custom-nopad border border-orange-200 flex flex-col">
+                        <div class="px-6 py-4 bg-orange-50 border-b border-orange-100"><h3 class="font-bold text-orange-800 text-sm">Próximos a Mantención</h3></div>
+                        <div class="flex-1 overflow-y-auto max-h-[300px] p-2">
+                            <table class="w-full text-left"><thead><tr><th class="p-2 text-xs text-slate-500">Equipo</th><th class="p-2 text-xs text-slate-500 text-right">Faltan</th></tr></thead><tbody>
+                            {% for p in proximos %}<tr><td class="p-2 font-bold text-slate-800 cursor-pointer hover:text-blue-600 border-b" onclick="window.location.href='/equipo/{{p.codigo}}'">{{ p.codigo }}</td><td class="p-2 text-right text-orange-600 font-bold border-b">{{ p.margen_str }} {{ p.ctrl }}</td></tr>{% endfor %}
                             {% if not proximos %}<tr><td colspan="2" class="text-center text-slate-400 py-4">Sin equipos próximos a taller.</td></tr>{% endif %}
                             </tbody></table>
                         </div>
                     </div>
 
-                    <div class="card-custom-nopad border border-red-200"><div class="px-6 py-4 bg-red-50 border-b border-red-100"><h3 class="font-bold text-red-700 text-sm">Alertas Críticas: Atrasados</h3></div>
-                        <div class="max-h-[300px] overflow-y-auto">
-                            <table class="table-custom"><thead><tr><th>Equipo</th><th class="text-right">Atraso</th></tr></thead><tbody>
-                            {% for c in criticos %}<tr><td class="font-bold text-slate-800 cursor-pointer hover:text-blue-600" onclick="window.location.href='/equipo/{{c.codigo}}'">{{ c.codigo }}</td><td class="text-right text-red-600 font-bold">{{ c.margen_str }}</td></tr>{% endfor %}
+                    <!-- ATRASADOS CRÍTICOS -->
+                    <div class="card-custom-nopad border border-red-200 flex flex-col">
+                        <div class="px-6 py-4 bg-red-50 border-b border-red-100"><h3 class="font-bold text-red-700 text-sm">Alertas Críticas: Atrasados</h3></div>
+                        <div class="flex-1 overflow-y-auto max-h-[300px] p-2">
+                            <table class="w-full text-left"><thead><tr><th class="p-2 text-xs text-slate-500">Equipo</th><th class="p-2 text-xs text-slate-500 text-right">Atraso</th></tr></thead><tbody>
+                            {% for c in criticos %}<tr><td class="p-2 font-bold text-slate-800 cursor-pointer hover:text-blue-600 border-b" onclick="window.location.href='/equipo/{{c.codigo}}'">{{ c.codigo }}</td><td class="p-2 text-right text-red-600 font-bold border-b">{{ c.margen_str }}</td></tr>{% endfor %}
                             {% if not criticos %}<tr><td colspan="2" class="text-center text-slate-400 py-4">Cero atrasos críticos.</td></tr>{% endif %}
                             </tbody></table>
                         </div>
                     </div>
 
-                    <div class="card-custom-nopad border border-yellow-200"><div class="px-6 py-4 bg-yellow-50 border-b border-yellow-100"><h3 class="font-bold text-yellow-800 text-sm">Unidades en Taller o Averías</h3></div>
-                        <div class="max-h-[300px] overflow-y-auto">
-                            <table class="table-custom"><thead><tr><th>Equipo</th><th class="text-right">Estado</th></tr></thead><tbody>
-                            {% for t in taller %}<tr><td class="font-bold text-slate-800 cursor-pointer hover:text-blue-600" onclick="window.location.href='/equipo/{{t.codigo}}'">{{ t.codigo }}</td><td class="text-right"><span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-bold">{{ t.estado }}</span></td></tr>{% endfor %}
+                    <!-- TALLER -->
+                    <div class="card-custom-nopad border border-yellow-200 flex flex-col">
+                        <div class="px-6 py-4 bg-yellow-50 border-b border-yellow-100"><h3 class="font-bold text-yellow-800 text-sm">Unidades en Taller</h3></div>
+                        <div class="flex-1 overflow-y-auto max-h-[300px] p-2">
+                            <table class="w-full text-left"><thead><tr><th class="p-2 text-xs text-slate-500">Equipo</th><th class="p-2 text-xs text-slate-500 text-right">Estado</th></tr></thead><tbody>
+                            {% for t in taller %}<tr><td class="p-2 font-bold text-slate-800 cursor-pointer hover:text-blue-600 border-b" onclick="window.location.href='/equipo/{{t.codigo}}'">{{ t.codigo }}</td><td class="p-2 text-right border-b"><span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-bold">{{ t.estado }}</span></td></tr>{% endfor %}
                             {% if not taller %}<tr><td colspan="2" class="text-center text-slate-400 py-4">No hay unidades detenidas.</td></tr>{% endif %}
                             </tbody></table>
                         </div>
                     </div>
                 </div>
 
+                <!-- CATÁLOGO VISUAL RESTAURADO -->
                 <div class="card-custom">
                     <h3 class="text-sm font-bold text-slate-700 mb-6">Catálogo Visual de Flota</h3>
                     <div class="flex overflow-x-auto hide-scrollbar gap-4 pb-4">
                         {% for a in equipos_aleatorios %}
-                        <div class="min-w-[160px] border border-slate-200 rounded-xl p-4 text-center cursor-pointer hover:border-blue-500 hover:shadow-md transition-all bg-white" onclick="window.location.href='/equipo/{{a.codigo}}'">
-                            <div class="h-20 flex items-center justify-center mb-3">
-                                <img src="{{ a.foto_url }}" class="h-full object-contain" onerror="this.outerHTML='<span class=\'text-slate-300 text-xs\'>Sin Foto</span>';">
+                        <div class="min-w-[140px] max-w-[160px] border border-slate-200 rounded-xl p-4 text-center cursor-pointer hover:border-blue-500 hover:shadow-md transition-all bg-white" onclick="window.location.href='/equipo/{{a.codigo}}'">
+                            <div class="h-16 flex items-center justify-center mb-3">
+                                <img src="{{ a.foto_url }}" class="h-full object-contain" onerror="this.outerHTML='<span class=\'text-slate-300 text-xs\'>S/I</span>';">
                             </div>
-                            <p class="text-sm text-slate-800 font-bold uppercase">{{ a.codigo }}</p>
+                            <p class="text-xs text-slate-800 font-bold uppercase truncate">{{ a.codigo }}</p>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
             </div>
 
-            <div id="eq" class="seccion"><div class="card-custom-nopad overflow-x-auto bg-white">
+            <!-- RESTO DE PESTAÑAS (Protegidas con table-wrapper para pantallas pequeñas) -->
+            <div id="eq" class="seccion"><div class="card-custom-nopad bg-white table-wrapper">
                 <table class="table-custom table-searchable"><thead><tr><th>Código</th><th>Tipo</th><th>Ubicación</th><th>Operador</th><th>Lectura</th><th>Margen</th><th>Estado</th></tr></thead><tbody>
                 {% for e in eqs %}<tr><td class="font-bold text-blue-600 cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td><td>{{ e.tipo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'ubicacion', 'equipo')">{{ e.ubicacion }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'responsable', 'equipo')">{{ e.responsable }}</td><td>{{ e.lectura }}</td><td class="font-bold {% if e.margen < 0 %}text-red-600{% elif e.margen <= 150 %}text-orange-500{% else %}text-green-600{% endif %}">{{ e.margen_str }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'estado_base', 'equipo')">{{ e.estado }}</td></tr>{% endfor %}
                 </tbody></table>
             </div></div>
 
-            <div id="datos" class="seccion"><div class="card-custom-nopad overflow-x-auto bg-white">
+            <div id="datos" class="seccion"><div class="card-custom-nopad bg-white table-wrapper">
                 <table class="table-custom table-searchable"><thead><tr><th>Equipo</th><th>N° Chasis (VIN)</th><th>N° Motor</th><th>Patente</th></tr></thead><tbody>
                 {% for e in eqs %}<tr><td class="font-bold text-blue-600 cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'vin', 'equipo')" class="text-slate-500 font-mono">{{ e.vin }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'n_motor', 'equipo')" class="text-slate-500 font-mono">{{ e.motor }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'patente', 'equipo')" class="font-bold">{{ e.patente }}</td></tr>{% endfor %}
                 </tbody></table>
@@ -144,7 +163,7 @@
 
             <div id="plan" class="seccion">
                 <p class="text-sm text-slate-500 mb-6">Arrastra las tarjetas para cambiar el estado de las Órdenes de Trabajo Reales.</p>
-                <div class="grid grid-cols-4 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-slate-700 mb-4 px-2">Pendiente</h3><div id="kb-pendiente" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="Pendiente">{% for c in kanban['Pendiente'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab" data-id="{{ c.id }}"><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }}</p></div>{% endfor %}</div></div>
                     <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-blue-800 mb-4 px-2">En Progreso</h3><div id="kb-progreso" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="En Progreso">{% for c in kanban['En Progreso'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-blue-200 cursor-grab border-l-4 border-l-blue-500" data-id="{{ c.id }}"><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }}</p></div>{% endfor %}</div></div>
                     <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-yellow-800 mb-4 px-2">En Revisión</h3><div id="kb-revision" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="En Revisión">{% for c in kanban['En Revisión'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-yellow-200 cursor-grab border-l-4 border-l-yellow-500" data-id="{{ c.id }}"><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }}</p></div>{% endfor %}</div></div>
@@ -156,16 +175,16 @@
 
             <div id="ot" class="seccion">
                 <div class="card-custom mb-6 bg-slate-50">
-                    <form action="/api/add_record" method="POST" class="flex gap-4 items-end">
+                    <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
                         <input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/">
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input" required></div>
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1">Tipo de Mantención</label><input type="text" name="tipo" class="form-input" required></div>
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1">Odómetro/Horómetro</label><input type="number" name="lectura" class="form-input" required></div>
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input" required></div>
-                        <button type="submit" class="btn-primary mb-1">Agregar OT</button>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input" required></div>
+                        <div class="flex-1 min-w-[150px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Tipo de Mantención</label><input type="text" name="tipo" class="form-input" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Odómetro/Horómetro</label><input type="number" name="lectura" class="form-input" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input" required></div>
+                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar OT</button>
                     </form>
                 </div>
-                <div class="card-custom-nopad overflow-x-auto max-h-[60vh]">
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
                     <table class="table-custom table-searchable"><thead><tr><th>Fecha / Folio</th><th>Equipo</th><th>Intervención</th><th>Odómetro/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>
                     {% for m in mantenciones %}<tr>
                         <td><span class="font-bold">{{ m.fecha }}</span><br><span class="text-xs text-slate-400">{{ m.ot_generada }}</span></td>
@@ -174,8 +193,8 @@
                         <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'lectura', 'ot')">{{ m.lectura_str }}</td>
                         <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'costo_mantencion_clp', 'ot')" class="font-bold">{{ m.costo_str }}</td>
                         <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'estado', 'ot')"><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-300">{{ m.estado }}</span></td>
-                        <td class="text-right w-40">
-                            <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="btn-primary text-xs mr-2 px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200">Imprimir</a>
+                        <td class="text-right min-w-[140px]">
+                            <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="btn-primary text-xs mr-2 px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded">Imprimir</a>
                             <button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-red-500 hover:text-red-700 font-bold text-xs">Borrar</button>
                         </td>
                     </tr>{% endfor %}
@@ -185,16 +204,16 @@
 
             <div id="compras" class="seccion">
                 <div class="card-custom mb-6 bg-slate-50">
-                    <form action="/api/add_record" method="POST" class="flex gap-4 items-end">
+                    <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
                         <input type="hidden" name="tabla" value="compra"><input type="hidden" name="referer" value="/">
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input" required></div>
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1">OC</label><input type="text" name="oc" class="form-input"></div>
-                        <div class="flex-[2]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Descripción</label><input type="text" name="descripcion" class="form-input"></div>
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input"></div>
-                        <button type="submit" class="btn-primary mb-1">Agregar Compra</button>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">OC</label><input type="text" name="oc" class="form-input"></div>
+                        <div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Descripción</label><input type="text" name="descripcion" class="form-input"></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input"></div>
+                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar Compra</button>
                     </form>
                 </div>
-                <div class="card-custom-nopad overflow-x-auto max-h-[60vh]">
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
                     <table class="table-custom table-searchable"><thead><tr><th>Fecha</th><th>OC</th><th>Equipo</th><th>Descripción</th><th>Costo</th><th class="text-right">Acción</th></tr></thead><tbody>
                     {% for c in compras %}<tr><td>{{ c.fecha }}</td><td contenteditable="true" onblur="guardarInline(this, '{{c.id}}', 'oc', 'compra')">{{ c.oc }}</td><td class="font-bold text-blue-800">{{ c.codigo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{c.id}}', 'descripcion', 'compra')">{{ c.descripcion }}</td><td contenteditable="true" onblur="guardarInline(this, '{{c.id}}', 'costo_pm_clp', 'compra')" class="font-bold">{{ c.costo_str }}</td><td class="text-right"><button onclick="borrarRegistro('compra', '{{c.id}}')" class="text-red-500 font-bold text-xs">Borrar</button></td></tr>{% endfor %}
                     </tbody></table>
@@ -203,16 +222,16 @@
 
             <div id="lec" class="seccion">
                 <div class="card-custom mb-6 bg-slate-50">
-                    <form action="/api/add_record" method="POST" class="flex gap-4 items-end">
+                    <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
                         <input type="hidden" name="tabla" value="lectura"><input type="hidden" name="referer" value="/">
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input" required></div>
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1">Valor</label><input type="number" name="valor" class="form-input" required></div>
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1">Tipo</label><select name="control" class="form-input"><option value="HR">Horómetro</option><option value="KM">Kilometraje</option></select></div>
-                        <div class="flex-[2]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Observación</label><input type="text" name="observacion" class="form-input"></div>
-                        <button type="submit" class="btn-primary mb-1">Agregar Lectura</button>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Valor</label><input type="number" name="valor" class="form-input" required></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Tipo</label><select name="control" class="form-input"><option value="HR">Horómetro</option><option value="KM">Kilometraje</option></select></div>
+                        <div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Observación</label><input type="text" name="observacion" class="form-input"></div>
+                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar Lectura</button>
                     </form>
                 </div>
-                <div class="card-custom-nopad overflow-x-auto max-h-[60vh]">
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
                     <table class="table-custom table-searchable"><thead><tr><th>Fecha</th><th>Equipo</th><th>Operador</th><th>Valor Registrado</th><th>Observación</th><th class="text-right">Acción</th></tr></thead><tbody>
                     {% for l in lecturas %}<tr><td>{{ l.fecha }}</td><td class="font-bold text-blue-800">{{ l.codigo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{l.id}}', 'responsable', 'lectura')">{{ l.responsable }}</td><td class="font-bold">{{ l.valor_str }} <span class="text-[10px] text-slate-500">{{ l.tipo }}</span></td><td contenteditable="true" onblur="guardarInline(this, '{{l.id}}', 'observacion', 'lectura')" class="text-slate-500">{{ l.obs }}</td><td class="text-right"><button onclick="borrarRegistro('lectura', '{{l.id}}')" class="text-red-500 font-bold text-xs">Borrar</button></td></tr>{% endfor %}
                     </tbody></table>
@@ -220,14 +239,14 @@
             </div>
 
             <div id="cond" class="seccion">
-                <div class="card-custom mb-6 bg-slate-50 flex justify-between items-center">
+                <div class="card-custom mb-6 bg-slate-50 flex flex-wrap justify-between items-center gap-4">
                     <span class="font-bold text-slate-700">BASE DE OPERADORES</span>
                     <form action="/api/add_record" method="POST" class="m-0 flex gap-4"><input type="hidden" name="tabla" value="personal"><input type="hidden" name="referer" value="/">
                         <input type="text" name="nombre" placeholder="Nombre Completo" class="form-input w-64" required>
-                        <button type="submit" class="btn-primary">Añadir Operador</button>
+                        <button type="submit" class="btn-primary whitespace-nowrap">Añadir Operador</button>
                     </form>
                 </div>
-                <div class="card-custom-nopad overflow-x-auto max-h-[60vh]">
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
                     <table class="table-custom table-searchable"><thead><tr><th>Nombre Operador</th><th>Cargo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>
                     {% for op in operadores %}<tr><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'nombre', 'personal')" class="font-bold">{{ op.nombre }}</td><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'cargo', 'personal')">{{ op.cargo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'estado', 'personal')"><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ op.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('personal', '{{op.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}
                     </tbody></table>
@@ -235,15 +254,15 @@
             </div>
 
             <div id="mecanicos" class="seccion">
-                <div class="card-custom mb-6 bg-slate-50 flex justify-between items-center">
+                <div class="card-custom mb-6 bg-slate-50 flex flex-wrap justify-between items-center gap-4">
                     <span class="font-bold text-slate-700">EQUIPO TÉCNICO Y MECÁNICOS</span>
-                    <form action="/api/add_record" method="POST" class="m-0 flex gap-4"><input type="hidden" name="tabla" value="mecanico"><input type="hidden" name="referer" value="/">
+                    <form action="/api/add_record" method="POST" class="m-0 flex flex-wrap gap-4"><input type="hidden" name="tabla" value="mecanico"><input type="hidden" name="referer" value="/">
                         <input type="text" name="nombre" placeholder="Nombre del Mecánico" class="form-input w-64" required>
                         <input type="text" name="especialidad" placeholder="Especialidad (Ej: Hidráulica)" class="form-input w-48">
-                        <button type="submit" class="btn-primary">Añadir Mecánico</button>
+                        <button type="submit" class="btn-primary whitespace-nowrap">Añadir Mecánico</button>
                     </form>
                 </div>
-                <div class="card-custom-nopad overflow-x-auto max-h-[60vh]">
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
                     <table class="table-custom table-searchable"><thead><tr><th>Nombre Mecánico</th><th>Especialidad</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>
                     {% for m in mecanicos %}<tr><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'nombre', 'mecanico')" class="font-bold">{{ m.nombre }}</td><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'especialidad', 'mecanico')">{{ m.especialidad }}</td><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'estado', 'mecanico')"><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ m.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}
                     </tbody></table>
@@ -254,6 +273,8 @@
 
         </div>
     </main>
+
+    <!-- SCRIPTS CON ESCUDO ANTI-ERRORES -->
     <script>
         function switchTab(t, el) {
             document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active'));
@@ -284,40 +305,50 @@
         const cData = {{ charts|tojson }};
         
         window.onload = function() {
-            // Drag and Drop de Kanban
-            const kbCols = ['kb-pendiente', 'kb-progreso', 'kb-revision', 'kb-completado'];
-            kbCols.forEach(col => {
-                const el = document.getElementById(col);
-                if(el) {
-                    new Sortable(el, {
-                        group: 'kanban', animation: 150,
-                        onEnd: function (evt) {
-                            const ot_id = evt.item.getAttribute('data-id');
-                            const nuevo_estado = evt.to.getAttribute('data-status');
-                            fetch('/update_kanban', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ot_id: ot_id, estado: nuevo_estado }) });
+            // 1. KANBAN PROTEGIDO
+            try {
+                if (typeof Sortable !== 'undefined') {
+                    const kbCols = ['kb-pendiente', 'kb-progreso', 'kb-revision', 'kb-completado'];
+                    kbCols.forEach(col => {
+                        const el = document.getElementById(col);
+                        if(el) {
+                            new Sortable(el, {
+                                group: 'kanban', animation: 150,
+                                onEnd: function (evt) {
+                                    const ot_id = evt.item.getAttribute('data-id');
+                                    const nuevo_estado = evt.to.getAttribute('data-status');
+                                    fetch('/update_kanban', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ot_id: ot_id, estado: nuevo_estado }) });
+                                }
+                            });
                         }
                     });
                 }
-            });
+            } catch(e) { console.error('Error cargando Kanban', e); }
 
-            // Calendario con Link a Impresión de OT
-            if(document.getElementById('calendar')) {
-                const evts = mData.filter(m => m.fecha_iso).map(m => ({ title: m.codigo + ' (' + m.tipo_mantencion + ')', start: m.fecha_iso, url: '/imprimir_ot/' + m.id }));
-                window.calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
-                    initialView: 'dayGridMonth', locale: 'es',
-                    headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth' },
-                    events: evts, eventClick: function(info) {
-                        info.jsEvent.preventDefault();
-                        if (info.event.url) { window.open(info.event.url, "_blank"); }
-                    },
-                    eventContent: function(a) { return { html: `<div class="p-1 text-[10px] font-bold text-white bg-blue-600 rounded truncate cursor-pointer hover:bg-blue-800">${a.event.title}</div>` }; }
-                });
-            }
+            // 2. CALENDARIO PROTEGIDO
+            try {
+                if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
+                    const evts = mData.filter(m => m.fecha_iso).map(m => ({ title: m.codigo + ' (' + m.tipo_mantencion + ')', start: m.fecha_iso, url: '/imprimir_ot/' + m.id }));
+                    window.calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+                        initialView: 'dayGridMonth', locale: 'es',
+                        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth' },
+                        events: evts, eventClick: function(info) {
+                            info.jsEvent.preventDefault();
+                            if (info.event.url) { window.open(info.event.url, "_blank"); }
+                        },
+                        eventContent: function(a) { return { html: `<div class="p-1 text-[10px] font-bold text-white bg-blue-600 rounded truncate cursor-pointer hover:bg-blue-800">${a.event.title}</div>` }; }
+                    });
+                }
+            } catch(e) { console.error('Error cargando Calendario', e); }
 
-            // Gráficos
-            Chart.defaults.font.family = "'Inter', sans-serif";
-            new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '70%', data: { labels: ['Operativos', 'Fuera de Servicio', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'], borderWidth:0 }] }, options: { maintainAspectRatio:false, plugins:{legend:{position:'right'}} }});
-            new Chart(document.getElementById('chartCostosMensuales'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión Realizada (CLP)', data: cData.costos_mensuales.data, borderColor: '#2563EB', backgroundColor: 'rgba(37, 99, 235, 0.05)', fill: true, tension: 0.3, borderWidth: 2 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } }, scales:{x:{grid:{display:false}}, y:{beginAtZero: true}} }});
+            // 3. GRÁFICOS PROTEGIDOS
+            try {
+                if (typeof Chart !== 'undefined') {
+                    Chart.defaults.font.family = "'Inter', sans-serif";
+                    new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '70%', data: { labels: ['Operativos', 'Fuera de Servicio', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'], borderWidth:0 }] }, options: { maintainAspectRatio:false, plugins:{legend:{position:'right'}} }});
+                    new Chart(document.getElementById('chartCostosMensuales'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión Realizada (CLP)', data: cData.costos_mensuales.data, borderColor: '#2563EB', backgroundColor: 'rgba(37, 99, 235, 0.05)', fill: true, tension: 0.3, borderWidth: 2 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } }, scales:{x:{grid:{display:false}}, y:{beginAtZero: true}} }});
+                }
+            } catch(e) { console.error('Error cargando Gráficos', e); }
         };
     </script>
 </body>
