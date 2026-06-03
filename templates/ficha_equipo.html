@@ -24,6 +24,10 @@
 </head>
 <body class="p-8">
 
+    <datalist id="lista_mecanicos">
+        {% for m in mecanicos %}<option value="{{ m.nombre }}"></option>{% endfor %}
+    </datalist>
+
     <div class="max-w-6xl mx-auto">
         <div class="mb-6"><a href="/" class="text-blue-600 font-bold hover:underline">← Volver al Dashboard</a></div>
 
@@ -58,21 +62,22 @@
                 <div class="p-4 bg-slate-50 border-b border-slate-200">
                     <form action="/api/add_record" method="POST" class="flex gap-2">
                         <input type="hidden" name="tabla" value="ot"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
-                        <input type="text" name="tipo" placeholder="Pauta PM" class="form-input w-1/3" required>
+                        <input type="text" name="tipo" placeholder="Pauta PM" class="form-input w-1/4" required>
                         <input type="number" name="lectura" placeholder="Odo/Hor" class="form-input w-1/4" required>
-                        <input type="number" name="costo" placeholder="Costo CLP" class="form-input w-1/3" required>
+                        <input type="number" name="costo" placeholder="Costo CLP" class="form-input w-1/4" required>
+                        <input list="lista_mecanicos" name="mecanico" placeholder="Mecánico" class="form-input w-1/4">
                         <button type="submit" class="btn-primary px-3 text-xs">+</button>
                     </form>
                 </div>
                 <div class="max-h-[250px] overflow-y-auto">
                     <table class="table-custom">
-                        <thead><tr><th>Fecha</th><th>Tipo</th><th>Odo/Hor</th><th>Costo</th><th>Acción</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th>Tipo</th><th>Mecánico</th><th>Costo</th><th>Acción</th></tr></thead>
                         <tbody>
                             {% for m in mants_prev %}
                             <tr>
-                                <td class="font-bold text-slate-700">{{ m.fecha }}</td>
+                                <td class="font-bold text-slate-700">{{ m.fecha }}<br><span contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'folio', 'ot')" class="text-[9px] text-slate-400">{{ m.folio }}</span></td>
                                 <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'tipo_mantencion', 'ot')">{{ m.tipo }}</td>
-                                <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'lectura', 'ot')">{{ m.lectura }}</td>
+                                <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'mecanico', 'ot')">{{ m.mecanico }}</td>
                                 <td class="font-bold text-blue-700">{{ m.costo_str }}</td>
                                 <td class="w-32">
                                     <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="text-blue-500 font-bold text-[10px] mr-2 hover:underline">Imp</a>
@@ -92,21 +97,22 @@
                 <div class="p-4 bg-white border-b border-red-100">
                     <form action="/api/add_record" method="POST" class="flex gap-2">
                         <input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
-                        <input type="text" name="falla" placeholder="Falla / Avería" class="form-input border-red-200 w-1/3" required>
+                        <input type="text" name="falla" placeholder="Falla / Avería" class="form-input border-red-200 w-1/4" required>
                         <input type="number" name="lectura" placeholder="Odo/Hor" class="form-input border-red-200 w-1/4" required>
-                        <input type="number" name="costo" placeholder="Costo CLP" class="form-input border-red-200 w-1/3" required>
+                        <input type="number" name="costo" placeholder="Costo CLP" class="form-input border-red-200 w-1/4" required>
+                        <input list="lista_mecanicos" name="mecanico" placeholder="Mecánico" class="form-input border-red-200 w-1/4">
                         <button type="submit" class="btn-danger px-3 text-xs">+</button>
                     </form>
                 </div>
                 <div class="max-h-[250px] overflow-y-auto">
                     <table class="table-custom">
-                        <thead><tr><th>Fecha</th><th>Falla</th><th>Odo/Hor</th><th>Costo</th><th>Acción</th></tr></thead>
+                        <thead><tr><th>Fecha</th><th>Falla</th><th>Mecánico</th><th>Costo</th><th>Acción</th></tr></thead>
                         <tbody>
                             {% for m in mants_corr %}
                             <tr>
-                                <td class="font-bold text-red-600">{{ m.fecha }}</td>
+                                <td class="font-bold text-red-600">{{ m.fecha }}<br><span contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'folio', 'ot')" class="text-[9px] text-slate-400">{{ m.folio }}</span></td>
                                 <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'tipo_mantencion', 'ot')">{{ m.tipo }}</td>
-                                <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'lectura', 'ot')">{{ m.lectura }}</td>
+                                <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'mecanico', 'ot')">{{ m.mecanico }}</td>
                                 <td class="font-bold text-blue-700">{{ m.costo_str }}</td>
                                 <td class="w-32">
                                     <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="text-blue-500 font-bold text-[10px] mr-2 hover:underline">Imp</a>
@@ -119,6 +125,7 @@
                 </div>
             </div>
 
+            <!-- Resto de Ficha se mantiene igual (Lecturas y Uso de Equipo) -->
             <div class="card-custom-nopad">
                 <div class="header-section">
                     <h3 class="font-bold text-slate-800">Lecturas de Terreno</h3>
