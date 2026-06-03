@@ -31,11 +31,18 @@
         .form-input:focus { border-color: #3B82F6; }
         .btn-primary { background-color: #2563EB; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; transition: background 0.2s; cursor: pointer; border:none;}
         .btn-primary:hover { background-color: #1D4ED8; }
+        .btn-danger { background-color: #FEE2E2; color: #DC2626; padding: 6px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; border:none;}
+        .btn-danger:hover { background-color: #FECACA; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
     
+    <!-- Datalist global para autocompletar mecánicos -->
+    <datalist id="lista_mecanicos">
+        {% for m in mecanicos %}<option value="{{ m.nombre }}"></option>{% endfor %}
+    </datalist>
+
     <aside class="w-64 sidebar-bg flex flex-col z-20 shadow-sm shrink-0">
         <div class="h-24 flex items-center justify-center border-b border-slate-100 p-4">
             <img src="{{ url_for('static', filename='Logo Azul.png') }}" alt="Demotron Logo" class="h-full object-contain" onerror="this.outerHTML='<span class=\'text-2xl font-bold text-blue-800\'>DEMOTRON</span>';">
@@ -134,23 +141,27 @@
 
             <div id="cal" class="seccion"><div class="card-custom-nopad p-6 flex flex-col" style="height: calc(100vh - 150px);"><div id="calendar" class="flex-1 w-full h-full"></div></div></div>
 
+            <!-- ORDENES DE TRABAJO PREVENTIVAS -->
             <div id="ot" class="seccion">
                 <div class="card-custom mb-6 bg-slate-50">
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
                         <input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/">
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input" required></div>
-                        <div class="flex-1 min-w-[150px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Pauta Preventiva</label><input type="text" name="tipo" class="form-input" required></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Odómetro/Horómetro</label><input type="number" name="lectura" class="form-input" required></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input" required></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input" required></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Folio (Opcional)</label><input type="text" name="folio" class="form-input"></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Pauta Preventiva</label><input type="text" name="tipo" class="form-input" required></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Odómetro/Hor.</label><input type="number" name="lectura" class="form-input" required></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Mecánico</label><input list="lista_mecanicos" name="mecanico" class="form-input" placeholder="Opcional"></div>
                         <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar OT Preventiva</button>
                     </form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
-                    <table class="table-custom table-searchable"><thead><tr><th>Fecha / Folio</th><th>Equipo</th><th>Intervención</th><th>Odómetro/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>
+                    <table class="table-custom table-searchable"><thead><tr><th>Fecha / Folio</th><th>Equipo</th><th>Intervención</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>
                     {% for m in mants_prev %}<tr>
-                        <td><span class="font-bold">{{ m.fecha }}</span><br><span class="text-xs text-slate-400">{{ m.ot_generada }}</span></td>
+                        <td><span class="font-bold">{{ m.fecha }}</span><br><span contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'folio', 'ot')" class="text-xs text-slate-400">{{ m.ot_generada }}</span></td>
                         <td class="font-bold text-blue-800">{{ m.codigo }}</td>
                         <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'tipo_mantencion', 'ot')">{{ m.tipo_mantencion }}</td>
+                        <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'mecanico', 'ot')">{{ m.mecanico }}</td>
                         <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'lectura', 'ot')">{{ m.lectura_str }}</td>
                         <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'costo_mantencion_clp', 'ot')" class="font-bold">{{ m.costo_str }}</td>
                         <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'estado', 'ot')"><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-300">{{ m.estado }}</span></td>
@@ -199,23 +210,27 @@
                 </div>
             </div>
 
+            <!-- AVERÍAS CORRECTIVAS -->
             <div id="ot_corr" class="seccion">
                 <div class="card-custom mb-6 bg-red-50 border-red-200">
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
                         <input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="referer" value="/">
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input" required></div>
-                        <div class="flex-1 min-w-[150px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Falla / Avería</label><input type="text" name="falla" class="form-input" required></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Odómetro/Horómetro</label><input type="number" name="lectura" class="form-input" required></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input" required></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input border-red-200" required></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Folio (Opcional)</label><input type="text" name="folio" class="form-input border-red-200"></div>
+                        <div class="flex-1 min-w-[150px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Falla / Avería</label><input type="text" name="falla" class="form-input border-red-200" required></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Odómetro/Hor.</label><input type="number" name="lectura" class="form-input border-red-200" required></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input border-red-200" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Mecánico</label><input list="lista_mecanicos" name="mecanico" class="form-input border-red-200" placeholder="Opcional"></div>
                         <button type="submit" class="btn-danger mb-1 whitespace-nowrap">Reportar Avería</button>
                     </form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
-                    <table class="table-custom table-searchable"><thead><tr><th>Fecha / Folio</th><th>Equipo</th><th>Falla Reportada</th><th>Odómetro/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>
+                    <table class="table-custom table-searchable"><thead><tr><th>Fecha / Folio</th><th>Equipo</th><th>Falla Reportada</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>
                     {% for m in mants_corr %}<tr>
-                        <td><span class="font-bold text-red-600">{{ m.fecha }}</span><br><span class="text-xs text-slate-400">{{ m.ot_generada }}</span></td>
+                        <td><span class="font-bold text-red-600">{{ m.fecha }}</span><br><span contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'folio', 'ot')" class="text-xs text-slate-400">{{ m.ot_generada }}</span></td>
                         <td class="font-bold text-blue-800">{{ m.codigo }}</td>
                         <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'tipo_mantencion', 'ot')">{{ m.tipo_mantencion }}</td>
+                        <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'mecanico', 'ot')">{{ m.mecanico }}</td>
                         <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'lectura', 'ot')">{{ m.lectura_str }}</td>
                         <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'costo_mantencion_clp', 'ot')" class="font-bold">{{ m.costo_str }}</td>
                         <td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'estado', 'ot')"><span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">{{ m.estado }}</span></td>
@@ -279,7 +294,6 @@
                     </tbody></table>
                 </div>
             </div>
-
         </div>
     </main>
 
@@ -289,7 +303,6 @@
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.getElementById(t).classList.add('active'); el.classList.add('active');
             document.getElementById('title').innerText = el.innerText.trim();
-            // Forza render del calendario al mostrarlo para evitar fallos visuales de grid
             if(t==='cal' && window.calendar) { setTimeout(() => window.calendar.render(), 100); }
         }
 
@@ -337,9 +350,7 @@
             try {
                 if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
                     let evts = [];
-                    // Preventivas (Azul)
                     mDataPrev.filter(m => m.fecha_iso).forEach(m => { evts.push({ title: m.codigo + ' (PM)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#2563EB' }); });
-                    // Correctivas (Rojo)
                     mDataCorr.filter(m => m.fecha_iso).forEach(m => { evts.push({ title: m.codigo + ' (Avería)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#DC2626' }); });
                     
                     window.calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
