@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>DEMOTRON ERP CMMS</title>
-    <!-- Favicon -->
     <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Librerías Externas -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -46,7 +44,6 @@
 </head>
 <body class="flex h-screen overflow-hidden">
     
-    <!-- SIDEBAR -->
     <aside class="w-64 sidebar-bg flex flex-col z-20 shadow-sm shrink-0">
         <div class="h-24 flex items-center justify-center border-b border-slate-100 p-4">
             <img src="{{ url_for('static', filename='img/demotron azul.png') }}" alt="Demotron Logo" class="h-full object-contain" onerror="this.outerHTML='<span class=\'text-2xl font-bold text-blue-800\'>DEMOTRON</span>';">
@@ -71,7 +68,6 @@
         </nav>
     </aside>
 
-    <!-- ÁREA PRINCIPAL -->
     <main class="flex-1 flex flex-col bg-[#F8FAFC] min-w-0">
         <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
             <h1 id="title" class="text-xl font-bold text-slate-800 truncate">Dashboard</h1>
@@ -80,9 +76,7 @@
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-8">
             
-            <!-- DASHBOARD -->
             <div id="dash" class="seccion active">
-                <!-- KPIs Responsivos -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
                     <div class="card-custom border-t-4 border-blue-600"><p class="text-xs font-bold text-slate-500 uppercase mb-2">Total Flota</p><p class="text-3xl font-bold text-slate-800">{{ kpis.total }}</p></div>
                     <div class="card-custom border-t-4 border-green-500"><p class="text-xs font-bold text-slate-500 uppercase mb-2">Operativos</p><p class="text-3xl font-bold text-green-600">{{ kpis.operativos }}</p></div>
@@ -90,15 +84,12 @@
                     <div class="card-custom border-t-4 border-blue-600"><p class="text-xs font-bold text-slate-500 uppercase mb-2">OT Pendientes</p><p class="text-3xl font-bold text-slate-800">{{ kpis.ot_abiertas }}</p></div>
                 </div>
 
-                <!-- Gráficos Responsivos -->
                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
                     <div class="card-custom"><h3 class="text-sm font-bold text-slate-700 mb-4">Estado Operativo</h3><div class="h-48 relative w-full"><canvas id="chartEstado"></canvas></div></div>
                     <div class="card-custom"><h3 class="text-sm font-bold text-slate-700 mb-4">Inversión Mensual</h3><div class="h-48 relative w-full"><canvas id="chartCostosMensuales"></canvas></div></div>
                 </div>
                 
-                <!-- Tablas Responsivas -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    <!-- PRÓXIMOS A MANTENCIÓN -->
                     <div class="card-custom-nopad border border-orange-200 flex flex-col">
                         <div class="px-6 py-4 bg-orange-50 border-b border-orange-100"><h3 class="font-bold text-orange-800 text-sm">Próximos a Mantención</h3></div>
                         <div class="flex-1 overflow-y-auto max-h-[300px] p-2">
@@ -109,7 +100,6 @@
                         </div>
                     </div>
 
-                    <!-- ATRASADOS CRÍTICOS -->
                     <div class="card-custom-nopad border border-red-200 flex flex-col">
                         <div class="px-6 py-4 bg-red-50 border-b border-red-100"><h3 class="font-bold text-red-700 text-sm">Alertas Críticas: Atrasados</h3></div>
                         <div class="flex-1 overflow-y-auto max-h-[300px] p-2">
@@ -120,7 +110,6 @@
                         </div>
                     </div>
 
-                    <!-- TALLER -->
                     <div class="card-custom-nopad border border-yellow-200 flex flex-col">
                         <div class="px-6 py-4 bg-yellow-50 border-b border-yellow-100"><h3 class="font-bold text-yellow-800 text-sm">Unidades en Taller</h3></div>
                         <div class="flex-1 overflow-y-auto max-h-[300px] p-2">
@@ -132,7 +121,6 @@
                     </div>
                 </div>
 
-                <!-- CATÁLOGO VISUAL RESTAURADO -->
                 <div class="card-custom">
                     <h3 class="text-sm font-bold text-slate-700 mb-6">Catálogo Visual de Flota</h3>
                     <div class="flex overflow-x-auto hide-scrollbar gap-4 pb-4">
@@ -148,7 +136,6 @@
                 </div>
             </div>
 
-            <!-- RESTO DE PESTAÑAS (Protegidas con table-wrapper para pantallas pequeñas) -->
             <div id="eq" class="seccion"><div class="card-custom-nopad bg-white table-wrapper">
                 <table class="table-custom table-searchable"><thead><tr><th>Código</th><th>Tipo</th><th>Ubicación</th><th>Operador</th><th>Lectura</th><th>Margen</th><th>Estado</th></tr></thead><tbody>
                 {% for e in eqs %}<tr><td class="font-bold text-blue-600 cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td><td>{{ e.tipo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'ubicacion', 'equipo')">{{ e.ubicacion }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'responsable', 'equipo')">{{ e.responsable }}</td><td>{{ e.lectura }}</td><td class="font-bold {% if e.margen < 0 %}text-red-600{% elif e.margen <= 150 %}text-orange-500{% else %}text-green-600{% endif %}">{{ e.margen_str }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'estado_base', 'equipo')">{{ e.estado }}</td></tr>{% endfor %}
@@ -162,12 +149,26 @@
             </div></div>
 
             <div id="plan" class="seccion">
-                <p class="text-sm text-slate-500 mb-6">Arrastra las tarjetas para cambiar el estado de las Órdenes de Trabajo Reales.</p>
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <p class="text-sm text-slate-500">Arrastra las tarjetas para cambiar el estado de las OTs.</p>
+                    
+                    <form action="/api/add_record" method="POST" class="flex gap-2 items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm w-full md:w-auto">
+                        <input type="hidden" name="tabla" value="ot">
+                        <input type="hidden" name="referer" value="/">
+                        <input type="hidden" name="estado" value="Pendiente">
+                        <input type="hidden" name="lectura" value="0">
+                        <input type="hidden" name="costo" value="0">
+                        <input type="text" name="codigo" placeholder="Equipo (Ej: ED-52)" class="form-input w-32" required>
+                        <input type="text" name="tipo" placeholder="Motivo / Falla" class="form-input w-48" required>
+                        <button type="submit" class="btn-primary whitespace-nowrap text-xs">Añadir a Pendiente</button>
+                    </form>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-slate-700 mb-4 px-2">Pendiente</h3><div id="kb-pendiente" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="Pendiente">{% for c in kanban['Pendiente'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab" data-id="{{ c.id }}"><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }}</p></div>{% endfor %}</div></div>
-                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-blue-800 mb-4 px-2">En Progreso</h3><div id="kb-progreso" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="En Progreso">{% for c in kanban['En Progreso'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-blue-200 cursor-grab border-l-4 border-l-blue-500" data-id="{{ c.id }}"><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }}</p></div>{% endfor %}</div></div>
-                    <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-yellow-800 mb-4 px-2">En Revisión</h3><div id="kb-revision" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="En Revisión">{% for c in kanban['En Revisión'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-yellow-200 cursor-grab border-l-4 border-l-yellow-500" data-id="{{ c.id }}"><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }}</p></div>{% endfor %}</div></div>
-                    <div class="bg-green-50 border border-green-100 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-green-800 mb-4 px-2">Finalizada</h3><div id="kb-completado" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="Finalizada">{% for c in kanban['Finalizada'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-green-200 border-l-4 border-l-green-500" data-id="{{ c.id }}"><h4 class="font-bold text-green-700">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }}</p></div>{% endfor %}</div></div>
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-slate-700 mb-4 px-2">Pendiente</h3><div id="kb-pendiente" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="Pendiente">{% for c in kanban['Pendiente'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab relative group" data-id="{{ c.id }}"><button onclick="borrarRegistro('ot', '{{c.id}}')" class="absolute top-2 right-2 text-red-300 hover:text-red-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">×</button><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1 pr-4">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }}</p></div>{% endfor %}</div></div>
+                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-blue-800 mb-4 px-2">En Progreso</h3><div id="kb-progreso" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="En Progreso">{% for c in kanban['En Progreso'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-blue-200 cursor-grab border-l-4 border-l-blue-500 relative group" data-id="{{ c.id }}"><button onclick="borrarRegistro('ot', '{{c.id}}')" class="absolute top-2 right-2 text-red-300 hover:text-red-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">×</button><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1 pr-4">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }}</p></div>{% endfor %}</div></div>
+                    <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-yellow-800 mb-4 px-2">En Revisión</h3><div id="kb-revision" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="En Revisión">{% for c in kanban['En Revisión'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-yellow-200 cursor-grab border-l-4 border-l-yellow-500 relative group" data-id="{{ c.id }}"><button onclick="borrarRegistro('ot', '{{c.id}}')" class="absolute top-2 right-2 text-red-300 hover:text-red-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">×</button><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1 pr-4">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }}</p></div>{% endfor %}</div></div>
+                    <div class="bg-green-50 border border-green-100 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-green-800 mb-4 px-2">Finalizada (Últimas 10)</h3><div id="kb-completado" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="Finalizada">{% for c in kanban['Finalizada'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-green-200 border-l-4 border-l-green-500 relative group" data-id="{{ c.id }}"><button onclick="borrarRegistro('ot', '{{c.id}}')" class="absolute top-2 right-2 text-red-300 hover:text-red-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">×</button><h4 class="font-bold text-green-700">{{ c.codigo }}</h4><p class="text-xs text-slate-500 mt-1 pr-4">{{ c.tipo }}</p><p class="text-[10px] text-slate-400 mt-2">{{ c.folio }}</p></div>{% endfor %}</div></div>
                 </div>
             </div>
 
@@ -274,7 +275,6 @@
         </div>
     </main>
 
-    <!-- SCRIPTS CON ESCUDO ANTI-ERRORES -->
     <script>
         function switchTab(t, el) {
             document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active'));
@@ -305,7 +305,6 @@
         const cData = {{ charts|tojson }};
         
         window.onload = function() {
-            // 1. KANBAN PROTEGIDO
             try {
                 if (typeof Sortable !== 'undefined') {
                     const kbCols = ['kb-pendiente', 'kb-progreso', 'kb-revision', 'kb-completado'];
@@ -325,7 +324,6 @@
                 }
             } catch(e) { console.error('Error cargando Kanban', e); }
 
-            // 2. CALENDARIO PROTEGIDO
             try {
                 if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
                     const evts = mData.filter(m => m.fecha_iso).map(m => ({ title: m.codigo + ' (' + m.tipo_mantencion + ')', start: m.fecha_iso, url: '/imprimir_ot/' + m.id }));
@@ -341,7 +339,6 @@
                 }
             } catch(e) { console.error('Error cargando Calendario', e); }
 
-            // 3. GRÁFICOS PROTEGIDOS
             try {
                 if (typeof Chart !== 'undefined') {
                     Chart.defaults.font.family = "'Inter', sans-serif";
