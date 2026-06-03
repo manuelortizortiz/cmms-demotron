@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Ficha Técnica: {{ eq.codigo }}</title>
+    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -16,7 +17,8 @@
         td[contenteditable="true"]:focus { outline: none; border-bottom: 2px solid #2563EB; background: #F8FAFC; }
         .form-input { border: 1px solid #E2E8F0; padding: 8px 12px; border-radius: 8px; font-size: 12px; width: 100%; outline: none;}
         .form-input:focus { border-color: #3B82F6; }
-        .btn-primary { background-color: #2563EB; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;}
+        .btn-primary { background-color: #2563EB; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; border:none;}
+        .btn-danger { background-color: #DC2626; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; border:none;}
         .btn-outline { background-color: white; color: #334155; border: 1px solid #CBD5E1; padding: 6px 12px; border-radius: 8px; font-weight: 600; cursor: pointer;}
     </style>
 </head>
@@ -39,7 +41,7 @@
                 </div>
                 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 text-sm">
-                    <div><span class="block text-[10px] text-slate-400 font-bold uppercase">Operador</span><span class="font-bold">{{ eq.responsable or 'Sin Asignar' }}</span></div>
+                    <div><span class="block text-[10px] text-slate-400 font-bold uppercase">Operador Principal</span><span class="font-bold">{{ eq.responsable or 'Sin Asignar' }}</span></div>
                     <div><span class="block text-[10px] text-slate-400 font-bold uppercase">Patente</span><span class="font-bold">{{ eq.patente or 'S/P' }}</span></div>
                     <div><span class="block text-[10px] text-slate-400 font-bold uppercase">VIN</span><span class="font-mono text-slate-600">{{ eq.vin or 'S/I' }}</span></div>
                     <div><span class="block text-[10px] text-slate-400 font-bold uppercase">Motor</span><span class="font-mono text-slate-600">{{ eq.n_motor or 'S/I' }}</span></div>
@@ -47,33 +49,68 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            
             <div class="card-custom-nopad">
                 <div class="header-section">
-                    <h3 class="font-bold text-slate-800">Mantenciones (OTs)</h3>
+                    <h3 class="font-bold text-slate-800">Preventivas (PM)</h3>
                 </div>
                 <div class="p-4 bg-slate-50 border-b border-slate-200">
                     <form action="/api/add_record" method="POST" class="flex gap-2">
                         <input type="hidden" name="tabla" value="ot"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
-                        <input type="text" name="tipo" placeholder="Tipo de OT" class="form-input w-1/3" required>
+                        <input type="text" name="tipo" placeholder="Pauta PM" class="form-input w-1/3" required>
                         <input type="number" name="lectura" placeholder="Odo/Hor" class="form-input w-1/4" required>
                         <input type="number" name="costo" placeholder="Costo CLP" class="form-input w-1/3" required>
                         <button type="submit" class="btn-primary px-3 text-xs">+</button>
                     </form>
                 </div>
-                <div class="max-h-[300px] overflow-y-auto">
+                <div class="max-h-[250px] overflow-y-auto">
                     <table class="table-custom">
                         <thead><tr><th>Fecha</th><th>Tipo</th><th>Odo/Hor</th><th>Costo</th><th>Acción</th></tr></thead>
                         <tbody>
-                            {% for m in mants %}
+                            {% for m in mants_prev %}
                             <tr>
                                 <td class="font-bold text-slate-700">{{ m.fecha }}</td>
                                 <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'tipo_mantencion', 'ot')">{{ m.tipo }}</td>
                                 <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'lectura', 'ot')">{{ m.lectura }}</td>
                                 <td class="font-bold text-blue-700">{{ m.costo_str }}</td>
                                 <td class="w-32">
-                                    <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="text-blue-500 font-bold text-xs mr-2 hover:underline">Imprimir</a>
-                                    <button onclick="borrarRegistro('ot', '{{ m.id }}')" class="text-red-500 font-bold text-xs hover:underline">Borrar</button>
+                                    <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="text-blue-500 font-bold text-[10px] mr-2 hover:underline">Imp</a>
+                                    <button onclick="borrarRegistro('ot', '{{ m.id }}')" class="text-red-500 font-bold text-[10px] hover:underline">Borrar</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card-custom-nopad border border-red-200">
+                <div class="header-section bg-red-50 border-b border-red-100">
+                    <h3 class="font-bold text-red-700">Averías (Correctivas)</h3>
+                </div>
+                <div class="p-4 bg-white border-b border-red-100">
+                    <form action="/api/add_record" method="POST" class="flex gap-2">
+                        <input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
+                        <input type="text" name="falla" placeholder="Falla / Avería" class="form-input border-red-200 w-1/3" required>
+                        <input type="number" name="lectura" placeholder="Odo/Hor" class="form-input border-red-200 w-1/4" required>
+                        <input type="number" name="costo" placeholder="Costo CLP" class="form-input border-red-200 w-1/3" required>
+                        <button type="submit" class="btn-danger px-3 text-xs">+</button>
+                    </form>
+                </div>
+                <div class="max-h-[250px] overflow-y-auto">
+                    <table class="table-custom">
+                        <thead><tr><th>Fecha</th><th>Falla</th><th>Odo/Hor</th><th>Costo</th><th>Acción</th></tr></thead>
+                        <tbody>
+                            {% for m in mants_corr %}
+                            <tr>
+                                <td class="font-bold text-red-600">{{ m.fecha }}</td>
+                                <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'tipo_mantencion', 'ot')">{{ m.tipo }}</td>
+                                <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'lectura', 'ot')">{{ m.lectura }}</td>
+                                <td class="font-bold text-blue-700">{{ m.costo_str }}</td>
+                                <td class="w-32">
+                                    <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="text-blue-500 font-bold text-[10px] mr-2 hover:underline">Imp</a>
+                                    <button onclick="borrarRegistro('ot', '{{ m.id }}')" class="text-red-500 font-bold text-[10px] hover:underline">Borrar</button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -95,7 +132,7 @@
                         <button type="submit" class="btn-primary px-3 text-xs">+</button>
                     </form>
                 </div>
-                <div class="max-h-[300px] overflow-y-auto">
+                <div class="max-h-[250px] overflow-y-auto">
                     <table class="table-custom">
                         <thead><tr><th>Fecha</th><th>Valor</th><th>Observación</th><th>Acción</th></tr></thead>
                         <tbody>
@@ -111,11 +148,42 @@
                     </table>
                 </div>
             </div>
+
+            <div class="card-custom-nopad">
+                <div class="header-section">
+                    <h3 class="font-bold text-slate-800">Historial de Uso de Equipo</h3>
+                </div>
+                <div class="p-4 bg-slate-50 border-b border-slate-200">
+                    <form action="/api/add_record" method="POST" class="flex gap-2">
+                        <input type="hidden" name="tabla" value="uso_equipo"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
+                        <input type="date" name="fecha" class="form-input w-1/4" required>
+                        <input type="text" name="operador" placeholder="Operador" class="form-input w-1/3" required>
+                        <input type="text" name="observacion" placeholder="Entrega/Obs." class="form-input w-1/3">
+                        <button type="submit" class="btn-primary px-3 text-xs">+</button>
+                    </form>
+                </div>
+                <div class="max-h-[250px] overflow-y-auto">
+                    <table class="table-custom">
+                        <thead><tr><th>Fecha</th><th>Operador</th><th>Obs/Entrega</th><th>Acción</th></tr></thead>
+                        <tbody>
+                            {% for u in usos %}
+                            <tr>
+                                <td class="font-bold text-slate-700">{{ u.fecha }}</td>
+                                <td class="font-bold text-slate-800">{{ u.operador }}</td>
+                                <td contenteditable="true" onblur="guardarInline(this, '{{ u.id }}', 'observacion', 'uso_equipo')" class="text-slate-500 text-xs italic">{{ u.obs }}</td>
+                                <td><button onclick="borrarRegistro('uso_equipo', '{{ u.id }}')" class="text-red-500 font-bold text-xs hover:underline">Borrar</button></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
 
         <div class="card-custom-nopad mt-6">
             <div class="header-section">
-                <h3 class="font-bold text-slate-800">Pauta Maestra de Filtros</h3>
+                <h3 class="font-bold text-slate-800">Pauta de Filtros</h3>
                 <div class="flex items-center">
                     <form action="/api/add_record" method="POST" class="m-0 mr-2"><input type="hidden" name="tabla" value="filtro"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}"><button type="submit" class="btn-outline text-xs">Añadir Fila</button></form>
                     <a href="/imprimir_pauta/{{ eq.codigo }}" target="_blank" class="btn-primary text-xs">Imprimir Pauta</a>
