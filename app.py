@@ -173,10 +173,8 @@ def dashboard():
             
             if e.estado_base == 'Taller': taller.append(eq_data)
             if e.margen < 0 and e.estado_base != 'Fuera de Servicio': criticos.append(eq_data)
-            # LOGICA PRÓXIMOS MANTENIMIENTOS (Margen entre 0 y 150)
             if 0 <= e.margen <= 150 and e.estado_base != 'Fuera de Servicio': proximos.append(eq_data)
 
-        # Ordenar próximos de menor a mayor margen
         proximos = sorted(proximos, key=lambda x: x['margen'])
         equipos_aleatorios = list(equipos_dict)
         random.shuffle(equipos_aleatorios)
@@ -185,9 +183,13 @@ def dashboard():
         todas_compras = [{'id': c.id, 'fecha': c.fecha.strftime('%d/%m/%Y'), 'oc': c.oc, 'codigo': c.codigo_equipo, 'descripcion': c.descripcion, 'costo_str': format_clp(c.costo_pm_clp)} for c in compras_db]
         todas_lecturas = [{'id': l.id, 'fecha': l.fecha.strftime('%d/%m/%Y'), 'codigo': l.codigo_equipo, 'valor_str': format_num(max(l.horometro or 0, l.kilometraje or 0)), 'tipo': 'HR' if (l.horometro and l.horometro > 0) else 'KM', 'obs': l.observacion, 'responsable': l.responsable} for l in lecturas_db]
         
+        # KANBAN PROTEGIDO CONTRA HISTORIAL MASIVO
         kanban_tareas = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Finalizada': []}
         for ot in ots_db:
             if ot.estado in kanban_tareas:
+                # Si es finalizada, solo enviamos las ultimas 10 para no inundar el tablero Kanban
+                if ot.estado == 'Finalizada' and len(kanban_tareas['Finalizada']) >= 10:
+                    continue
                 kanban_tareas[ot.estado].append({
                     'id': ot.id, 'codigo': ot.codigo_equipo, 'folio': ot.folio, 'tipo': ot.tipo_mantencion, 'fecha': ot.fecha.strftime('%d/%m/%Y')
                 })
@@ -357,7 +359,6 @@ def update_inline():
 @app.route('/admin/cargar_sql_final', strict_slashes=False)
 def cargar_sql_final():
     try:
-        # Se recrean solo las tablas que provienen del Excel. Los Mecánicos y Personal NO se borran.
         OrdenTrabajo.__table__.drop(db.engine, checkfirst=True)
         CompraRepuesto.__table__.drop(db.engine, checkfirst=True)
         HistorialLectura.__table__.drop(db.engine, checkfirst=True)
@@ -422,13 +423,11 @@ def cargar_sql_final():
                 except: pass
             db.session.commit()
 
-        # Carga Blindada de Lecturas
         df_lec = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
         for _, row in df_lec.iterrows():
             if not row.iloc[1]: continue
             db.session.add(HistorialLectura(fecha=parse_date(row.iloc[0]), codigo_equipo=str(row.iloc[1]).strip(), horometro=clean_int(row.iloc[2], 0), kilometraje=clean_int(row.iloc[3], 0), obra_ubicacion=row.iloc[4], responsable=row.iloc[5], observacion=row.iloc[6]))
 
-        # Carga Blindada de Mantenciones
         df_man = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
         for _, row in df_man.iterrows():
             if not row.iloc[1]: continue
@@ -439,7 +438,6 @@ def cargar_sql_final():
                 estado=str(row.iloc[9]) if row.iloc[9] else 'Finalizada', tipo_ot='Preventiva'
             ))
 
-        # Carga Blindada de Compras
         df_com = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
         for _, row in df_com.iterrows():
             if not row.iloc[2]: continue
@@ -447,7 +445,6 @@ def cargar_sql_final():
         
         db.session.commit()
 
-        # Recálculo Final de Márgenes
         for eq in Equipo.query.all():
             u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if u_lec: eq.lectura_actual = u_lec.horometro if eq.control_base == 'HORAS' else u_lec.kilometraje
