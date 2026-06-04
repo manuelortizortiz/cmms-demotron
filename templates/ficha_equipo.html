@@ -27,6 +27,13 @@
     <datalist id="lista_mecanicos">
         {% for m in mecanicos %}<option value="{{ m.nombre }}"></option>{% endfor %}
     </datalist>
+    <datalist id="lista_pautas">
+        <option value="PM1"></option>
+        <option value="PM2"></option>
+        <option value="PM3"></option>
+        <option value="PM4"></option>
+        <option value="PM5"></option>
+    </datalist>
 
     <div class="max-w-6xl mx-auto">
         <div class="mb-6"><a href="/" class="text-blue-600 font-bold hover:underline">← Volver al Dashboard</a></div>
@@ -62,8 +69,8 @@
                 <div class="p-4 bg-slate-50 border-b border-slate-200">
                     <form action="/api/add_record" method="POST" class="flex gap-2">
                         <input type="hidden" name="tabla" value="ot"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
-                        <input type="text" name="tipo" placeholder="Pauta PM" class="form-input w-1/4" required>
-                        <input type="number" name="lectura" placeholder="Odo/Hor" class="form-input w-1/4" required>
+                        <input list="lista_pautas" name="tipo" placeholder="Pauta PM" class="form-input w-1/4" required>
+                        <input type="number" name="lectura" placeholder="Odo/Hor" class="form-input w-1/4">
                         <input type="number" name="costo" placeholder="Costo CLP" class="form-input w-1/4" required>
                         <input list="lista_mecanicos" name="mecanico" placeholder="Mecánico" class="form-input w-1/4">
                         <button type="submit" class="btn-primary px-3 text-xs">+</button>
@@ -79,7 +86,7 @@
                                 <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'tipo_mantencion', 'ot')">{{ m.tipo }}</td>
                                 <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'mecanico', 'ot')">{{ m.mecanico }}</td>
                                 <td class="font-bold text-blue-700">{{ m.costo_str }}</td>
-                                <td class="w-32">
+                                <td class="w-24">
                                     <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="text-blue-500 font-bold text-[10px] mr-2 hover:underline">Imp</a>
                                     <button onclick="borrarRegistro('ot', '{{ m.id }}')" class="text-red-500 font-bold text-[10px] hover:underline">Borrar</button>
                                 </td>
@@ -98,7 +105,7 @@
                     <form action="/api/add_record" method="POST" class="flex gap-2">
                         <input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="codigo" value="{{ eq.codigo }}"><input type="hidden" name="referer" value="/equipo/{{ eq.codigo }}">
                         <input type="text" name="falla" placeholder="Falla / Avería" class="form-input border-red-200 w-1/4" required>
-                        <input type="number" name="lectura" placeholder="Odo/Hor" class="form-input border-red-200 w-1/4" required>
+                        <input type="number" name="lectura" placeholder="Odo/Hor" class="form-input border-red-200 w-1/4">
                         <input type="number" name="costo" placeholder="Costo CLP" class="form-input border-red-200 w-1/4" required>
                         <input list="lista_mecanicos" name="mecanico" placeholder="Mecánico" class="form-input border-red-200 w-1/4">
                         <button type="submit" class="btn-danger px-3 text-xs">+</button>
@@ -114,7 +121,7 @@
                                 <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'tipo_mantencion', 'ot')">{{ m.tipo }}</td>
                                 <td contenteditable="true" onblur="guardarInline(this, '{{ m.id }}', 'mecanico', 'ot')">{{ m.mecanico }}</td>
                                 <td class="font-bold text-blue-700">{{ m.costo_str }}</td>
-                                <td class="w-32">
+                                <td class="w-24">
                                     <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="text-blue-500 font-bold text-[10px] mr-2 hover:underline">Imp</a>
                                     <button onclick="borrarRegistro('ot', '{{ m.id }}')" class="text-red-500 font-bold text-[10px] hover:underline">Borrar</button>
                                 </td>
@@ -125,7 +132,6 @@
                 </div>
             </div>
 
-            <!-- Resto de Ficha se mantiene igual (Lecturas y Uso de Equipo) -->
             <div class="card-custom-nopad">
                 <div class="header-section">
                     <h3 class="font-bold text-slate-800">Lecturas de Terreno</h3>
