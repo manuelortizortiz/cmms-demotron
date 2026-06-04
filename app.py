@@ -85,7 +85,7 @@ class OrdenTrabajo(db.Model):
     lectura = db.Column(db.Integer, default=0)
     es_pm = db.Column(db.String(20))
     lugar = db.Column(db.String(100))
-    mecanico = db.Column(db.String(100), default="Sin Asignar") # NUEVA COLUMNA AGREGADA
+    mecanico = db.Column(db.String(100), default="Sin Asignar")
 
 class HistorialLectura(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -199,7 +199,8 @@ def dashboard():
         kanban_tareas = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Finalizada': []}
         for ot in ots_db:
             if ot.estado in kanban_tareas:
-                if ot.estado == 'Finalizada' and len(kanban_tareas['Finalizada']) >= 10: continue
+                if ot.estado == 'Finalizada' and len(kanban_tareas['Finalizada']) >= 10:
+                    continue
                 kanban_tareas[ot.estado].append({
                     'id': ot.id, 'codigo': ot.codigo_equipo, 'folio': ot.folio, 'tipo': ot.tipo_mantencion, 'fecha': ot.fecha.strftime('%d/%m/%Y'), 'clasificacion': ot.tipo_ot
                 })
@@ -256,14 +257,22 @@ def ficha_equipo(codigo):
     return render_template('ficha_equipo.html', eq=equipo, foto_url=foto_url, mants_prev=mants_prev, mants_corr=mants_corr, lecturas=lecturas, filtros=filtros, usos=usos, mecanicos=lista_mecanicos)
 
 # ==========================================
-# RUTAS DE IMPRESIÓN 
+# RUTAS DE IMPRESIÓN (NUEVA LÓGICA VERTICAL)
 # ==========================================
 @app.route('/imprimir_ot/<int:ot_id>', strict_slashes=False)
 def imprimir_ot(ot_id):
     ot = OrdenTrabajo.query.get_or_404(ot_id)
     equipo = Equipo.query.filter_by(codigo=ot.codigo_equipo).first()
     filtros = FiltroEquipo.query.filter_by(codigo_equipo=ot.codigo_equipo).all()
-    return render_template('ot_print.html', equipo=equipo, ot=ot, filtros=filtros, fecha_actual=datetime.now().strftime("%d/%m/%Y"))
+    
+    # Búsqueda automática de la última mantención de este equipo
+    ultima_ot = OrdenTrabajo.query.filter(
+        OrdenTrabajo.codigo_equipo == ot.codigo_equipo,
+        OrdenTrabajo.id < ot.id,
+        OrdenTrabajo.estado == 'Finalizada'
+    ).order_by(OrdenTrabajo.fecha.desc()).first()
+
+    return render_template('ot_print.html', equipo=equipo, ot=ot, filtros=filtros, ultima_ot=ultima_ot, fecha_actual=datetime.now().strftime("%d/%m/%Y"))
 
 @app.route('/imprimir_pauta/<codigo>', strict_slashes=False)
 def imprimir_pauta(codigo):
@@ -272,7 +281,7 @@ def imprimir_pauta(codigo):
     return render_template('pauta_print.html', equipo=equipo, filtros=filtros, fecha_actual=datetime.now().strftime("%d/%m/%Y"))
 
 # ==========================================
-# RUTAS DE CONTROL Y CRUD
+# RUTAS DE CONTROL Y CRUD (CON AUTO-LECTURA Y FOLIO CORRELATIVO)
 # ==========================================
 @app.route('/update_kanban', methods=['POST'])
 def update_kanban():
@@ -296,13 +305,26 @@ def add_record():
         if eq: eq.lectura_actual = val
 
     elif tabla == 'ot':
+        eq = Equipo.query.filter_by(codigo=codigo).first()
+        
+        # 1. Auto-Lectura si viene en 0
+        lectura_req = clean_int(request.form.get('lectura'))
+        if lectura_req == 0 and eq:
+            lectura_req = eq.lectura_actual
+            
+        # 2. Correlativo Automático
         folio_req = request.form.get('folio', '').strip()
+        if not folio_req:
+            ultima_ot_global = OrdenTrabajo.query.order_by(OrdenTrabajo.id.desc()).first()
+            siguiente_id = (ultima_ot_global.id + 1) if ultima_ot_global else 1
+            folio_req = f"OT-{siguiente_id:05d}"
+            
         db.session.add(OrdenTrabajo(
             codigo_equipo=codigo, 
-            folio=folio_req if folio_req else f"OT-DMT-{random.randint(1000,9999)}", 
+            folio=folio_req, 
             tipo_ot='Preventiva', 
-            tipo_mantencion=request.form.get('tipo', 'Mantención'), 
-            lectura=clean_int(request.form.get('lectura')), 
+            tipo_mantencion=request.form.get('tipo', 'PM1'), 
+            lectura=lectura_req, 
             costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0), 
             estado=request.form.get('estado', 'Pendiente'), 
             mecanico=request.form.get('mecanico', 'Sin Asignar'),
@@ -310,13 +332,22 @@ def add_record():
         ))
 
     elif tabla == 'ot_corr':
+        eq = Equipo.query.filter_by(codigo=codigo).first()
+        lectura_req = clean_int(request.form.get('lectura'))
+        if lectura_req == 0 and eq: lectura_req = eq.lectura_actual
+        
         folio_req = request.form.get('folio', '').strip()
+        if not folio_req:
+            ultima_ot_global = OrdenTrabajo.query.order_by(OrdenTrabajo.id.desc()).first()
+            siguiente_id = (ultima_ot_global.id + 1) if ultima_ot_global else 1
+            folio_req = f"CM-{siguiente_id:05d}"
+
         db.session.add(OrdenTrabajo(
             codigo_equipo=codigo, 
-            folio=folio_req if folio_req else f"CM-{random.randint(1000,9999)}", 
+            folio=folio_req, 
             tipo_ot='Correctiva', 
             tipo_mantencion=request.form.get('falla', 'Avería'), 
-            lectura=clean_int(request.form.get('lectura')), 
+            lectura=lectura_req, 
             costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0), 
             estado=request.form.get('estado', 'Pendiente'), 
             mecanico=request.form.get('mecanico', 'Sin Asignar'),
@@ -394,7 +425,6 @@ def update_inline():
 @app.route('/admin/cargar_sql_final', strict_slashes=False)
 def cargar_sql_final():
     try:
-        # PARCHE DE ESTRUCTURA SEGURO PARA OPERADORES Y OTs (Mecánico)
         try:
             db.session.execute(text("ALTER TABLE personal ADD COLUMN equipo_asignado VARCHAR(50) DEFAULT 'Ninguno'"))
             db.session.commit()
@@ -420,7 +450,6 @@ def cargar_sql_final():
 
         if not excel_principal: return "Error: Falta el archivo principal CMMS DEMOTRON (.xlsx)."
 
-        # Carga Equipos
         df_eq = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Equipos", skiprows=2).replace({np.nan: None})
         operadores_set = set()
         for _, row in df_eq.iterrows():
@@ -448,7 +477,6 @@ def cargar_sql_final():
                 db.session.add(Personal(nombre=op, cargo="Operador", estado="Activo", equipo_asignado="Varios"))
         db.session.commit()
 
-        # Carga Detalles VIN
         if archivo_detalles:
             if archivo_detalles.endswith('.xlsx'): df_det = pd.read_excel(archivo_detalles, engine='openpyxl')
             else: df_det = pd.read_csv(archivo_detalles)
@@ -462,7 +490,6 @@ def cargar_sql_final():
                     eq.n_motor = clean_string(row.get('N° Motor', ''))
             db.session.commit()
 
-        # Carga Filtros
         if archivo_filtros:
             if archivo_filtros.endswith('.xlsx'): df_fil = pd.read_excel(archivo_filtros, engine='openpyxl')
             else: df_fil = pd.read_csv(archivo_filtros)
@@ -484,7 +511,6 @@ def cargar_sql_final():
                 except: pass
             db.session.commit()
 
-        # Carga Lecturas
         df_lec = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
         for _, row in df_lec.iterrows():
             if not row.iloc[1]: continue
@@ -495,7 +521,6 @@ def cargar_sql_final():
             if not HistorialLectura.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, horometro=hor, kilometraje=kil).first():
                 db.session.add(HistorialLectura(fecha=fecha_dt, codigo_equipo=cod, horometro=hor, kilometraje=kil, obra_ubicacion=row.iloc[4], responsable=row.iloc[5], observacion=row.iloc[6]))
 
-        # Carga Preventivas
         df_man = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
         for _, row in df_man.iterrows():
             if not row.iloc[1]: continue
@@ -510,7 +535,6 @@ def cargar_sql_final():
                     estado=str(row.iloc[9]) if row.iloc[9] else 'Finalizada', mecanico="Sin Asignar"
                 ))
 
-        # Carga Correctivas (NUEVA HOJA CON MECÁNICO Y FOLIO)
         try:
             df_corr = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Correctivas", skiprows=2).replace({np.nan: None})
             for _, row in df_corr.iterrows():
@@ -531,7 +555,6 @@ def cargar_sql_final():
                     ))
         except: pass
 
-        # Carga Compras
         df_com = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
         for _, row in df_com.iterrows():
             if not row.iloc[2]: continue
@@ -543,7 +566,6 @@ def cargar_sql_final():
         
         db.session.commit()
 
-        # Recálculo de Próximos Mantenimientos
         for eq in Equipo.query.all():
             u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if u_lec: eq.lectura_actual = u_lec.horometro if eq.control_base == 'HORAS' else u_lec.kilometraje
