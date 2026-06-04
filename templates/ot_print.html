@@ -39,6 +39,7 @@
 </head>
 <body onload="window.print()">
 
+    <!-- ENCABEZADO -->
     <div class="header-main flex justify-between items-center">
         <div style="width: 25%;">
             <p style="font-size: 12px; margin: 2px 0;">Fecha: <span class="font-bold">{{ ot.fecha.strftime('%d / %m / %Y') }}</span></p>
@@ -53,10 +54,11 @@
         
         <div style="width: 25%; text-align: right;">
             <p style="font-size: 11px; margin: 2px 0;">Código: <b>DM-OT-001</b></p>
-            <p style="font-size: 11px; margin: 2px 0;">Versión: <b>1.2</b></p>
+            <p style="font-size: 11px; margin: 2px 0;">Versión: <b>1.3</b></p>
         </div>
     </div>
 
+    <!-- SECCIÓN 1: DATOS DEL EQUIPO -->
     <div class="grid-2" style="margin-top: 0;">
         <div class="box" style="margin-bottom: 0;">
             <div class="box-header">DATOS DEL EQUIPO: {{ equipo.codigo }}</div>
@@ -84,15 +86,16 @@
     <div class="grid-2">
         <div class="box" style="margin-bottom: 0;">
             <div class="box-header">TIPO DE MANTENIMIENTO:</div>
-            <div class="box-content" style="height: 60px;">
+            <div class="box-content" style="height: 75px;"> <!-- ALTURA AMPLIADA -->
                 <div class="flex justify-between mb-2">
                     <label><div class="chk" {% if ot.tipo_ot == 'Preventiva' %}style="background:#082b5f;"{% endif %}></div> MP (Preventivo)</label>
                     <label><div class="chk" {% if ot.tipo_ot == 'Correctiva' %}style="background:#082b5f;"{% endif %}></div> MC (Correctivo)</label>
                     <label><div class="chk"></div> MPd (Predictivo)</label>
                 </div>
+                <!-- HORÓMETRO Y KILOMETRAJE EN BLANCO PARA EL MECÁNICO -->
                 <div class="flex gap-4 mb-2">
-                    <p class="mt-0 w-1/2 font-bold" style="font-size: 12px;">HORÓMETRO: {{ ot.lectura if ot.lectura > 0 else '' }}</p>
-                    <p class="mt-0 w-1/2 font-bold" style="font-size: 12px;">KILOMETRAJE: {{ ot.lectura if ot.lectura > 0 else '' }}</p>
+                    <p class="mt-0 w-1/2 font-bold" style="font-size: 11px;">HORÓMETRO: <span class="line-blank" style="width: 60px;"></span></p>
+                    <p class="mt-0 w-1/2 font-bold" style="font-size: 11px;">KILOMETRAJE: <span class="line-blank" style="width: 60px;"></span></p>
                 </div>
                 <p class="line-text mb-0">ÚLTIMA MANTENCIÓN: <b>{% if ultima_ot %}{{ ultima_ot.lectura }} ({{ ultima_ot.fecha.strftime('%d/%m/%Y') }}){% else %}Sin registro{% endif %}</b></p>
             </div>
@@ -100,7 +103,7 @@
 
         <div class="box" style="margin-bottom: 0;">
             <div class="box-header">ORIGEN DE FALLA Y LOCALIZACIÓN:</div>
-            <div class="box-content grid-2" style="grid-template-columns: 1fr 1fr; gap: 4px; height: 60px;">
+            <div class="box-content grid-2" style="grid-template-columns: 1fr 1fr; gap: 4px; height: 75px;"> <!-- ALTURA AMPLIADA -->
                 <div>
                     <label><div class="chk"></div> Mecánica</label><br>
                     <label><div class="chk"></div> Eléctrica</label><br>
@@ -115,6 +118,7 @@
         </div>
     </div>
 
+    <!-- SECCIÓN 2: TRABAJO A REALIZAR / PAUTA INTELIGENTE -->
     {% set pauta = (ot.tipo_mantencion or '') | upper %}
     {% set lvl = 0 %}
     {% if 'PM5' in pauta %}{% set lvl = 5 %}
@@ -196,6 +200,7 @@
         </div>
     </div>
 
+    <!-- SECCIÓN 3: SEGURIDAD Y MATERIALES -->
     <div class="grid-2">
         <div class="box" style="margin-bottom: 0;">
             <div class="box-header" style="background-color: #475569;">CONDICIÓN DE SEGURIDAD DEL EQUIPO (LOTO):</div>
@@ -273,6 +278,7 @@
         </div>
     </div>
 
+    <!-- FOOTER / FIRMAS -->
     <div style="margin-top: 10px; border-top: 2px solid #082b5f; padding-top: 10px;">
         <div class="flex justify-between items-start mb-2">
             <div style="width: 45%;">
