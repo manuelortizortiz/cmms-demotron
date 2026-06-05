@@ -33,7 +33,7 @@ class RegistroUsoEquipo(db.Model):
     fecha = db.Column(db.DateTime, default=datetime.now)
     operador = db.Column(db.String(100))
     codigo_equipo = db.Column(db.String(50))
-    observacion = db.Column(db.String(250))
+    observacion = db.Column(db.Text) # Ampliado a texto ilimitado
 
 class Mecanico(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -78,7 +78,7 @@ class OrdenTrabajo(db.Model):
     fecha = db.Column(db.DateTime, default=datetime.now)
     codigo_equipo = db.Column(db.String(50))
     tipo_ot = db.Column(db.String(50), default="Preventiva")
-    tipo_mantencion = db.Column(db.String(100))
+    tipo_mantencion = db.Column(db.Text) # SOLUCIÓN: Cambiado a TEXTO ILIMITADO
     costo_mantencion_clp = db.Column(db.Float, default=0.0)
     estado = db.Column(db.String(50), default="Pendiente")
     folio = db.Column(db.String(50))
@@ -95,14 +95,14 @@ class HistorialLectura(db.Model):
     kilometraje = db.Column(db.Integer, default=0)
     obra_ubicacion = db.Column(db.String(100))
     responsable = db.Column(db.String(100))
-    observacion = db.Column(db.String(250))
+    observacion = db.Column(db.Text) # Ampliado a texto ilimitado
 
 class CompraRepuesto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fecha = db.Column(db.DateTime, default=datetime.now)
     oc = db.Column(db.String(100))
     codigo_equipo = db.Column(db.String(50))
-    descripcion = db.Column(db.String(250))
+    descripcion = db.Column(db.Text) # SOLUCIÓN: Cambiado a TEXTO ILIMITADO
     proveedor = db.Column(db.String(100))
     costo_pm_clp = db.Column(db.Float, default=0.0)
     estado_oc = db.Column(db.String(100))
@@ -257,7 +257,7 @@ def ficha_equipo(codigo):
     return render_template('ficha_equipo.html', eq=equipo, foto_url=foto_url, mants_prev=mants_prev, mants_corr=mants_corr, lecturas=lecturas, filtros=filtros, usos=usos, mecanicos=lista_mecanicos)
 
 # ==========================================
-# RUTAS DE IMPRESIÓN (NUEVA LÓGICA VERTICAL)
+# RUTAS DE IMPRESIÓN
 # ==========================================
 @app.route('/imprimir_ot/<int:ot_id>', strict_slashes=False)
 def imprimir_ot(ot_id):
@@ -265,7 +265,6 @@ def imprimir_ot(ot_id):
     equipo = Equipo.query.filter_by(codigo=ot.codigo_equipo).first()
     filtros = FiltroEquipo.query.filter_by(codigo_equipo=ot.codigo_equipo).all()
     
-    # Búsqueda automática de la última mantención de este equipo
     ultima_ot = OrdenTrabajo.query.filter(
         OrdenTrabajo.codigo_equipo == ot.codigo_equipo,
         OrdenTrabajo.id < ot.id,
@@ -281,7 +280,7 @@ def imprimir_pauta(codigo):
     return render_template('pauta_print.html', equipo=equipo, filtros=filtros, fecha_actual=datetime.now().strftime("%d/%m/%Y"))
 
 # ==========================================
-# RUTAS DE CONTROL Y CRUD (CON AUTO-LECTURA Y FOLIO CORRELATIVO)
+# RUTAS DE CONTROL Y CRUD
 # ==========================================
 @app.route('/update_kanban', methods=['POST'])
 def update_kanban():
@@ -306,13 +305,10 @@ def add_record():
 
     elif tabla == 'ot':
         eq = Equipo.query.filter_by(codigo=codigo).first()
-        
-        # 1. Auto-Lectura si viene en 0
         lectura_req = clean_int(request.form.get('lectura'))
         if lectura_req == 0 and eq:
             lectura_req = eq.lectura_actual
             
-        # 2. Correlativo Automático
         folio_req = request.form.get('folio', '').strip()
         if not folio_req:
             ultima_ot_global = OrdenTrabajo.query.order_by(OrdenTrabajo.id.desc()).first()
@@ -425,6 +421,7 @@ def update_inline():
 @app.route('/admin/cargar_sql_final', strict_slashes=False)
 def cargar_sql_final():
     try:
+        # PARCHES DE ESTRUCTURA Y PROTECCIÓN DE DATOS
         try:
             db.session.execute(text("ALTER TABLE personal ADD COLUMN equipo_asignado VARCHAR(50) DEFAULT 'Ninguno'"))
             db.session.commit()
@@ -435,12 +432,20 @@ def cargar_sql_final():
             db.session.commit()
         except Exception: db.session.rollback()
 
-        OrdenTrabajo.__table__.drop(db.engine, checkfirst=True)
-        CompraRepuesto.__table__.drop(db.engine, checkfirst=True)
-        HistorialLectura.__table__.drop(db.engine, checkfirst=True)
-        FiltroEquipo.__table__.drop(db.engine, checkfirst=True)
-        Equipo.__table__.drop(db.engine, checkfirst=True)
-        RegistroUsoEquipo.__table__.drop(db.engine, checkfirst=True)
+        # ¡PARCHE ESTRELLA! Ampliamos el texto de las descripciones a ilimitado para que nunca más truene.
+        try:
+            db.session.execute(text("ALTER TABLE orden_trabajo ALTER COLUMN tipo_mantencion TYPE TEXT"))
+            db.session.execute(text("ALTER TABLE compra_repuesto ALTER COLUMN descripcion TYPE TEXT"))
+            db.session.execute(text("ALTER TABLE historial_lectura ALTER COLUMN observacion TYPE TEXT"))
+            db.session.execute(text("ALTER TABLE registro_uso_equipo ALTER COLUMN observacion TYPE TEXT"))
+            db.session.commit()
+        except Exception: db.session.rollback()
+
+        # -----------------------------------------------------------------------------
+        # ¡ATENCIÓN! HE ELIMINADO TOTALMENTE LOS COMANDOS DE BORRADO DE TABLAS.
+        # Desde ahora, el sistema SOLO CREA tablas si faltan y AÑADE lo nuevo.
+        # Nada de lo que crees desde la web volverá a borrarse.
+        # -----------------------------------------------------------------------------
         db.create_all()
 
         archivos = os.listdir('.')
