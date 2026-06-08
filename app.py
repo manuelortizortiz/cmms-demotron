@@ -4,19 +4,19 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 
+# --- IMPORTACIONES NUEVAS (PASO 1) ---
+from config import Config
+from extensions import db, login_manager, scheduler
+
 app = Flask(__name__)
-app.secret_key = 'demotron_seguridad_maxima_2026'
+# Cargar configuración centralizada
+app.config.from_object(Config)
 
-ruta_db = os.getenv('DATABASE_URL', 'sqlite:///demotron_master.db')
-if ruta_db.startswith("postgres://"):
-    ruta_db = ruta_db.replace("postgres://", "postgresql://", 1)
-app.config['SQLALCHEMY_DATABASE_URI'] = ruta_db
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-db = SQLAlchemy(app)
+# Inicializar extensiones con la app
+db.init_app(app)
+login_manager.init_app(app)
 
 # ==========================================
 # MODELOS DE BASE DE DATOS
@@ -33,7 +33,7 @@ class RegistroUsoEquipo(db.Model):
     fecha = db.Column(db.DateTime, default=datetime.now)
     operador = db.Column(db.String(100))
     codigo_equipo = db.Column(db.String(50))
-    observacion = db.Column(db.Text) # Ampliado a texto ilimitado
+    observacion = db.Column(db.Text) 
 
 class Mecanico(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -78,7 +78,7 @@ class OrdenTrabajo(db.Model):
     fecha = db.Column(db.DateTime, default=datetime.now)
     codigo_equipo = db.Column(db.String(50))
     tipo_ot = db.Column(db.String(50), default="Preventiva")
-    tipo_mantencion = db.Column(db.Text) # SOLUCIÓN: Cambiado a TEXTO ILIMITADO
+    tipo_mantencion = db.Column(db.Text) 
     costo_mantencion_clp = db.Column(db.Float, default=0.0)
     estado = db.Column(db.String(50), default="Pendiente")
     folio = db.Column(db.String(50))
@@ -95,14 +95,14 @@ class HistorialLectura(db.Model):
     kilometraje = db.Column(db.Integer, default=0)
     obra_ubicacion = db.Column(db.String(100))
     responsable = db.Column(db.String(100))
-    observacion = db.Column(db.Text) # Ampliado a texto ilimitado
+    observacion = db.Column(db.Text) 
 
 class CompraRepuesto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     fecha = db.Column(db.DateTime, default=datetime.now)
     oc = db.Column(db.String(100))
     codigo_equipo = db.Column(db.String(50))
-    descripcion = db.Column(db.Text) # SOLUCIÓN: Cambiado a TEXTO ILIMITADO
+    descripcion = db.Column(db.Text) 
     proveedor = db.Column(db.String(100))
     costo_pm_clp = db.Column(db.Float, default=0.0)
     estado_oc = db.Column(db.String(100))
@@ -257,7 +257,7 @@ def ficha_equipo(codigo):
     return render_template('ficha_equipo.html', eq=equipo, foto_url=foto_url, mants_prev=mants_prev, mants_corr=mants_corr, lecturas=lecturas, filtros=filtros, usos=usos, mecanicos=lista_mecanicos)
 
 # ==========================================
-# RUTAS DE IMPRESIÓN
+# RUTAS DE IMPRESIÓN 
 # ==========================================
 @app.route('/imprimir_ot/<int:ot_id>', strict_slashes=False)
 def imprimir_ot(ot_id):
@@ -421,7 +421,6 @@ def update_inline():
 @app.route('/admin/cargar_sql_final', strict_slashes=False)
 def cargar_sql_final():
     try:
-        # PARCHES DE ESTRUCTURA Y PROTECCIÓN DE DATOS
         try:
             db.session.execute(text("ALTER TABLE personal ADD COLUMN equipo_asignado VARCHAR(50) DEFAULT 'Ninguno'"))
             db.session.commit()
@@ -432,7 +431,6 @@ def cargar_sql_final():
             db.session.commit()
         except Exception: db.session.rollback()
 
-        # ¡PARCHE ESTRELLA! Ampliamos el texto de las descripciones a ilimitado para que nunca más truene.
         try:
             db.session.execute(text("ALTER TABLE orden_trabajo ALTER COLUMN tipo_mantencion TYPE TEXT"))
             db.session.execute(text("ALTER TABLE compra_repuesto ALTER COLUMN descripcion TYPE TEXT"))
@@ -441,11 +439,6 @@ def cargar_sql_final():
             db.session.commit()
         except Exception: db.session.rollback()
 
-        # -----------------------------------------------------------------------------
-        # ¡ATENCIÓN! HE ELIMINADO TOTALMENTE LOS COMANDOS DE BORRADO DE TABLAS.
-        # Desde ahora, el sistema SOLO CREA tablas si faltan y AÑADE lo nuevo.
-        # Nada de lo que crees desde la web volverá a borrarse.
-        # -----------------------------------------------------------------------------
         db.create_all()
 
         archivos = os.listdir('.')
