@@ -1,7 +1,7 @@
 import os
 from flask import Flask
 from config import Config
-from extensions import db, login_manager, scheduler
+from extensions import db, login_manager, scheduler, migrate
 from models.user import User
 
 def create_app():
@@ -12,13 +12,14 @@ def create_app():
     # Inicializar las herramientas
     db.init_app(app)
     login_manager.init_app(app)
+    migrate.init_app(app, db)  # <-- VINCULAMOS MIGRATE CON LA APP
 
     # Le enseña a Flask-Login cómo buscar usuarios
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # Construye la base de datos si no existe
+    # Mantenemos esto por ahora para que nada se rompa mientras migramos
     with app.app_context():
         db.create_all()
 
