@@ -36,7 +36,13 @@
     </datalist>
 
     <div class="max-w-6xl mx-auto">
-        <div class="mb-6"><a href="/" class="text-blue-600 font-bold hover:underline">← Volver al Dashboard</a></div>
+        <div class="mb-6 flex justify-between items-center">
+            <a href="/" class="text-blue-600 font-bold hover:underline">← Volver al Dashboard</a>
+            <div class="flex gap-4 items-center">
+                <span class="text-xs text-slate-500 font-bold uppercase">{{ current_user.nombre }} ({{ current_user.role }})</span>
+                <a href="/logout" class="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-3 py-1 rounded-lg text-xs font-bold transition">Cerrar Sesión</a>
+            </div>
+        </div>
 
         <div class="card-custom flex flex-col md:flex-row gap-8 items-start relative">
             <div class="w-48 h-32 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center p-2">
