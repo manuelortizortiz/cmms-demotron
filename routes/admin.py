@@ -1,4 +1,4 @@
-from flask import Blueprint
+from flask import Blueprint, send_file
 import os
 import random
 import pandas as pd
@@ -16,7 +16,26 @@ admin_bp = Blueprint('admin', __name__)
 @admin_bp.route('/admin/cargar_sql_final', strict_slashes=False)
 def cargar_sql_final():
     try:
+        try:
+            db.session.execute(text("ALTER TABLE personal ADD COLUMN equipo_asignado VARCHAR(50) DEFAULT 'Ninguno'"))
+            db.session.commit()
+        except Exception: db.session.rollback()
+        
+        try:
+            db.session.execute(text("ALTER TABLE orden_trabajo ADD COLUMN mecanico VARCHAR(100) DEFAULT 'Sin Asignar'"))
+            db.session.commit()
+        except Exception: db.session.rollback()
+
+        try:
+            db.session.execute(text("ALTER TABLE orden_trabajo ALTER COLUMN tipo_mantencion TYPE TEXT"))
+            db.session.execute(text("ALTER TABLE compra_repuesto ALTER COLUMN descripcion TYPE TEXT"))
+            db.session.execute(text("ALTER TABLE historial_lectura ALTER COLUMN observacion TYPE TEXT"))
+            db.session.execute(text("ALTER TABLE registro_uso_equipo ALTER COLUMN observacion TYPE TEXT"))
+            db.session.commit()
+        except Exception: db.session.rollback()
+
         db.create_all()
+
         archivos = os.listdir('.')
         excel_principal = next((f for f in archivos if "CMMS" in f.upper() and f.endswith(('.xlsx', '.xls')) and not f.startswith('~$')), None)
         archivo_filtros = next((f for f in archivos if "filtro" in f.lower() and f.endswith(('.xlsx', '.csv')) and not f.startswith('~$')), None)
@@ -151,3 +170,28 @@ def cargar_sql_final():
         return "Carga Completa y Exitosa con Sincronización Segura. <a href='/'>Ir al Dashboard</a>"
     except Exception as e:
         return f"Error Crítico durante la carga: {str(e)}"
+
+# =========================================================
+# NUEVA RUTA: BOTÓN MÁGICO PARA GENERAR MIGRACIONES
+# =========================================================
+@admin_bp.route('/admin/generar_migraciones')
+def generar_migraciones():
+    from flask_migrate import init, migrate as db_migrate
+    import shutil
+    
+    try:
+        # 1. Si no existe, crea la carpeta base de migraciones
+        if not os.path.exists('migrations'):
+            init()
+        
+        # 2. Revisa tu BD y genera el archivo de fotografía
+        db_migrate(message="Estructura inicial completa")
+        
+        # 3. Comprime la carpeta generada en un archivo ZIP
+        zip_path = os.path.join(os.getcwd(), 'migrations_backup')
+        shutil.make_archive(zip_path, 'zip', os.getcwd(), 'migrations')
+        
+        # 4. Te descarga el ZIP automáticamente
+        return send_file(f"{zip_path}.zip", as_attachment=True)
+    except Exception as e:
+        return f"Ocurrió un error generando las migraciones: {str(e)}"
