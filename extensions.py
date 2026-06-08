@@ -1,10 +1,11 @@
-# extensions.py
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
-from flask_apscheduler import APScheduler
-from flask_migrate import Migrate  # <-- NUEVO IMPORT
+from apscheduler.schedulers.background import BackgroundScheduler
+from flask_migrate import Migrate
+from flask_mail import Mail  # <-- NUEVO
 
 db = SQLAlchemy()
 login_manager = LoginManager()
-scheduler = APScheduler()
-migrate = Migrate()  # <-- INICIALIZAMOS MIGRATE
+scheduler = BackgroundScheduler()
+migrate = Migrate()
+mail = Mail()  # <-- NUEVO
