@@ -5,38 +5,39 @@ from extensions import db, login_manager, scheduler, migrate
 from models.user import User
 
 def create_app():
-    # Inicializa Flask y carga la configuración
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    # Inicializar las herramientas
     db.init_app(app)
     login_manager.init_app(app)
-    migrate.init_app(app, db)  # <-- VINCULAMOS MIGRATE CON LA APP
+    migrate.init_app(app, db)
 
-    # Le enseña a Flask-Login cómo buscar usuarios
+    # --- CONFIGURACIÓN DE SEGURIDAD (Login) ---
+    # Le decimos a Flask qué ruta usar para hacer login
+    login_manager.login_view = 'auth.login'
+    login_manager.login_message = 'Por favor inicie sesión para acceder al sistema.'
+    login_manager.login_message_category = 'danger'
+
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # Mantenemos esto por ahora para que nada se rompa mientras migramos
-    with app.app_context():
-        db.create_all()
-
-    # Importar y registrar los Blueprints (Rutas)
+    # Importar Blueprints
     from routes.dashboard import dashboard_bp
     from routes.equipos import equipos_bp
     from routes.api import api_bp
     from routes.admin import admin_bp
+    from routes.auth import auth_bp  # <-- NUEVO Blueprint
 
+    # Registrar Blueprints
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(equipos_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(auth_bp)  # <-- Registro del Login
 
     return app
 
-# Iniciar la aplicación
 app = create_app()
 
 if __name__ == '__main__':
