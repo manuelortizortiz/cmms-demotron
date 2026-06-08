@@ -2,7 +2,8 @@ from flask import Blueprint, request, jsonify, redirect
 from datetime import datetime
 import random
 from flask_login import login_required
-from extensions import db
+from flask_mail import Message
+from extensions import db, mail
 from models.equipo import Equipo, FiltroEquipo
 from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
@@ -18,6 +19,8 @@ def update_kanban():
     ot = OrdenTrabajo.query.get(data.get('ot_id'))
     if ot:
         ot.estado = data.get('estado')
+        if ot.estado == 'Finalizada' and not ot.fecha_cierre:
+            ot.fecha_cierre = datetime.now()
         db.session.commit()
     return jsonify({"status": "success"})
 
@@ -46,16 +49,11 @@ def add_record():
             folio_req = f"OT-{siguiente_id:05d}"
             
         db.session.add(OrdenTrabajo(
-            codigo_equipo=codigo, 
-            folio=folio_req, 
-            tipo_ot='Preventiva', 
-            tipo_mantencion=request.form.get('tipo', 'PM1'), 
-            lectura=lectura_req, 
+            codigo_equipo=codigo, folio=folio_req, tipo_ot='Preventiva', 
+            tipo_mantencion=request.form.get('tipo', 'PM1'), lectura=lectura_req, 
             costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0), 
             estado=request.form.get('estado', 'Pendiente'), 
             mecanico=request.form.get('mecanico', 'Sin Asignar'),
-            sistema_falla=request.form.get('sistema_falla'),
-            causa_raiz=request.form.get('causa_raiz'),
             fecha=datetime.now()
         ))
 
@@ -64,25 +62,31 @@ def add_record():
         lectura_req = clean_int(request.form.get('lectura'))
         if lectura_req == 0 and eq: lectura_req = eq.lectura_actual
         
-        folio_req = request.form.get('folio', '').strip()
-        if not folio_req:
-            ultima_ot_global = OrdenTrabajo.query.order_by(OrdenTrabajo.id.desc()).first()
-            siguiente_id = (ultima_ot_global.id + 1) if ultima_ot_global else 1
-            folio_req = f"CM-{siguiente_id:05d}"
+        folio_req = request.form.get('folio', '').strip() or f"CM-{random.randint(1000,9999)}"
+        sistema_f = request.form.get('sistema_falla', 'No especificado')
+        causa_r = request.form.get('causa_raiz', 'Sin diagnóstico inicial')
 
-        db.session.add(OrdenTrabajo(
-            codigo_equipo=codigo, 
-            folio=folio_req, 
-            tipo_ot='Correctiva', 
-            tipo_mantencion=request.form.get('falla', 'Avería'), 
-            lectura=lectura_req, 
+        nueva_ot = OrdenTrabajo(
+            codigo_equipo=codigo, folio=folio_req, tipo_ot='Correctiva', 
+            tipo_mantencion=request.form.get('falla', 'Avería'), lectura=lectura_req, 
             costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0), 
             estado=request.form.get('estado', 'Pendiente'), 
             mecanico=request.form.get('mecanico', 'Sin Asignar'),
-            sistema_falla=request.form.get('sistema_falla'),
-            causa_raiz=request.form.get('causa_raiz'),
-            fecha=datetime.now()
-        ))
+            sistema_falla=sistema_f, causa_raiz=causa_r, fecha=datetime.now()
+        )
+        db.session.add(nueva_ot)
+        db.session.commit()
+
+        try:
+            msg = Message(
+                subject=f"🚨 ALERTA CMMS: Nueva Avería en Equipo {codigo}",
+                sender='no-reply@demotron.cl',
+                recipients=['admin@demotron.cl']
+            )
+            msg.body = f"Se ha reportado una nueva avería.\n\nEquipo: {codigo}\nFolio: {folio_req}\nSistema: {sistema_f}\nDiagnóstico: {causa_r}\n\nRevisar en el Kanban para asignación."
+            mail.send(msg)
+        except Exception as e:
+            print(f"Error correo: {e}")
 
     elif tabla == 'compra':
         db.session.add(CompraRepuesto(codigo_equipo=codigo, oc=request.form.get('oc', f"OC-{random.randint(100,999)}"), descripcion=request.form.get('descripcion', 'Insumos'), costo_pm_clp=clean_float(request.form.get('costo'), 0.0), fecha=datetime.now()))
