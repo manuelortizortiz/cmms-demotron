@@ -2,75 +2,317 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>DEMOTRON ERP</title>
+    <title>DEMOTRON ERP CMMS</title>
+    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        body { font-family: 'Inter', sans-serif; font-size: 13px; background-color: #F8FAFC; color: #334155; margin: 0; }
         .seccion { display: none; } .seccion.active { display: block; }
-        .nav-link { cursor: pointer; padding: 10px; display: block; }
-        .nav-link.active { font-weight: bold; color: blue; }
-        .card-custom { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .sidebar-bg { background-color: #FFFFFF; border-right: 1px solid #E2E8F0; }
+        .nav-link { color: #64748B; display: block; padding: 12px 24px; cursor: pointer; transition: all 0.2s; border-radius: 0 24px 24px 0; margin-right: 16px; margin-bottom: 4px; font-weight: 600; }
+        .nav-link:hover { background: #F1F5F9; color: #0F172A; }
+        .nav-link.active { background: #EFF6FF; color: #1D4ED8; }
+        .card-custom { background: white; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); padding: 24px;}
+        .card-custom-nopad { background: white; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden;}
+        .table-wrapper { width: 100%; overflow-x: auto; }
+        .table-custom { width: 100%; border-collapse: collapse; min-width: 600px; }
+        .table-custom th { font-size: 11px; color: #64748B; padding: 16px; border-bottom: 1px solid #E2E8F0; text-align: left; font-weight: 600; white-space: nowrap; }
+        .table-custom td { padding: 14px 16px; border-bottom: 1px solid #F1F5F9; color: #334155; }
+        td[contenteditable="true"]:focus { outline: none; border-bottom: 2px solid #2563EB; background: #F8FAFC; }
+        .form-input { border: 1px solid #E2E8F0; padding: 8px 12px; border-radius: 8px; font-size: 12px; width: 100%; outline: none; transition: border-color 0.2s; }
+        .form-input:focus { border-color: #3B82F6; }
+        .btn-primary { background-color: #2563EB; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; transition: background 0.2s; cursor: pointer; border:none;}
+        .btn-danger { background-color: #FEE2E2; color: #DC2626; padding: 6px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; border:none;}
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="flex h-screen bg-gray-50">
-    <aside class="w-64 bg-white border-r p-6">
-        <h1 class="font-bold text-xl mb-6">DEMOTRON</h1>
-        <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard</a>
-        <a onclick="switchTab('ot_corr', this)" class="nav-link">Averías</a>
-        <a href="/logout" class="mt-10 text-red-500 block text-sm font-bold">Salir</a>
-    </aside>
+<body class="flex h-screen overflow-hidden">
+    <datalist id="lista_mecanicos">{% for m in mecanicos %}<option value="{{ m.nombre }}"></option>{% endfor %}</datalist>
+    <datalist id="lista_pautas"><option value="PM1"></option><option value="PM2"></option><option value="PM3"></option><option value="PM4"></option><option value="PM5"></option></datalist>
 
-    <main class="flex-1 p-8 overflow-y-auto">
-        <h1 id="title" class="text-2xl font-bold mb-6">Dashboard</h1>
-        
-        <div id="dash" class="seccion active">
-            <div class="grid grid-cols-4 gap-4 mb-8">
-                <div class="card-custom">Total Flota: <span class="font-bold text-xl">{{ kpis.total }}</span></div>
-                <div class="card-custom">Operativos: <span class="font-bold text-xl text-green-600">{{ kpis.operativos }}</span></div>
-                <div class="card-custom">Atrasados: <span class="font-bold text-xl text-red-600">{{ kpis.atrasados }}</span></div>
-                <div class="card-custom">OT Abiertas: <span class="font-bold text-xl">{{ kpis.ot_abiertas }}</span></div>
-            </div>
-            <div class="grid grid-cols-3 gap-6">
-                <div class="card-custom"><canvas id="chartEstado"></canvas></div>
-                <div class="card-custom"><canvas id="chartCostos"></canvas></div>
-                <div class="card-custom"><canvas id="chartFallas"></canvas></div>
+    <aside class="w-64 sidebar-bg flex flex-col z-20 shadow-sm shrink-0">
+        <div class="h-24 flex items-center justify-center border-b border-slate-100 p-4">
+            <img src="{{ url_for('static', filename='Logo Azul.png') }}" alt="Logo" class="h-full object-contain" onerror="this.outerHTML='<span class=\'text-2xl font-bold text-blue-800\'>DEMOTRON</span>';">
+        </div>
+        <nav class="flex-1 py-6 overflow-y-auto hide-scrollbar">
+            <p class="px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Principal</p>
+            <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard</a>
+            <a onclick="switchTab('eq', this)" class="nav-link">Equipos</a>
+            <a onclick="switchTab('datos', this)" class="nav-link">Datos Técnicos</a>
+            
+            <p class="px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 mt-6">Gestión de Flota</p>
+            <a onclick="switchTab('plan', this)" class="nav-link">Planificación Kanban</a>
+            <a onclick="switchTab('cal', this)" class="nav-link">Calendario</a>
+            <a onclick="switchTab('ot', this)" class="nav-link">OT Preventivas</a>
+            <a onclick="switchTab('compras', this)" class="nav-link">Compras e Insumos</a>
+            <a onclick="switchTab('lec', this)" class="nav-link">Lecturas Terreno</a>
+            <a onclick="switchTab('ot_corr', this)" class="nav-link text-red-600">Averías (Correctivas)</a>
+            
+            <p class="px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 mt-6">Personal</p>
+            <a onclick="switchTab('cond', this)" class="nav-link">Operadores</a>
+            <a onclick="switchTab('mecanicos', this)" class="nav-link">Mecánicos</a>
+        </nav>
+        <div class="mt-auto border-t border-slate-200 p-4 bg-slate-50">
+            <div class="flex items-center justify-between">
+                <div class="truncate pr-2">
+                    <p class="text-xs font-bold text-slate-800 truncate">{{ current_user.nombre }}</p>
+                    <p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">{{ current_user.role }}</p>
+                </div>
+                <a href="/logout" class="text-red-500 hover:text-white hover:bg-red-500 border border-red-200 p-2 rounded-lg transition-colors font-bold text-xs">Salir</a>
             </div>
         </div>
+    </aside>
 
-        <div id="ot_corr" class="seccion">
-            <div class="card-custom mb-6 bg-red-50">
-                <form action="/api/add_record" method="POST" class="flex gap-4">
-                    <input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="referer" value="/?tab=ot_corr">
-                    <input type="text" name="codigo" placeholder="Equipo" class="border p-2 rounded" required>
-                    <select name="sistema_falla" class="border p-2 rounded"><option value="Motor">Motor</option><option value="Hidráulico">Hidráulico</option></select>
-                    <input type="text" name="causa_raiz" placeholder="Causa" class="border p-2 rounded">
-                    <input type="number" name="costo" placeholder="Costo" class="border p-2 rounded" required>
-                    <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded">Reportar</button>
-                </form>
+    <main class="flex-1 flex flex-col bg-[#F8FAFC] min-w-0">
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
+            <h1 id="title" class="text-xl font-bold text-slate-800">Dashboard</h1>
+            <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="Buscar en esta vista..." class="form-input w-64 bg-slate-50 ml-4 hidden md:block">
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-8">
+            
+            <div id="dash" class="seccion active">
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                    <div class="card-custom border-t-4 border-blue-600"><p class="text-xs font-bold text-slate-500 uppercase mb-2">Total Flota</p><p class="text-3xl font-bold text-slate-800">{{ kpis.total }}</p></div>
+                    <div class="card-custom border-t-4 border-green-500"><p class="text-xs font-bold text-slate-500 uppercase mb-2">Operativos</p><p class="text-3xl font-bold text-green-600">{{ kpis.operativos }}</p></div>
+                    <div class="card-custom border-t-4 border-red-500"><p class="text-xs font-bold text-slate-500 uppercase mb-2">Atrasados (PM)</p><p class="text-3xl font-bold text-red-500">{{ kpis.atrasados }}</p></div>
+                    <div class="card-custom border-t-4 border-blue-600"><p class="text-xs font-bold text-slate-500 uppercase mb-2">OT Pendientes</p><p class="text-3xl font-bold text-slate-800">{{ kpis.ot_abiertas }}</p></div>
+                </div>
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+                    <div class="card-custom"><h3 class="text-sm font-bold text-slate-700 mb-4">Estado Operativo</h3><div class="h-48 relative w-full"><canvas id="chartEstado"></canvas></div></div>
+                    <div class="card-custom"><h3 class="text-sm font-bold text-slate-700 mb-4">Inversión Mensual</h3><div class="h-48 relative w-full"><canvas id="chartCostosMensuales"></canvas></div></div>
+                    <div class="card-custom"><h3 class="text-sm font-bold text-slate-700 mb-4">Pareto de Fallas</h3><div class="h-48 relative w-full"><canvas id="chartFallas"></canvas></div></div>
+                </div>
             </div>
-            <div class="card-custom">
-                <table class="w-full">
-                    <thead><tr class="text-left border-b"><th>Fecha</th><th>Equipo</th><th>Sistema</th><th>Causa</th><th>Estado</th></tr></thead>
-                    <tbody>{% for m in mants_corr %}<tr><td>{{ m.fecha }}</td><td>{{ m.codigo }}</td><td>{{ m.sistema_falla }}</td><td>{{ m.causa_raiz }}</td><td>{{ m.estado }}</td></tr>{% endfor %}</tbody>
-                </table>
+
+            <div id="eq" class="seccion">
+                <div class="card-custom-nopad bg-white table-wrapper">
+                    <table class="table-custom table-searchable"><thead><tr><th>Código</th><th>Tipo</th><th>Ubicación</th><th>Operador</th><th>Lectura</th><th>Margen</th><th>Estado</th></tr></thead><tbody>
+                    {% for e in eqs %}<tr><td class="font-bold text-blue-600 cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td><td>{{ e.tipo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'ubicacion', 'equipo')">{{ e.ubicacion }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'responsable', 'equipo')">{{ e.responsable }}</td><td>{{ e.lectura }}</td><td class="font-bold {% if e.margen < 0 %}text-red-600{% elif e.margen <= 150 %}text-orange-500{% else %}text-green-600{% endif %}">{{ e.margen_str }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'estado_base', 'equipo')">{{ e.estado }}</td></tr>{% endfor %}
+                    </tbody></table>
+                </div>
             </div>
+
+            <div id="datos" class="seccion">
+                <div class="card-custom-nopad bg-white table-wrapper">
+                    <table class="table-custom table-searchable"><thead><tr><th>Equipo</th><th>N° Chasis (VIN)</th><th>N° Motor</th><th>Patente</th></tr></thead><tbody>
+                    {% for e in eqs %}<tr><td class="font-bold text-blue-600 cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'vin', 'equipo')" class="text-slate-500 font-mono">{{ e.vin }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'n_motor', 'equipo')" class="text-slate-500 font-mono">{{ e.motor }}</td><td contenteditable="true" onblur="guardarInline(this, '{{e.codigo}}', 'patente', 'equipo')" class="font-bold">{{ e.patente }}</td></tr>{% endfor %}
+                    </tbody></table>
+                </div>
+            </div>
+
+            <div id="plan" class="seccion">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-slate-700 mb-4 px-2">Pendiente</h3><div id="kb-pendiente" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="Pendiente">{% for c in kanban['Pendiente'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-grab relative group" data-id="{{ c.id }}"><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4></div>{% endfor %}</div></div>
+                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-blue-800 mb-4 px-2">En Progreso</h3><div id="kb-progreso" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="En Progreso">{% for c in kanban['En Progreso'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-blue-200 cursor-grab relative group" data-id="{{ c.id }}"><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4></div>{% endfor %}</div></div>
+                    <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-yellow-800 mb-4 px-2">En Revisión</h3><div id="kb-revision" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="En Revisión">{% for c in kanban['En Revisión'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-yellow-200 cursor-grab relative group" data-id="{{ c.id }}"><h4 class="font-bold text-blue-800">{{ c.codigo }}</h4></div>{% endfor %}</div></div>
+                    <div class="bg-green-50 border border-green-100 rounded-xl p-4 flex flex-col h-[70vh]"><h3 class="font-bold text-green-800 mb-4 px-2">Finalizada</h3><div id="kb-completado" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="Finalizada">{% for c in kanban['Finalizada'] %}<div class="bg-white p-4 rounded-lg shadow-sm border border-green-200 cursor-grab relative group" data-id="{{ c.id }}"><h4 class="font-bold text-green-700">{{ c.codigo }}</h4></div>{% endfor %}</div></div>
+                </div>
+            </div>
+
+            <div id="cal" class="seccion"><div class="card-custom-nopad p-6 flex flex-col" style="height: calc(100vh - 150px);"><div id="calendar" class="flex-1 w-full h-full"></div></div></div>
+
+            <div id="ot" class="seccion">
+                <div class="card-custom mb-6 bg-slate-50">
+                    <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
+                        <input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/?tab=ot">
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Pauta Preventiva</label><input list="lista_pautas" name="tipo" class="form-input" required></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Mecánico</label><input list="lista_mecanicos" name="mecanico" class="form-input" placeholder="Opcional"></div>
+                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar OT Preventiva</button>
+                    </form>
+                </div>
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
+                    <table class="table-custom table-searchable"><thead><tr><th>Fecha</th><th>Equipo</th><th>Intervención</th><th>Mecánico</th><th>Costo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>
+                    {% for m in mants_prev %}<tr><td>{{ m.fecha }}</td><td class="font-bold text-blue-800">{{ m.codigo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'tipo_mantencion', 'ot')">{{ m.tipo_mantencion }}</td><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'mecanico', 'ot')">{{ m.mecanico }}</td><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'costo_mantencion_clp', 'ot')" class="font-bold">{{ m.costo_str }}</td><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'estado', 'ot')">{{ m.estado }}</td><td class="text-right"><button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-red-500 font-bold text-xs">Borrar</button></td></tr>{% endfor %}
+                    </tbody></table>
+                </div>
+            </div>
+
+            <div id="ot_corr" class="seccion">
+                <div class="card-custom mb-6 bg-red-50 border-red-200">
+                    <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
+                        <input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="referer" value="/?tab=ot_corr">
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input border-red-200 uppercase" required></div>
+                        <div class="flex-1 min-w-[150px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Sistema Falla</label><select name="sistema_falla" class="form-input border-red-200"><option value="Motor">Motor</option><option value="Hidráulico">Hidráulico</option><option value="Eléctrico">Eléctrico</option><option value="Frenos">Frenos</option><option value="Estructura">Estructura</option><option value="Neumáticos">Neumáticos</option></select></div>
+                        <div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Causa Raíz / Diagnóstico</label><input type="text" name="causa_raiz" class="form-input border-red-200" placeholder="Ej: Fuga por manguera desgastada"></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input border-red-200" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Mecánico</label><input list="lista_mecanicos" name="mecanico" class="form-input border-red-200"></div>
+                        <button type="submit" class="btn-danger mb-1 whitespace-nowrap">Reportar Avería</button>
+                    </form>
+                </div>
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
+                    <table class="table-custom table-searchable"><thead><tr><th>Fecha</th><th>Equipo</th><th>Sistema</th><th>Causa Raíz</th><th>Costo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>
+                    {% for m in mants_corr %}<tr><td><span class="font-bold text-red-600">{{ m.fecha }}</span></td><td class="font-bold text-blue-800">{{ m.codigo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'sistema_falla', 'ot')">{{ m.sistema_falla }}</td><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'causa_raiz', 'ot')">{{ m.causa_raiz }}</td><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'costo_mantencion_clp', 'ot')" class="font-bold">{{ m.costo_str }}</td><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'estado', 'ot')"><span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">{{ m.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-red-500 hover:text-red-700 font-bold text-xs">Borrar</button></td></tr>{% endfor %}
+                    </tbody></table>
+                </div>
+            </div>
+
+            <div id="compras" class="seccion">
+                <div class="card-custom mb-6 bg-slate-50">
+                    <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
+                        <input type="hidden" name="tabla" value="compra"><input type="hidden" name="referer" value="/?tab=compras">
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">OC</label><input type="text" name="oc" class="form-input"></div>
+                        <div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Descripción</label><input type="text" name="descripcion" class="form-input"></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input"></div>
+                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar Compra</button>
+                    </form>
+                </div>
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
+                    <table class="table-custom table-searchable"><thead><tr><th>Fecha</th><th>OC</th><th>Equipo</th><th>Descripción</th><th>Costo</th><th class="text-right">Acción</th></tr></thead><tbody>
+                    {% for c in compras %}<tr><td>{{ c.fecha }}</td><td contenteditable="true" onblur="guardarInline(this, '{{c.id}}', 'oc', 'compra')">{{ c.oc }}</td><td class="font-bold text-blue-800">{{ c.codigo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{c.id}}', 'descripcion', 'compra')">{{ c.descripcion }}</td><td contenteditable="true" onblur="guardarInline(this, '{{c.id}}', 'costo_pm_clp', 'compra')" class="font-bold">{{ c.costo_str }}</td><td class="text-right"><button onclick="borrarRegistro('compra', '{{c.id}}')" class="text-red-500 font-bold text-xs">Borrar</button></td></tr>{% endfor %}
+                    </tbody></table>
+                </div>
+            </div>
+
+            <div id="lec" class="seccion">
+                <div class="card-custom mb-6 bg-slate-50">
+                    <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
+                        <input type="hidden" name="tabla" value="lectura"><input type="hidden" name="referer" value="/?tab=lec">
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Valor</label><input type="number" name="valor" class="form-input" required></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Tipo</label><select name="control" class="form-input"><option value="HR">Horómetro</option><option value="KM">Kilometraje</option></select></div>
+                        <div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Observación</label><input type="text" name="observacion" class="form-input"></div>
+                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar Lectura</button>
+                    </form>
+                </div>
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
+                    <table class="table-custom table-searchable"><thead><tr><th>Fecha</th><th>Equipo</th><th>Operador</th><th>Valor Registrado</th><th>Observación</th><th class="text-right">Acción</th></tr></thead><tbody>
+                    {% for l in lecturas %}<tr><td>{{ l.fecha }}</td><td class="font-bold text-blue-800">{{ l.codigo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{l.id}}', 'responsable', 'lectura')">{{ l.responsable }}</td><td class="font-bold">{{ l.valor_str }} <span class="text-[10px] text-slate-500">{{ l.tipo }}</span></td><td contenteditable="true" onblur="guardarInline(this, '{{l.id}}', 'observacion', 'lectura')" class="text-slate-500">{{ l.obs }}</td><td class="text-right"><button onclick="borrarRegistro('lectura', '{{l.id}}')" class="text-red-500 font-bold text-xs">Borrar</button></td></tr>{% endfor %}
+                    </tbody></table>
+                </div>
+            </div>
+
+            <div id="cond" class="seccion space-y-6">
+                <div class="card-custom-nopad bg-white flex flex-col">
+                    <div class="px-6 py-4 bg-slate-50 border-b flex flex-wrap justify-between items-center gap-4">
+                        <h3 class="font-bold text-slate-700">NÓMINA DE OPERADORES</h3>
+                        <form action="/api/add_record" method="POST" class="m-0 flex gap-4"><input type="hidden" name="tabla" value="personal"><input type="hidden" name="referer" value="/?tab=cond">
+                            <input type="text" name="nombre" placeholder="Nombre Completo" class="form-input w-48" required>
+                            <input type="text" name="equipo" placeholder="Equipo Asignado" class="form-input w-32 uppercase" required>
+                            <button type="submit" class="btn-primary whitespace-nowrap text-xs">Añadir Operador</button>
+                        </form>
+                    </div>
+                    <div class="table-wrapper max-h-[40vh] overflow-y-auto">
+                        <table class="table-custom table-searchable"><thead><tr><th>Nombre Operador</th><th>Equipo Asignado</th><th>Cargo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>
+                        {% for op in operadores %}<tr><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'nombre', 'personal')" class="font-bold">{{ op.nombre }}</td><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'equipo_asignado', 'personal')" class="font-bold text-blue-600">{{ op.equipo_asignado }}</td><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'cargo', 'personal')">{{ op.cargo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'estado', 'personal')"><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ op.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('personal', '{{op.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}
+                        </tbody></table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="mecanicos" class="seccion">
+                <div class="card-custom mb-6 bg-slate-50 flex flex-wrap justify-between items-center gap-4">
+                    <span class="font-bold text-slate-700">EQUIPO TÉCNICO Y MECÁNICOS</span>
+                    <form action="/api/add_record" method="POST" class="m-0 flex flex-wrap gap-4"><input type="hidden" name="tabla" value="mecanico"><input type="hidden" name="referer" value="/?tab=mecanicos">
+                        <input type="text" name="nombre" placeholder="Nombre del Mecánico" class="form-input w-64" required>
+                        <input type="text" name="especialidad" placeholder="Especialidad" class="form-input w-48">
+                        <button type="submit" class="btn-primary whitespace-nowrap">Añadir Mecánico</button>
+                    </form>
+                </div>
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
+                    <table class="table-custom table-searchable"><thead><tr><th>Nombre Mecánico</th><th>Especialidad</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>
+                    {% for m in mecanicos %}<tr><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'nombre', 'mecanico')" class="font-bold">{{ m.nombre }}</td><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'especialidad', 'mecanico')">{{ m.especialidad }}</td><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'estado', 'mecanico')"><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ m.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}
+                    </tbody></table>
+                </div>
+            </div>
+
         </div>
     </main>
 
     <script>
-        const cData = {{ charts|tojson }};
-        const fData = {{ fallas_data|tojson }};
-        
         function switchTab(t, el) {
             document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.getElementById(t).classList.add('active'); el.classList.add('active');
             document.getElementById('title').innerText = el.innerText.trim();
+            
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + t;
+            window.history.replaceState({path:newUrl}, '', newUrl);
+
+            if(t==='cal' && window.calendar) { setTimeout(() => window.calendar.render(), 100); }
         }
 
-        new Chart(document.getElementById('chartEstado'), { type: 'doughnut', data: { labels: ['Op', 'Fuera', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'] }] }});
-        new Chart(document.getElementById('chartCostos'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión', data: cData.costos_mensuales.data, borderColor: '#2563EB' }] }});
-        new Chart(document.getElementById('chartFallas'), { type: 'bar', data: { labels: fData.labels, datasets: [{ label: 'Averías', data: fData.data, backgroundColor: '#EF4444' }] }});
+        function filtrarTablas(q) {
+            q = q.toLowerCase();
+            document.querySelector('.seccion.active').querySelectorAll('.table-searchable tbody tr').forEach(r => {
+                r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none';
+            });
+        }
+
+        function guardarInline(el, cod, campo, tabla) {
+            fetch('/update_inline', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: cod, campo: campo, valor: el.innerText.trim(), tabla: tabla}) });
+        }
+
+        function borrarRegistro(tabla, id) {
+            if(confirm('¿Eliminar permanentemente?')) {
+                fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' }).then(() => location.reload());
+            }
+        }
+
+        const cData = {{ charts|tojson }};
+        const fData = {{ fallas_data|tojson }};
+        const mDataPrev = {{ mants_prev|tojson }};
+        const mDataCorr = {{ mants_corr|tojson }};
+        
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tabActiva = urlParams.get('tab');
+            if (tabActiva) {
+                const link = document.querySelector(`a[onclick*="switchTab('${tabActiva}'"]`);
+                if (link) switchTab(tabActiva, link);
+            }
+
+            // KANBAN
+            try {
+                if (typeof Sortable !== 'undefined') {
+                    ['kb-pendiente', 'kb-progreso', 'kb-revision', 'kb-completado'].forEach(col => {
+                        const el = document.getElementById(col);
+                        if(el) {
+                            new Sortable(el, {
+                                group: 'kanban', animation: 150,
+                                onEnd: function (evt) {
+                                    const ot_id = evt.item.getAttribute('data-id');
+                                    const nuevo_estado = evt.to.getAttribute('data-status');
+                                    fetch('/update_kanban', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ot_id: ot_id, estado: nuevo_estado }) });
+                                }
+                            });
+                        }
+                    });
+                }
+            } catch(e) {}
+
+            // CALENDARIO
+            try {
+                if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
+                    let evts = [];
+                    mDataPrev.filter(m => m.fecha_iso).forEach(m => { evts.push({ title: m.codigo + ' (PM)', start: m.fecha_iso, color: '#2563EB' }); });
+                    mDataCorr.filter(m => m.fecha_iso).forEach(m => { evts.push({ title: m.codigo + ' (Avería)', start: m.fecha_iso, color: '#DC2626' }); });
+                    
+                    window.calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+                        initialView: 'dayGridMonth', locale: 'es', height: '100%',
+                        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth' },
+                        events: evts
+                    });
+                }
+            } catch(e) {}
+
+            // GRAFICOS
+            try {
+                if (typeof Chart !== 'undefined') {
+                    Chart.defaults.font.family = "'Inter', sans-serif";
+                    new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '70%', data: { labels: ['Operativos', 'Fuera de Servicio', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'], borderWidth:0 }] }, options: { maintainAspectRatio:false, plugins:{legend:{position:'right'}} }});
+                    new Chart(document.getElementById('chartCostosMensuales'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión Realizada (CLP)', data: cData.costos_mensuales.data, borderColor: '#2563EB', backgroundColor: 'rgba(37, 99, 235, 0.05)', fill: true, tension: 0.3, borderWidth: 2 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } }, scales:{x:{grid:{display:false}}, y:{beginAtZero: true}} }});
+                    new Chart(document.getElementById('chartFallas'), { type: 'bar', data: { labels: fData.labels, datasets: [{ label: 'N° de Averías', data: fData.data, backgroundColor: '#EF4444', borderRadius: 4 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } }, scales:{x:{grid:{display:false}}, y:{beginAtZero: true, ticks: {stepSize: 1}}} }});
+                }
+            } catch(e) {}
+        };
     </script>
 </body>
 </html>
