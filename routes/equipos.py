@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template
 from datetime import datetime
+from flask_login import login_required
 from models.equipo import Equipo, FiltroEquipo
 from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura
@@ -9,6 +10,7 @@ from utils.formatters import format_num, format_clp, buscar_foto_por_tipo
 equipos_bp = Blueprint('equipos', __name__)
 
 @equipos_bp.route('/equipo/<codigo>', strict_slashes=False)
+@login_required
 def ficha_equipo(codigo):
     equipo = Equipo.query.filter_by(codigo=codigo).first_or_404()
     foto_url = buscar_foto_por_tipo(equipo.tipo_equipo, equipo.marca)
@@ -31,6 +33,7 @@ def ficha_equipo(codigo):
     return render_template('ficha_equipo.html', eq=equipo, foto_url=foto_url, mants_prev=mants_prev, mants_corr=mants_corr, lecturas=lecturas, filtros=filtros, usos=usos, mecanicos=lista_mecanicos)
 
 @equipos_bp.route('/imprimir_ot/<int:ot_id>', strict_slashes=False)
+@login_required
 def imprimir_ot(ot_id):
     ot = OrdenTrabajo.query.get_or_404(ot_id)
     equipo = Equipo.query.filter_by(codigo=ot.codigo_equipo).first()
@@ -45,6 +48,7 @@ def imprimir_ot(ot_id):
     return render_template('ot_print.html', equipo=equipo, ot=ot, filtros=filtros, ultima_ot=ultima_ot, fecha_actual=datetime.now().strftime("%d/%m/%Y"))
 
 @equipos_bp.route('/imprimir_pauta/<codigo>', strict_slashes=False)
+@login_required
 def imprimir_pauta(codigo):
     equipo = Equipo.query.filter_by(codigo=codigo).first_or_404()
     filtros = FiltroEquipo.query.filter_by(codigo_equipo=codigo).all()
