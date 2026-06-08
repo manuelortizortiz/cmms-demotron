@@ -2,95 +2,57 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>DEMOTRON ERP CMMS</title>
-    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>DEMOTRON ERP</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; font-size: 13px; background-color: #F8FAFC; color: #334155; margin: 0; }
         .seccion { display: none; } .seccion.active { display: block; }
-        .sidebar-bg { background-color: #FFFFFF; border-right: 1px solid #E2E8F0; }
-        .nav-link { color: #64748B; display: block; padding: 12px 24px; cursor: pointer; transition: all 0.2s; border-radius: 0 24px 24px 0; margin-right: 16px; margin-bottom: 4px; font-weight: 600; }
-        .nav-link:hover { background: #F1F5F9; color: #0F172A; }
-        .nav-link.active { background: #EFF6FF; color: #1D4ED8; }
-        .card-custom { background: white; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); padding: 24px;}
-        .card-custom-nopad { background: white; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden;}
-        .table-wrapper { width: 100%; overflow-x: auto; }
-        .table-custom { width: 100%; border-collapse: collapse; min-width: 600px; }
-        .table-custom th { font-size: 11px; color: #64748B; padding: 16px; border-bottom: 1px solid #E2E8F0; text-align: left; font-weight: 600; white-space: nowrap; }
-        .table-custom td { padding: 14px 16px; border-bottom: 1px solid #F1F5F9; color: #334155; }
-        .form-input { border: 1px solid #E2E8F0; padding: 8px 12px; border-radius: 8px; font-size: 12px; width: 100%; outline: none; }
-        .btn-primary { background-color: #2563EB; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; border:none;}
-        .btn-danger { background-color: #DC2626; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; border:none;}
+        .nav-link { cursor: pointer; padding: 10px; display: block; }
+        .nav-link.active { font-weight: bold; color: blue; }
+        .card-custom { background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden">
-    
-    <aside class="w-64 sidebar-bg flex flex-col z-20 shadow-sm shrink-0">
-        <div class="h-24 flex items-center justify-center border-b border-slate-100 p-4">
-            <img src="{{ url_for('static', filename='Logo Azul.png') }}" alt="Logo" class="h-full object-contain">
-        </div>
-        <nav class="flex-1 py-6 overflow-y-auto">
-            <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard</a>
-            <a onclick="switchTab('eq', this)" class="nav-link">Equipos</a>
-            <a onclick="switchTab('ot', this)" class="nav-link">OT Preventivas</a>
-            <a onclick="switchTab('ot_corr', this)" class="nav-link text-red-600">Averías (Correctivas)</a>
-        </nav>
-        <div class="mt-auto border-t border-slate-200 p-4 bg-slate-50">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-bold text-slate-800">{{ current_user.nombre }}</p>
-                    <p class="text-[9px] text-slate-500 uppercase font-bold">{{ current_user.role }}</p>
-                </div>
-                <a href="/logout" class="text-red-500 hover:bg-red-50 border border-red-200 p-2 rounded-lg text-xs font-bold">Salir</a>
-            </div>
-        </div>
+<body class="flex h-screen bg-gray-50">
+    <aside class="w-64 bg-white border-r p-6">
+        <h1 class="font-bold text-xl mb-6">DEMOTRON</h1>
+        <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard</a>
+        <a onclick="switchTab('ot_corr', this)" class="nav-link">Averías</a>
+        <a href="/logout" class="mt-10 text-red-500 block text-sm font-bold">Salir</a>
     </aside>
 
-    <main class="flex-1 flex flex-col bg-[#F8FAFC] min-w-0">
-        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8">
-            <h1 id="title" class="text-xl font-bold text-slate-800">Dashboard</h1>
-        </header>
-
-        <div class="flex-1 overflow-y-auto p-8 space-y-8">
-            <div id="dash" class="seccion active">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div class="card-custom border-t-4 border-blue-600"><p class="text-xs font-bold uppercase text-slate-500">Total Flota</p><p class="text-3xl font-bold">{{ kpis.total }}</p></div>
-                    <div class="card-custom border-t-4 border-green-500"><p class="text-xs font-bold uppercase text-slate-500">Operativos</p><p class="text-3xl font-bold text-green-600">{{ kpis.operativos }}</p></div>
-                    <div class="card-custom border-t-4 border-red-500"><p class="text-xs font-bold uppercase text-slate-500">Atrasados</p><p class="text-3xl font-bold text-red-500">{{ kpis.atrasados }}</p></div>
-                    <div class="card-custom border-t-4 border-yellow-500"><p class="text-xs font-bold uppercase text-slate-500">OT Abiertas</p><p class="text-3xl font-bold">{{ kpis.ot_abiertas }}</p></div>
-                </div>
-                
-                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-8">
-                    <div class="card-custom"><h3 class="text-sm font-bold text-slate-700 mb-4">Estado Operativo</h3><div class="h-48 relative"><canvas id="chartEstado"></canvas></div></div>
-                    <div class="card-custom"><h3 class="text-sm font-bold text-slate-700 mb-4">Inversión Mensual</h3><div class="h-48 relative"><canvas id="chartCostosMensuales"></canvas></div></div>
-                    <div class="card-custom"><h3 class="text-sm font-bold text-slate-700 mb-4">Pareto de Fallas</h3><div class="h-48 relative"><canvas id="chartFallas"></canvas></div></div>
-                </div>
+    <main class="flex-1 p-8 overflow-y-auto">
+        <h1 id="title" class="text-2xl font-bold mb-6">Dashboard</h1>
+        
+        <div id="dash" class="seccion active">
+            <div class="grid grid-cols-4 gap-4 mb-8">
+                <div class="card-custom">Total Flota: <span class="font-bold text-xl">{{ kpis.total }}</span></div>
+                <div class="card-custom">Operativos: <span class="font-bold text-xl text-green-600">{{ kpis.operativos }}</span></div>
+                <div class="card-custom">Atrasados: <span class="font-bold text-xl text-red-600">{{ kpis.atrasados }}</span></div>
+                <div class="card-custom">OT Abiertas: <span class="font-bold text-xl">{{ kpis.ot_abiertas }}</span></div>
             </div>
+            <div class="grid grid-cols-3 gap-6">
+                <div class="card-custom"><canvas id="chartEstado"></canvas></div>
+                <div class="card-custom"><canvas id="chartCostos"></canvas></div>
+                <div class="card-custom"><canvas id="chartFallas"></canvas></div>
+            </div>
+        </div>
 
-            <div id="eq" class="seccion"><div class="card-custom-nopad bg-white table-wrapper"><table class="table-custom"><thead><tr><th>Código</th><th>Tipo</th><th>Ubicación</th><th>Estado</th></tr></thead><tbody>{% for e in eqs %}<tr><td>{{ e.codigo }}</td><td>{{ e.tipo }}</td><td>{{ e.ubicacion }}</td><td>{{ e.estado }}</td></tr>{% endfor %}</tbody></table></div></div>
-            
-            <div id="ot" class="seccion"><div class="card-custom-nopad bg-white table-wrapper"><table class="table-custom"><thead><tr><th>Fecha</th><th>Equipo</th><th>Mantención</th><th>Mecánico</th><th>Costo</th></tr></thead><tbody>{% for m in mants_prev %}<tr><td>{{ m.fecha }}</td><td>{{ m.codigo }}</td><td>{{ m.tipo_mantencion }}</td><td>{{ m.mecanico }}</td><td>{{ m.costo_str }}</td></tr>{% endfor %}</tbody></table></div></div>
-
-            <div id="ot_corr" class="seccion">
-                <div class="card-custom mb-6 bg-red-50">
-                    <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
-                        <input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="referer" value="/?tab=ot_corr">
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase">Equipo</label><input type="text" name="codigo" class="form-input border-red-200" required></div>
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase">Sistema</label>
-                            <select name="sistema_falla" class="form-input border-red-200">
-                                <option value="Motor">Motor</option><option value="Hidráulico">Hidráulico</option><option value="Eléctrico">Eléctrico</option><option value="Frenos">Frenos</option>
-                            </select>
-                        </div>
-                        <div class="flex-[2]"><label class="text-[10px] font-bold text-slate-500 uppercase">Diagnóstico</label><input type="text" name="causa_raiz" class="form-input border-red-200" placeholder="Ej: Falla manguera"></div>
-                        <div class="flex-1"><label class="text-[10px] font-bold text-slate-500 uppercase">Costo</label><input type="number" name="costo" class="form-input border-red-200" required></div>
-                        <button type="submit" class="btn-danger">Reportar</button>
-                    </form>
-                </div>
-                <div class="card-custom-nopad"><table class="table-custom"><thead><tr><th>Fecha</th><th>Equipo</th><th>Sistema</th><th>Causa</th><th>Estado</th></tr></thead><tbody>{% for m in mants_corr %}<tr><td>{{ m.fecha }}</td><td>{{ m.codigo }}</td><td>{{ m.sistema_falla }}</td><td>{{ m.causa_raiz }}</td><td>{{ m.estado }}</td></tr>{% endfor %}</tbody></table></div>
+        <div id="ot_corr" class="seccion">
+            <div class="card-custom mb-6 bg-red-50">
+                <form action="/api/add_record" method="POST" class="flex gap-4">
+                    <input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="referer" value="/?tab=ot_corr">
+                    <input type="text" name="codigo" placeholder="Equipo" class="border p-2 rounded" required>
+                    <select name="sistema_falla" class="border p-2 rounded"><option value="Motor">Motor</option><option value="Hidráulico">Hidráulico</option></select>
+                    <input type="text" name="causa_raiz" placeholder="Causa" class="border p-2 rounded">
+                    <input type="number" name="costo" placeholder="Costo" class="border p-2 rounded" required>
+                    <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded">Reportar</button>
+                </form>
+            </div>
+            <div class="card-custom">
+                <table class="w-full">
+                    <thead><tr class="text-left border-b"><th>Fecha</th><th>Equipo</th><th>Sistema</th><th>Causa</th><th>Estado</th></tr></thead>
+                    <tbody>{% for m in mants_corr %}<tr><td>{{ m.fecha }}</td><td>{{ m.codigo }}</td><td>{{ m.sistema_falla }}</td><td>{{ m.causa_raiz }}</td><td>{{ m.estado }}</td></tr>{% endfor %}</tbody>
+                </table>
             </div>
         </div>
     </main>
@@ -106,14 +68,9 @@
             document.getElementById('title').innerText = el.innerText.trim();
         }
 
-        window.onload = function() {
-            // Gráfico Estado
-            new Chart(document.getElementById('chartEstado'), { type: 'doughnut', data: { labels: ['Operativos', 'Fuera de Servicio', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'] }] }});
-            // Gráfico Costos
-            new Chart(document.getElementById('chartCostosMensuales'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión Realizada', data: cData.costos_mensuales.data, borderColor: '#2563EB', fill: true }] }});
-            // Gráfico Pareto Fallas
-            new Chart(document.getElementById('chartFallas'), { type: 'bar', data: { labels: fData.labels, datasets: [{ label: 'N° Averías', data: fData.data, backgroundColor: '#EF4444' }] }, options: { maintainAspectRatio: false } });
-        };
+        new Chart(document.getElementById('chartEstado'), { type: 'doughnut', data: { labels: ['Op', 'Fuera', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'] }] }});
+        new Chart(document.getElementById('chartCostos'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión', data: cData.costos_mensuales.data, borderColor: '#2563EB' }] }});
+        new Chart(document.getElementById('chartFallas'), { type: 'bar', data: { labels: fData.labels, datasets: [{ label: 'Averías', data: fData.data, backgroundColor: '#EF4444' }] }});
     </script>
 </body>
 </html>
