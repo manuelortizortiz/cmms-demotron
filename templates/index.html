@@ -57,6 +57,7 @@
             <a onclick="switchTab('cond', this)" class="nav-link">Operadores</a>
             <a onclick="switchTab('mecanicos', this)" class="nav-link">Mecánicos</a>
         </nav>
+        
         <div class="mt-auto border-t border-slate-200 p-4 bg-slate-50">
             <div class="flex items-center justify-between">
                 <div class="truncate pr-2">
@@ -164,7 +165,40 @@
             </div>
 
             <div id="compras" class="seccion"><div class="card-custom mb-6 bg-slate-50"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="compra"><input type="hidden" name="referer" value="/?tab=compras"><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">OC</label><input type="text" name="oc" class="form-input"></div><div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Descripción</label><input type="text" name="descripcion" class="form-input"></div><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input"></div><button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar Compra</button></form></div><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead><tr><th>Fecha</th><th>OC</th><th>Equipo</th><th>Descripción</th><th>Costo</th><th class="text-right">Acción</th></tr></thead><tbody>{% for c in compras %}<tr><td>{{ c.fecha }}</td><td contenteditable="true" onblur="guardarInline(this, '{{c.id}}', 'oc', 'compra')">{{ c.oc }}</td><td class="font-bold text-blue-800">{{ c.codigo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{c.id}}', 'descripcion', 'compra')">{{ c.descripcion }}</td><td contenteditable="true" onblur="guardarInline(this, '{{c.id}}', 'costo_pm_clp', 'compra')" class="font-bold">{{ c.costo_str }}</td><td class="text-right"><button onclick="borrarRegistro('compra', '{{c.id}}')" class="text-red-500 font-bold text-xs">Borrar</button></td></tr>{% endfor %}</tbody></table></div></div>
-            <div id="lec" class="seccion"><div class="card-custom mb-6 bg-slate-50"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="lectura"><input type="hidden" name="referer" value="/?tab=lec"><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Valor</label><input type="number" name="valor" class="form-input" required></div><div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Tipo</label><select name="control" class="form-input"><option value="HR">Horómetro</option><option value="KM">Kilometraje</option></select></div><div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Observación</label><input type="text" name="observacion" class="form-input"></div><button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar Lectura</button></form></div><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead><tr><th>Fecha</th><th>Equipo</th><th>Operador</th><th>Valor Registrado</th><th>Observación</th><th class="text-right">Acción</th></tr></thead><tbody>{% for l in lecturas %}<tr><td>{{ l.fecha }}</td><td class="font-bold text-blue-800">{{ l.codigo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{l.id}}', 'responsable', 'lectura')">{{ l.responsable }}</td><td class="font-bold">{{ l.valor_str }} <span class="text-[10px] text-slate-500">{{ l.tipo }}</span></td><td contenteditable="true" onblur="guardarInline(this, '{{l.id}}', 'observacion', 'lectura')" class="text-slate-500">{{ l.obs }}</td><td class="text-right"><button onclick="borrarRegistro('lectura', '{{l.id}}')" class="text-red-500 font-bold text-xs">Borrar</button></td></tr>{% endfor %}</tbody></table></div></div>
+            
+            <div id="lec" class="seccion">
+                <div class="card-custom mb-6 bg-slate-50">
+                    <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
+                        <input type="hidden" name="tabla" value="lectura"><input type="hidden" name="referer" value="/?tab=lec">
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Valor</label><input type="number" name="valor" class="form-input" required></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Tipo</label><select name="control" class="form-input"><option value="HR">Horómetro</option><option value="KM">Kilometraje</option></select></div>
+                        <div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Observación</label><input type="text" name="observacion" class="form-input"></div>
+                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar Lectura</button>
+                    </form>
+                </div>
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
+                    <table class="table-custom table-searchable">
+                        <thead><tr><th>Fecha</th><th>Equipo</th><th>Operador</th><th>Valor Registrado</th><th>Observación</th><th class="text-right">Acciones</th></tr></thead>
+                        <tbody>
+                        {% for l in lecturas %}
+                        <tr>
+                            <td>{{ l.fecha }}</td>
+                            <td class="font-bold text-blue-800">{{ l.codigo }}</td>
+                            <td contenteditable="true" onblur="guardarInline(this, '{{l.id}}', 'responsable', 'lectura')">{{ l.responsable }}</td>
+                            <td class="font-bold">{{ l.valor_str }} <span class="text-[10px] text-slate-500">{{ l.tipo }}</span></td>
+                            <td contenteditable="true" onblur="guardarInline(this, '{{l.id}}', 'observacion', 'lectura')" class="text-slate-500">{{ l.obs }}</td>
+                            <td class="text-right whitespace-nowrap">
+                                <button onclick="editarLectura('{{l.id}}', '{{l.tipo}}', '{{l.valor_str}}')" class="text-blue-500 hover:text-blue-700 font-bold text-xs mr-3">Editar</button>
+                                <button onclick="borrarRegistro('lectura', '{{l.id}}')" class="text-red-500 hover:text-red-700 font-bold text-xs">Borrar</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div id="cond" class="seccion space-y-6"><div class="card-custom-nopad bg-white flex flex-col"><div class="px-6 py-4 bg-slate-50 border-b flex flex-wrap justify-between items-center gap-4"><h3 class="font-bold text-slate-700">NÓMINA DE OPERADORES</h3><form action="/api/add_record" method="POST" class="m-0 flex gap-4"><input type="hidden" name="tabla" value="personal"><input type="hidden" name="referer" value="/?tab=cond"><input type="text" name="nombre" placeholder="Nombre Completo" class="form-input w-48" required><input type="text" name="equipo" placeholder="Equipo Asignado" class="form-input w-32 uppercase" required><button type="submit" class="btn-primary whitespace-nowrap text-xs">Añadir Operador</button></form></div><div class="table-wrapper max-h-[40vh] overflow-y-auto"><table class="table-custom table-searchable"><thead><tr><th>Nombre Operador</th><th>Equipo Asignado</th><th>Cargo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>{% for op in operadores %}<tr><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'nombre', 'personal')" class="font-bold">{{ op.nombre }}</td><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'equipo_asignado', 'personal')" class="font-bold text-blue-600">{{ op.equipo_asignado }}</td><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'cargo', 'personal')">{{ op.cargo }}</td><td contenteditable="true" onblur="guardarInline(this, '{{op.id}}', 'estado', 'personal')"><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ op.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('personal', '{{op.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}</tbody></table></div></div><div class="card-custom-nopad bg-white flex flex-col"><div class="px-6 py-4 bg-slate-50 border-b flex flex-wrap justify-between items-center gap-4"><h3 class="font-bold text-slate-700">REGISTRO DE USO DE EQUIPOS</h3><form action="/api/add_record" method="POST" class="m-0 flex gap-2"><input type="hidden" name="tabla" value="uso_equipo"><input type="hidden" name="referer" value="/?tab=cond"><input type="date" name="fecha" class="form-input w-32" required><input type="text" name="operador" placeholder="Operador" class="form-input w-40" required><input type="text" name="codigo" placeholder="Equipo" class="form-input w-24 uppercase" required><input type="text" name="observacion" placeholder="Obs / Entrega" class="form-input w-48"><button type="submit" class="btn-primary whitespace-nowrap text-xs">Registrar Uso</button></form></div><div class="table-wrapper max-h-[40vh] overflow-y-auto"><table class="table-custom table-searchable"><thead><tr><th>Fecha</th><th>Operador</th><th>Equipo Utilizado</th><th>Observación Entrega</th><th class="text-right">Acción</th></tr></thead><tbody>{% for u in usos %}<tr><td>{{ u.fecha }}</td><td class="font-bold">{{ u.operador }}</td><td class="font-bold text-blue-600">{{ u.codigo_equipo }}</td><td class="text-slate-500 italic">{{ u.observacion }}</td><td class="text-right"><button onclick="borrarRegistro('uso_equipo', '{{u.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}</tbody></table></div></div></div>
             <div id="mecanicos" class="seccion"><div class="card-custom mb-6 bg-slate-50 flex flex-wrap justify-between items-center gap-4"><span class="font-bold text-slate-700">EQUIPO TÉCNICO Y MECÁNICOS</span><form action="/api/add_record" method="POST" class="m-0 flex flex-wrap gap-4"><input type="hidden" name="tabla" value="mecanico"><input type="hidden" name="referer" value="/?tab=mecanicos"><input type="text" name="nombre" placeholder="Nombre del Mecánico" class="form-input w-64" required><input type="text" name="especialidad" placeholder="Especialidad (Ej: Hidráulica)" class="form-input w-48"><button type="submit" class="btn-primary whitespace-nowrap">Añadir Mecánico</button></form></div><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead><tr><th>Nombre Mecánico</th><th>Especialidad</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>{% for m in mecanicos %}<tr><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'nombre', 'mecanico')" class="font-bold">{{ m.nombre }}</td><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'especialidad', 'mecanico')">{{ m.especialidad }}</td><td contenteditable="true" onblur="guardarInline(this, '{{m.id}}', 'estado', 'mecanico')"><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ m.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}</tbody></table></div></div>
 
@@ -198,6 +232,19 @@
         function borrarRegistro(tabla, id) {
             if(confirm('¿Eliminar permanentemente?')) {
                 fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' }).then(() => location.reload());
+            }
+        }
+
+        // --- NUEVA FUNCIÓN PARA EDITAR LECTURAS ---
+        function editarLectura(id, tipo, valor_actual) {
+            let nuevo_valor = prompt("Ingrese el nuevo valor de " + (tipo === 'HR' ? 'Horómetro' : 'Kilometraje') + ":", valor_actual.replace(/\./g, ''));
+            if (nuevo_valor !== null && nuevo_valor.trim() !== "") {
+                let campo = tipo === 'HR' ? 'horometro' : 'kilometraje';
+                fetch('/update_inline', { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({codigo: id, campo: campo, valor: nuevo_valor, tabla: 'lectura'}) 
+                }).then(() => location.reload());
             }
         }
 
