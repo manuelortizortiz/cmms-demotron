@@ -4,6 +4,8 @@ import random
 import pandas as pd
 import numpy as np
 from sqlalchemy import text
+from flask_login import login_required
+from utils.auth import role_required
 from extensions import db
 from models.equipo import Equipo, FiltroEquipo
 from models.orden_trabajo import OrdenTrabajo
@@ -14,6 +16,8 @@ from utils.formatters import clean_string, clean_int, clean_float, parse_date
 admin_bp = Blueprint('admin', __name__)
 
 @admin_bp.route('/admin/cargar_sql_final', strict_slashes=False)
+@login_required
+@role_required('admin', 'gerencia')
 def cargar_sql_final():
     try:
         try:
@@ -171,27 +175,19 @@ def cargar_sql_final():
     except Exception as e:
         return f"Error Crítico durante la carga: {str(e)}"
 
-# =========================================================
-# NUEVA RUTA: BOTÓN MÁGICO PARA GENERAR MIGRACIONES
-# =========================================================
 @admin_bp.route('/admin/generar_migraciones')
+@login_required
+@role_required('admin', 'gerencia')
 def generar_migraciones():
     from flask_migrate import init, migrate as db_migrate
     import shutil
     
     try:
-        # 1. Si no existe, crea la carpeta base de migraciones
         if not os.path.exists('migrations'):
             init()
-        
-        # 2. Revisa tu BD y genera el archivo de fotografía
         db_migrate(message="Estructura inicial completa")
-        
-        # 3. Comprime la carpeta generada en un archivo ZIP
         zip_path = os.path.join(os.getcwd(), 'migrations_backup')
         shutil.make_archive(zip_path, 'zip', os.getcwd(), 'migrations')
-        
-        # 4. Te descarga el ZIP automáticamente
         return send_file(f"{zip_path}.zip", as_attachment=True)
     except Exception as e:
         return f"Ocurrió un error generando las migraciones: {str(e)}"
