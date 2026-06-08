@@ -6,13 +6,20 @@ from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from sqlalchemy import text
 
-# Importaciones de seguridad añadidas
+# Importaciones de seguridad 
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # --- IMPORTACIONES CENTRALIZADAS (PASO 1) ---
 from config import Config
 from extensions import db, login_manager, scheduler
+
+# --- IMPORTACIONES DE MODELOS MODULARES (PASO 2) ---
+from models.user import User
+from models.equipo import Equipo, FiltroEquipo
+from models.orden_trabajo import OrdenTrabajo
+from models.personal import Personal, RegistroUsoEquipo, Mecanico
+from models.historial import HistorialLectura, CompraRepuesto
 
 app = Flask(__name__)
 # Cargar configuración centralizada
@@ -22,131 +29,14 @@ app.config.from_object(Config)
 db.init_app(app)
 login_manager.init_app(app)
 
-# ==========================================
-# MODELOS DE BASE DE DATOS
-# ==========================================
-
-# --- NUEVO MODELO USER (Requerido para Flask-Login) ---
-class User(UserMixin, db.Model):
-    __tablename__ = 'users'
-    id           = db.Column(db.Integer, primary_key=True)
-    username     = db.Column(db.String(80), unique=True, nullable=False)
-    email        = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash= db.Column(db.String(256), nullable=False)
-    role         = db.Column(db.String(50), default='mecanico') # 'mecanico' | 'supervisor' | 'planificador' | 'gerencia' | 'admin'
-    nombre       = db.Column(db.String(100))
-    activo       = db.Column(db.Boolean, default=True)
-    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
-    last_login   = db.Column(db.DateTime)
-
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
-    @property
-    def is_gerencia(self):
-        return self.role in ['gerencia', 'admin']
-
-    @property
-    def is_supervisor(self):
-        return self.role in ['supervisor', 'planificador', 'gerencia', 'admin']
-
-# --- CONFIGURACIÓN DEL USER LOADER (Soluciona el error) ---
+# --- CONFIGURACIÓN DEL USER LOADER ---
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-
-# --- MODELOS EXISTENTES (Intactos) ---
-class Personal(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100))
-    cargo = db.Column(db.String(100), default="Operador")
-    estado = db.Column(db.String(50), default="Activo")
-    equipo_asignado = db.Column(db.String(50), default="Ninguno")
-
-class RegistroUsoEquipo(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    fecha = db.Column(db.DateTime, default=datetime.now)
-    operador = db.Column(db.String(100))
-    codigo_equipo = db.Column(db.String(50))
-    observacion = db.Column(db.Text) 
-
-class Mecanico(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100))
-    especialidad = db.Column(db.String(100), default="General")
-    estado = db.Column(db.String(50), default="Activo")
-
-class Equipo(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    codigo = db.Column(db.String(50), unique=True)
-    tipo_equipo = db.Column(db.String(100))
-    marca = db.Column(db.String(50))
-    modelo = db.Column(db.String(100))
-    ubicacion = db.Column(db.String(100))
-    responsable = db.Column(db.String(100))
-    estado_base = db.Column(db.String(50), default="Operativo")
-    control_base = db.Column(db.String(50), default="HORAS")
-    frecuencia_base = db.Column(db.Integer, default=250)
-    lectura_actual = db.Column(db.Integer, default=0)
-    proxima_pm = db.Column(db.Integer, default=0)
-    vin = db.Column(db.String(100), default="")
-    n_motor = db.Column(db.String(100), default="")
-    patente = db.Column(db.String(50), default="")
-    planificacion_mantencion = db.Column(db.Text, default="Registrar estrategia de mantenimiento...")
-
-    @property
-    def margen(self): return (self.proxima_pm or 0) - (self.lectura_actual or 0)
-
-class FiltroEquipo(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    codigo_equipo = db.Column(db.String(50))
-    sistema = db.Column(db.String(100), default="-")
-    cant = db.Column(db.Integer, default=1)
-    fleetguard = db.Column(db.String(100), default="-")
-    baldwind = db.Column(db.String(100), default="-")
-    originales = db.Column(db.String(100), default="-")
-    donaldson = db.Column(db.String(100), default="-")
-    otra = db.Column(db.String(100), default="-")
-
-class OrdenTrabajo(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    fecha = db.Column(db.DateTime, default=datetime.now)
-    codigo_equipo = db.Column(db.String(50))
-    tipo_ot = db.Column(db.String(50), default="Preventiva")
-    tipo_mantencion = db.Column(db.Text) 
-    costo_mantencion_clp = db.Column(db.Float, default=0.0)
-    estado = db.Column(db.String(50), default="Pendiente")
-    folio = db.Column(db.String(50))
-    lectura = db.Column(db.Integer, default=0)
-    es_pm = db.Column(db.String(20))
-    lugar = db.Column(db.String(100))
-    mecanico = db.Column(db.String(100), default="Sin Asignar")
-
-class HistorialLectura(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    fecha = db.Column(db.DateTime, default=datetime.now)
-    codigo_equipo = db.Column(db.String(50))
-    horometro = db.Column(db.Integer, default=0)
-    kilometraje = db.Column(db.Integer, default=0)
-    obra_ubicacion = db.Column(db.String(100))
-    responsable = db.Column(db.String(100))
-    observacion = db.Column(db.Text) 
-
-class CompraRepuesto(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    fecha = db.Column(db.DateTime, default=datetime.now)
-    oc = db.Column(db.String(100))
-    codigo_equipo = db.Column(db.String(50))
-    descripcion = db.Column(db.Text) 
-    proveedor = db.Column(db.String(100))
-    costo_pm_clp = db.Column(db.Float, default=0.0)
-    estado_oc = db.Column(db.String(100))
-
-with app.app_context(): db.create_all()
+# Crea las tablas si no existen basándose en los modelos importados
+with app.app_context(): 
+    db.create_all()
 
 # ==========================================
 # FUNCIONES AUXILIARES 
