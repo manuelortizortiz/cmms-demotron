@@ -72,6 +72,16 @@
             <a onclick="switchTab('cond', this)" class="nav-link">Operadores</a>
             <a onclick="switchTab('mecanicos', this)" class="nav-link">Mecánicos</a>
         </nav>
+        
+        <div class="mt-auto border-t border-slate-200 p-4 bg-slate-50">
+            <div class="flex items-center justify-between">
+                <div class="truncate pr-2">
+                    <p class="text-xs font-bold text-slate-800 truncate">{{ current_user.nombre }}</p>
+                    <p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">{{ current_user.role }}</p>
+                </div>
+                <a href="/logout" class="text-red-500 hover:text-white hover:bg-red-500 border border-red-200 p-2 rounded-lg transition-colors font-bold text-xs" title="Cerrar Sesión">Salir</a>
+            </div>
+        </div>
     </aside>
 
     <main class="flex-1 flex flex-col bg-[#F8FAFC] min-w-0">
@@ -310,7 +320,6 @@
             document.getElementById(t).classList.add('active'); el.classList.add('active');
             document.getElementById('title').innerText = el.innerText.trim();
             
-            // Actualiza la URL para que no se pierda la ubicación al recargar
             const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + t;
             window.history.replaceState({path:newUrl}, '', newUrl);
 
@@ -339,7 +348,6 @@
         const cData = {{ charts|tojson }};
         
         window.onload = function() {
-            // Memoria inteligente de pestaña activa
             const urlParams = new URLSearchParams(window.location.search);
             const tabActiva = urlParams.get('tab');
             if (tabActiva) {
