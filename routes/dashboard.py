@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template
 import random
 from datetime import datetime
+from flask_login import login_required
 from models.equipo import Equipo
 from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
@@ -10,6 +11,7 @@ from utils.formatters import format_num, format_clp, buscar_foto_por_tipo
 dashboard_bp = Blueprint('dashboard', __name__)
 
 @dashboard_bp.route('/', strict_slashes=False)
+@login_required
 def dashboard():
     try:
         eqs_db = Equipo.query.all()
