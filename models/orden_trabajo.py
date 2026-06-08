@@ -15,3 +15,8 @@ class OrdenTrabajo(db.Model):
     es_pm = db.Column(db.String(20))
     lugar = db.Column(db.String(100))
     mecanico = db.Column(db.String(100), default="Sin Asignar")
+    
+    # --- NUEVOS CAMPOS (PASO 7) ---
+    sistema_falla = db.Column(db.String(100), nullable=True)
+    causa_raiz = db.Column(db.Text, nullable=True)
+    fecha_cierre = db.Column(db.DateTime, nullable=True)
