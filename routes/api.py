@@ -38,25 +38,51 @@ def add_record():
         eq = Equipo.query.filter_by(codigo=codigo).first()
         lectura_req = clean_int(request.form.get('lectura'))
         if lectura_req == 0 and eq: lectura_req = eq.lectura_actual
+        
         folio_req = request.form.get('folio', '').strip()
         if not folio_req:
             ultima_ot_global = OrdenTrabajo.query.order_by(OrdenTrabajo.id.desc()).first()
             siguiente_id = (ultima_ot_global.id + 1) if ultima_ot_global else 1
             folio_req = f"OT-{siguiente_id:05d}"
             
-        db.session.add(OrdenTrabajo(codigo_equipo=codigo, folio=folio_req, tipo_ot='Preventiva', tipo_mantencion=request.form.get('tipo', 'PM1'), lectura=lectura_req, costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0), estado=request.form.get('estado', 'Pendiente'), mecanico=request.form.get('mecanico', 'Sin Asignar'), fecha=datetime.now()))
+        db.session.add(OrdenTrabajo(
+            codigo_equipo=codigo, 
+            folio=folio_req, 
+            tipo_ot='Preventiva', 
+            tipo_mantencion=request.form.get('tipo', 'PM1'), 
+            lectura=lectura_req, 
+            costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0), 
+            estado=request.form.get('estado', 'Pendiente'), 
+            mecanico=request.form.get('mecanico', 'Sin Asignar'),
+            sistema_falla=request.form.get('sistema_falla'),
+            causa_raiz=request.form.get('causa_raiz'),
+            fecha=datetime.now()
+        ))
 
     elif tabla == 'ot_corr':
         eq = Equipo.query.filter_by(codigo=codigo).first()
         lectura_req = clean_int(request.form.get('lectura'))
         if lectura_req == 0 and eq: lectura_req = eq.lectura_actual
+        
         folio_req = request.form.get('folio', '').strip()
         if not folio_req:
             ultima_ot_global = OrdenTrabajo.query.order_by(OrdenTrabajo.id.desc()).first()
             siguiente_id = (ultima_ot_global.id + 1) if ultima_ot_global else 1
             folio_req = f"CM-{siguiente_id:05d}"
 
-        db.session.add(OrdenTrabajo(codigo_equipo=codigo, folio=folio_req, tipo_ot='Correctiva', tipo_mantencion=request.form.get('falla', 'Avería'), lectura=lectura_req, costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0), estado=request.form.get('estado', 'Pendiente'), mecanico=request.form.get('mecanico', 'Sin Asignar'), fecha=datetime.now()))
+        db.session.add(OrdenTrabajo(
+            codigo_equipo=codigo, 
+            folio=folio_req, 
+            tipo_ot='Correctiva', 
+            tipo_mantencion=request.form.get('falla', 'Avería'), 
+            lectura=lectura_req, 
+            costo_mantencion_clp=clean_float(request.form.get('costo'), 0.0), 
+            estado=request.form.get('estado', 'Pendiente'), 
+            mecanico=request.form.get('mecanico', 'Sin Asignar'),
+            sistema_falla=request.form.get('sistema_falla'),
+            causa_raiz=request.form.get('causa_raiz'),
+            fecha=datetime.now()
+        ))
 
     elif tabla == 'compra':
         db.session.add(CompraRepuesto(codigo_equipo=codigo, oc=request.form.get('oc', f"OC-{random.randint(100,999)}"), descripcion=request.form.get('descripcion', 'Insumos'), costo_pm_clp=clean_float(request.form.get('costo'), 0.0), fecha=datetime.now()))
