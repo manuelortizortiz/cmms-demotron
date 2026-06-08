@@ -1,5 +1,6 @@
 import os
 from flask import Flask
+from sqlalchemy import text
 from config import Config
 from extensions import db, login_manager, scheduler, migrate
 from models.user import User
@@ -12,29 +13,39 @@ def create_app():
     login_manager.init_app(app)
     migrate.init_app(app, db)
 
-    # --- CONFIGURACIÓN DE SEGURIDAD (Login) ---
-    # Le decimos a Flask qué ruta usar para hacer login
     login_manager.login_view = 'auth.login'
-    login_manager.login_message = 'Por favor inicie sesión para acceder al sistema.'
     login_manager.login_message_category = 'danger'
 
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # Importar Blueprints
+    with app.app_context():
+        db.create_all()
+        
+        # --- AUTO-MIGRACIÓN DE CAMPOS ---
+        # Esto añade las columnas si no existen, sin romper nada
+        try:
+            db.session.execute(text("ALTER TABLE orden_trabajo ADD COLUMN IF NOT EXISTS sistema_falla VARCHAR(100)"))
+            db.session.execute(text("ALTER TABLE orden_trabajo ADD COLUMN IF NOT EXISTS causa_raiz TEXT"))
+            db.session.execute(text("ALTER TABLE orden_trabajo ADD COLUMN IF NOT EXISTS fecha_cierre TIMESTAMP"))
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"Nota: Las columnas ya existían o hubo un error al auto-migrar: {e}")
+
+    # Registro de Blueprints
     from routes.dashboard import dashboard_bp
     from routes.equipos import equipos_bp
     from routes.api import api_bp
     from routes.admin import admin_bp
-    from routes.auth import auth_bp  # <-- NUEVO Blueprint
+    from routes.auth import auth_bp
 
-    # Registrar Blueprints
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(equipos_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(admin_bp)
-    app.register_blueprint(auth_bp)  # <-- Registro del Login
+    app.register_blueprint(auth_bp)
 
     return app
 
