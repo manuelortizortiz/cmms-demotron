@@ -2,8 +2,9 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_apscheduler import APScheduler
+from flask_migrate import Migrate  # <-- NUEVO IMPORT
 
-# Inicializamos las extensiones sin vincularlas a la app todavía
 db = SQLAlchemy()
 login_manager = LoginManager()
 scheduler = APScheduler()
+migrate = Migrate()  # <-- INICIALIZAMOS MIGRATE
