@@ -22,10 +22,6 @@ def cargar_sql_final():
     try:
         try:
             db.session.execute(text("ALTER TABLE personal ADD COLUMN equipo_asignado VARCHAR(50) DEFAULT 'Ninguno'"))
-            db.session.commit()
-        except Exception: db.session.rollback()
-        
-        try:
             db.session.execute(text("ALTER TABLE orden_trabajo ADD COLUMN mecanico VARCHAR(100) DEFAULT 'Sin Asignar'"))
             db.session.commit()
         except Exception: db.session.rollback()
@@ -144,11 +140,21 @@ def cargar_sql_final():
                 folio_val = str(row.iloc[6]).strip() if len(row)>6 and row.iloc[6] else f"CM-{random.randint(1000,9999)}"
                 mecanico_val = str(row.iloc[7]).strip() if len(row)>7 and row.iloc[7] else 'Sin Asignar'
 
+                # Clasificación inteligente para histórico en base a Excel
+                falla_lower = falla.lower()
+                if any(x in falla_lower for x in ['motor', 'aceite', 'filtro', 'refrigerante', 'radiador', 'correa']): sistema_val = 'Motor'
+                elif any(x in falla_lower for x in ['hidraulic', 'hidráulic', 'manguera', 'bomba', 'cilindro', 'oring', 'fuga']): sistema_val = 'Hidráulico'
+                elif any(x in falla_lower for x in ['freno', 'balata', 'tambor', 'pastilla']): sistema_val = 'Frenos'
+                elif any(x in falla_lower for x in ['electri', 'eléctri', 'bateria', 'luces', 'sensor', 'cable']): sistema_val = 'Eléctrico'
+                elif any(x in falla_lower for x in ['neumatico', 'neumático', 'rueda', 'llanta']): sistema_val = 'Neumáticos'
+                else: sistema_val = 'Estructura'
+
                 if not OrdenTrabajo.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, tipo_mantencion=falla).first():
                     db.session.add(OrdenTrabajo(
                         fecha=fecha_dt, codigo_equipo=cod, tipo_ot='Correctiva', tipo_mantencion=falla, 
                         lectura=clean_int(row.iloc[3], 0), costo_mantencion_clp=clean_float(row.iloc[4], 0.0), 
-                        estado=estado_val, folio=folio_val, mecanico=mecanico_val
+                        estado=estado_val, folio=folio_val, mecanico=mecanico_val,
+                        sistema_falla=sistema_val, causa_raiz=falla
                     ))
         except: pass
 
@@ -181,10 +187,8 @@ def cargar_sql_final():
 def generar_migraciones():
     from flask_migrate import init, migrate as db_migrate
     import shutil
-    
     try:
-        if not os.path.exists('migrations'):
-            init()
+        if not os.path.exists('migrations'): init()
         db_migrate(message="Estructura inicial completa")
         zip_path = os.path.join(os.getcwd(), 'migrations_backup')
         shutil.make_archive(zip_path, 'zip', os.getcwd(), 'migrations')
