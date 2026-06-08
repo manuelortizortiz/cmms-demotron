@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, redirect
 from datetime import datetime
 import random
+from flask_login import login_required
 from extensions import db
 from models.equipo import Equipo, FiltroEquipo
 from models.orden_trabajo import OrdenTrabajo
@@ -11,6 +12,7 @@ from utils.formatters import clean_int, clean_float
 api_bp = Blueprint('api', __name__)
 
 @api_bp.route('/update_kanban', methods=['POST'])
+@login_required
 def update_kanban():
     data = request.json
     ot = OrdenTrabajo.query.get(data.get('ot_id'))
@@ -20,6 +22,7 @@ def update_kanban():
     return jsonify({"status": "success"})
 
 @api_bp.route('/api/add_record', methods=['POST'])
+@login_required
 def add_record():
     tabla = request.form.get('tabla')
     codigo = request.form.get('codigo')
@@ -74,6 +77,7 @@ def add_record():
     return redirect(request.form.get('referer', '/'))
 
 @api_bp.route('/api/delete_record/<tabla>/<int:id>', methods=['POST'])
+@login_required
 def delete_record(tabla, id):
     obj = None
     if tabla == 'lectura': obj = HistorialLectura.query.get(id)
@@ -91,6 +95,7 @@ def delete_record(tabla, id):
     return jsonify({"status": "error"}), 404
 
 @api_bp.route('/update_inline', methods=['POST'])
+@login_required
 def update_inline():
     data = request.json
     tabla = data.get('tabla')
