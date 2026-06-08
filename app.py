@@ -6,7 +6,11 @@ from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from sqlalchemy import text
 
-# --- IMPORTACIONES NUEVAS (PASO 1) ---
+# Importaciones de seguridad añadidas
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+
+# --- IMPORTACIONES CENTRALIZADAS (PASO 1) ---
 from config import Config
 from extensions import db, login_manager, scheduler
 
@@ -21,6 +25,41 @@ login_manager.init_app(app)
 # ==========================================
 # MODELOS DE BASE DE DATOS
 # ==========================================
+
+# --- NUEVO MODELO USER (Requerido para Flask-Login) ---
+class User(UserMixin, db.Model):
+    __tablename__ = 'users'
+    id           = db.Column(db.Integer, primary_key=True)
+    username     = db.Column(db.String(80), unique=True, nullable=False)
+    email        = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash= db.Column(db.String(256), nullable=False)
+    role         = db.Column(db.String(50), default='mecanico') # 'mecanico' | 'supervisor' | 'planificador' | 'gerencia' | 'admin'
+    nombre       = db.Column(db.String(100))
+    activo       = db.Column(db.Boolean, default=True)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login   = db.Column(db.DateTime)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    @property
+    def is_gerencia(self):
+        return self.role in ['gerencia', 'admin']
+
+    @property
+    def is_supervisor(self):
+        return self.role in ['supervisor', 'planificador', 'gerencia', 'admin']
+
+# --- CONFIGURACIÓN DEL USER LOADER (Soluciona el error) ---
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+
+# --- MODELOS EXISTENTES (Intactos) ---
 class Personal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100))
@@ -257,7 +296,7 @@ def ficha_equipo(codigo):
     return render_template('ficha_equipo.html', eq=equipo, foto_url=foto_url, mants_prev=mants_prev, mants_corr=mants_corr, lecturas=lecturas, filtros=filtros, usos=usos, mecanicos=lista_mecanicos)
 
 # ==========================================
-# RUTAS DE IMPRESIÓN 
+# RUTAS DE IMPRESIÓN
 # ==========================================
 @app.route('/imprimir_ot/<int:ot_id>', strict_slashes=False)
 def imprimir_ot(ot_id):
