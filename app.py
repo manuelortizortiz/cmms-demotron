@@ -4,7 +4,7 @@ from sqlalchemy import text
 from config import Config
 from extensions import db, login_manager, scheduler, migrate, mail
 from models.user import User
-from models.orden_trabajo import OrdenTrabajo  # <-- Necesario para el parche
+from models.orden_trabajo import OrdenTrabajo
 
 def create_app():
     app = Flask(__name__)
@@ -25,31 +25,28 @@ def create_app():
     with app.app_context():
         db.create_all()
         
-        # 1. Crear columnas si no existen
         try:
             db.session.execute(text("ALTER TABLE orden_trabajo ADD COLUMN IF NOT EXISTS sistema_falla VARCHAR(100)"))
             db.session.execute(text("ALTER TABLE orden_trabajo ADD COLUMN IF NOT EXISTS causa_raiz TEXT"))
             db.session.execute(text("ALTER TABLE orden_trabajo ADD COLUMN IF NOT EXISTS fecha_cierre TIMESTAMP"))
+            # --- NUEVA AUTO-MIGRACIÓN PARA EL RUT ---
+            db.session.execute(text("ALTER TABLE mecanico ADD COLUMN IF NOT EXISTS rut VARCHAR(20)"))
             db.session.commit()
         except Exception as e:
             db.session.rollback()
 
-        # 2. PARCHE MÁGICO: Clasificar datos históricos para encender el Gráfico Pareto
         try:
             ots_viejas = OrdenTrabajo.query.filter(OrdenTrabajo.tipo_ot == 'Correctiva').all()
             for ot in ots_viejas:
                 if not ot.sistema_falla or ot.sistema_falla == 'Otros':
                     falla = ot.tipo_mantencion.lower() if ot.tipo_mantencion else ""
-                    # Inteligencia de clasificación por palabras clave
                     if any(x in falla for x in ['motor', 'aceite', 'filtro', 'refrig', 'radiador', 'correa']): ot.sistema_falla = 'Motor'
                     elif any(x in falla for x in ['hidraulic', 'hidráulic', 'manguera', 'bomba', 'cilindro', 'oring', 'fuga']): ot.sistema_falla = 'Hidráulico'
                     elif any(x in falla for x in ['freno', 'balata', 'tambor', 'pastilla']): ot.sistema_falla = 'Frenos'
                     elif any(x in falla for x in ['electri', 'eléctri', 'bateria', 'luces', 'sensor', 'cable']): ot.sistema_falla = 'Eléctrico'
                     elif any(x in falla for x in ['neumatico', 'neumático', 'rueda', 'llanta']): ot.sistema_falla = 'Neumáticos'
                     else: ot.sistema_falla = 'Estructura'
-                    
-                    if not ot.causa_raiz:
-                        ot.causa_raiz = ot.tipo_mantencion
+                    if not ot.causa_raiz: ot.causa_raiz = ot.tipo_mantencion
             db.session.commit()
         except Exception as e:
             db.session.rollback()
