@@ -100,8 +100,17 @@ def cargar_sql_final():
             fecha_dt = parse_date(row.get('Fecha'))
             tipo = clean_string(str(row.get('Tipo Mantencion', '') or ''))
             
+            # --- FIX: MANEJO SEGURO DE FOLIO (Evita el error con 'SN' u otros textos) ---
             folio_raw = row.get('Folio')
-            folio_str = str(int(float(folio_raw))) if folio_raw is not None and folio_raw == folio_raw else ''
+            folio_str = ''
+            if folio_raw is not None and str(folio_raw).lower() not in ['none', 'nan', '']:
+                try:
+                    # Intenta convertir a int si es número (ej: 15910.0 -> '15910')
+                    folio_str = str(int(float(folio_raw)))
+                except (ValueError, TypeError):
+                    # Si falla (ej: 'SN'), lo deja como texto normal
+                    folio_str = str(folio_raw).strip()
+            # -----------------------------------------------------------------------------
             
             es_pm_raw = clean_string(str(row.get('EsPM', 'No') or 'No')).lower()
             tipo_ot = 'Preventiva' if es_pm_raw in ['sí','si','s','yes','1','true'] else 'Correctiva'
@@ -119,18 +128,27 @@ def cargar_sql_final():
                 ))
         db.session.commit()
 
-        # --- 4. HOJA CORRECTIVAS (CON FIX DE PARETO Y ESPACIO EN COLUMNA) ---
+        # --- 4. HOJA CORRECTIVAS ---
         try:
             df_corr = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Correctivas", skiprows=2).replace({np.nan: None})
-            df_corr.columns = df_corr.columns.str.strip()  # Elimina el bug del espacio "Falla / Averia "
+            df_corr.columns = df_corr.columns.str.strip() # Corrige el bug del espacio "Falla / Averia "
             for _, row in df_corr.iterrows():
                 cod = clean_string(str(row.get('Codigo Equipo', '') or ''))
                 if not cod or cod.lower() == 'none': continue
                 fecha_dt = parse_date(row.get('Fecha'))
                 falla = clean_string(str(row.get('Falla / Averia', '') or ''))
                 
+                # --- FIX: MANEJO SEGURO DE FOLIO CORRECTIVAS ---
                 folio_raw = row.get('Folio')
-                folio_val = str(int(float(folio_raw))) if folio_raw is not None and folio_raw==folio_raw else f"CM-{random.randint(1000,9999)}"
+                if folio_raw is not None and str(folio_raw).lower() not in ['none', 'nan', '']:
+                    try:
+                        folio_val = str(int(float(folio_raw)))
+                    except (ValueError, TypeError):
+                        folio_val = str(folio_raw).strip()
+                else:
+                    folio_val = f"CM-{random.randint(1000,9999)}"
+                # ------------------------------------------------
+                
                 mecanico_val = clean_string(str(row.get('Mecanico', '') or 'Sin Asignar')) or 'Sin Asignar'
                 estado_val = clean_string(str(row.get('Estado', '') or 'Finalizada')) or 'Finalizada'
                 
@@ -221,6 +239,7 @@ def cargar_sql_final():
 
         return "Carga Completa y Exitosa con Sincronización Segura. <a href='/'>Ir al Dashboard</a>"
     except Exception as e:
+        db.session.rollback()
         return f"Error Crítico durante la carga: {str(e)}"
 
 @admin_bp.route('/admin/generar_migraciones')
