@@ -49,7 +49,6 @@ def dashboard():
 
         proximos = sorted(proximos, key=lambda x: x['margen'])
 
-        # --- NUEVOS KPIs Y TOP FALLAS ---
         total_eq = len(eqs_db)
         operativos_count = conteo_estado.get('Operativo', 0)
         disponibilidad_pct = round((operativos_count / total_eq * 100), 1) if total_eq > 0 else 0
@@ -73,7 +72,6 @@ def dashboard():
         todas_compras = [{'id': c.id, 'fecha': c.fecha.strftime('%d/%m/%Y'), 'oc': c.oc, 'codigo': c.codigo_equipo, 'descripcion': c.descripcion, 'costo_str': format_clp(c.costo_pm_clp)} for c in compras_db]
         todas_lecturas = [{'id': l.id, 'fecha': l.fecha.strftime('%d/%m/%Y'), 'codigo': l.codigo_equipo, 'valor_str': format_num(max(l.horometro or 0, l.kilometraje or 0)), 'tipo': 'HR' if (l.horometro and l.horometro > 0) else 'KM', 'obs': l.observacion, 'responsable': l.responsable} for l in lecturas_db]
         
-        # --- KANBAN MEJORADO (5 ESTADOS Y TARJETAS RICAS) ---
         kanban_tareas = {'Pendiente': [], 'En Progreso': [], 'En Espera Repuestos': [], 'En Revisión': [], 'Finalizada': []}
         for ot in ots_db:
             estado_k = ot.estado if ot.estado in kanban_tareas else 'Pendiente'
@@ -112,12 +110,15 @@ def dashboard():
             'costos_mensuales': {'labels': ['Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul'], 'data': list(costos.values())}
         }
         
+        # --- SE ENVIAN LOS RUTs AL TEMPLATE HTML ---
+        mecanicos_list = [{'id': m.id, 'rut': m.rut, 'nombre': m.nombre, 'especialidad': m.especialidad, 'estado': m.estado} for m in mecanicos_db]
+
         return render_template('index.html', kpis=kpis, charts=charts, fallas_data=fallas_data, 
                                eqs=equipos_dict, criticos=criticos, proximos=proximos, taller=taller, 
                                top_equipos_fallas=top_equipos_fallas, mants_prev=todas_mants_prev, 
                                mants_corr=todas_mants_corr, compras=todas_compras, lecturas=todas_lecturas, 
                                kanban=kanban_tareas, operadores=[{'id': p.id, 'nombre': p.nombre, 'cargo': p.cargo, 'estado': p.estado, 'equipo_asignado': p.equipo_asignado} for p in operadores_db], 
-                               mecanicos=[{'id': m.id, 'nombre': m.nombre, 'especialidad': m.especialidad, 'estado': m.estado} for m in mecanicos_db], 
+                               mecanicos=mecanicos_list, 
                                usos=[{'id': u.id, 'fecha': u.fecha.strftime('%d/%m/%Y'), 'operador': u.operador, 'codigo_equipo': u.codigo_equipo, 'observacion': u.observacion} for u in usos_db])
     except Exception as e:
         return f"Error en Dashboard: {str(e)}"
