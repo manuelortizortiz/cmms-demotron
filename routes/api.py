@@ -33,10 +33,8 @@ def add_record():
     if tabla == 'lectura':
         val = clean_int(request.form.get('valor'))
         eq = Equipo.query.filter_by(codigo=codigo).first()
-        # Inteligencia: Detecta HR o KM automáticamente
         h_val = val if eq and eq.control_base == 'HORAS' else 0
         k_val = val if eq and eq.control_base == 'KM' else 0
-        
         db.session.add(HistorialLectura(
             codigo_equipo=codigo, horometro=h_val, kilometraje=k_val, 
             observacion=request.form.get('observacion', ''), fecha=datetime.now(),
@@ -48,13 +46,11 @@ def add_record():
         eq = Equipo.query.filter_by(codigo=codigo).first()
         lectura_req = clean_int(request.form.get('lectura'))
         if lectura_req == 0 and eq: lectura_req = eq.lectura_actual
-        
         folio_req = request.form.get('folio', '').strip()
         if not folio_req:
             ultima_ot_global = OrdenTrabajo.query.order_by(OrdenTrabajo.id.desc()).first()
             siguiente_id = (ultima_ot_global.id + 1) if ultima_ot_global else 1
             folio_req = f"OT-{siguiente_id:05d}"
-            
         db.session.add(OrdenTrabajo(
             codigo_equipo=codigo, folio=folio_req, tipo_ot='Preventiva', 
             tipo_mantencion=request.form.get('tipo', 'PM1'), lectura=lectura_req, 
@@ -68,11 +64,9 @@ def add_record():
         eq = Equipo.query.filter_by(codigo=codigo).first()
         lectura_req = clean_int(request.form.get('lectura'))
         if lectura_req == 0 and eq: lectura_req = eq.lectura_actual
-        
         folio_req = request.form.get('folio', '').strip() or f"CM-{datetime.now().strftime('%M%S%f')}"
         sistema_f = request.form.get('sistema_falla', 'No especificado')
         causa_r = request.form.get('causa_raiz', 'Sin diagnóstico inicial')
-
         nueva_ot = OrdenTrabajo(
             codigo_equipo=codigo, folio=folio_req, tipo_ot='Correctiva', 
             tipo_mantencion=request.form.get('falla', 'Avería'), lectura=lectura_req, 
@@ -83,24 +77,16 @@ def add_record():
         )
         db.session.add(nueva_ot)
         db.session.commit()
-
         try:
-            msg = Message(
-                subject=f"🚨 ALERTA CMMS: Nueva Avería en Equipo {codigo}",
-                sender='no-reply@demotron.cl',
-                recipients=['admin@demotron.cl']
-            )
+            msg = Message(subject=f"🚨 ALERTA CMMS: Nueva Avería en Equipo {codigo}", sender='no-reply@demotron.cl', recipients=['admin@demotron.cl'])
             msg.body = f"Se ha reportado una avería.\nEquipo: {codigo}\nFolio: {folio_req}\nSistema: {sistema_f}\nDiagnóstico: {causa_r}"
             mail.send(msg)
-        except Exception as e:
-            print(f"Error correo: {e}")
+        except Exception as e: print(f"Error correo: {e}")
 
     elif tabla == 'compra':
-        # Fix: OC Segura para evitar colisiones
         oc_segura = request.form.get('oc', '').strip() or f"OC-{datetime.now().strftime('%Y%m%d%H%M')}"
         db.session.add(CompraRepuesto(
-            codigo_equipo=codigo, oc=oc_segura, 
-            descripcion=request.form.get('descripcion', 'Insumos'), 
+            codigo_equipo=codigo, oc=oc_segura, descripcion=request.form.get('descripcion', 'Insumos'), 
             costo_pm_clp=clean_float(request.form.get('costo'), 0.0), fecha=datetime.now()
         ))
         
@@ -114,8 +100,14 @@ def add_record():
         db.session.add(RegistroUsoEquipo(fecha=fecha_uso, operador=request.form.get('operador', ''), codigo_equipo=codigo, observacion=request.form.get('observacion', '')))
         op = Personal.query.filter_by(nombre=request.form.get('operador')).first()
         if op: op.equipo_asignado = codigo
+        
     elif tabla == 'mecanico':
-        db.session.add(Mecanico(nombre=request.form.get('nombre', ''), especialidad=request.form.get('especialidad', 'General'), estado='Activo'))
+        db.session.add(Mecanico(
+            rut=request.form.get('rut', ''),  # <-- GUARDADO DE RUT
+            nombre=request.form.get('nombre', ''), 
+            especialidad=request.form.get('especialidad', 'General'), 
+            estado='Activo'
+        ))
 
     db.session.commit()
     return redirect(request.form.get('referer', '/'))
@@ -131,7 +123,6 @@ def delete_record(tabla, id):
     elif tabla == 'personal': obj = Personal.query.get(id)
     elif tabla == 'mecanico': obj = Mecanico.query.get(id)
     elif tabla == 'uso_equipo': obj = RegistroUsoEquipo.query.get(id)
-        
     if obj:
         db.session.delete(obj)
         db.session.commit()
@@ -165,7 +156,6 @@ def update_inline():
         return jsonify({"status": "success"})
     return jsonify({"status": "error"}), 404
 
-# --- NUEVAS RUTAS DE EDICIÓN ---
 @api_bp.route('/api/edit_ot/<int:ot_id>', methods=['POST'])
 @login_required
 def edit_ot(ot_id):
@@ -200,7 +190,6 @@ def edit_lectura(lid):
     if data.get('horometro') is not None: lec.horometro = clean_int(data.get('horometro'), 0)
     if data.get('kilometraje') is not None: lec.kilometraje = clean_int(data.get('kilometraje'), 0)
     if data.get('observacion') is not None: lec.observacion = data.get('observacion').strip()
-    
     eq = Equipo.query.filter_by(codigo=lec.codigo_equipo).first()
     if eq:
         ultima = HistorialLectura.query.filter_by(codigo_equipo=lec.codigo_equipo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
@@ -217,8 +206,7 @@ def edit_equipo(codigo):
     for campo in campos:
         val = data.get(campo)
         if val is not None: setattr(eq, campo, val.strip())
-    if data.get('frecuencia_base'):
-        eq.frecuencia_base = clean_int(data.get('frecuencia_base'), eq.frecuencia_base)
+    if data.get('frecuencia_base'): eq.frecuencia_base = clean_int(data.get('frecuencia_base'), eq.frecuencia_base)
     eq.proxima_pm = (eq.lectura_actual or 0) + eq.frecuencia_base
     db.session.commit()
     return jsonify({"status": "success"})
