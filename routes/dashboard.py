@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template
 import random
 from datetime import datetime
+from collections import Counter
 from flask_login import login_required
 from sqlalchemy import func
 from extensions import db
@@ -43,25 +44,47 @@ def dashboard():
             if 0 <= e.margen <= 150 and e.estado_base != 'Fuera de Servicio': proximos.append(eq_data)
 
         fallas_query = db.session.query(OrdenTrabajo.sistema_falla, func.count(OrdenTrabajo.id))\
-                         .filter(OrdenTrabajo.tipo_ot == 'Correctiva')\
-                         .group_by(OrdenTrabajo.sistema_falla).all()
+                         .filter(OrdenTrabajo.tipo_ot == 'Correctiva').group_by(OrdenTrabajo.sistema_falla).all()
         fallas_data = {'labels': [f[0] or "Otros" for f in fallas_query], 'data': [f[1] for f in fallas_query]}
 
         proximos = sorted(proximos, key=lambda x: x['margen'])
-        equipos_aleatorios = list(equipos_dict)
-        random.shuffle(equipos_aleatorios)
+
+        # --- NUEVOS KPIs Y TOP FALLAS ---
+        total_eq = len(eqs_db)
+        operativos_count = conteo_estado.get('Operativo', 0)
+        disponibilidad_pct = round((operativos_count / total_eq * 100), 1) if total_eq > 0 else 0
+
+        mes_actual = datetime.now().month
+        anio_actual = datetime.now().year
+        pm_mes = [o for o in ots_db if o.tipo_ot=='Preventiva' and o.fecha and o.fecha.month==mes_actual and o.fecha.year==anio_actual]
+        pm_finalizadas = len([o for o in pm_mes if o.estado=='Finalizada'])
+        cumpl_pm_pct = round(pm_finalizadas / len(pm_mes) * 100, 1) if pm_mes else 0
+
+        correctivas_mes = len([o for o in ots_db if o.tipo_ot=='Correctiva' and o.fecha and o.fecha.month==mes_actual and o.fecha.year==anio_actual])
+
+        eq_fallas_counter = Counter(o.codigo_equipo for o in ots_db if o.tipo_ot=='Correctiva')
+        top_equipos_fallas = [
+            {'codigo': k, 'cantidad': v, 'foto_url': buscar_foto_por_tipo(next((e.tipo_equipo for e in eqs_db if e.codigo==k), ''), '')}
+            for k, v in eq_fallas_counter.most_common(5)
+        ]
 
         todas_mants_prev = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Preventiva']
         todas_mants_corr = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'sistema_falla': m.sistema_falla, 'causa_raiz': m.causa_raiz, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Correctiva']
         todas_compras = [{'id': c.id, 'fecha': c.fecha.strftime('%d/%m/%Y'), 'oc': c.oc, 'codigo': c.codigo_equipo, 'descripcion': c.descripcion, 'costo_str': format_clp(c.costo_pm_clp)} for c in compras_db]
-        
-        # Corrección: Asegurarnos de enviar 'tipo' y 'responsable' a la tabla de Lecturas
         todas_lecturas = [{'id': l.id, 'fecha': l.fecha.strftime('%d/%m/%Y'), 'codigo': l.codigo_equipo, 'valor_str': format_num(max(l.horometro or 0, l.kilometraje or 0)), 'tipo': 'HR' if (l.horometro and l.horometro > 0) else 'KM', 'obs': l.observacion, 'responsable': l.responsable} for l in lecturas_db]
         
-        kanban_tareas = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Finalizada': []}
+        # --- KANBAN MEJORADO (5 ESTADOS Y TARJETAS RICAS) ---
+        kanban_tareas = {'Pendiente': [], 'En Progreso': [], 'En Espera Repuestos': [], 'En Revisión': [], 'Finalizada': []}
         for ot in ots_db:
-            if ot.estado in kanban_tareas:
-                kanban_tareas[ot.estado].append({'id': ot.id, 'codigo': ot.codigo_equipo, 'folio': ot.folio, 'tipo': ot.tipo_mantencion, 'fecha': ot.fecha.strftime('%d/%m/%Y'), 'clasificacion': ot.tipo_ot})
+            estado_k = ot.estado if ot.estado in kanban_tareas else 'Pendiente'
+            dias_abierta = (datetime.now() - ot.fecha).days if ot.fecha else 0
+            kanban_tareas[estado_k].append({
+                'id': ot.id, 'codigo': ot.codigo_equipo, 'folio': ot.folio,
+                'tipo': ot.tipo_mantencion, 'fecha': ot.fecha.strftime('%d/%m/%Y') if ot.fecha else '',
+                'clasificacion': ot.tipo_ot, 'mecanico': ot.mecanico or 'Sin Asignar',
+                'sistema_falla': ot.sistema_falla or '', 'dias': dias_abierta,
+                'vencida': dias_abierta > 7 and estado_k != 'Finalizada'
+            })
 
         mes_actual = datetime.now().month
         costos = {2:0, 3:0, 4:0, 5:0, 6:0, 7:0}
@@ -77,10 +100,11 @@ def dashboard():
             mttr_str = "0 hrs"
 
         kpis = {
-            'total': len(eqs_db), 'operativos': conteo_estado.get('Operativo', 0),
-            'atrasados': len(criticos), 'ot_abiertas': len([o for o in ots_db if o.estado != 'Finalizada']),
-            'costo_mes_str': format_clp(costos.get(mes_actual, 0)),
-            'mttr': mttr_str
+            'total': total_eq, 'operativos': operativos_count, 'atrasados': len(criticos), 
+            'ot_abiertas': len([o for o in ots_db if o.estado != 'Finalizada']),
+            'costo_mes_str': format_clp(costos.get(mes_actual, 0)), 'mttr': mttr_str,
+            'disponibilidad_pct': disponibilidad_pct, 'cumpl_pm_pct': cumpl_pm_pct,
+            'correctivas_mes': correctivas_mes
         }
 
         charts = {
@@ -88,6 +112,12 @@ def dashboard():
             'costos_mensuales': {'labels': ['Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul'], 'data': list(costos.values())}
         }
         
-        return render_template('index.html', kpis=kpis, charts=charts, fallas_data=fallas_data, eqs=equipos_dict, criticos=criticos, proximos=proximos, taller=taller, equipos_aleatorios=equipos_aleatorios, mants_prev=todas_mants_prev, mants_corr=todas_mants_corr, compras=todas_compras, lecturas=todas_lecturas, kanban=kanban_tareas, operadores=[{'id': p.id, 'nombre': p.nombre, 'cargo': p.cargo, 'estado': p.estado, 'equipo_asignado': p.equipo_asignado} for p in operadores_db], mecanicos=[{'id': m.id, 'nombre': m.nombre, 'especialidad': m.especialidad, 'estado': m.estado} for m in mecanicos_db], usos=[{'id': u.id, 'fecha': u.fecha.strftime('%d/%m/%Y'), 'operador': u.operador, 'codigo_equipo': u.codigo_equipo, 'observacion': u.observacion} for u in usos_db])
+        return render_template('index.html', kpis=kpis, charts=charts, fallas_data=fallas_data, 
+                               eqs=equipos_dict, criticos=criticos, proximos=proximos, taller=taller, 
+                               top_equipos_fallas=top_equipos_fallas, mants_prev=todas_mants_prev, 
+                               mants_corr=todas_mants_corr, compras=todas_compras, lecturas=todas_lecturas, 
+                               kanban=kanban_tareas, operadores=[{'id': p.id, 'nombre': p.nombre, 'cargo': p.cargo, 'estado': p.estado, 'equipo_asignado': p.equipo_asignado} for p in operadores_db], 
+                               mecanicos=[{'id': m.id, 'nombre': m.nombre, 'especialidad': m.especialidad, 'estado': m.estado} for m in mecanicos_db], 
+                               usos=[{'id': u.id, 'fecha': u.fecha.strftime('%d/%m/%Y'), 'operador': u.operador, 'codigo_equipo': u.codigo_equipo, 'observacion': u.observacion} for u in usos_db])
     except Exception as e:
         return f"Error en Dashboard: {str(e)}"
