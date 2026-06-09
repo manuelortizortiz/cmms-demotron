@@ -10,7 +10,8 @@ from extensions import db
 from models.equipo import Equipo, FiltroEquipo
 from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
-from models.personal import Personal, RegistroUsoEquipo
+# Agregamos Mecanico a las importaciones
+from models.personal import Personal, RegistroUsoEquipo, Mecanico
 from utils.formatters import clean_string, clean_int, clean_float, parse_date
 
 admin_bp = Blueprint('admin', __name__)
@@ -100,17 +101,15 @@ def cargar_sql_final():
             fecha_dt = parse_date(row.get('Fecha'))
             tipo = clean_string(str(row.get('Tipo Mantencion', '') or ''))
             
-            # --- FIX: MANEJO SEGURO DE FOLIO (Evita el error con 'SN' u otros textos) ---
+            # --- FIX: MANEJO SEGURO DE FOLIO ---
             folio_raw = row.get('Folio')
             folio_str = ''
             if folio_raw is not None and str(folio_raw).lower() not in ['none', 'nan', '']:
                 try:
-                    # Intenta convertir a int si es número (ej: 15910.0 -> '15910')
                     folio_str = str(int(float(folio_raw)))
                 except (ValueError, TypeError):
-                    # Si falla (ej: 'SN'), lo deja como texto normal
                     folio_str = str(folio_raw).strip()
-            # -----------------------------------------------------------------------------
+            # -----------------------------------
             
             es_pm_raw = clean_string(str(row.get('EsPM', 'No') or 'No')).lower()
             tipo_ot = 'Preventiva' if es_pm_raw in ['sí','si','s','yes','1','true'] else 'Correctiva'
@@ -131,7 +130,7 @@ def cargar_sql_final():
         # --- 4. HOJA CORRECTIVAS ---
         try:
             df_corr = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Correctivas", skiprows=2).replace({np.nan: None})
-            df_corr.columns = df_corr.columns.str.strip() # Corrige el bug del espacio "Falla / Averia "
+            df_corr.columns = df_corr.columns.str.strip()
             for _, row in df_corr.iterrows():
                 cod = clean_string(str(row.get('Codigo Equipo', '') or ''))
                 if not cod or cod.lower() == 'none': continue
@@ -152,7 +151,7 @@ def cargar_sql_final():
                 mecanico_val = clean_string(str(row.get('Mecanico', '') or 'Sin Asignar')) or 'Sin Asignar'
                 estado_val = clean_string(str(row.get('Estado', '') or 'Finalizada')) or 'Finalizada'
                 
-                # Inteligencia del Gráfico Pareto: Clasifica los registros viejos automáticamente
+                # Inteligencia del Gráfico Pareto
                 falla_lower = falla.lower()
                 if any(x in falla_lower for x in ['motor','aceite','filtro','refrigerante','radiador','correa']): sistema_val='Motor'
                 elif any(x in falla_lower for x in ['hidraulic','hidráulic','manguera','bomba','cilindro','oring','fuga']): sistema_val='Hidráulico'
@@ -202,7 +201,7 @@ def cargar_sql_final():
             else: eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
         db.session.commit()
 
-        # ARCHIVOS ADICIONALES (Filtros y detalles)
+        # ARCHIVOS ADICIONALES
         if archivo_detalles:
             if archivo_detalles.endswith('.xlsx'): df_det = pd.read_excel(archivo_detalles, engine='openpyxl')
             else: df_det = pd.read_csv(archivo_detalles)
@@ -256,3 +255,63 @@ def generar_migraciones():
         return send_file(f"{zip_path}.zip", as_attachment=True)
     except Exception as e:
         return f"Ocurrió un error generando las migraciones: {str(e)}"
+
+# --- NUEVA FUNCIÓN DE CARGA MASIVA DE TALLER ---
+@admin_bp.route('/admin/cargar_taller', strict_slashes=False)
+@login_required
+@role_required('admin', 'gerencia')
+def cargar_taller():
+    # Lista extraída de tu tabla en la imagen
+    equipo_taller = [
+        {"nombre": "Marcelo Alegria Corvalan", "cargo": "ELECTROMECANICO"},
+        {"nombre": "Francisco Antonio Almuna Bravo", "cargo": "MECANICO"},
+        {"nombre": "Elias Alvarado Otarola", "cargo": "ENCARGADO DE MANTENCIONES"},
+        {"nombre": "Daniel Hernan Andrade Altamirano", "cargo": "JEFE DE TALLER"},
+        {"nombre": "Francisco Javier Beltran Troncoso", "cargo": "ASISTENTE DE BODEGA"},
+        {"nombre": "Pablo Sebastián Bulnes Benvenuto", "cargo": "MECANICO"},
+        {"nombre": "Jonathan Alejandro Care Morales", "cargo": "MECANICO ESPECIALISTA EN A/C"},
+        {"nombre": "Juan Carlos Celedon Salinas", "cargo": "MECANICO"},
+        {"nombre": "Juan Carlos Cheuque Inostroza", "cargo": "SOLDADOR"},
+        {"nombre": "Domingo Andres Garrido Faundez", "cargo": "ASISTENTE DE CONTROL DE GESTIÓN"},
+        {"nombre": "Sergio Enrique Ibañez Pinilla", "cargo": "CHOFER"},
+        {"nombre": "Sebastian Antonio Lastra Bustamante", "cargo": "AYUDANTE"},
+        {"nombre": "Manuel Alejandro Ortiz Ortiz", "cargo": "JEFE DE SERVICIOS Y MANTENCIONES"},
+        {"nombre": "Francisco Solano Parra Muñoz", "cargo": "MECANICO"},
+        {"nombre": "Israel Perez Gomez", "cargo": "MECANICO"},
+        {"nombre": "Matias Ignacio Piñaleo Molina", "cargo": "AYUDANTE MECANICO"},
+        {"nombre": "Alejandro Andres Poblete Olivares", "cargo": "ASISTENTE DE TALLER"},
+        {"nombre": "Claudio Antonio Ramirez Muñoz", "cargo": "VULCANIZADOR"},
+        {"nombre": "Rodrigo Fernando Rigaud Briceño", "cargo": "ASISTENTE DE TALLER"},
+        {"nombre": "Luis Alejandro Rios Hernandez", "cargo": "MECANICO"},
+        {"nombre": "Bernardo Miguel Salinas Espinoza", "cargo": "ELECTRICISTA"},
+        {"nombre": "Octavio Andres Santelices Utreras", "cargo": "DESARROLLADOR DE SISTEMAS Y SOPORTE"},
+        {"nombre": "Washington Ernesto Sanzana Molina", "cargo": "MECANICO"},
+        {"nombre": "Marcelino Antonio Silva Naranjo", "cargo": "ASISTENTE DE TALLER"},
+        {"nombre": "Marcos Ricardo Soto Mendoza", "cargo": "ELECTROMECANICO"},
+        {"nombre": "Luis Felipe Valenzuela Burgos", "cargo": "ASISTENTE DE MECANICOS"},
+        {"nombre": "Juan Enrique Villalobos Saez", "cargo": "MECANICO"},
+        {"nombre": "Jorge Enrique Villanueva Vega", "cargo": "SOLDADOR"},
+        {"nombre": "Carlos Cesar Viñals Medina", "cargo": "SUPERVISOR DE TERRENO"}
+    ]
+    
+    try:
+        agregados = 0
+        for persona in equipo_taller:
+            if not Mecanico.query.filter_by(nombre=persona['nombre']).first():
+                nuevo_membro = Mecanico(
+                    nombre=persona['nombre'], 
+                    especialidad=persona['cargo'].upper(), 
+                    estado='Activo'
+                )
+                db.session.add(nuevo_membro)
+                agregados += 1
+                
+        db.session.commit()
+        return f"<div style='font-family: Arial; padding: 40px; text-align: center;'>" \
+               f"<h2 style='color: green;'>¡Carga Exitosa!</h2>" \
+               f"<p>Se agregaron {agregados} miembros nuevos al equipo de taller.</p>" \
+               f"<a href='/?tab=mecanicos' style='display: inline-block; padding: 10px 20px; background: #2563EB; color: white; text-decoration: none; border-radius: 8px;'>Ver Equipo en Dashboard</a>" \
+               f"</div>"
+    except Exception as e:
+        db.session.rollback()
+        return f"Error al cargar el personal: {str(e)}"
