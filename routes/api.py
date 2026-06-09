@@ -32,9 +32,16 @@ def add_record():
     
     if tabla == 'lectura':
         val = clean_int(request.form.get('valor'))
-        ctrl = request.form.get('control', 'HR')
-        db.session.add(HistorialLectura(codigo_equipo=codigo, horometro=val if ctrl == 'HR' else 0, kilometraje=val if ctrl == 'KM' else 0, observacion=request.form.get('observacion', ''), fecha=datetime.now()))
         eq = Equipo.query.filter_by(codigo=codigo).first()
+        # Inteligencia: Detecta HR o KM automáticamente
+        h_val = val if eq and eq.control_base == 'HORAS' else 0
+        k_val = val if eq and eq.control_base == 'KM' else 0
+        
+        db.session.add(HistorialLectura(
+            codigo_equipo=codigo, horometro=h_val, kilometraje=k_val, 
+            observacion=request.form.get('observacion', ''), fecha=datetime.now(),
+            responsable=request.form.get('responsable', 'Admin')
+        ))
         if eq: eq.lectura_actual = val
 
     elif tabla == 'ot':
@@ -62,7 +69,7 @@ def add_record():
         lectura_req = clean_int(request.form.get('lectura'))
         if lectura_req == 0 and eq: lectura_req = eq.lectura_actual
         
-        folio_req = request.form.get('folio', '').strip() or f"CM-{random.randint(1000,9999)}"
+        folio_req = request.form.get('folio', '').strip() or f"CM-{datetime.now().strftime('%M%S%f')}"
         sistema_f = request.form.get('sistema_falla', 'No especificado')
         causa_r = request.form.get('causa_raiz', 'Sin diagnóstico inicial')
 
@@ -83,13 +90,20 @@ def add_record():
                 sender='no-reply@demotron.cl',
                 recipients=['admin@demotron.cl']
             )
-            msg.body = f"Se ha reportado una nueva avería.\n\nEquipo: {codigo}\nFolio: {folio_req}\nSistema: {sistema_f}\nDiagnóstico: {causa_r}\n\nRevisar en el Kanban para asignación."
+            msg.body = f"Se ha reportado una avería.\nEquipo: {codigo}\nFolio: {folio_req}\nSistema: {sistema_f}\nDiagnóstico: {causa_r}"
             mail.send(msg)
         except Exception as e:
             print(f"Error correo: {e}")
 
     elif tabla == 'compra':
-        db.session.add(CompraRepuesto(codigo_equipo=codigo, oc=request.form.get('oc', f"OC-{random.randint(100,999)}"), descripcion=request.form.get('descripcion', 'Insumos'), costo_pm_clp=clean_float(request.form.get('costo'), 0.0), fecha=datetime.now()))
+        # Fix: OC Segura para evitar colisiones
+        oc_segura = request.form.get('oc', '').strip() or f"OC-{datetime.now().strftime('%Y%m%d%H%M')}"
+        db.session.add(CompraRepuesto(
+            codigo_equipo=codigo, oc=oc_segura, 
+            descripcion=request.form.get('descripcion', 'Insumos'), 
+            costo_pm_clp=clean_float(request.form.get('costo'), 0.0), fecha=datetime.now()
+        ))
+        
     elif tabla == 'filtro':
         db.session.add(FiltroEquipo(codigo_equipo=codigo, sistema="NUEVO SISTEMA"))
     elif tabla == 'personal':
@@ -150,3 +164,73 @@ def update_inline():
         db.session.commit()
         return jsonify({"status": "success"})
     return jsonify({"status": "error"}), 404
+
+# --- NUEVAS RUTAS DE EDICIÓN ---
+@api_bp.route('/api/edit_ot/<int:ot_id>', methods=['POST'])
+@login_required
+def edit_ot(ot_id):
+    ot = OrdenTrabajo.query.get_or_404(ot_id)
+    data = request.form
+    if data.get('fecha'):
+        try: ot.fecha = datetime.strptime(data.get('fecha'), '%Y-%m-%d')
+        except ValueError: pass
+    if data.get('tipo_mantencion'): ot.tipo_mantencion = data.get('tipo_mantencion').strip()
+    if data.get('tipo_ot') in ['Preventiva','Correctiva']: ot.tipo_ot = data.get('tipo_ot')
+    if data.get('estado'): ot.estado = data.get('estado')
+    if data.get('mecanico'): ot.mecanico = data.get('mecanico').strip()
+    if data.get('folio'): ot.folio = data.get('folio').strip()
+    if data.get('lugar'): ot.lugar = data.get('lugar').strip()
+    if data.get('lectura'): ot.lectura = clean_int(data.get('lectura'))
+    if data.get('costo'): ot.costo_mantencion_clp = clean_float(data.get('costo'), 0.0)
+    if data.get('sistema_falla'): ot.sistema_falla = data.get('sistema_falla')
+    if data.get('causa_raiz'): ot.causa_raiz = data.get('causa_raiz').strip()
+    if ot.estado == 'Finalizada' and not ot.fecha_cierre:
+        ot.fecha_cierre = datetime.now()
+    db.session.commit()
+    return jsonify({"status": "success"})
+
+@api_bp.route('/api/edit_lectura/<int:lid>', methods=['POST'])
+@login_required
+def edit_lectura(lid):
+    lec = HistorialLectura.query.get_or_404(lid)
+    data = request.form
+    if data.get('fecha'):
+        try: lec.fecha = datetime.strptime(data.get('fecha'), '%Y-%m-%d')
+        except ValueError: pass
+    if data.get('horometro') is not None: lec.horometro = clean_int(data.get('horometro'), 0)
+    if data.get('kilometraje') is not None: lec.kilometraje = clean_int(data.get('kilometraje'), 0)
+    if data.get('observacion') is not None: lec.observacion = data.get('observacion').strip()
+    
+    eq = Equipo.query.filter_by(codigo=lec.codigo_equipo).first()
+    if eq:
+        ultima = HistorialLectura.query.filter_by(codigo_equipo=lec.codigo_equipo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
+        if ultima: eq.lectura_actual = ultima.horometro if eq.control_base == 'HORAS' else ultima.kilometraje
+        db.session.commit()
+    return jsonify({"status": "success"})
+
+@api_bp.route('/api/edit_equipo/<codigo>', methods=['POST'])
+@login_required
+def edit_equipo(codigo):
+    eq = Equipo.query.filter_by(codigo=codigo).first_or_404()
+    data = request.form
+    campos = ['tipo_equipo','marca','modelo','ubicacion','responsable','estado_base','control_base','vin','n_motor','patente']
+    for campo in campos:
+        val = data.get(campo)
+        if val is not None: setattr(eq, campo, val.strip())
+    if data.get('frecuencia_base'):
+        eq.frecuencia_base = clean_int(data.get('frecuencia_base'), eq.frecuencia_base)
+    eq.proxima_pm = (eq.lectura_actual or 0) + eq.frecuencia_base
+    db.session.commit()
+    return jsonify({"status": "success"})
+
+@api_bp.route('/api/cambiar_estado_ot/<int:ot_id>', methods=['POST'])
+@login_required
+def cambiar_estado_ot(ot_id):
+    ot = OrdenTrabajo.query.get_or_404(ot_id)
+    nuevo = request.json.get('estado')
+    if nuevo in ['Pendiente','En Progreso','En Espera Repuestos','En Revisión','Finalizada']:
+        ot.estado = nuevo
+        if nuevo == 'Finalizada' and not ot.fecha_cierre: ot.fecha_cierre = datetime.now()
+        db.session.commit()
+        return jsonify({"status": "success", "estado": nuevo})
+    return jsonify({"status": "error"}), 400
