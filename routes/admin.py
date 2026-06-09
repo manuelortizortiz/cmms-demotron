@@ -20,6 +20,7 @@ admin_bp = Blueprint('admin', __name__)
 @role_required('admin', 'gerencia')
 def cargar_sql_final():
     try:
+        # Prevención: Agregar columnas si no existen
         try:
             db.session.execute(text("ALTER TABLE personal ADD COLUMN equipo_asignado VARCHAR(50) DEFAULT 'Ninguno'"))
             db.session.execute(text("ALTER TABLE orden_trabajo ADD COLUMN mecanico VARCHAR(100) DEFAULT 'Sin Asignar'"))
@@ -43,33 +44,147 @@ def cargar_sql_final():
 
         if not excel_principal: return "Error: Falta el archivo principal CMMS DEMOTRON (.xlsx)."
 
+        # --- 1. HOJA EQUIPOS ---
         df_eq = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Equipos", skiprows=2).replace({np.nan: None})
+        df_eq.columns = df_eq.columns.str.strip()
         operadores_set = set()
         for _, row in df_eq.iterrows():
-            if not row.iloc[0]: continue
-            cod = str(row.iloc[0]).strip()
-            responsable = str(row.iloc[6]).strip() if row.iloc[6] else 'Sin Asignar'
-            if responsable and responsable.lower() != 'none': operadores_set.add(responsable)
+            cod = clean_string(str(row.get('Codigo', '') or ''))
+            if not cod or cod.lower() == 'none': continue
+            responsable = clean_string(str(row.get('Responsable', '') or 'Sin Asignar'))
+            if responsable and responsable.lower() not in ['none','nan']: operadores_set.add(responsable)
             
             eq = Equipo.query.filter_by(codigo=cod).first()
             if not eq:
                 eq = Equipo(codigo=cod)
                 db.session.add(eq)
             
-            eq.tipo_equipo = row.iloc[1]
-            eq.marca = row.iloc[2]
-            eq.modelo = str(row.iloc[3])
-            eq.ubicacion = row.iloc[5]
-            eq.responsable = responsable
-            eq.estado_base = str(row.iloc[7]).strip() if row.iloc[7] else 'Operativo'
-            eq.control_base = str(row.iloc[8]).strip() if row.iloc[8] else 'HORAS'
-            eq.frecuencia_base = clean_int(row.iloc[9], 250)
-            
+            eq.tipo_equipo     = clean_string(str(row.get('Tipo Equipo', '') or ''))
+            eq.marca           = clean_string(str(row.get('Marca', '') or ''))
+            eq.modelo          = clean_string(str(row.get('Modelo', '') or ''))
+            eq.ubicacion       = clean_string(str(row.get('Ubicacion', '') or ''))
+            eq.responsable     = responsable
+            eq.estado_base     = clean_string(str(row.get('Estado Base', '') or 'Operativo')) or 'Operativo'
+            eq.control_base    = clean_string(str(row.get('Control Base', '') or 'HORAS')) or 'HORAS'
+            eq.frecuencia_base = clean_int(row.get('Frecuencia Base'), 250)
+        
         for op in operadores_set:
             if not Personal.query.filter_by(nombre=op).first():
                 db.session.add(Personal(nombre=op, cargo="Operador", estado="Activo", equipo_asignado="Varios"))
         db.session.commit()
 
+        # --- 2. HOJA LECTURAS ---
+        df_lec = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
+        df_lec.columns = df_lec.columns.str.strip()
+        for _, row in df_lec.iterrows():
+            cod = clean_string(str(row.get('Codigo', '') or ''))
+            if not cod or cod.lower() == 'none': continue
+            fecha_dt = parse_date(row.get('Fecha'))
+            hor = clean_int(row.get('Horometro'), 0)
+            kil = clean_int(row.get('Kilometraje'), 0)
+            if not HistorialLectura.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, horometro=hor).first():
+                db.session.add(HistorialLectura(
+                    fecha=fecha_dt, codigo_equipo=cod, horometro=hor, kilometraje=kil,
+                    obra_ubicacion=clean_string(str(row.get('Obra / Ubicacion', '') or '')),
+                    responsable=clean_string(str(row.get('Responsable', '') or '')),
+                    observacion=clean_string(str(row.get('Observacion', '') or ''))
+                ))
+        db.session.commit()
+
+        # --- 3. HOJA MANTENCIONES (PREVENTIVAS) ---
+        df_man = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
+        df_man.columns = df_man.columns.str.strip()
+        for _, row in df_man.iterrows():
+            cod = clean_string(str(row.get('Codigo', '') or ''))
+            if not cod or cod.lower() == 'none': continue
+            fecha_dt = parse_date(row.get('Fecha'))
+            tipo = clean_string(str(row.get('Tipo Mantencion', '') or ''))
+            
+            folio_raw = row.get('Folio')
+            folio_str = str(int(float(folio_raw))) if folio_raw is not None and folio_raw == folio_raw else ''
+            
+            es_pm_raw = clean_string(str(row.get('EsPM', 'No') or 'No')).lower()
+            tipo_ot = 'Preventiva' if es_pm_raw in ['sí','si','s','yes','1','true'] else 'Correctiva'
+            
+            if not OrdenTrabajo.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, tipo_mantencion=tipo).first():
+                db.session.add(OrdenTrabajo(
+                    fecha=fecha_dt, codigo_equipo=cod, tipo_ot=tipo_ot, tipo_mantencion=tipo,
+                    lectura=clean_int(row.get('Lectura'), 0),
+                    es_pm=clean_string(str(row.get('EsPM', '') or '')),
+                    folio=folio_str,
+                    lugar=clean_string(str(row.get('Lugar', '') or '')),
+                    costo_mantencion_clp=clean_float(row.get('Costo Mantencion CLP'), 0.0),
+                    estado=clean_string(str(row.get('Estado', '') or 'Finalizada')) or 'Finalizada',
+                    mecanico='Sin Asignar'
+                ))
+        db.session.commit()
+
+        # --- 4. HOJA CORRECTIVAS (CON FIX DE PARETO Y ESPACIO EN COLUMNA) ---
+        try:
+            df_corr = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Correctivas", skiprows=2).replace({np.nan: None})
+            df_corr.columns = df_corr.columns.str.strip()  # Elimina el bug del espacio "Falla / Averia "
+            for _, row in df_corr.iterrows():
+                cod = clean_string(str(row.get('Codigo Equipo', '') or ''))
+                if not cod or cod.lower() == 'none': continue
+                fecha_dt = parse_date(row.get('Fecha'))
+                falla = clean_string(str(row.get('Falla / Averia', '') or ''))
+                
+                folio_raw = row.get('Folio')
+                folio_val = str(int(float(folio_raw))) if folio_raw is not None and folio_raw==folio_raw else f"CM-{random.randint(1000,9999)}"
+                mecanico_val = clean_string(str(row.get('Mecanico', '') or 'Sin Asignar')) or 'Sin Asignar'
+                estado_val = clean_string(str(row.get('Estado', '') or 'Finalizada')) or 'Finalizada'
+                
+                # Inteligencia del Gráfico Pareto: Clasifica los registros viejos automáticamente
+                falla_lower = falla.lower()
+                if any(x in falla_lower for x in ['motor','aceite','filtro','refrigerante','radiador','correa']): sistema_val='Motor'
+                elif any(x in falla_lower for x in ['hidraulic','hidráulic','manguera','bomba','cilindro','oring','fuga']): sistema_val='Hidráulico'
+                elif any(x in falla_lower for x in ['freno','balata','tambor','pastilla']): sistema_val='Frenos'
+                elif any(x in falla_lower for x in ['electri','eléctri','bateria','luces','sensor','cable']): sistema_val='Eléctrico'
+                elif any(x in falla_lower for x in ['neumatico','neumático','rueda','llanta']): sistema_val='Neumáticos'
+                else: sistema_val='Estructura'
+                
+                if not OrdenTrabajo.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, tipo_mantencion=falla).first():
+                    db.session.add(OrdenTrabajo(
+                        fecha=fecha_dt, codigo_equipo=cod, tipo_ot='Correctiva', tipo_mantencion=falla,
+                        lectura=clean_int(row.get('Lectura (Odo/Hor)'), 0),
+                        costo_mantencion_clp=clean_float(row.get('Costo CLP'), 0.0),
+                        estado=estado_val, folio=folio_val, mecanico=mecanico_val,
+                        sistema_falla=sistema_val, causa_raiz=falla
+                    ))
+            db.session.commit()
+        except Exception as e:
+            print(f"Error Correctivas: {e}")
+
+        # --- 5. HOJA COMPRAS PM ---
+        try:
+            df_com = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
+            df_com.columns = df_com.columns.str.strip()
+            for _, row in df_com.iterrows():
+                cod = clean_string(str(row.get('Codigo', '') or ''))
+                oc_str = clean_string(str(row.get('OC', '') or ''))
+                if not oc_str or oc_str.lower() in ['none','nan']: continue
+                fecha_dt = parse_date(row.get('Fecha'))
+                if not CompraRepuesto.query.filter_by(codigo_equipo=cod, oc=oc_str).first():
+                    db.session.add(CompraRepuesto(
+                        fecha=fecha_dt, oc=oc_str, codigo_equipo=cod,
+                        descripcion=clean_string(str(row.get('Descripcion', '') or '')),
+                        proveedor=clean_string(str(row.get('Proveedor', '') or '')),
+                        costo_pm_clp=clean_float(row.get('Costo PM CLP'), 0.0),
+                        estado_oc=clean_string(str(row.get('Estado OC', '') or ''))
+                    ))
+            db.session.commit()
+        except Exception as e: pass
+
+        # CÁLCULO DE PROYECCIONES FINALES
+        for eq in Equipo.query.all():
+            u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
+            if u_lec: eq.lectura_actual = u_lec.horometro if eq.control_base == 'HORAS' else u_lec.kilometraje
+            u_pm = OrdenTrabajo.query.filter_by(codigo_equipo=eq.codigo, estado='Finalizada').order_by(OrdenTrabajo.fecha.desc()).first()
+            if u_pm: eq.proxima_pm = u_pm.lectura + eq.frecuencia_base
+            else: eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
+        db.session.commit()
+
+        # ARCHIVOS ADICIONALES (Filtros y detalles)
         if archivo_detalles:
             if archivo_detalles.endswith('.xlsx'): df_det = pd.read_excel(archivo_detalles, engine='openpyxl')
             else: df_det = pd.read_csv(archivo_detalles)
@@ -103,79 +218,6 @@ def cargar_sql_final():
                             ))
                 except: pass
             db.session.commit()
-
-        df_lec = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
-        for _, row in df_lec.iterrows():
-            if not row.iloc[1]: continue
-            fecha_dt = parse_date(row.iloc[0])
-            cod = str(row.iloc[1]).strip()
-            hor = clean_int(row.iloc[2], 0)
-            kil = clean_int(row.iloc[3], 0)
-            if not HistorialLectura.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, horometro=hor, kilometraje=kil).first():
-                db.session.add(HistorialLectura(fecha=fecha_dt, codigo_equipo=cod, horometro=hor, kilometraje=kil, obra_ubicacion=row.iloc[4], responsable=row.iloc[5], observacion=row.iloc[6]))
-
-        df_man = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
-        for _, row in df_man.iterrows():
-            if not row.iloc[1]: continue
-            fecha_dt = parse_date(row.iloc[0])
-            cod = str(row.iloc[1]).strip()
-            tipo = str(row.iloc[2]).strip()
-            if not OrdenTrabajo.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, tipo_mantencion=tipo).first():
-                db.session.add(OrdenTrabajo(
-                    fecha=fecha_dt, codigo_equipo=cod, tipo_ot='Preventiva', tipo_mantencion=tipo, 
-                    lectura=clean_int(row.iloc[3], 0), es_pm=str(row.iloc[4]), folio=str(row.iloc[5]), 
-                    lugar=str(row.iloc[6]), costo_mantencion_clp=clean_float(row.iloc[8], 0.0), 
-                    estado=str(row.iloc[9]) if row.iloc[9] else 'Finalizada', mecanico="Sin Asignar"
-                ))
-
-        try:
-            df_corr = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Correctivas", skiprows=2).replace({np.nan: None})
-            for _, row in df_corr.iterrows():
-                if not row.iloc[1]: continue
-                fecha_dt = parse_date(row.iloc[0])
-                cod = str(row.iloc[1]).strip()
-                falla = str(row.iloc[2]).strip()
-                
-                estado_val = str(row.iloc[5]).strip() if len(row)>5 and row.iloc[5] else 'Finalizada'
-                folio_val = str(row.iloc[6]).strip() if len(row)>6 and row.iloc[6] else f"CM-{random.randint(1000,9999)}"
-                mecanico_val = str(row.iloc[7]).strip() if len(row)>7 and row.iloc[7] else 'Sin Asignar'
-
-                # Clasificación inteligente para histórico en base a Excel
-                falla_lower = falla.lower()
-                if any(x in falla_lower for x in ['motor', 'aceite', 'filtro', 'refrigerante', 'radiador', 'correa']): sistema_val = 'Motor'
-                elif any(x in falla_lower for x in ['hidraulic', 'hidráulic', 'manguera', 'bomba', 'cilindro', 'oring', 'fuga']): sistema_val = 'Hidráulico'
-                elif any(x in falla_lower for x in ['freno', 'balata', 'tambor', 'pastilla']): sistema_val = 'Frenos'
-                elif any(x in falla_lower for x in ['electri', 'eléctri', 'bateria', 'luces', 'sensor', 'cable']): sistema_val = 'Eléctrico'
-                elif any(x in falla_lower for x in ['neumatico', 'neumático', 'rueda', 'llanta']): sistema_val = 'Neumáticos'
-                else: sistema_val = 'Estructura'
-
-                if not OrdenTrabajo.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, tipo_mantencion=falla).first():
-                    db.session.add(OrdenTrabajo(
-                        fecha=fecha_dt, codigo_equipo=cod, tipo_ot='Correctiva', tipo_mantencion=falla, 
-                        lectura=clean_int(row.iloc[3], 0), costo_mantencion_clp=clean_float(row.iloc[4], 0.0), 
-                        estado=estado_val, folio=folio_val, mecanico=mecanico_val,
-                        sistema_falla=sistema_val, causa_raiz=falla
-                    ))
-        except: pass
-
-        df_com = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
-        for _, row in df_com.iterrows():
-            if not row.iloc[2]: continue
-            fecha_dt = parse_date(row.iloc[0])
-            oc_str = str(row.iloc[1])
-            cod = str(row.iloc[2]).strip()
-            if not CompraRepuesto.query.filter_by(codigo_equipo=cod, oc=oc_str).first():
-                db.session.add(CompraRepuesto(fecha=fecha_dt, oc=oc_str, codigo_equipo=cod, descripcion=row.iloc[3], proveedor=row.iloc[4], costo_pm_clp=clean_float(row.iloc[5], 0.0), estado_oc=str(row.iloc[7])))
-        
-        db.session.commit()
-
-        for eq in Equipo.query.all():
-            u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
-            if u_lec: eq.lectura_actual = u_lec.horometro if eq.control_base == 'HORAS' else u_lec.kilometraje
-            u_pm = OrdenTrabajo.query.filter_by(codigo_equipo=eq.codigo, estado='Finalizada').order_by(OrdenTrabajo.fecha.desc()).first()
-            if u_pm: eq.proxima_pm = u_pm.lectura + eq.frecuencia_base
-            else: eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
-        db.session.commit()
 
         return "Carga Completa y Exitosa con Sincronización Segura. <a href='/'>Ir al Dashboard</a>"
     except Exception as e:
