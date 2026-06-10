@@ -47,9 +47,11 @@
             <a onclick="switchTab('plan', this)" class="nav-link">Planificación Kanban</a>
             <a onclick="switchTab('cal', this)" class="nav-link">Calendario</a>
             <a onclick="switchTab('ot', this)" class="nav-link">OT Preventivas</a>
-            <a onclick="switchTab('compras', this)" class="nav-link">Compras e Insumos</a>
-            <a onclick="switchTab('lec', this)" class="nav-link">Lecturas Terreno</a>
             <a onclick="switchTab('ot_corr', this)" class="nav-link text-red-600">Mantenciones correctivas</a>
+            <a onclick="switchTab('lec', this)" class="nav-link">Lecturas Terreno</a>
+            <p class="px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 mt-6">Suministros</p>
+            <a onclick="switchTab('bodega', this)" class="nav-link">📦 Bodega e Inventario</a>
+            <a onclick="switchTab('compras', this)" class="nav-link">Compras e Insumos</a>
             <p class="px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 mt-6">Personal</p>
             <a onclick="switchTab('cond', this)" class="nav-link">Operadores</a>
             <a onclick="switchTab('mecanicos', this)" class="nav-link">Mecánicos</a>
@@ -133,10 +135,7 @@
                         <thead><tr><th>Código</th><th>Tipo</th><th>Ubicación</th><th>Operador</th><th>Lectura</th><th>Margen</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead>
                         <tbody>{% for e in eqs %}<tr>
                             <td class="font-bold text-blue-600 cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
-                            <td>{{ e.tipo }}</td>
-                            <td>{{ e.ubicacion }}</td>
-                            <td>{{ e.responsable }}</td>
-                            <td>{{ e.lectura }}</td>
+                            <td>{{ e.tipo }}</td><td>{{ e.ubicacion }}</td><td>{{ e.responsable }}</td><td>{{ e.lectura }}</td>
                             <td class="font-bold {% if e.margen < 0 %}text-red-600{% elif e.margen <= 150 %}text-orange-500{% else %}text-green-600{% endif %}">{{ e.margen_str }}</td>
                             <td>{{ e.estado }}</td>
                             <td class="text-right whitespace-nowrap">
@@ -154,12 +153,7 @@
                         <thead><tr><th>Equipo</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>N° Chasis (VIN)</th><th>N° Motor</th><th>Patente</th><th class="text-right">Acciones</th></tr></thead>
                         <tbody>{% for e in eqs %}<tr>
                             <td class="font-bold text-blue-600 cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
-                            <td>{{ e.tipo }}</td>
-                            <td>{{ e.marca }}</td>
-                            <td>{{ e.modelo }}</td>
-                            <td class="text-slate-500 font-mono">{{ e.vin }}</td>
-                            <td class="text-slate-500 font-mono">{{ e.motor }}</td>
-                            <td class="font-bold">{{ e.patente }}</td>
+                            <td>{{ e.tipo }}</td><td>{{ e.marca }}</td><td>{{ e.modelo }}</td><td class="text-slate-500 font-mono">{{ e.vin }}</td><td class="text-slate-500 font-mono">{{ e.motor }}</td><td class="font-bold">{{ e.patente }}</td>
                             <td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Datos {{e.codigo}}', [{db: 'vin', label: 'VIN', val: '{{e.vin}}'},{db: 'n_motor', label: 'Motor', val: '{{e.motor}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50">Editar</button></td>
                         </tr>{% endfor %}</tbody>
                     </table>
@@ -168,7 +162,7 @@
 
             <div id="plan" class="seccion">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <p class="text-sm text-slate-500">Agrega un equipo al tablero.</p>
+                    <p class="text-sm text-slate-500">Arrastra las tarjetas para cambiar su estado. Los cambios se registrarán en la auditoría.</p>
                     <form action="/api/add_record" method="POST" class="flex gap-2 items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm w-full md:w-auto">
                         <input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/?tab=plan"><input type="hidden" name="estado" value="Pendiente"><input type="hidden" name="lectura" value="0"><input type="hidden" name="costo" value="0">
                         <input type="text" name="codigo" placeholder="Equipo" class="form-input w-24 uppercase" required>
@@ -186,8 +180,7 @@
                         </div>
                         <div id="{{ col_id }}" class="space-y-3 overflow-y-auto flex-1 hide-scrollbar pb-10" data-status="{{ estado }}">
                             {% for t in kanban[estado] %}
-                            <div class="bg-white p-3 rounded-lg shadow-sm border {% if t.vencida %}border-red-400{% else %}border-slate-200{% endif %}" data-id="{{ t.id }}">
-                                
+                            <div class="bg-white p-3 rounded-lg shadow-sm border {% if t.vencida %}border-red-400{% else %}border-slate-200{% endif %} cursor-grab" data-id="{{ t.id }}">
                                 <div class="flex justify-between items-start mb-2">
                                     <h4 class="font-bold text-slate-800 text-sm">{{ t.codigo }}</h4>
                                     <div class="flex gap-2">
@@ -198,17 +191,9 @@
                                     </div>
                                 </div>
                                 <div class="mb-2"><span class="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase {% if t.clasificacion=='Preventiva' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">{{ t.clasificacion }}</span></div>
-                                
                                 <p class="text-[11px] text-slate-500 mb-1 leading-tight">{{ t.tipo[:45] }}</p>
                                 <p class="text-[10px] text-slate-400 mb-2 font-semibold">👷 {{ t.mecanico }}</p>
-                                
-                                <select class="kanban-estado-sel w-full text-[10px] border border-slate-200 rounded p-1 text-slate-600 mb-2" data-id="{{ t.id }}">
-                                    {% for s in ['Pendiente','En Progreso','En Revisión','Finalizada'] %}
-                                    <option value="{{ s }}" {% if s==estado %}selected{% endif %}>{{ s }}</option>
-                                    {% endfor %}
-                                </select>
-
-                                <div class="flex justify-between items-center mt-2 border-t border-slate-100 pt-2">
+                                <div class="flex justify-between items-center mt-3 border-t border-slate-100 pt-2">
                                     <div class="flex items-center gap-1">
                                         <span class="text-[9px] text-slate-400">{{ t.fecha }}</span>
                                         {% if t.vencida %}<span class="text-[9px] font-bold text-red-500 bg-red-50 px-1 rounded">⚠️ {{ t.dias }}d</span>{% endif %}
@@ -235,7 +220,7 @@
                         <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Odo/Hor. (Opcional)</label><input type="number" name="lectura" class="form-input" placeholder="Automático"></div>
                         <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input" required></div>
                         <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Mecánico</label><input list="lista_mecanicos" name="mecanico" class="form-input" placeholder="Opcional"></div>
-                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar OT</button>
+                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar OT Preventiva</button>
                     </form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
@@ -243,8 +228,7 @@
                         <thead><tr><th>Fecha / Folio</th><th>Equipo</th><th>Intervención</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead>
                         <tbody>{% for m in mants_prev %}<tr>
                             <td><span class="font-bold">{{ m.fecha }}</span><br><span class="text-xs text-slate-400">{{ m.ot_generada }}</span></td>
-                            <td class="font-bold text-blue-800">{{ m.codigo }}</td>
-                            <td>{{ m.tipo_mantencion }}</td><td>{{ m.mecanico }}</td><td>{{ m.lectura_str }}</td><td class="font-bold">{{ m.costo_str }}</td>
+                            <td class="font-bold text-blue-800">{{ m.codigo }}</td><td>{{ m.tipo_mantencion }}</td><td>{{ m.mecanico }}</td><td>{{ m.lectura_str }}</td><td class="font-bold">{{ m.costo_str }}</td>
                             <td><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-300">{{ m.estado }}</span></td>
                             <td class="text-right whitespace-nowrap">
                                 <button onclick="abrirEditModal('ot', '{{m.id}}', 'OT {{m.ot_generada}}', [{db: 'folio', label: 'Folio', val: '{{m.ot_generada}}'},{db: 'mecanico', label: 'Mecánico', val: '{{m.mecanico}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button>
@@ -284,8 +268,41 @@
                 </div>
             </div>
 
+            <div id="bodega" class="seccion">
+                <div class="card-custom mb-6 bg-slate-50">
+                    <div class="flex justify-between items-center mb-4"><span class="font-bold text-slate-700">INVENTARIO DE BODEGA</span></div>
+                    <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
+                        <input type="hidden" name="tabla" value="bodega"><input type="hidden" name="referer" value="/?tab=bodega">
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Código (Opcional)</label><input type="text" name="codigo_item" class="form-input uppercase"></div>
+                        <div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Nombre del Insumo / Kit</label><input type="text" name="nombre" class="form-input" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Categoría</label>
+                            <select name="categoria" class="form-input">
+                                <option value="Filtro">Filtro</option><option value="Lubricante">Lubricante</option>
+                                <option value="Kit de Mantención">Kit de Mantención</option><option value="Repuesto">Repuesto</option>
+                                <option value="Herramienta">Herramienta</option>
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Cantidad</label><input type="number" name="cantidad" class="form-input" value="1" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Ubicación</label><input type="text" name="ubicacion" class="form-input" placeholder="Ej: Estante A"></div>
+                        <button type="submit" class="btn-primary mb-1">Agregar Insumo</button>
+                    </form>
+                </div>
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
+                    <table class="table-custom table-searchable">
+                        <thead><tr><th>Código</th><th>Nombre / Descripción</th><th>Categoría</th><th>Cantidad en Stock</th><th>Ubicación</th><th class="text-right">Acciones</th></tr></thead>
+                        <tbody>{% for b in bodega %}<tr>
+                            <td class="font-mono text-slate-500">{{ b.codigo_item or '-' }}</td><td class="font-bold">{{ b.nombre }}</td><td>{{ b.categoria }}</td><td class="font-bold text-blue-600">{{ b.cantidad }}</td><td>{{ b.ubicacion }}</td>
+                            <td class="text-right whitespace-nowrap">
+                                <button onclick="abrirEditModal('bodega', '{{b.id}}', 'Insumo', [{db: 'nombre', label: 'Nombre', val: '{{b.nombre}}'},{db: 'cantidad', label: 'Stock', val: '{{b.cantidad}}'}])" class="text-blue-500 font-bold text-xs mr-2">Editar</button>
+                                <button onclick="borrarRegistro('bodega', '{{b.id}}')" class="text-red-500 font-bold text-xs">Borrar</button>
+                            </td>
+                        </tr>{% endfor %}</tbody>
+                    </table>
+                </div>
+            </div>
+
             <div id="compras" class="seccion">
-                <div class="card-custom mb-6 bg-slate-50"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="compra"><input type="hidden" name="referer" value="/?tab=compras"><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">OC</label><input type="text" name="oc" class="form-input" placeholder="Auto-Generada si vacío"></div><div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Descripción</label><input type="text" name="descripcion" class="form-input"></div><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input"></div><button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar Compra</button></form></div>
+                <div class="card-custom mb-6 bg-slate-50"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="compra"><input type="hidden" name="referer" value="/?tab=compras"><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Descripción</label><input type="text" name="descripcion" class="form-input"></div><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input"></div><button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar Compra</button></form></div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
                     <table class="table-custom table-searchable"><thead><tr><th>Fecha</th><th>OC</th><th>Equipo</th><th>Descripción</th><th>Costo</th><th class="text-right">Acción</th></tr></thead>
                     <tbody>{% for c in compras %}<tr><td>{{ c.fecha }}</td><td>{{ c.oc }}</td><td class="font-bold text-blue-800">{{ c.codigo }}</td><td>{{ c.descripcion }}</td><td class="font-bold">{{ c.costo_str }}</td>
@@ -299,7 +316,7 @@
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
                         <input type="hidden" name="tabla" value="lectura"><input type="hidden" name="referer" value="/?tab=lec">
                         <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input uppercase" placeholder="Ej: EX-01" required></div>
-                        <div class="flex-[2] min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Valor (Auto-detecta HR/KM)</label><input type="number" name="valor" class="form-input" required></div>
+                        <div class="flex-[2] min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Valor Numérico (Auto-detecta HR/KM)</label><input type="number" name="valor" class="form-input" required></div>
                         <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Registrar Lectura</button>
                     </form>
                 </div>
@@ -308,16 +325,16 @@
                         <thead><tr><th>Fecha</th><th>Equipo</th><th>Tipo de Equipo</th><th>Valor Registrado</th><th class="text-right">Acciones</th></tr></thead>
                         <tbody>{% for l in lecturas %}<tr>
                             <td>{{ l.fecha }}</td><td class="font-bold text-blue-800">{{ l.codigo }}</td><td>{{ l.tipo_equipo }}</td><td class="font-bold">{{ l.valor_str }} <span class="text-[10px] text-slate-500">{{ l.tipo }}</span></td>
-                            <td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('lectura', '{{l.id}}', 'Lectura {{l.codigo}}', [{db: '{{ 'horometro' if l.tipo == 'HR' else 'kilometraje' }}', label: 'Valor', val: '{{l.valor_str.replace('.', '')}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button><button onclick="borrarRegistro('lectura', '{{l.id}}')" class="text-red-500 font-bold text-xs">Borrar</button></td>
+                            <td class="text-right whitespace-nowrap">
+                                <button onclick="abrirEditModal('lectura', '{{l.id}}', 'Lectura {{l.codigo}}', [{db: '{{ 'horometro' if l.tipo == 'HR' else 'kilometraje' }}', label: 'Valor Nuevo', val: '{{l.valor_str.replace('.', '')}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button>
+                                <button onclick="borrarRegistro('lectura', '{{l.id}}')" class="text-red-500 font-bold text-xs">Borrar</button>
+                            </td>
                         </tr>{% endfor %}</tbody>
                     </table>
                 </div>
             </div>
 
-            <div id="cond" class="seccion space-y-6">
-                <div class="card-custom-nopad bg-white flex flex-col"><div class="px-6 py-4 bg-slate-50 border-b flex flex-wrap justify-between items-center gap-4"><h3 class="font-bold text-slate-700">NÓMINA DE OPERADORES</h3><form action="/api/add_record" method="POST" class="m-0 flex gap-4"><input type="hidden" name="tabla" value="personal"><input type="hidden" name="referer" value="/?tab=cond"><input type="text" name="nombre" placeholder="Nombre Completo" class="form-input w-48" required><input type="text" name="equipo" placeholder="Equipo Asignado" class="form-input w-32 uppercase" required><button type="submit" class="btn-primary whitespace-nowrap text-xs">Añadir Operador</button></form></div>
-                <div class="table-wrapper max-h-[40vh] overflow-y-auto"><table class="table-custom table-searchable"><thead><tr><th>Nombre Operador</th><th>Equipo Asignado</th><th>Cargo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>{% for op in operadores %}<tr><td class="font-bold">{{ op.nombre }}</td><td class="font-bold text-blue-600">{{ op.equipo_asignado }}</td><td>{{ op.cargo }}</td><td><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ op.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('personal', '{{op.id}}', 'Operador {{op.nombre}}', [{db: 'equipo_asignado', label: 'Equipo', val: '{{op.equipo_asignado}}'},{db: 'estado', label: 'Estado', val: '{{op.estado}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button><button onclick="borrarRegistro('personal', '{{op.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}</tbody></table></div></div>
-            </div>
+            <div id="cond" class="seccion space-y-6"><div class="card-custom-nopad bg-white flex flex-col"><div class="px-6 py-4 bg-slate-50 border-b flex flex-wrap justify-between items-center gap-4"><h3 class="font-bold text-slate-700">NÓMINA DE OPERADORES</h3><form action="/api/add_record" method="POST" class="m-0 flex gap-4"><input type="hidden" name="tabla" value="personal"><input type="hidden" name="referer" value="/?tab=cond"><input type="text" name="nombre" placeholder="Nombre Completo" class="form-input w-48" required><input type="text" name="equipo" placeholder="Equipo Asignado" class="form-input w-32 uppercase" required><button type="submit" class="btn-primary whitespace-nowrap text-xs">Añadir Operador</button></form></div><div class="table-wrapper max-h-[40vh] overflow-y-auto"><table class="table-custom table-searchable"><thead><tr><th>Nombre Operador</th><th>Equipo Asignado</th><th>Cargo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>{% for op in operadores %}<tr><td class="font-bold">{{ op.nombre }}</td><td class="font-bold text-blue-600">{{ op.equipo_asignado }}</td><td>{{ op.cargo }}</td><td><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ op.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('personal', '{{op.id}}', 'Operador {{op.nombre}}', [{db: 'equipo_asignado', label: 'Equipo', val: '{{op.equipo_asignado}}'},{db: 'estado', label: 'Estado', val: '{{op.estado}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button><button onclick="borrarRegistro('personal', '{{op.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}</tbody></table></div></div></div>
             
             <div id="mecanicos" class="seccion">
                 <div class="card-custom mb-6 bg-slate-50 flex flex-wrap justify-between items-center gap-4">
@@ -465,16 +482,6 @@
             });
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.kanban-estado-sel').forEach(sel => {
-                sel.addEventListener('change', function() {
-                    fetch('/api/cambiar_estado_ot/' + this.dataset.id, {
-                        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({estado: this.value})
-                    }).then(r => r.json()).then(d => { if(d.status === 'success') location.reload(); });
-                });
-            });
-        });
-
         const mDataPrev = {{ mants_prev|tojson }};
         const mDataCorr = {{ mants_corr|tojson }};
         const cData = {{ charts|tojson }};
@@ -500,10 +507,27 @@
             } catch(e) {}
 
             try {
+                // FILTRO DE DUPLICADOS EN CALENDARIO (Soluciona el problema de múltiples items el mismo día)
                 if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
                     let evts = [];
-                    mDataPrev.filter(m => m.fecha_iso).forEach(m => { evts.push({ title: m.codigo + ' (PM)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#2563EB' }); });
-                    mDataCorr.filter(m => m.fecha_iso).forEach(m => { evts.push({ title: m.codigo + ' (Avería)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#DC2626' }); });
+                    let eventMap = {};
+                    
+                    mDataPrev.filter(m => m.fecha_iso).forEach(m => { 
+                        let key = m.fecha_iso + '_' + m.codigo + '_PM';
+                        if(!eventMap[key]){
+                            evts.push({ title: m.codigo + ' (PM)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#2563EB' });
+                            eventMap[key] = true;
+                        }
+                    });
+                    
+                    mDataCorr.filter(m => m.fecha_iso).forEach(m => { 
+                        let key = m.fecha_iso + '_' + m.codigo + '_Corr';
+                        if(!eventMap[key]){
+                            evts.push({ title: m.codigo + ' (Avería)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#DC2626' });
+                            eventMap[key] = true;
+                        }
+                    });
+                    
                     window.calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
                         initialView: 'dayGridMonth', locale: 'es', height: '100%', expandRows: true,
                         events: evts, eventClick: function(info) { info.jsEvent.preventDefault(); if(info.event.url) window.open(info.event.url, "_blank"); }
