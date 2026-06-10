@@ -11,6 +11,7 @@ from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
 from models.personal import Personal, Mecanico, RegistroUsoEquipo
 from models.chatter import RegistroChatter
+from models.bodega import InventarioBodega
 from utils.formatters import clean_int, clean_float
 
 api_bp = Blueprint('api', __name__)
@@ -38,8 +39,6 @@ def add_record():
         eq = Equipo.query.filter_by(codigo=codigo).first()
         h_val = val if eq and eq.control_base == 'HORAS' else 0
         k_val = val if eq and eq.control_base == 'KM' else 0
-        
-        # Eliminadas observacion y operador manual, es transparente.
         db.session.add(HistorialLectura(
             codigo_equipo=codigo, horometro=h_val, kilometraje=k_val, 
             observacion='', fecha=datetime.now(), responsable=''
@@ -95,6 +94,15 @@ def add_record():
             costo_pm_clp=clean_float(request.form.get('costo'), 0.0), fecha=datetime.now()
         ))
         
+    elif tabla == 'bodega':
+        db.session.add(InventarioBodega(
+            codigo_item=request.form.get('codigo_item', '').strip(),
+            nombre=request.form.get('nombre', '').strip(),
+            categoria=request.form.get('categoria', 'Filtro'),
+            cantidad=clean_int(request.form.get('cantidad'), 0),
+            ubicacion=request.form.get('ubicacion', '').strip()
+        ))
+        
     elif tabla == 'filtro':
         db.session.add(FiltroEquipo(codigo_equipo=codigo, sistema="NUEVO SISTEMA"))
     elif tabla == 'personal':
@@ -124,10 +132,12 @@ def delete_record(tabla, id):
     if tabla == 'lectura': obj = HistorialLectura.query.get(id)
     elif tabla == 'ot': obj = OrdenTrabajo.query.get(id)
     elif tabla == 'compra': obj = CompraRepuesto.query.get(id)
+    elif tabla == 'bodega': obj = InventarioBodega.query.get(id)
     elif tabla == 'filtro': obj = FiltroEquipo.query.get(id)
     elif tabla == 'personal': obj = Personal.query.get(id)
     elif tabla == 'mecanico': obj = Mecanico.query.get(id)
     elif tabla == 'uso_equipo': obj = RegistroUsoEquipo.query.get(id)
+    
     if obj:
         db.session.delete(obj)
         db.session.commit()
@@ -148,13 +158,14 @@ def update_inline():
     elif tabla == 'lectura': obj = HistorialLectura.query.get(cod)
     elif tabla == 'ot': obj = OrdenTrabajo.query.get(cod)
     elif tabla == 'compra': obj = CompraRepuesto.query.get(cod)
+    elif tabla == 'bodega': obj = InventarioBodega.query.get(cod)
     elif tabla == 'personal': obj = Personal.query.get(cod)
     elif tabla == 'mecanico': obj = Mecanico.query.get(cod)
     elif tabla == 'filtro': obj = FiltroEquipo.query.get(cod)
     elif tabla == 'uso_equipo': obj = RegistroUsoEquipo.query.get(cod)
 
     if obj:
-        if campo in ['costo_mantencion_clp', 'costo_pm_clp', 'horometro', 'kilometraje', 'lectura', 'cant']:
+        if campo in ['costo_mantencion_clp', 'costo_pm_clp', 'horometro', 'kilometraje', 'lectura', 'cant', 'cantidad']:
             valor = clean_float(valor, 0.0) if 'costo' in campo else clean_int(valor)
         setattr(obj, campo, valor)
         db.session.commit()
@@ -168,19 +179,14 @@ def cambiar_estado_ot(ot_id):
     nuevo = request.json.get('estado')
     estado_anterior = ot.estado
     
-    # KANBAN A 4 COLUMNAS
     if nuevo in ['Pendiente','En Progreso','En Revisión','Finalizada']:
         ot.estado = nuevo
         if nuevo == 'Finalizada' and not ot.fecha_cierre: ot.fecha_cierre = datetime.now()
         
         if estado_anterior != nuevo:
             log = RegistroChatter(
-                modelo_ref='ot',
-                registro_id=str(ot.id),
-                autor=current_user.nombre,
-                accion='cambio_estado',
-                valor_anterior=estado_anterior,
-                valor_nuevo=nuevo
+                modelo_ref='ot', registro_id=str(ot.id), autor=current_user.nombre,
+                accion='cambio_estado', valor_anterior=estado_anterior, valor_nuevo=nuevo
             )
             db.session.add(log)
             
@@ -217,14 +223,20 @@ def add_chatter():
     if not mensaje and not archivo_url:
         return jsonify({"status": "error"}), 400
 
-    log = RegistroChatter(
-        modelo_ref=modelo,
-        registro_id=registro_id,
-        autor=current_user.nombre,
-        accion=accion,
-        mensaje=mensaje,
-        archivo_url=archivo_url
-    )
+    log = RegistroChatter(modelo_ref=modelo, registro_id=registro_id, autor=current_user.nombre, accion=accion, mensaje=mensaje, archivo_url=archivo_url)
     db.session.add(log)
     db.session.commit()
     return jsonify({"status": "success", "log": log.to_dict()})
+
+@api_bp.route('/api/edit_ot/<int:ot_id>', methods=['POST'])
+@login_required
+def edit_ot(ot_id):
+    pass # Ya incluido en update_inline
+@api_bp.route('/api/edit_lectura/<int:lid>', methods=['POST'])
+@login_required
+def edit_lectura(lid):
+    pass # Ya incluido en update_inline
+@api_bp.route('/api/edit_equipo/<codigo>', methods=['POST'])
+@login_required
+def edit_equipo(codigo):
+    pass # Ya incluido en update_inline
