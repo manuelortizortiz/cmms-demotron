@@ -253,8 +253,14 @@ def cargar_taller():
     
     try:
         agregados = 0
+        actualizados = 0
         for persona in equipo_taller:
-            if not Mecanico.query.filter_by(nombre=persona['nombre']).first():
+            mecanico_existente = Mecanico.query.filter_by(nombre=persona['nombre']).first()
+            if mecanico_existente:
+                mecanico_existente.rut = persona['rut']
+                mecanico_existente.especialidad = persona['cargo'].upper()
+                actualizados += 1
+            else:
                 nuevo_membro = Mecanico(
                     rut=persona['rut'],
                     nombre=persona['nombre'], 
@@ -266,8 +272,8 @@ def cargar_taller():
                 
         db.session.commit()
         return f"<div style='font-family: Arial; padding: 40px; text-align: center;'>" \
-               f"<h2 style='color: green;'>¡Carga Exitosa con RUTs!</h2>" \
-               f"<p>Se agregaron/actualizaron {agregados} miembros con sus respectivos RUTs.</p>" \
+               f"<h2 style='color: green;'>¡Carga y Actualización Exitosa!</h2>" \
+               f"<p>Se agregaron {agregados} miembros nuevos y se actualizaron los RUTs de {actualizados} miembros existentes.</p>" \
                f"<a href='/?tab=mecanicos' style='display: inline-block; padding: 10px 20px; background: #2563EB; color: white; text-decoration: none; border-radius: 8px;'>Ver Equipo en Dashboard</a>" \
                f"</div>"
     except Exception as e:
