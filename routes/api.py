@@ -38,7 +38,8 @@ def add_record():
         eq = Equipo.query.filter_by(codigo=codigo).first()
         h_val = val if eq and eq.control_base == 'HORAS' else 0
         k_val = val if eq and eq.control_base == 'KM' else 0
-        # No se guarda observación ni operador
+        
+        # Eliminadas observacion y operador manual, es transparente.
         db.session.add(HistorialLectura(
             codigo_equipo=codigo, horometro=h_val, kilometraje=k_val, 
             observacion='', fecha=datetime.now(), responsable=''
@@ -167,7 +168,7 @@ def cambiar_estado_ot(ot_id):
     nuevo = request.json.get('estado')
     estado_anterior = ot.estado
     
-    # Se quitó "En Espera Repuestos"
+    # KANBAN A 4 COLUMNAS
     if nuevo in ['Pendiente','En Progreso','En Revisión','Finalizada']:
         ot.estado = nuevo
         if nuevo == 'Finalizada' and not ot.fecha_cierre: ot.fecha_cierre = datetime.now()
