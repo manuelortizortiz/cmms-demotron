@@ -23,13 +23,15 @@ def create_app():
         return User.query.get(int(user_id))
 
     with app.app_context():
+        # --- SE AGREGA EL CHATTER PARA CREAR TABLA ---
+        from models.chatter import RegistroChatter
+        
         db.create_all()
         
         try:
             db.session.execute(text("ALTER TABLE orden_trabajo ADD COLUMN IF NOT EXISTS sistema_falla VARCHAR(100)"))
             db.session.execute(text("ALTER TABLE orden_trabajo ADD COLUMN IF NOT EXISTS causa_raiz TEXT"))
             db.session.execute(text("ALTER TABLE orden_trabajo ADD COLUMN IF NOT EXISTS fecha_cierre TIMESTAMP"))
-            # --- NUEVA AUTO-MIGRACIÓN PARA EL RUT ---
             db.session.execute(text("ALTER TABLE mecanico ADD COLUMN IF NOT EXISTS rut VARCHAR(20)"))
             db.session.commit()
         except Exception as e:
