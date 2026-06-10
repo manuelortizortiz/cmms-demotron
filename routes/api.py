@@ -1,13 +1,16 @@
 from flask import Blueprint, request, jsonify, redirect
+import os
+from werkzeug.utils import secure_filename
 from datetime import datetime
 import random
-from flask_login import login_required
+from flask_login import login_required, current_user
 from flask_mail import Message
 from extensions import db, mail
 from models.equipo import Equipo, FiltroEquipo
 from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
 from models.personal import Personal, Mecanico, RegistroUsoEquipo
+from models.chatter import RegistroChatter
 from utils.formatters import clean_int, clean_float
 
 api_bp = Blueprint('api', __name__)
@@ -38,7 +41,7 @@ def add_record():
         db.session.add(HistorialLectura(
             codigo_equipo=codigo, horometro=h_val, kilometraje=k_val, 
             observacion=request.form.get('observacion', ''), fecha=datetime.now(),
-            responsable=request.form.get('responsable', 'Admin')
+            responsable=request.form.get('responsable', current_user.nombre)
         ))
         if eq: eq.lectura_actual = val
 
@@ -65,7 +68,6 @@ def add_record():
         lectura_req = clean_int(request.form.get('lectura'))
         if lectura_req == 0 and eq: lectura_req = eq.lectura_actual
         
-        # Estructuración forzada del folio manual o automático como OT-CR-
         folio_input = request.form.get('folio', '').strip()
         if folio_input:
             folio_req = folio_input if folio_input.startswith("OT-CR-") else f"OT-CR-{folio_input}"
@@ -206,28 +208,71 @@ def edit_lectura(lid):
         db.session.commit()
     return jsonify({"status": "success"})
 
-@api_bp.route('/api/edit_equipo/<codigo>', methods=['POST'])
-@login_required
-def edit_equipo(codigo):
-    eq = Equipo.query.filter_by(codigo=codigo).first_or_404()
-    data = request.form
-    campos = ['tipo_equipo','marca','modelo','ubicacion','responsable','estado_base','control_base','vin','n_motor','patente']
-    for campo in campos:
-        val = data.get(campo)
-        if val is not None: setattr(eq, campo, val.strip())
-    if data.get('frecuencia_base'): eq.frecuencia_base = clean_int(data.get('frecuencia_base'), eq.frecuencia_base)
-    eq.proxima_pm = (eq.lectura_actual or 0) + eq.frecuencia_base
-    db.session.commit()
-    return jsonify({"status": "success"})
-
 @api_bp.route('/api/cambiar_estado_ot/<int:ot_id>', methods=['POST'])
 @login_required
 def cambiar_estado_ot(ot_id):
     ot = OrdenTrabajo.query.get_or_404(ot_id)
     nuevo = request.json.get('estado')
+    estado_anterior = ot.estado
+    
     if nuevo in ['Pendiente','En Progreso','En Espera Repuestos','En Revisión','Finalizada']:
         ot.estado = nuevo
         if nuevo == 'Finalizada' and not ot.fecha_cierre: ot.fecha_cierre = datetime.now()
+        
+        # --- AUDITORÍA AUTOMÁTICA HACIA EL CHATTER ---
+        if estado_anterior != nuevo:
+            log = RegistroChatter(
+                modelo_ref='ot',
+                registro_id=str(ot.id),
+                autor=current_user.nombre,
+                accion='cambio_estado',
+                valor_anterior=estado_anterior,
+                valor_nuevo=nuevo
+            )
+            db.session.add(log)
+            
         db.session.commit()
         return jsonify({"status": "success", "estado": nuevo})
     return jsonify({"status": "error"}), 400
+
+# --- RUTAS DE LA API CHATTER ---
+@api_bp.route('/api/chatter/<modelo>/<registro_id>', methods=['GET'])
+@login_required
+def get_chatter(modelo, registro_id):
+    logs = RegistroChatter.query.filter_by(modelo_ref=modelo, registro_id=registro_id).order_by(RegistroChatter.fecha.desc()).all()
+    return jsonify([log.to_dict() for log in logs])
+
+@api_bp.route('/api/chatter/add', methods=['POST'])
+@login_required
+def add_chatter():
+    modelo = request.form.get('modelo_ref')
+    registro_id = request.form.get('registro_id')
+    mensaje = request.form.get('mensaje', '').strip()
+    accion = 'comentario'
+    archivo_url = None
+
+    if 'archivo' in request.files:
+        file = request.files['archivo']
+        if file.filename != '':
+            filename = secure_filename(file.filename)
+            upload_folder = os.path.join('static', 'uploads', 'chatter')
+            os.makedirs(upload_folder, exist_ok=True)
+            filepath = os.path.join(upload_folder, filename)
+            file.save(filepath)
+            archivo_url = f"/static/uploads/chatter/{filename}"
+            accion = 'adjunto'
+
+    if not mensaje and not archivo_url:
+        return jsonify({"status": "error"}), 400
+
+    log = RegistroChatter(
+        modelo_ref=modelo,
+        registro_id=registro_id,
+        autor=current_user.nombre,
+        accion=accion,
+        mensaje=mensaje,
+        archivo_url=archivo_url
+    )
+    db.session.add(log)
+    db.session.commit()
+    return jsonify({"status": "success", "log": log.to_dict()})
