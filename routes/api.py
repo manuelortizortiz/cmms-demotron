@@ -38,10 +38,10 @@ def add_record():
         eq = Equipo.query.filter_by(codigo=codigo).first()
         h_val = val if eq and eq.control_base == 'HORAS' else 0
         k_val = val if eq and eq.control_base == 'KM' else 0
+        # No se guarda observación ni operador
         db.session.add(HistorialLectura(
             codigo_equipo=codigo, horometro=h_val, kilometraje=k_val, 
-            observacion=request.form.get('observacion', ''), fecha=datetime.now(),
-            responsable=request.form.get('responsable', current_user.nombre)
+            observacion='', fecha=datetime.now(), responsable=''
         ))
         if eq: eq.lectura_actual = val
 
@@ -86,11 +86,6 @@ def add_record():
         )
         db.session.add(nueva_ot)
         db.session.commit()
-        try:
-            msg = Message(subject=f"🚨 ALERTA CMMS: Nueva Correctiva en Equipo {codigo}", sender='no-reply@demotron.cl', recipients=['admin@demotron.cl'])
-            msg.body = f"Se ha reportado una mantención correctiva.\nEquipo: {codigo}\nFolio: {folio_req}\nSistema: {sistema_f}\nDiagnóstico: {causa_r}"
-            mail.send(msg)
-        except Exception as e: print(f"Error correo: {e}")
 
     elif tabla == 'compra':
         oc_segura = request.form.get('oc', '').strip() or f"OC-{datetime.now().strftime('%Y%m%d%H%M')}"
@@ -165,49 +160,6 @@ def update_inline():
         return jsonify({"status": "success"})
     return jsonify({"status": "error"}), 404
 
-@api_bp.route('/api/edit_ot/<int:ot_id>', methods=['POST'])
-@login_required
-def edit_ot(ot_id):
-    ot = OrdenTrabajo.query.get_or_404(ot_id)
-    data = request.form
-    if data.get('fecha'):
-        try: ot.fecha = datetime.strptime(data.get('fecha'), '%Y-%m-%d')
-        except ValueError: pass
-    if data.get('tipo_mantencion'): ot.tipo_mantencion = data.get('tipo_mantencion').strip()
-    if data.get('tipo_ot') in ['Preventiva','Correctiva']: ot.tipo_ot = data.get('tipo_ot')
-    if data.get('estado'): ot.estado = data.get('estado')
-    if data.get('mecanico'): ot.mecanico = data.get('mecanico').strip()
-    if data.get('folio'): 
-        f_input = data.get('folio').strip()
-        ot.folio = f_input if f_input.startswith("OT-CR-") or ot.tipo_ot == 'Preventiva' else f"OT-CR-{f_input}"
-    if data.get('lugar'): ot.lugar = data.get('lugar').strip()
-    if data.get('lectura'): ot.lectura = clean_int(data.get('lectura'))
-    if data.get('costo'): ot.costo_mantencion_clp = clean_float(data.get('costo'), 0.0)
-    if data.get('sistema_falla'): ot.sistema_falla = data.get('sistema_falla')
-    if data.get('causa_raiz'): ot.causa_raiz = data.get('causa_raiz').strip()
-    if ot.estado == 'Finalizada' and not ot.fecha_cierre:
-        ot.fecha_cierre = datetime.now()
-    db.session.commit()
-    return jsonify({"status": "success"})
-
-@api_bp.route('/api/edit_lectura/<int:lid>', methods=['POST'])
-@login_required
-def edit_lectura(lid):
-    lec = HistorialLectura.query.get_or_404(lid)
-    data = request.form
-    if data.get('fecha'):
-        try: lec.fecha = datetime.strptime(data.get('fecha'), '%Y-%m-%d')
-        except ValueError: pass
-    if data.get('horometro') is not None: lec.horometro = clean_int(data.get('horometro'), 0)
-    if data.get('kilometraje') is not None: lec.kilometraje = clean_int(data.get('kilometraje'), 0)
-    if data.get('observacion') is not None: lec.observacion = data.get('observacion').strip()
-    eq = Equipo.query.filter_by(codigo=lec.codigo_equipo).first()
-    if eq:
-        ultima = HistorialLectura.query.filter_by(codigo_equipo=lec.codigo_equipo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
-        if ultima: eq.lectura_actual = ultima.horometro if eq.control_base == 'HORAS' else ultima.kilometraje
-        db.session.commit()
-    return jsonify({"status": "success"})
-
 @api_bp.route('/api/cambiar_estado_ot/<int:ot_id>', methods=['POST'])
 @login_required
 def cambiar_estado_ot(ot_id):
@@ -215,11 +167,11 @@ def cambiar_estado_ot(ot_id):
     nuevo = request.json.get('estado')
     estado_anterior = ot.estado
     
-    if nuevo in ['Pendiente','En Progreso','En Espera Repuestos','En Revisión','Finalizada']:
+    # Se quitó "En Espera Repuestos"
+    if nuevo in ['Pendiente','En Progreso','En Revisión','Finalizada']:
         ot.estado = nuevo
         if nuevo == 'Finalizada' and not ot.fecha_cierre: ot.fecha_cierre = datetime.now()
         
-        # --- AUDITORÍA AUTOMÁTICA HACIA EL CHATTER ---
         if estado_anterior != nuevo:
             log = RegistroChatter(
                 modelo_ref='ot',
@@ -235,7 +187,6 @@ def cambiar_estado_ot(ot_id):
         return jsonify({"status": "success", "estado": nuevo})
     return jsonify({"status": "error"}), 400
 
-# --- RUTAS DE LA API CHATTER ---
 @api_bp.route('/api/chatter/<modelo>/<registro_id>', methods=['GET'])
 @login_required
 def get_chatter(modelo, registro_id):
