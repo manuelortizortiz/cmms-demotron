@@ -1,5 +1,4 @@
 from flask import Blueprint, render_template
-import random
 from datetime import datetime
 from collections import Counter
 from flask_login import login_required
@@ -9,6 +8,7 @@ from models.equipo import Equipo
 from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
 from models.personal import Personal, Mecanico, RegistroUsoEquipo
+from models.bodega import InventarioBodega
 from utils.formatters import format_num, format_clp, buscar_foto_por_tipo
 
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -24,6 +24,7 @@ def dashboard():
         operadores_db = Personal.query.all()
         mecanicos_db = Mecanico.query.all()
         usos_db = RegistroUsoEquipo.query.order_by(RegistroUsoEquipo.fecha.desc()).all()
+        bodega_db = InventarioBodega.query.order_by(InventarioBodega.nombre).all()
         
         equipos_dict, taller, criticos, proximos = [], [], [], []
         conteo_estado = {'Operativo': 0, 'Fuera de Servicio': 0, 'Taller': 0}
@@ -71,7 +72,6 @@ def dashboard():
         todas_mants_corr = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'sistema_falla': m.sistema_falla, 'causa_raiz': m.causa_raiz, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Correctiva']
         todas_compras = [{'id': c.id, 'fecha': c.fecha.strftime('%d/%m/%Y'), 'oc': c.oc, 'codigo': c.codigo_equipo, 'descripcion': c.descripcion, 'costo_str': format_clp(c.costo_pm_clp)} for c in compras_db]
         
-        # --- LECTURAS OPTIMIZADAS ---
         todas_lecturas = []
         for l in lecturas_db:
             eq = next((e for e in eqs_db if e.codigo == l.codigo_equipo), None)
@@ -82,8 +82,9 @@ def dashboard():
                 'valor_str': format_num(max(l.horometro or 0, l.kilometraje or 0)), 
                 'tipo': 'HR' if (l.horometro and l.horometro > 0) else 'KM'
             })
+            
+        bodega_list = [{'id': b.id, 'codigo_item': b.codigo_item, 'nombre': b.nombre, 'categoria': b.categoria, 'cantidad': b.cantidad, 'ubicacion': b.ubicacion} for b in bodega_db]
         
-        # --- KANBAN 4 COLUMNAS LIMPIO ---
         kanban_tareas = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Finalizada': []}
         for ot in ots_db:
             estado_k = ot.estado if ot.estado in kanban_tareas else 'Pendiente'
@@ -129,7 +130,7 @@ def dashboard():
                                top_equipos_fallas=top_equipos_fallas, mants_prev=todas_mants_prev, 
                                mants_corr=todas_mants_corr, compras=todas_compras, lecturas=todas_lecturas, 
                                kanban=kanban_tareas, operadores=[{'id': p.id, 'nombre': p.nombre, 'cargo': p.cargo, 'estado': p.estado, 'equipo_asignado': p.equipo_asignado} for p in operadores_db], 
-                               mecanicos=mecanicos_list, 
+                               mecanicos=mecanicos_list, bodega=bodega_list,
                                usos=[{'id': u.id, 'fecha': u.fecha.strftime('%d/%m/%Y'), 'operador': u.operador, 'codigo_equipo': u.codigo_equipo, 'observacion': u.observacion} for u in usos_db])
     except Exception as e:
         return f"Error en Dashboard: {str(e)}"
