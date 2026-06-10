@@ -195,14 +195,21 @@ def cargar_sql_final():
             db.session.commit()
         except Exception as e: pass
 
+        # --- CORRECCIÓN CÁLCULO DE PROYECCIONES FINALES (FIX CD-107) ---
         for eq in Equipo.query.all():
             u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if u_lec: eq.lectura_actual = u_lec.horometro if eq.control_base == 'HORAS' else u_lec.kilometraje
-            u_pm = OrdenTrabajo.query.filter_by(codigo_equipo=eq.codigo, estado='Finalizada').order_by(OrdenTrabajo.fecha.desc()).first()
-            if u_pm: eq.proxima_pm = u_pm.lectura + eq.frecuencia_base
-            else: eq.proxima_pm = eq.lectura_actual + eq.frecuencia_base
+            
+            # CRÍTICO: Buscar SOLO la última mantención Preventiva para calcular la próxima
+            u_pm = OrdenTrabajo.query.filter_by(codigo_equipo=eq.codigo, tipo_ot='Preventiva', estado='Finalizada').order_by(OrdenTrabajo.fecha.desc()).first()
+            
+            if u_pm: 
+                eq.proxima_pm = u_pm.lectura + eq.frecuencia_base
+            else: 
+                eq.proxima_pm = (eq.lectura_actual or 0) + eq.frecuencia_base
         db.session.commit()
 
+        # ARCHIVOS ADICIONALES
         if archivo_detalles:
             if archivo_detalles.endswith('.xlsx'): df_det = pd.read_excel(archivo_detalles, engine='openpyxl')
             else: df_det = pd.read_csv(archivo_detalles)
@@ -215,6 +222,51 @@ def cargar_sql_final():
                     eq.vin = clean_string(row.get('N° Chasis', ''))
                     eq.n_motor = clean_string(row.get('N° Motor', ''))
             db.session.commit()
+
+        # --- CORRECCIÓN IMPORTADOR DE FILTROS ---
+        if archivo_filtros:
+            try:
+                # Regla de oro: Aplicamos skiprows=2 al igual que a todos los demás Excel
+                if archivo_filtros.endswith('.xlsx'): df_fil = pd.read_excel(archivo_filtros, engine='openpyxl', skiprows=2)
+                else: df_fil = pd.read_csv(archivo_filtros, skiprows=2)
+                
+                df_fil.columns = df_fil.columns.astype(str).str.strip()
+                df_fil = df_fil.replace({np.nan: "-"})
+                
+                # Búsqueda dinámica de columnas para que no falle si cambian de orden
+                cols = df_fil.columns.tolist()
+                cod_c = next((c for c in cols if 'cod' in c.lower() or 'equipo' in c.lower()), cols[0] if len(cols)>0 else None)
+                sis_c = next((c for c in cols if 'sistem' in c.lower()), cols[1] if len(cols)>1 else None)
+                can_c = next((c for c in cols if 'cant' in c.lower()), cols[2] if len(cols)>2 else None)
+                fg_c = next((c for c in cols if 'fleet' in c.lower()), cols[3] if len(cols)>3 else None)
+                bw_c = next((c for c in cols if 'bald' in c.lower()), cols[4] if len(cols)>4 else None)
+                or_c = next((c for c in cols if 'orig' in c.lower()), cols[5] if len(cols)>5 else None)
+                dn_c = next((c for c in cols if 'donald' in c.lower()), cols[6] if len(cols)>6 else None)
+                ot_c = next((c for c in cols if 'otra' in c.lower() or 'altern' in c.lower()), cols[7] if len(cols)>7 else None)
+
+                for _, row in df_fil.iterrows():
+                    cod = clean_string(str(row.get(cod_c, '')))
+                    if not cod or cod == '-': continue
+                    
+                    sistema_f = clean_string(str(row.get(sis_c, '-')))
+                    eq = Equipo.query.filter_by(codigo=cod).first()
+                    
+                    if eq:
+                        fil = FiltroEquipo.query.filter_by(codigo_equipo=cod, sistema=sistema_f).first()
+                        if not fil:
+                            db.session.add(FiltroEquipo(
+                                codigo_equipo=cod, 
+                                sistema=sistema_f,
+                                cant=clean_int(row.get(can_c), 1) if can_c else 1,
+                                fleetguard=clean_string(str(row.get(fg_c, '-'))) if fg_c else "-",
+                                baldwind=clean_string(str(row.get(bw_c, '-'))) if bw_c else "-",
+                                originales=clean_string(str(row.get(or_c, '-'))) if or_c else "-",
+                                donaldson=clean_string(str(row.get(dn_c, '-'))) if dn_c else "-",
+                                otra=clean_string(str(row.get(ot_c, '-'))) if ot_c else "-"
+                            ))
+                db.session.commit()
+            except Exception as e:
+                print(f"Error procesando filtros: {e}")
 
         return "Carga Completa y Exitosa con Sincronización Segura. <a href='/'>Ir al Dashboard</a>"
     except Exception as e:
