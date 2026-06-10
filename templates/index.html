@@ -203,12 +203,6 @@
                                     </select>
                                 </div>
 
-                                <select class="kanban-estado-sel w-full text-[10px] border border-slate-200 rounded p-1 text-slate-600 mb-2" data-id="{{ t.id }}">
-                                    {% for s in ['Pendiente','En Progreso','En Revisión','Finalizada'] %}
-                                    <option value="{{ s }}" {% if s==estado %}selected{% endif %}>{{ s }}</option>
-                                    {% endfor %}
-                                </select>
-
                                 <div class="flex justify-between items-center mt-3 border-t border-slate-100 pt-2">
                                     <div class="flex items-center gap-1">
                                         <span class="text-[9px] text-slate-400">{{ t.fecha }}</span>
@@ -509,15 +503,6 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Cambio de Estado Automático
-            document.querySelectorAll('.kanban-estado-sel').forEach(sel => {
-                sel.addEventListener('change', function() {
-                    fetch('/api/cambiar_estado_ot/' + this.dataset.id, {
-                        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({estado: this.value})
-                    }).then(r => r.json()).then(d => { if(d.status === 'success') location.reload(); });
-                });
-            });
-
             // Asignación de Mecánico Automático + Chatter Audit
             document.querySelectorAll('.kanban-mecanico-sel').forEach(sel => {
                 sel.addEventListener('change', function() {
