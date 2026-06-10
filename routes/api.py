@@ -64,7 +64,14 @@ def add_record():
         eq = Equipo.query.filter_by(codigo=codigo).first()
         lectura_req = clean_int(request.form.get('lectura'))
         if lectura_req == 0 and eq: lectura_req = eq.lectura_actual
-        folio_req = request.form.get('folio', '').strip() or f"CM-{datetime.now().strftime('%M%S%f')}"
+        
+        # Estructuración forzada del folio manual o automático como OT-CR-
+        folio_input = request.form.get('folio', '').strip()
+        if folio_input:
+            folio_req = folio_input if folio_input.startswith("OT-CR-") else f"OT-CR-{folio_input}"
+        else:
+            folio_req = f"OT-CR-{datetime.now().strftime('%M%S%f')[:5]}"
+            
         sistema_f = request.form.get('sistema_falla', 'No especificado')
         causa_r = request.form.get('causa_raiz', 'Sin diagnóstico inicial')
         nueva_ot = OrdenTrabajo(
@@ -78,8 +85,8 @@ def add_record():
         db.session.add(nueva_ot)
         db.session.commit()
         try:
-            msg = Message(subject=f"🚨 ALERTA CMMS: Nueva Avería en Equipo {codigo}", sender='no-reply@demotron.cl', recipients=['admin@demotron.cl'])
-            msg.body = f"Se ha reportado una avería.\nEquipo: {codigo}\nFolio: {folio_req}\nSistema: {sistema_f}\nDiagnóstico: {causa_r}"
+            msg = Message(subject=f"🚨 ALERTA CMMS: Nueva Correctiva en Equipo {codigo}", sender='no-reply@demotron.cl', recipients=['admin@demotron.cl'])
+            msg.body = f"Se ha reportado una mantención correctiva.\nEquipo: {codigo}\nFolio: {folio_req}\nSistema: {sistema_f}\nDiagnóstico: {causa_r}"
             mail.send(msg)
         except Exception as e: print(f"Error correo: {e}")
 
@@ -103,7 +110,7 @@ def add_record():
         
     elif tabla == 'mecanico':
         db.session.add(Mecanico(
-            rut=request.form.get('rut', ''),  # <-- GUARDADO DE RUT
+            rut=request.form.get('rut', ''),  
             nombre=request.form.get('nombre', ''), 
             especialidad=request.form.get('especialidad', 'General'), 
             estado='Activo'
@@ -168,7 +175,9 @@ def edit_ot(ot_id):
     if data.get('tipo_ot') in ['Preventiva','Correctiva']: ot.tipo_ot = data.get('tipo_ot')
     if data.get('estado'): ot.estado = data.get('estado')
     if data.get('mecanico'): ot.mecanico = data.get('mecanico').strip()
-    if data.get('folio'): ot.folio = data.get('folio').strip()
+    if data.get('folio'): 
+        f_input = data.get('folio').strip()
+        ot.folio = f_input if f_input.startswith("OT-CR-") or ot.tipo_ot == 'Preventiva' else f"OT-CR-{f_input}"
     if data.get('lugar'): ot.lugar = data.get('lugar').strip()
     if data.get('lectura'): ot.lectura = clean_int(data.get('lectura'))
     if data.get('costo'): ot.costo_mantencion_clp = clean_float(data.get('costo'), 0.0)
