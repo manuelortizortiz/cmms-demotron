@@ -118,6 +118,7 @@ def cargar_sql_final():
                 ))
         db.session.commit()
 
+        # --- HOJA CORRECTIVAS OPTIMIZADA (PUNTOS 1, 2 Y 3) ---
         try:
             df_corr = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Correctivas", skiprows=2).replace({np.nan: None})
             df_corr.columns = df_corr.columns.str.strip()  
@@ -125,16 +126,25 @@ def cargar_sql_final():
                 cod = clean_string(str(row.get('Codigo Equipo', '') or ''))
                 if not cod or cod.lower() == 'none': continue
                 fecha_dt = parse_date(row.get('Fecha'))
-                falla = clean_string(str(row.get('Falla / Averia', '') or ''))  
+                falla = clean_string(str(row.get('Falla / Averia', '') or ''))
                 
+                # Punto 3: Folio estructurado automáticamente como OT-CR-[Folio]
                 folio_raw = row.get('Folio')
                 if folio_raw is not None and str(folio_raw).lower() not in ['none', 'nan', '']:
-                    try: folio_val = str(int(float(folio_raw)))
-                    except: folio_val = str(folio_raw).strip()
-                else: folio_val = f"CM-{random.randint(1000,9999)}"
+                    try: f_num = str(int(float(folio_raw)))
+                    except: f_num = str(folio_raw).strip()
+                    folio_val = f"OT-CR-{f_num}"
+                else:
+                    folio_val = f"OT-CR-{random.randint(1000,9999)}"
                 
                 mecanico_val = clean_string(str(row.get('Mecanico', '') or 'Sin Asignar')) or 'Sin Asignar'
                 estado_val = clean_string(str(row.get('Estado', '') or 'Finalizada')) or 'Finalizada'
+                
+                # Punto 1: Captura de Horómetros/Odómetros desde la Columna E (Índice por posición 4)
+                lectura_val = clean_int(row.iloc[4], 0)
+                
+                # Punto 2: Forzar costos a 0.0 ya que no existe la columna en el Excel aún
+                costo_val = 0.0
                 
                 falla_lower = falla.lower()
                 if any(x in falla_lower for x in ['motor','aceite','filtro','refrigerante','radiador','correa']): sistema_val='Motor'
@@ -147,13 +157,14 @@ def cargar_sql_final():
                 if not OrdenTrabajo.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, tipo_mantencion=falla).first():
                     db.session.add(OrdenTrabajo(
                         fecha=fecha_dt, codigo_equipo=cod, tipo_ot='Correctiva', tipo_mantencion=falla,
-                        lectura=clean_int(row.get('Lectura (Odo/Hor)'), 0),
-                        costo_mantencion_clp=clean_float(row.get('Costo CLP'), 0.0),
+                        lectura=lectura_val,
+                        costo_mantencion_clp=costo_val,
                         estado=estado_val, folio=folio_val, mecanico=mecanico_val,
                         sistema_falla=sistema_val, causa_raiz=falla
                     ))
             db.session.commit()
-        except Exception as e: pass
+        except Exception as e:
+            print(f"Error Correctivas: {e}")
 
         try:
             df_com = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
@@ -273,7 +284,7 @@ def cargar_taller():
         db.session.commit()
         return f"<div style='font-family: Arial; padding: 40px; text-align: center;'>" \
                f"<h2 style='color: green;'>¡Carga y Actualización Exitosa!</h2>" \
-               f"<p>Se agregaron {agregados} miembros nuevos y se actualizaron los RUTs de {actualizados} miembros existentes.</p>" \
+               f"<p>Se agregaron {agregados} miembros nuevos y se actualizaron los RUTs de {actualizados} miembros.</p>" \
                f"<a href='/?tab=mecanicos' style='display: inline-block; padding: 10px 20px; background: #2563EB; color: white; text-decoration: none; border-radius: 8px;'>Ver Equipo en Dashboard</a>" \
                f"</div>"
     except Exception as e:
