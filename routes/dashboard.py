@@ -70,9 +70,21 @@ def dashboard():
         todas_mants_prev = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Preventiva']
         todas_mants_corr = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'sistema_falla': m.sistema_falla, 'causa_raiz': m.causa_raiz, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Correctiva']
         todas_compras = [{'id': c.id, 'fecha': c.fecha.strftime('%d/%m/%Y'), 'oc': c.oc, 'codigo': c.codigo_equipo, 'descripcion': c.descripcion, 'costo_str': format_clp(c.costo_pm_clp)} for c in compras_db]
-        todas_lecturas = [{'id': l.id, 'fecha': l.fecha.strftime('%d/%m/%Y'), 'codigo': l.codigo_equipo, 'valor_str': format_num(max(l.horometro or 0, l.kilometraje or 0)), 'tipo': 'HR' if (l.horometro and l.horometro > 0) else 'KM', 'obs': l.observacion, 'responsable': l.responsable} for l in lecturas_db]
         
-        kanban_tareas = {'Pendiente': [], 'En Progreso': [], 'En Espera Repuestos': [], 'En Revisión': [], 'Finalizada': []}
+        # --- LECTURAS OPTIMIZADAS ---
+        todas_lecturas = []
+        for l in lecturas_db:
+            eq = next((e for e in eqs_db if e.codigo == l.codigo_equipo), None)
+            tipo_eq = eq.tipo_equipo if eq else 'S/E'
+            todas_lecturas.append({
+                'id': l.id, 'fecha': l.fecha.strftime('%d/%m/%Y'), 
+                'codigo': l.codigo_equipo, 'tipo_equipo': tipo_eq,
+                'valor_str': format_num(max(l.horometro or 0, l.kilometraje or 0)), 
+                'tipo': 'HR' if (l.horometro and l.horometro > 0) else 'KM'
+            })
+        
+        # --- KANBAN 4 COLUMNAS ---
+        kanban_tareas = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Finalizada': []}
         for ot in ots_db:
             estado_k = ot.estado if ot.estado in kanban_tareas else 'Pendiente'
             dias_abierta = (datetime.now() - ot.fecha).days if ot.fecha else 0
@@ -110,7 +122,6 @@ def dashboard():
             'costos_mensuales': {'labels': ['Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul'], 'data': list(costos.values())}
         }
         
-        # --- SE ENVIAN LOS RUTs AL TEMPLATE HTML ---
         mecanicos_list = [{'id': m.id, 'rut': m.rut, 'nombre': m.nombre, 'especialidad': m.especialidad, 'estado': m.estado} for m in mecanicos_db]
 
         return render_template('index.html', kpis=kpis, charts=charts, fallas_data=fallas_data, 
