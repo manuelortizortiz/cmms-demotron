@@ -83,7 +83,7 @@ def dashboard():
                 'tipo': 'HR' if (l.horometro and l.horometro > 0) else 'KM'
             })
         
-        # --- KANBAN 4 COLUMNAS ---
+        # --- KANBAN 4 COLUMNAS LIMPIO ---
         kanban_tareas = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Finalizada': []}
         for ot in ots_db:
             estado_k = ot.estado if ot.estado in kanban_tareas else 'Pendiente'
