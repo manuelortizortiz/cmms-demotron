@@ -24,8 +24,7 @@ def cargar_sql_final():
             db.session.execute(text("ALTER TABLE personal ADD COLUMN equipo_asignado VARCHAR(50) DEFAULT 'Ninguno'"))
             db.session.execute(text("ALTER TABLE orden_trabajo ADD COLUMN mecanico VARCHAR(100) DEFAULT 'Sin Asignar'"))
             db.session.commit()
-        except Exception:
-            db.session.rollback()
+        except Exception: db.session.rollback()
 
         try:
             db.session.execute(text("ALTER TABLE orden_trabajo ALTER COLUMN tipo_mantencion TYPE TEXT"))
@@ -33,8 +32,7 @@ def cargar_sql_final():
             db.session.execute(text("ALTER TABLE historial_lectura ALTER COLUMN observacion TYPE TEXT"))
             db.session.execute(text("ALTER TABLE registro_uso_equipo ALTER COLUMN observacion TYPE TEXT"))
             db.session.commit()
-        except Exception:
-            db.session.rollback()
+        except Exception: db.session.rollback()
 
         db.create_all()
 
@@ -43,8 +41,7 @@ def cargar_sql_final():
         archivo_filtros = next((f for f in archivos if "filtro" in f.lower() and f.endswith(('.xlsx', '.csv')) and not f.startswith('~$')), None)
         archivo_detalles = next((f for f in archivos if "detalles" in f.lower() and f.endswith(('.xlsx', '.csv')) and not f.startswith('~$')), None)
 
-        if not excel_principal:
-            return "Error: Falta el archivo principal CMMS DEMOTRON (.xlsx)."
+        if not excel_principal: return "Error: Falta el archivo principal CMMS DEMOTRON (.xlsx)."
 
         # --- 1. HOJA EQUIPOS ---
         df_eq = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Equipos", skiprows=2).replace({np.nan: None})
@@ -185,8 +182,7 @@ def cargar_sql_final():
                         sistema_falla=sistema_val, causa_raiz=falla
                     ))
             db.session.commit()
-        except Exception as e:
-            print(f"Error Correctivas: {e}")
+        except Exception as e: pass
 
         # --- 5. HOJA COMPRAS PM ---
         try:
@@ -206,10 +202,9 @@ def cargar_sql_final():
                         estado_oc=clean_string(str(row.get('Estado OC', '') or ''))
                     ))
             db.session.commit()
-        except Exception as e:
-            pass
+        except Exception as e: pass
 
-        # PROYECCIONES
+        # PROYECCIONES (FIX CD-107 INCLUIDO)
         for eq in Equipo.query.all():
             u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if u_lec: eq.lectura_actual = u_lec.horometro if eq.control_base == 'HORAS' else u_lec.kilometraje
@@ -218,7 +213,6 @@ def cargar_sql_final():
             else: eq.proxima_pm = (eq.lectura_actual or 0) + eq.frecuencia_base
         db.session.commit()
 
-        # ARCHIVOS ADICIONALES
         if archivo_detalles:
             try:
                 if archivo_detalles.endswith('.xlsx'): df_det = pd.read_excel(archivo_detalles, engine='openpyxl')
@@ -232,26 +226,36 @@ def cargar_sql_final():
                         eq.vin = clean_string(row.get('N° Chasis', ''))
                         eq.n_motor = clean_string(row.get('N° Motor', ''))
                 db.session.commit()
-            except Exception as e:
-                pass
+            except Exception as e: pass
 
+        # --- IMPORTE INTELIGENTE Y SOBREESCRITURA DE FILTROS (UPSERT) ---
         if archivo_filtros:
             try:
+                # 1. Intentar primero con skiprows=2
                 if archivo_filtros.endswith('.xlsx'): df_fil = pd.read_excel(archivo_filtros, engine='openpyxl', skiprows=2)
                 else: df_fil = pd.read_csv(archivo_filtros, skiprows=2)
                 
                 df_fil.columns = df_fil.columns.astype(str).str.strip()
+                cols = [c.lower() for c in df_fil.columns]
+                
+                # Fallback: Si no encuentra la columna del equipo, significa que no tenía filas en blanco arriba
+                if not any('cod' in c or 'equipo' in c for c in cols):
+                    if archivo_filtros.endswith('.xlsx'): df_fil = pd.read_excel(archivo_filtros, engine='openpyxl')
+                    else: df_fil = pd.read_csv(archivo_filtros)
+                    df_fil.columns = df_fil.columns.astype(str).str.strip()
+                    cols = [c.lower() for c in df_fil.columns]
+
                 df_fil = df_fil.replace({np.nan: "-"})
                 
-                cols = df_fil.columns.tolist()
-                cod_c = next((c for c in cols if 'cod' in c.lower() or 'equipo' in c.lower()), cols[0] if len(cols)>0 else None)
-                sis_c = next((c for c in cols if 'sistem' in c.lower()), cols[1] if len(cols)>1 else None)
-                can_c = next((c for c in cols if 'cant' in c.lower()), cols[2] if len(cols)>2 else None)
-                fg_c = next((c for c in cols if 'fleet' in c.lower()), cols[3] if len(cols)>3 else None)
-                bw_c = next((c for c in cols if 'bald' in c.lower()), cols[4] if len(cols)>4 else None)
-                or_c = next((c for c in cols if 'orig' in c.lower()), cols[5] if len(cols)>5 else None)
-                dn_c = next((c for c in cols if 'donald' in c.lower()), cols[6] if len(cols)>6 else None)
-                ot_c = next((c for c in cols if 'otra' in c.lower() or 'altern' in c.lower()), cols[7] if len(cols)>7 else None)
+                # Detección flexible de nombres de columna
+                cod_c = next((c for c in df_fil.columns if 'cod' in c.lower() or 'equipo' in c.lower()), df_fil.columns[0] if len(df_fil.columns)>0 else None)
+                sis_c = next((c for c in df_fil.columns if 'sistem' in c.lower()), df_fil.columns[1] if len(df_fil.columns)>1 else None)
+                can_c = next((c for c in df_fil.columns if 'cant' in c.lower()), df_fil.columns[2] if len(df_fil.columns)>2 else None)
+                fg_c = next((c for c in df_fil.columns if 'fleet' in c.lower()), df_fil.columns[3] if len(df_fil.columns)>3 else None)
+                bw_c = next((c for c in df_fil.columns if 'bald' in c.lower()), df_fil.columns[4] if len(df_fil.columns)>4 else None)
+                or_c = next((c for c in df_fil.columns if 'orig' in c.lower()), df_fil.columns[5] if len(df_fil.columns)>5 else None)
+                dn_c = next((c for c in df_fil.columns if 'donald' in c.lower()), df_fil.columns[6] if len(df_fil.columns)>6 else None)
+                ot_c = next((c for c in df_fil.columns if 'otra' in c.lower() or 'altern' in c.lower()), df_fil.columns[7] if len(df_fil.columns)>7 else None)
 
                 for indice, row in df_fil.iterrows():
                     cod = clean_string(str(row.get(cod_c, '')))
@@ -261,21 +265,32 @@ def cargar_sql_final():
                     eq = Equipo.query.filter_by(codigo=cod).first()
                     
                     if eq:
-                        fil = FiltroEquipo.query.filter_by(codigo_equipo=cod, sistema=sistema_f).first()
-                        if not fil:
+                        cant_val = clean_int(row.get(can_c), 1) if can_c else 1
+                        fg_val = clean_string(str(row.get(fg_c, '-'))) if fg_c else "-"
+                        bw_val = clean_string(str(row.get(bw_c, '-'))) if bw_c else "-"
+                        or_val = clean_string(str(row.get(or_c, '-'))) if or_c else "-"
+                        dn_val = clean_string(str(row.get(dn_c, '-'))) if dn_c else "-"
+                        ot_val = clean_string(str(row.get(ot_c, '-'))) if ot_c else "-"
+
+                        fil_existente = FiltroEquipo.query.filter_by(codigo_equipo=cod, sistema=sistema_f).first()
+                        if fil_existente:
+                            # MODO UPSERT: Sobreescribe los códigos viejos obligatoriamente
+                            fil_existente.cant = cant_val
+                            fil_existente.fleetguard = fg_val
+                            fil_existente.baldwind = bw_val
+                            fil_existente.originales = or_val
+                            fil_existente.donaldson = dn_val
+                            fil_existente.otra = ot_val
+                        else:
+                            # Si es nuevo, lo registra
                             db.session.add(FiltroEquipo(
-                                codigo_equipo=cod, 
-                                sistema=sistema_f,
-                                cant=clean_int(row.get(can_c), 1) if can_c else 1,
-                                fleetguard=clean_string(str(row.get(fg_c, '-'))) if fg_c else "-",
-                                baldwind=clean_string(str(row.get(bw_c, '-'))) if bw_c else "-",
-                                originales=clean_string(str(row.get(or_c, '-'))) if or_c else "-",
-                                donaldson=clean_string(str(row.get(dn_c, '-'))) if dn_c else "-",
-                                otra=clean_string(str(row.get(ot_c, '-'))) if ot_c else "-"
+                                codigo_equipo=cod, sistema=sistema_f, cant=cant_val,
+                                fleetguard=fg_val, baldwind=bw_val, originales=or_val,
+                                donaldson=dn_val, otra=ot_val
                             ))
                 db.session.commit()
             except Exception as e:
-                print(f"Error filtros: {e}")
+                print(f"Error crítico en filtros: {e}")
 
         return "Carga Completa y Exitosa. <a href='/'>Ir al Dashboard</a>"
     except Exception as e:
@@ -353,11 +368,7 @@ def cargar_taller():
                 agregados += 1
                 
         db.session.commit()
-        return f"<div style='font-family: Arial; padding: 40px; text-align: center;'>" \
-               f"<h2 style='color: green;'>¡Carga y Actualización Exitosa!</h2>" \
-               f"<p>Se agregaron {agregados} miembros nuevos y se actualizaron los RUTs de {actualizados} miembros existentes.</p>" \
-               f"<a href='/?tab=mecanicos' style='display: inline-block; padding: 10px 20px; background: #2563EB; color: white; text-decoration: none; border-radius: 8px;'>Ver Equipo en Dashboard</a>" \
-               f"</div>"
+        return "Carga de taller exitosa."
     except Exception as e:
         db.session.rollback()
-        return f"Error al cargar el personal: {str(e)}"
+        return f"Error: {str(e)}"
