@@ -54,7 +54,6 @@ def dashboard():
         operativos_count = conteo_estado.get('Operativo', 0)
         disponibilidad_pct = round((operativos_count / total_eq * 100), 1) if total_eq > 0 else 0
 
-        # --- CORRECCIÓN: CUMPLIMIENTO PM REAL BASADO EN ALERTAS ACTIVAS ---
         atrasados_count = len(criticos)
         cumpl_pm_pct = round(((total_eq - atrasados_count) / total_eq * 100), 1) if total_eq > 0 else 100.0
 
@@ -68,22 +67,19 @@ def dashboard():
             for k, v in eq_fallas_counter.most_common(5)
         ]
 
-        # --- NUEVO DATO: TOP 7 EQUIPOS MÁS COSTOSOS EN PREVENTIVA Y CORRECTIVA ---
+        # --- RANKING 1: LOS 7 EQUIPOS MÁS COSTOSOS EN PREVENTIVA ---
         costos_prev_eq = {}
-        costos_corr_eq = {}
         for o in ots_db:
-            cod = o.codigo_equipo
-            costo = float(o.costo_mantencion_clp or 0.0)
             if o.tipo_ot == 'Preventiva':
+                cod = o.codigo_equipo
+                costo = float(o.costo_mantencion_clp or 0.0)
                 costos_prev_eq[cod] = costos_prev_eq.get(cod, 0.0) + costo
-            elif o.tipo_ot == 'Correctiva':
-                costos_corr_eq[cod] = costos_corr_eq.get(cod, 0.0) + costo
 
         top_7_prev_list = sorted(costos_prev_eq.items(), key=lambda x: x[1], reverse=True)[:7]
-        top_7_corr_list = sorted(costos_corr_eq.items(), key=lambda x: x[1], reverse=True)[:7]
-
         top_7_preventivas = [{'codigo': x[0], 'costo': x[1], 'costo_str': format_clp(x[1])} for x in top_7_prev_list]
-        top_7_correctivas = [{'codigo': x[0], 'costo': x[1], 'costo_str': format_clp(x[1])} for x in top_7_corr_list]
+
+        # --- RANKING 2: LOS 7 EQUIPOS CON MANTENCIÓN CERCANA (MENOR MARGEN RESTANTE >= 0) ---
+        cercanos_list = sorted([e for e in eqs_db if e.margen is not None and e.margen >= 0], key=lambda x: x.margen)[:7]
 
         todas_mants_prev = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Preventiva']
         todas_mants_corr = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'sistema_falla': m.sistema_falla, 'causa_raiz': m.causa_raiz, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Correctiva']
@@ -139,9 +135,11 @@ def dashboard():
             'costos_mensuales': {'labels': ['Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul'], 'data': list(costos.values())},
             'costos_top7': {
                 'prev_labels': [x['codigo'] for x in top_7_preventivas],
-                'prev_data': [x['costo'] for x in top_7_preventivas],
-                'corr_labels': [x['codigo'] for x in top_7_correctivas],
-                'corr_data': [x['costo'] for x in top_7_correctivas]
+                'prev_data': [x['costo'] for x in top_7_preventivas]
+            },
+            'cercanas_top7': {
+                'labels': [e.codigo for e in cercanos_list],
+                'data': [int(e.margen) for e in cercanos_list]
             }
         }
         
@@ -153,7 +151,6 @@ def dashboard():
                                mants_corr=todas_mants_corr, compras=todas_compras, lecturas=todas_lecturas, 
                                kanban=kanban_tareas, operadores=[{'id': p.id, 'nombre': p.nombre, 'cargo': p.cargo, 'estado': p.estado, 'equipo_asignado': p.equipo_asignado} for p in operadores_db], 
                                mecanicos=mecanicos_list, bodega=bodega_list,
-                               top_7_preventivas=top_7_preventivas, top_7_correctivas=top_7_correctivas,
                                usos=[{'id': u.id, 'fecha': u.fecha.strftime('%d/%m/%Y'), 'operador': u.operador, 'codigo_equipo': u.codigo_equipo, 'observacion': u.observacion} for u in usos_db])
     except Exception as e:
         return f"Error en Dashboard: {str(e)}"
