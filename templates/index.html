@@ -114,12 +114,12 @@
 
                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
                     <div class="card-custom">
-                        <h3 class="text-sm font-bold text-slate-700 mb-4">🏆 Los 7 Equipos más Costosos (Mantención Preventiva)</h3>
+                        <h3 class="text-sm font-bold text-slate-700 mb-4">Los 7 Equipos más Costosos (Mantención Preventiva)</h3>
                         <div class="h-64 relative w-full"><canvas id="chartTop7Prev"></canvas></div>
                     </div>
                     <div class="card-custom">
-                        <h3 class="text-sm font-bold text-slate-700 mb-4">🏆 Los 7 Equipos más Costosos (Mantención Correctiva)</h3>
-                        <div class="h-64 relative w-full"><canvas id="chartTop7Corr"></canvas></div>
+                        <h3 class="text-sm font-bold text-slate-700 mb-4">Los 7 Equipos con Mantención Cercana</h3>
+                        <div class="h-64 relative w-full"><canvas id="chartTop7Cercana"></canvas></div>
                     </div>
                 </div>
 
@@ -373,7 +373,7 @@
                     <form action="/api/add_record" method="POST" class="m-0 flex flex-wrap gap-4"><input type="hidden" name="tabla" value="mecanico"><input type="hidden" name="referer" value="/?tab=mecanicos"><input type="text" name="rut" placeholder="RUT" class="form-input w-32"><input type="text" name="nombre" placeholder="Nombre" class="form-input w-64" required><input type="text" name="especialidad" placeholder="Especialidad" class="form-input w-48"><button type="submit" class="btn-primary">Añadir Mecánico</button></form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
-                    <table class="table-custom table-searchable"><thead><tr><th>RUT</th><th>Nombre Mecánico</th><th>Especialidad</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mants %}{% endfor %}{% for m in mecanicos %}<tr><td class="font-mono text-slate-500">{{ m.rut or '-' }}</td><td class="font-bold">{{ m.nombre }}</td><td>{{ m.especialidad }}</td><td><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('mecanico', '{{m.id}}', 'Mecánico {{m.nombre}}', [{db: 'especialidad', label: 'Especialidad', val: '{{m.especialidad}}'},{db: 'estado', label: 'Estado', val: '{{m.estado}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}</tbody></table>
+                    <table class="table-custom table-searchable"><thead><tr><th>RUT</th><th>Nombre Mecánico</th><th>Especialidad</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mecanicos %}<tr><td class="font-mono text-slate-500">{{ m.rut or '-' }}</td><td class="font-bold">{{ m.nombre }}</td><td>{{ m.especialidad }}</td><td><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('mecanico', '{{m.id}}', 'Mecánico {{m.nombre}}', [{db: 'especialidad', label: 'Especialidad', val: '{{m.especialidad}}'},{db: 'estado', label: 'Estado', val: '{{m.estado}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}</tbody></table>
                 </div>
             </div>
         </div>
@@ -575,9 +575,24 @@
                     new Chart(document.getElementById('chartCostosMensuales'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión (CLP)', data: cData.costos_mensuales.data, borderColor: '#2563EB', fill: true }] }, options: { maintainAspectRatio:false }});
                     new Chart(document.getElementById('chartFallas'), { type: 'bar', data: { labels: fData.labels, datasets: [{ label: 'N° Averías', data: fData.data, backgroundColor: '#EF4444', borderRadius: 4 }] }, options: { maintainAspectRatio:false }});
                     
-                    // --- NUEVOS GRÁFICOS: TOP 7 PREVENTIVAS Y CORRECTIVAS ---
-                    new Chart(document.getElementById('chartTop7Prev'), { type: 'bar', data: { labels: cData.costos_top7.prev_labels, datasets: [{ label: 'Inversión Preventiva (CLP)', data: cData.costos_top7.prev_data, backgroundColor: '#2563EB', borderRadius: 4 }] }, options: { maintainAspectRatio:false, indexAxis: 'y', scales: { x: { beginAtZero: true } } } });
-                    new Chart(document.getElementById('chartTop7Corr'), { type: 'bar', data: { labels: cData.costos_top7.corr_labels, datasets: [{ label: 'Inversión Correctiva (CLP)', data: cData.costos_top7.corr_data, backgroundColor: '#DC2626', borderRadius: 4 }] }, options: { maintainAspectRatio:false, indexAxis: 'y', scales: { x: { beginAtZero: true } } } });
+                    // --- GRÁFICOS TOP 7 DE COSTOS ACTUALIZADOS ---
+                    new Chart(document.getElementById('chartTop7Prev'), { 
+                        type: 'bar', 
+                        data: { 
+                            labels: cData.costos_top7.prev_labels, 
+                            datasets: [{ label: 'Costo Acumulado (CLP)', data: cData.costos_top7.prev_data, backgroundColor: '#2563EB', borderRadius: 4 }] 
+                        }, 
+                        options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: { beginAtZero: true } } }
+                    });
+                    
+                    new Chart(document.getElementById('chartTop7Carcana' ? 'chartTop7Carcana' : 'chartTop7Corr'), { 
+                        type: 'bar', 
+                        data: { 
+                            labels: cData.costos_top7.corr_labels, 
+                            datasets: [{ label: 'Costo Acumulado (CLP)', data: cData.costos_top7.corr_data, backgroundColor: '#DC2626', borderRadius: 4 }] 
+                        }, 
+                        options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: { beginAtZero: true } } }
+                    });
                 }
             } catch(e) {}
         };
