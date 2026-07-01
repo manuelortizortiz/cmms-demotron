@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import Counter
 from flask_login import login_required
 from sqlalchemy import func
@@ -67,7 +67,6 @@ def dashboard():
             for k, v in eq_fallas_counter.most_common(5)
         ]
 
-        # --- RANKING 1: LOS 7 EQUIPOS MÁS COSTOSOS EN PREVENTIVA ---
         costos_prev_eq = {}
         for o in ots_db:
             if o.tipo_ot == 'Preventiva':
@@ -78,18 +77,19 @@ def dashboard():
         top_7_prev_list = sorted(costos_prev_eq.items(), key=lambda x: x[1], reverse=True)[:7]
         top_7_preventivas = [{'codigo': x[0], 'costo': x[1], 'costo_str': format_clp(x[1])} for x in top_7_prev_list]
 
-        # --- RANKING 2: LOS 7 EQUIPOS CON MANTENCIÓN CERCANA (MEDIDOR VISUAL) ---
+        # CALCULADORA INTELIGENTE DE EVENTOS FUTUROS (CALENDARIO)
         cercanos_seguro = []
+        eventos_futuros = []
         for e in eqs_db:
             try:
                 m_val = float(e.margen)
-                if m_val >= 0:
+                if e.estado_base != 'Fuera de Servicio' and m_val >= 0:
                     pct = 0.0
                     freq = float(e.frecuencia_base) if e.frecuencia_base else 250.0
                     if freq > 0:
                         consumido = freq - m_val
                         pct = (consumido / freq) * 100
-                        pct = max(0.0, min(100.0, pct)) # Asegurar que esté entre 0 y 100%
+                        pct = max(0.0, min(100.0, pct))
                     
                     cercanos_seguro.append({
                         'codigo': e.codigo, 
@@ -97,10 +97,20 @@ def dashboard():
                         'margen_str': format_num(m_val),
                         'pct': round(pct, 1)
                     })
+
+                    # Proyección en Calendario si el margen es menor a 150
+                    if m_val <= 150:
+                        dias_est = int(m_val / 8) if e.control_base == 'HORAS' else int(m_val / 100)
+                        dias_est = max(1, dias_est) # Al menos 1 día de diferencia
+                        fecha_est = (datetime.now() + timedelta(days=dias_est)).strftime('%Y-%m-%d')
+                        eventos_futuros.append({
+                            'title': f"⏳ {e.codigo} (PM Proyectada)",
+                            'start': fecha_est,
+                            'color': '#F59E0B' # Color Naranja
+                        })
             except Exception:
                 pass
         
-        # Ordenamos de menor margen a mayor (los más próximos arriba)
         top_7_cercanos = sorted(cercanos_seguro, key=lambda x: x['margen'])[:7]
 
         todas_mants_prev = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Preventiva']
@@ -170,6 +180,7 @@ def dashboard():
                                kanban=kanban_tareas, operadores=[{'id': p.id, 'nombre': p.nombre, 'cargo': p.cargo, 'estado': p.estado, 'equipo_asignado': p.equipo_asignado} for p in operadores_db], 
                                mecanicos=mecanicos_list, bodega=bodega_list,
                                top_7_preventivas=top_7_preventivas, top_7_cercanos=top_7_cercanos,
+                               eventos_futuros=eventos_futuros, # <--- ENVIADO AL CALENDARIO
                                usos=[{'id': u.id, 'fecha': u.fecha.strftime('%d/%m/%Y'), 'operador': u.operador, 'codigo_equipo': u.codigo_equipo, 'observacion': u.observacion} for u in usos_db])
     except Exception as e:
         return f"Error en Dashboard: {str(e)}"
