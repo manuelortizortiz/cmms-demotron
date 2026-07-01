@@ -157,6 +157,7 @@
                 </div>
             </div>
 
+            <!-- EQUIPOS -->
             <div id="eq" class="seccion">
                 <div class="card-custom-nopad bg-white table-wrapper">
                     <table class="table-custom table-searchable">
@@ -167,8 +168,10 @@
                             <td class="font-bold {% if e.margen < 0 %}text-red-600{% elif e.margen <= 150 %}text-orange-500{% else %}text-green-600{% endif %}">{{ e.margen_str }}</td>
                             <td>{{ e.estado }}</td>
                             <td class="text-right whitespace-nowrap">
+                                <!-- BOTON NUEVO IMPRIMIR FICHA -->
+                                <a href="/api/imprimir_equipo/{{e.codigo}}" target="_blank" class="text-indigo-600 font-bold text-xs border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-50 mr-2">🖨️ Ficha</a>
                                 <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Equipo {{e.codigo}}', [{db: 'ubicacion', label: 'Ubicación', val: '{{e.ubicacion}}'},{db: 'responsable', label: 'Operador', val: '{{e.responsable}}'},{db: 'estado_base', label: 'Estado', val: '{{e.estado}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button>
-                                <button onclick="abrirChatter('equipo', '{{e.codigo}}', 'Equipo {{e.codigo}}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 font-bold text-xs px-2 py-1 rounded">💬 Chatter</button>
+                                <button onclick="abrirChatter('equipo', '{{e.codigo}}', 'Equipo {{e.codigo}}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 font-bold text-xs px-2 py-1 rounded">💬 Notas</button>
                             </td>
                         </tr>{% endfor %}</tbody>
                     </table>
@@ -182,7 +185,10 @@
                         <tbody>{% for e in eqs %}<tr>
                             <td class="font-bold text-blue-600 cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
                             <td>{{ e.tipo }}</td><td>{{ e.marca }}</td><td>{{ e.modelo }}</td><td class="text-slate-500 font-mono">{{ e.vin }}</td><td class="text-slate-500 font-mono">{{ e.motor }}</td><td class="font-bold">{{ e.patente }}</td>
-                            <td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Datos {{e.codigo}}', [{db: 'vin', label: 'VIN', val: '{{e.vin}}'},{db: 'n_motor', label: 'Motor', val: '{{e.motor}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50">Editar</button></td>
+                            <td class="text-right whitespace-nowrap">
+                                <a href="/api/imprimir_equipo/{{e.codigo}}" target="_blank" class="text-indigo-600 font-bold text-xs border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-50 mr-2">🖨️ Ficha</a>
+                                <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Datos {{e.codigo}}', [{db: 'vin', label: 'VIN', val: '{{e.vin}}'},{db: 'n_motor', label: 'Motor', val: '{{e.motor}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50">Editar</button>
+                            </td>
                         </tr>{% endfor %}</tbody>
                     </table>
                 </div>
@@ -213,7 +219,8 @@
                                     <h4 class="font-bold text-slate-800 text-sm">{{ t.codigo }}</h4>
                                     <div class="flex gap-2">
                                         <button onclick="borrarRegistro('ot', '{{t.id}}')" class="text-slate-300 hover:text-red-500 font-bold px-1">&times;</button>
-                                        <a href="/ver_ot/{{ t.id }}" target="_blank" title="Ver / Imprimir" class="text-slate-400 hover:text-blue-600 transition-colors">
+                                        <!-- Vuelve a apuntar al formato anterior -->
+                                        <a href="/imprimir_ot/{{ t.id }}" target="_blank" title="Imprimir OT" class="text-slate-400 hover:text-blue-600 transition-colors">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
                                         </a>
                                     </div>
@@ -236,7 +243,7 @@
                                         <span class="text-[9px] text-slate-400">{{ t.fecha }}</span>
                                         {% if t.vencida %}<span class="text-[9px] font-bold text-red-500 bg-red-50 px-1 rounded">⚠️ {{ t.dias }}d</span>{% endif %}
                                     </div>
-                                    <button onclick="abrirChatter('ot', '{{ t.id }}', 'OT {{ t.codigo }}')" class="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-bold hover:bg-blue-100">💬 Chatter</button>
+                                    <button onclick="abrirChatter('ot', '{{ t.id }}', 'OT {{ t.codigo }}')" class="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-bold hover:bg-blue-100">💬 Notas</button>
                                 </div>
                             </div>
                             {% endfor %}
@@ -274,7 +281,8 @@
                             <td class="font-bold text-blue-800">{{ m.codigo }}</td><td>{{ m.tipo_mantencion }}</td><td>{{ m.mecanico }}</td><td>{{ m.lectura_str }}</td><td class="font-bold">{{ m.costo_str }}</td>
                             <td><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-300">{{ m.estado }}</span></td>
                             <td class="text-right whitespace-nowrap">
-                                <a href="/ver_ot/{{ m.id }}" target="_blank" class="text-indigo-600 font-bold text-xs border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-50 mr-2">🖨️ Ver</a>
+                                <!-- Vuelve a apuntar al formato anterior -->
+                                <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="text-indigo-600 font-bold text-xs border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-50 mr-2">🖨️ Ver</a>
                                 <button onclick="abrirEditModal('ot', '{{m.id}}', 'OT {{m.ot_generada}}', [{db: 'folio', label: 'Folio', val: '{{m.ot_generada}}'},{db: 'mecanico', label: 'Mecánico', val: '{{m.mecanico}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button>
                                 <button onclick="abrirChatter('ot', '{{m.id}}', 'OT {{m.ot_generada}}')" class="text-blue-600 font-bold text-xs mr-2">💬 Notas</button>
                                 <button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-red-500 font-bold text-xs">Borrar</button>
@@ -309,7 +317,8 @@
                             <td class="font-bold text-blue-800">{{ m.codigo }}</td><td>{{ m.sistema_falla }}</td><td>{{ m.causa_raiz }}</td><td>{{ m.mecanico }}</td><td class="font-bold">{{ m.lectura_str }}</td><td class="font-bold">{{ m.costo_str }}</td>
                             <td><span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">{{ m.estado }}</span></td>
                             <td class="text-right whitespace-nowrap">
-                                <a href="/ver_ot/{{ m.id }}" target="_blank" class="text-indigo-600 font-bold text-xs border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-50 mr-2">🖨️ Ver</a>
+                                <!-- Vuelve a apuntar al formato anterior -->
+                                <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="text-indigo-600 font-bold text-xs border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-50 mr-2">🖨️ Ver</a>
                                 <button onclick="abrirEditModal('ot', '{{m.id}}', 'OT {{m.ot_generada}}', [{db: 'folio', label: 'Folio', val: '{{m.ot_generada.replace('OT-CR-','')}}'},{db: 'mecanico', label: 'Mecánico', val: '{{m.mecanico}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button>
                                 <button onclick="abrirChatter('ot', '{{m.id}}', 'OT {{m.ot_generada}}')" class="text-blue-600 font-bold text-xs mr-2">💬 Notas</button>
                                 <button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-red-500 font-bold text-xs">Borrar</button>
@@ -398,6 +407,7 @@
         </div>
     </main>
 
+    <!-- MODAL CHATTER -->
     <div id="chatter-modal" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl flex flex-col max-h-[90vh]">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl shrink-0">
@@ -420,6 +430,7 @@
         </div>
     </div>
 
+    <!-- MODAL EDICIÓN GENÉRICA -->
     <div id="edit-modal" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-xl flex flex-col overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -547,7 +558,7 @@
 
         const mDataPrev = {{ mants_prev|tojson }};
         const mDataCorr = {{ mants_corr|tojson }};
-        const eventosFuturos = {{ eventos_futuros|tojson }}; // Datos proyectados desde Python
+        const eventosFuturos = {{ eventos_futuros|tojson }};
         const cData = {{ charts|tojson }};
         const fData = {{ fallas_data|tojson }};
         
@@ -571,21 +582,18 @@
             } catch(e) {}
 
             try {
-                // FILTRO DE CALENDARIO INTELIGENTE (SIN REPETIDOS + PROYECCIÓN FUTURA)
                 if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
                     let evts = []; let eventMap = {};
                     
-                    // Solo agrega las OTs FINALIZADAS al historial
                     mDataPrev.filter(m => m.fecha_iso && m.estado === 'Finalizada').forEach(m => { 
                         let key = m.fecha_iso + '_' + m.codigo + '_PM';
-                        if(!eventMap[key]){ evts.push({ title: m.codigo + ' (PM Hecha)', start: m.fecha_iso, url: '/ver_ot/' + m.id, color: '#10B981' }); eventMap[key] = true; }
+                        if(!eventMap[key]){ evts.push({ title: m.codigo + ' (PM Hecha)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#10B981' }); eventMap[key] = true; }
                     });
                     mDataCorr.filter(m => m.fecha_iso && m.estado === 'Finalizada').forEach(m => { 
                         let key = m.fecha_iso + '_' + m.codigo + '_Corr';
-                        if(!eventMap[key]){ evts.push({ title: m.codigo + ' (Avería)', start: m.fecha_iso, url: '/ver_ot/' + m.id, color: '#DC2626' }); eventMap[key] = true; }
+                        if(!eventMap[key]){ evts.push({ title: m.codigo + ' (Avería)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#DC2626' }); eventMap[key] = true; }
                     });
                     
-                    // Agrega los mantenimientos futuros proyectados
                     eventosFuturos.forEach(ef => {
                         evts.push({ title: ef.title, start: ef.start, color: ef.color });
                     });
