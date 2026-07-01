@@ -78,8 +78,18 @@ def dashboard():
         top_7_prev_list = sorted(costos_prev_eq.items(), key=lambda x: x[1], reverse=True)[:7]
         top_7_preventivas = [{'codigo': x[0], 'costo': x[1], 'costo_str': format_clp(x[1])} for x in top_7_prev_list]
 
-        # --- RANKING 2: LOS 7 EQUIPOS CON MANTENCIÓN CERCANA (MENOR MARGEN RESTANTE >= 0) ---
-        cercanos_list = sorted([e for e in eqs_db if e.margen is not None and e.margen >= 0], key=lambda x: x.margen)[:7]
+        # --- RANKING 2: LOS 7 EQUIPOS CON MANTENCIÓN CERCANA (Seguro contra errores numéricos) ---
+        cercanos_seguro = []
+        for e in eqs_db:
+            try:
+                m_val = float(e.margen)
+                if m_val >= 0:
+                    cercanos_seguro.append({'codigo': e.codigo, 'margen': m_val})
+            except Exception:
+                pass
+        
+        # Ordenamos de menor a mayor (los más cercanos a 0)
+        cercanos_seguro = sorted(cercanos_seguro, key=lambda x: x['margen'])[:7]
 
         todas_mants_prev = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Preventiva']
         todas_mants_corr = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'sistema_falla': m.sistema_falla, 'causa_raiz': m.causa_raiz, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Correctiva']
@@ -138,8 +148,8 @@ def dashboard():
                 'prev_data': [x['costo'] for x in top_7_preventivas]
             },
             'cercanas_top7': {
-                'labels': [e.codigo for e in cercanos_list],
-                'data': [int(e.margen) for e in cercanos_list]
+                'labels': [x['codigo'] for x in cercanos_seguro],
+                'data': [x['margen'] for x in cercanos_seguro]
             }
         }
         
