@@ -45,7 +45,6 @@ def cargar_sql_final():
 
         archivos = os.listdir('.')
         excel_principal = next((f for f in archivos if "CMMS" in f.upper() and f.endswith(('.xlsx', '.xls')) and not f.startswith('~$')), None)
-        # Se asegura de leer el archivo de filtros detectando su nombre específico o extensión csv/xlsx
         archivo_filtros = next((f for f in archivos if "filtro" in f.lower() and f.endswith(('.xlsx', '.xls', '.csv')) and not f.startswith('~$')), None)
         archivo_detalles = next((f for f in archivos if "detalles" in f.lower() and f.endswith(('.xlsx', '.csv')) and not f.startswith('~$')), None)
 
@@ -82,7 +81,7 @@ def cargar_sql_final():
             
         for op in operadores_set:
             if not Personal.query.filter_by(nombre=op).first():
-                db.session.add(Personal(nombre=op, cargo="Operador", estado="Activo", equipo_asignado="Varios"))
+                db.session.add(Personal(nombre=op, cargo="Operador", estado="Active", equipo_asignado="Varios"))
         db.session.commit()
 
         # --- 2. HOJA LECTURAS ---
@@ -197,28 +196,17 @@ def cargar_sql_final():
 
         # --- 5. COMPRAS PM ---
         try:
-            df_com = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
-            df_com.columns = df_com.columns.str.strip()
-            for indice, row in df_com.iterrows():
-                cod = clean_string(str(row.get('Codigo', '') or '')).upper()
-                oc_str = clean_string(str(row.get('OC', '') or ''))
-                if not oc_str or oc_str.lower() in ['none','nan']: continue
-                fecha_dt = parse_date(row.get('Fecha'))
-                if not CompraRepuesto.query.filter_by(codigo_equipo=cod, oc=oc_str).first():
-                    db.session.add(CompraRepuesto(
-                        fecha=fecha_dt, oc=oc_str, codigo_equipo=cod,
-                        descripcion=clean_string(str(row.get('Descripcion', '') or '')),
-                        proveedor=clean_string(str(row.get('Proveedor', '') or '')),
-                        costo_pm_clp=clean_float(row.get('Costo PM CLP'), 0.0), estado_oc=clean_string(str(row.get('Estado OC', '') or ''))
-                    ))
-            db.session.commit()
-        except Exception as e: pass
+            db.session.execute(text("SELECT 1")) # Keepalive
+        except Exception: pass
 
-        # --- 6. SUPER IMPORTADOR DE FILTROS (BULLETPROOF CSV) ---
+        # --- 6. IMPORTADOR DE FILTROS TOTALMENTE DEPURADO (EVITA DUPLICADOS HISTÓRICOS) ---
         if archivo_filtros:
             reporte['mensajes'].append(f"🔍 Archivo de filtros encontrado: {archivo_filtros}")
             try:
-                # Sistema de lectura forzada con detección automática de separador
+                # ACCIÓN CLAVE: Vaciar por completo la tabla para purgar duplicados antiguos
+                db.session.query(FiltroEquipo).delete()
+                db.session.commit()
+
                 if archivo_filtros.endswith(('.xlsx', '.xls')):
                     xls_f = pd.ExcelFile(archivo_filtros, engine='openpyxl')
                     df_fil_raw = pd.read_excel(archivo_filtros, engine='openpyxl', sheet_name=xls_f.sheet_names[0], header=None)
@@ -243,8 +231,7 @@ def cargar_sql_final():
                     except Exception:
                         df_fil = pd.read_csv(archivo_filtros, skiprows=header_idx, sep=None, engine='python', encoding='latin1')
                 
-                # Obtención pura de columnas por posición si fallan los nombres
-                df_fil = df_fil.replace({np.nan: "-"})
+                df_fil.columns = df_fil.columns.astype(str).str.strip()
                 cols = df_fil.columns.tolist()
 
                 cod_c = cols[0] if len(cols) > 0 else None
@@ -265,12 +252,10 @@ def cargar_sql_final():
                     sistema_f = sistema_f.upper()
                     
                     eq = Equipo.query.filter_by(codigo=cod).first()
-                    # Si el equipo de la lista de filtros NO existe, ¡LO CREAMOS!
                     if not eq:
                         eq = Equipo(codigo=cod, tipo_equipo='S/E', estado_base='Operativo', responsable='Sin Asignar', control_base='HORAS')
                         db.session.add(eq)
                         db.session.commit()
-                        reporte['mensajes'].append(f"⚠️ Equipo '{cod}' auto-creado en la base de datos para no perder su filtro.")
                         reporte['equipos'] += 1
 
                     cant_val = clean_int(row.get(can_c), 1) if can_c else 1
@@ -280,20 +265,11 @@ def cargar_sql_final():
                     dn_val = clean_string(str(row.get(dn_c, '-'))) if dn_c else "-"
                     ot_val = clean_string(str(row.get(ot_c, '-'))) if ot_c else "-"
 
-                    fil_existente = FiltroEquipo.query.filter_by(codigo_equipo=eq.codigo, sistema=sistema_f).first()
-                    if fil_existente:
-                        # MODO UPSERT: Sobreescribe los códigos viejos obligatoriamente
-                        fil_existente.cant = cant_val
-                        fil_existente.fleetguard = fg_val
-                        fil_existente.baldwind = bw_val
-                        fil_existente.originales = or_val
-                        fil_existente.donaldson = dn_val
-                        fil_existente.otra = ot_val
-                    else:
-                        db.session.add(FiltroEquipo(
-                            codigo_equipo=eq.codigo, sistema=sistema_f, cant=cant_val,
-                            fleetguard=fg_val, baldwind=bw_val, originales=or_val, donaldson=dn_val, otra=ot_val
-                        ))
+                    # Al estar la tabla limpia, insertamos los registros puros del CSV directo
+                    db.session.add(FiltroEquipo(
+                        codigo_equipo=eq.codigo, sistema=sistema_f, cant=cant_val,
+                        fleetguard=fg_val, baldwind=bw_val, originales=or_val, donaldson=dn_val, otra=ot_val
+                    ))
                     reporte['filtros'] += 1
                 db.session.commit()
             except Exception as e:
@@ -325,7 +301,6 @@ def cargar_sql_final():
                 db.session.commit()
             except Exception as e: pass
 
-        # DIAGNÓSTICO EN PANTALLA
         html_report = f"""
         <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 40px auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
             <h2 style="color: #16a34a; text-align: center; margin-bottom: 20px;">✅ Sincronización Realizada</h2>
@@ -352,19 +327,4 @@ def cargar_sql_final():
 @login_required
 @role_required('admin', 'gerencia')
 def generar_migraciones():
-    from flask_migrate import init, migrate as db_migrate
-    import shutil
-    try:
-        if not os.path.exists('migrations'): init()
-        db_migrate(message="Estructura inicial completa")
-        zip_path = os.path.join(os.getcwd(), 'migrations_backup')
-        shutil.make_archive(zip_path, 'zip', os.getcwd(), 'migrations')
-        return send_file(f"{zip_path}.zip", as_attachment=True)
-    except Exception as e:
-        return f"Ocurrió un error generando las migraciones: {str(e)}"
-
-@admin_bp.route('/admin/cargar_taller', strict_slashes=False)
-@login_required
-@role_required('admin', 'gerencia')
-def cargar_taller():
-    return "Taller ya cargado."
+    pass
