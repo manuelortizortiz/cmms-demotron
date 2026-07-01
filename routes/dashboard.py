@@ -54,12 +54,12 @@ def dashboard():
         operativos_count = conteo_estado.get('Operativo', 0)
         disponibilidad_pct = round((operativos_count / total_eq * 100), 1) if total_eq > 0 else 0
 
+        # --- CORRECCIÓN: CUMPLIMIENTO PM REAL BASADO EN ALERTAS ACTIVAS ---
+        atrasados_count = len(criticos)
+        cumpl_pm_pct = round(((total_eq - atrasados_count) / total_eq * 100), 1) if total_eq > 0 else 100.0
+
         mes_actual = datetime.now().month
         anio_actual = datetime.now().year
-        pm_mes = [o for o in ots_db if o.tipo_ot=='Preventiva' and o.fecha and o.fecha.month==mes_actual and o.fecha.year==anio_actual]
-        pm_finalizadas = len([o for o in pm_mes if o.estado=='Finalizada'])
-        cumpl_pm_pct = round(pm_finalizadas / len(pm_mes) * 100, 1) if pm_mes else 0
-
         correctivas_mes = len([o for o in ots_db if o.tipo_ot=='Correctiva' and o.fecha and o.fecha.month==mes_actual and o.fecha.year==anio_actual])
 
         eq_fallas_counter = Counter(o.codigo_equipo for o in ots_db if o.tipo_ot=='Correctiva')
@@ -67,6 +67,23 @@ def dashboard():
             {'codigo': k, 'cantidad': v, 'foto_url': buscar_foto_por_tipo(next((e.tipo_equipo for e in eqs_db if e.codigo==k), ''), '')}
             for k, v in eq_fallas_counter.most_common(5)
         ]
+
+        # --- NUEVO DATO: TOP 7 EQUIPOS MÁS COSTOSOS EN PREVENTIVA Y CORRECTIVA ---
+        costos_prev_eq = {}
+        costos_corr_eq = {}
+        for o in ots_db:
+            cod = o.codigo_equipo
+            costo = float(o.costo_mantencion_clp or 0.0)
+            if o.tipo_ot == 'Preventiva':
+                costos_prev_eq[cod] = costos_prev_eq.get(cod, 0.0) + costo
+            elif o.tipo_ot == 'Correctiva':
+                costos_corr_eq[cod] = costos_corr_eq.get(cod, 0.0) + costo
+
+        top_7_prev_list = sorted(costos_prev_eq.items(), key=lambda x: x[1], reverse=True)[:7]
+        top_7_corr_list = sorted(costos_corr_eq.items(), key=lambda x: x[1], reverse=True)[:7]
+
+        top_7_preventivas = [{'codigo': x[0], 'costo': x[1], 'costo_str': format_clp(x[1])} for x in top_7_prev_list]
+        top_7_correctivas = [{'codigo': x[0], 'costo': x[1], 'costo_str': format_clp(x[1])} for x in top_7_corr_list]
 
         todas_mants_prev = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Preventiva']
         todas_mants_corr = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'sistema_falla': m.sistema_falla, 'causa_raiz': m.causa_raiz, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Correctiva']
@@ -97,7 +114,6 @@ def dashboard():
                 'vencida': dias_abierta > 7 and estado_k != 'Finalizada'
             })
 
-        mes_actual = datetime.now().month
         costos = {2:0, 3:0, 4:0, 5:0, 6:0, 7:0}
         for ot in ots_db:
             if ot.fecha and ot.fecha.year >= 2026 and ot.fecha.month in costos: costos[ot.fecha.month] += (ot.costo_mantencion_clp or 0)
@@ -120,7 +136,13 @@ def dashboard():
 
         charts = {
             'estado': conteo_estado,
-            'costos_mensuales': {'labels': ['Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul'], 'data': list(costos.values())}
+            'costos_mensuales': {'labels': ['Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul'], 'data': list(costos.values())},
+            'costos_top7': {
+                'prev_labels': [x['codigo'] for x in top_7_preventivas],
+                'prev_data': [x['costo'] for x in top_7_preventivas],
+                'corr_labels': [x['codigo'] for x in top_7_correctivas],
+                'corr_data': [x['costo'] for x in top_7_correctivas]
+            }
         }
         
         mecanicos_list = [{'id': m.id, 'rut': m.rut, 'nombre': m.nombre, 'especialidad': m.especialidad, 'estado': m.estado} for m in mecanicos_db]
@@ -131,6 +153,7 @@ def dashboard():
                                mants_corr=todas_mants_corr, compras=todas_compras, lecturas=todas_lecturas, 
                                kanban=kanban_tareas, operadores=[{'id': p.id, 'nombre': p.nombre, 'cargo': p.cargo, 'estado': p.estado, 'equipo_asignado': p.equipo_asignado} for p in operadores_db], 
                                mecanicos=mecanicos_list, bodega=bodega_list,
+                               top_7_preventivas=top_7_preventivas, top_7_correctivas=top_7_correctivas,
                                usos=[{'id': u.id, 'fecha': u.fecha.strftime('%d/%m/%Y'), 'operador': u.operador, 'codigo_equipo': u.codigo_equipo, 'observacion': u.observacion} for u in usos_db])
     except Exception as e:
         return f"Error en Dashboard: {str(e)}"
