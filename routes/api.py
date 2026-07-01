@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, redirect
+from flask import Blueprint, request, jsonify, redirect, render_template_string
 import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -12,7 +12,7 @@ from models.historial import HistorialLectura, CompraRepuesto
 from models.personal import Personal, Mecanico, RegistroUsoEquipo
 from models.chatter import RegistroChatter
 from models.bodega import InventarioBodega
-from utils.formatters import clean_int, clean_float
+from utils.formatters import clean_int, clean_float, format_num, format_clp
 
 api_bp = Blueprint('api', __name__)
 
@@ -228,15 +228,120 @@ def add_chatter():
     db.session.commit()
     return jsonify({"status": "success", "log": log.to_dict()})
 
+# --- NUEVA RUTA PARA VER Y ENVIAR A IMPRESIÓN LA OT ---
+@api_bp.route('/ver_ot/<int:ot_id>')
+@login_required
+def ver_ot(ot_id):
+    ot = OrdenTrabajo.query.get_or_404(ot_id)
+    eq = Equipo.query.filter_by(codigo=ot.codigo_equipo).first()
+    
+    lectura_str = format_num(ot.lectura)
+    costo_str = format_clp(ot.costo_mantencion_clp)
+    fecha_str = ot.fecha.strftime('%d/%m/%Y') if ot.fecha else 'S/F'
+    tipo_eq_str = eq.tipo_equipo if eq else 'S/E'
+    ctrl_eq_str = eq.control_base if eq else ''
+    
+    html = """
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>{{ ot.folio }} - {{ ot.codigo_equipo }}</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            @media print {
+                body { background: white; padding: 0; margin: 0; }
+                .print\\:hidden { display: none !important; }
+                .shadow-2xl { box-shadow: none !important; }
+                .border { border-color: #cbd5e1 !important; }
+                @page { margin: 1cm; }
+            }
+        </style>
+    </head>
+    <body class="bg-slate-100 p-8 font-sans text-slate-800">
+        <div class="max-w-4xl mx-auto bg-white p-12 rounded-2xl shadow-2xl border border-slate-200">
+            <div class="flex justify-between items-start mb-8 border-b-2 border-slate-100 pb-8">
+                <div class="flex items-center gap-6">
+                    <div class="w-20 h-20 bg-blue-700 text-white flex items-center justify-center rounded-2xl text-3xl font-black tracking-tighter">DT</div>
+                    <div>
+                        <h1 class="text-3xl font-extrabold text-slate-800 mb-1">ORDEN DE TRABAJO</h1>
+                        <p class="text-slate-500 font-mono text-xl font-bold bg-slate-100 inline-block px-3 py-1 rounded-md">{{ ot.folio }}</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <button onclick="window.print()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-md print:hidden hover:bg-blue-700 transition duration-200">🖨️ Imprimir OT</button>
+                    <p class="text-sm font-bold text-slate-400 mt-4 uppercase print:block hidden">Folio No.</p>
+                    <p class="font-mono text-xl font-bold print:block hidden">{{ ot.folio }}</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-8 mb-8">
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                    <p class="text-[10px] text-blue-600 font-bold uppercase tracking-widest mb-3">Información del Equipo</p>
+                    <p class="font-black text-2xl text-slate-800 mb-2">{{ ot.codigo_equipo }}</p>
+                    <p class="text-sm text-slate-600 mb-1">Tipo de Equipo: <b class="text-slate-800">{{ tipo_eq_str }}</b></p>
+                    <p class="text-sm text-slate-600">Lectura Actual: <b class="text-slate-800">{{ lectura_str }} {{ ctrl_eq_str }}</b></p>
+                </div>
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                    <p class="text-[10px] text-blue-600 font-bold uppercase tracking-widest mb-3">Detalles de Intervención</p>
+                    <p class="font-black text-xl text-slate-800 mb-2">{{ ot.tipo_ot }}</p>
+                    <p class="text-sm text-slate-600 mb-1">Fecha Emisión: <b class="text-slate-800">{{ fecha_str }}</b></p>
+                    <p class="text-sm text-slate-600 mb-1">Responsable: <b class="text-slate-800">{{ ot.mecanico }}</b></p>
+                    <p class="text-sm text-slate-600">Estado: <span class="bg-slate-200 px-2 py-0.5 rounded font-bold text-slate-700 border border-slate-300">{{ ot.estado }}</span></p>
+                </div>
+            </div>
+
+            <div class="mb-12">
+                <h3 class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-3 border-b-2 border-slate-100 pb-2">Diagnóstico y Tareas Ejecutadas</h3>
+                {% if ot.tipo_ot == 'Correctiva' %}
+                    <div class="mb-4">
+                        <p class="text-sm text-slate-500 mb-1">Sistema Afectado</p>
+                        <p class="text-base font-bold text-slate-800">{{ ot.sistema_falla }}</p>
+                    </div>
+                    <div class="bg-red-50 p-5 rounded-xl border border-red-100">
+                        <p class="text-sm text-red-500 font-bold mb-1 uppercase text-[10px] tracking-wider">Avería Detectada / Causa Raíz</p>
+                        <p class="text-base text-red-900 font-semibold">{{ ot.causa_raiz }}</p>
+                    </div>
+                {% else %}
+                    <div class="bg-green-50 p-5 rounded-xl border border-green-100">
+                        <p class="text-sm text-green-600 font-bold mb-1 uppercase text-[10px] tracking-wider">Pauta Aplicada</p>
+                        <p class="text-base text-green-900 font-semibold">{{ ot.tipo_mantencion }}</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="grid grid-cols-2 gap-12 mt-16 pt-8 print:mt-32">
+                <div class="text-center">
+                    <div class="border-b-2 border-slate-300 w-3/4 mx-auto mb-2"></div>
+                    <p class="text-xs font-bold text-slate-600 uppercase">{{ ot.mecanico }}</p>
+                    <p class="text-[10px] text-slate-400">Firma Mecánico Responsable</p>
+                </div>
+                <div class="text-center">
+                    <div class="border-b-2 border-slate-300 w-3/4 mx-auto mb-2"></div>
+                    <p class="text-xs font-bold text-slate-600 uppercase">Jefatura de Taller</p>
+                    <p class="text-[10px] text-slate-400">V°B° Supervisor</p>
+                </div>
+            </div>
+
+            <div class="border-t-2 border-slate-100 mt-16 pt-6 flex justify-between items-center bg-slate-50 p-4 rounded-lg">
+                <p class="text-slate-400 text-xs font-bold">Generado por CMMS Demotron S.A.</p>
+                <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">Costo Total: <span class="text-blue-600 font-black text-xl ml-2">{{ costo_str }}</span></p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return render_template_string(html, ot=ot, eq=eq, lectura_str=lectura_str, costo_str=costo_str, fecha_str=fecha_str, tipo_eq_str=tipo_eq_str, ctrl_eq_str=ctrl_eq_str)
+
 @api_bp.route('/api/edit_ot/<int:ot_id>', methods=['POST'])
 @login_required
 def edit_ot(ot_id):
-    pass # Ya incluido en update_inline
+    pass 
 @api_bp.route('/api/edit_lectura/<int:lid>', methods=['POST'])
 @login_required
 def edit_lectura(lid):
-    pass # Ya incluido en update_inline
+    pass 
 @api_bp.route('/api/edit_equipo/<codigo>', methods=['POST'])
 @login_required
 def edit_equipo(codigo):
-    pass # Ya incluido en update_inline
+    pass
