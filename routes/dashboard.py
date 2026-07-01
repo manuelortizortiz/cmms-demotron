@@ -78,18 +78,30 @@ def dashboard():
         top_7_prev_list = sorted(costos_prev_eq.items(), key=lambda x: x[1], reverse=True)[:7]
         top_7_preventivas = [{'codigo': x[0], 'costo': x[1], 'costo_str': format_clp(x[1])} for x in top_7_prev_list]
 
-        # --- RANKING 2: LOS 7 EQUIPOS CON MANTENCIÓN CERCANA (Seguro contra errores numéricos) ---
+        # --- RANKING 2: LOS 7 EQUIPOS CON MANTENCIÓN CERCANA (MEDIDOR VISUAL) ---
         cercanos_seguro = []
         for e in eqs_db:
             try:
                 m_val = float(e.margen)
                 if m_val >= 0:
-                    cercanos_seguro.append({'codigo': e.codigo, 'margen': m_val})
+                    pct = 0.0
+                    freq = float(e.frecuencia_base) if e.frecuencia_base else 250.0
+                    if freq > 0:
+                        consumido = freq - m_val
+                        pct = (consumido / freq) * 100
+                        pct = max(0.0, min(100.0, pct)) # Asegurar que esté entre 0 y 100%
+                    
+                    cercanos_seguro.append({
+                        'codigo': e.codigo, 
+                        'margen': m_val,
+                        'margen_str': format_num(m_val),
+                        'pct': round(pct, 1)
+                    })
             except Exception:
                 pass
         
-        # Ordenamos de menor a mayor (los más cercanos a 0)
-        cercanos_seguro = sorted(cercanos_seguro, key=lambda x: x['margen'])[:7]
+        # Ordenamos de menor margen a mayor (los más próximos arriba)
+        top_7_cercanos = sorted(cercanos_seguro, key=lambda x: x['margen'])[:7]
 
         todas_mants_prev = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Preventiva']
         todas_mants_corr = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y'), 'fecha_iso': m.fecha.strftime('%Y-%m-%d'), 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'sistema_falla': m.sistema_falla, 'causa_raiz': m.causa_raiz, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Correctiva']
@@ -146,10 +158,6 @@ def dashboard():
             'costos_top7': {
                 'prev_labels': [x['codigo'] for x in top_7_preventivas],
                 'prev_data': [x['costo'] for x in top_7_preventivas]
-            },
-            'cercanas_top7': {
-                'labels': [x['codigo'] for x in cercanos_seguro],
-                'data': [x['margen'] for x in cercanos_seguro]
             }
         }
         
@@ -161,6 +169,7 @@ def dashboard():
                                mants_corr=todas_mants_corr, compras=todas_compras, lecturas=todas_lecturas, 
                                kanban=kanban_tareas, operadores=[{'id': p.id, 'nombre': p.nombre, 'cargo': p.cargo, 'estado': p.estado, 'equipo_asignado': p.equipo_asignado} for p in operadores_db], 
                                mecanicos=mecanicos_list, bodega=bodega_list,
+                               top_7_preventivas=top_7_preventivas, top_7_cercanos=top_7_cercanos,
                                usos=[{'id': u.id, 'fecha': u.fecha.strftime('%d/%m/%Y'), 'operador': u.operador, 'codigo_equipo': u.codigo_equipo, 'observacion': u.observacion} for u in usos_db])
     except Exception as e:
         return f"Error en Dashboard: {str(e)}"
