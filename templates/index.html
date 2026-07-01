@@ -379,6 +379,7 @@
         </div>
     </main>
 
+    <!-- MODAL CHATTER -->
     <div id="chatter-modal" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl flex flex-col max-h-[90vh]">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl shrink-0">
@@ -388,7 +389,7 @@
             <div id="chatter-feed" class="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50 relative border-l-2 border-slate-200 ml-6 mr-6 mt-4"></div>
             <div class="p-4 border-t border-slate-100 bg-white rounded-b-2xl shrink-0">
                 <div class="flex gap-3">
-                    <textarea id="chatter-msg" class="flex-1 border border-slate-200 rounded-xl p-3 text-sm focus:border-blue-500 outline-none resize-none" rows="2" placeholder="Escribe una nota..."></textarea>
+                    <textarea id="chatter-msg" class="flex-1 border border-slate-200 rounded-xl p-3 text-sm focus:border-blue-500 outline-none resize-none" rows="2" placeholder="Escribe una nota o adjunta archivo..."></textarea>
                     <div class="flex flex-col justify-end gap-2">
                         <label class="cursor-pointer bg-slate-100 text-slate-600 px-3 py-2 rounded-lg text-[11px] font-bold hover:bg-slate-200 text-center border border-slate-200 transition-colors">
                             📎 Adjuntar
@@ -401,6 +402,7 @@
         </div>
     </div>
 
+    <!-- MODAL EDICIÓN GENÉRICA -->
     <div id="edit-modal" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-xl flex flex-col overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -575,7 +577,7 @@
                     new Chart(document.getElementById('chartCostosMensuales'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión (CLP)', data: cData.costos_mensuales.data, borderColor: '#2563EB', fill: true }] }, options: { maintainAspectRatio:false }});
                     new Chart(document.getElementById('chartFallas'), { type: 'bar', data: { labels: fData.labels, datasets: [{ label: 'N° Averías', data: fData.data, backgroundColor: '#EF4444', borderRadius: 4 }] }, options: { maintainAspectRatio:false }});
                     
-                    // --- GRÁFICOS TOP 7 DE COSTOS ACTUALIZADOS ---
+                    // GRÁFICOS TOP 7 ACTUALIZADOS
                     new Chart(document.getElementById('chartTop7Prev'), { 
                         type: 'bar', 
                         data: { 
@@ -585,11 +587,12 @@
                         options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: { beginAtZero: true } } }
                     });
                     
-                    new Chart(document.getElementById('chartTop7Carcana' ? 'chartTop7Carcana' : 'chartTop7Corr'), { 
+                    // GRÁFICO: LOS 7 EQUIPOS CON MANTENCIÓN CERCANA (Margen en tono Ocre)
+                    new Chart(document.getElementById('chartTop7Cercana'), { 
                         type: 'bar', 
                         data: { 
-                            labels: cData.costos_top7.corr_labels, 
-                            datasets: [{ label: 'Costo Acumulado (CLP)', data: cData.costos_top7.corr_data, backgroundColor: '#DC2626', borderRadius: 4 }] 
+                            labels: cData.cercanas_top7.labels, 
+                            datasets: [{ label: 'Margen Restante (Hrs/Km)', data: cData.cercanas_top7.data, backgroundColor: '#F59E0B', borderRadius: 4 }] 
                         }, 
                         options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: { beginAtZero: true } } }
                     });
