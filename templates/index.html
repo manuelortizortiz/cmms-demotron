@@ -96,7 +96,7 @@
                         <div class="w-full bg-slate-100 h-1.5 rounded-full mt-2"><div class="bg-green-500 h-1.5 rounded-full" style="width: {{ kpis.disponibilidad_pct }}%"></div></div>
                     </div>
                     <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-center">
-                        <p class="text-[11px] font-bold text-slate-500 uppercase mb-1">📅 Cumplimiento PM</p>
+                        <p class="text-[11px] font-bold text-slate-500 uppercase mb-1">📅 Cumplimiento PM (Flota Al Día)</p>
                         <p class="text-2xl font-bold text-blue-600">{{ kpis.cumpl_pm_pct }}%</p>
                         <div class="w-full bg-slate-100 h-1.5 rounded-full mt-2"><div class="bg-blue-500 h-1.5 rounded-full" style="width: {{ kpis.cumpl_pm_pct }}%"></div></div>
                     </div>
@@ -109,6 +109,17 @@
                         <p class="text-[11px] font-bold text-slate-500 uppercase mb-1">🚨 Correctivas Mes</p>
                         <p class="text-2xl font-bold text-red-500">{{ kpis.correctivas_mes }}</p>
                         <p class="text-[10px] text-slate-400 mt-1">Fallas registradas</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+                    <div class="card-custom">
+                        <h3 class="text-sm font-bold text-slate-700 mb-4">🏆 Los 7 Equipos más Costosos (Mantención Preventiva)</h3>
+                        <div class="h-64 relative w-full"><canvas id="chartTop7Prev"></canvas></div>
+                    </div>
+                    <div class="card-custom">
+                        <h3 class="text-sm font-bold text-slate-700 mb-4">🏆 Los 7 Equipos más Costosos (Mantención Correctiva)</h3>
+                        <div class="h-64 relative w-full"><canvas id="chartTop7Corr"></canvas></div>
                     </div>
                 </div>
 
@@ -362,7 +373,7 @@
                     <form action="/api/add_record" method="POST" class="m-0 flex flex-wrap gap-4"><input type="hidden" name="tabla" value="mecanico"><input type="hidden" name="referer" value="/?tab=mecanicos"><input type="text" name="rut" placeholder="RUT" class="form-input w-32"><input type="text" name="nombre" placeholder="Nombre" class="form-input w-64" required><input type="text" name="especialidad" placeholder="Especialidad" class="form-input w-48"><button type="submit" class="btn-primary">Añadir Mecánico</button></form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
-                    <table class="table-custom table-searchable"><thead><tr><th>RUT</th><th>Nombre Mecánico</th><th>Especialidad</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mecanicos %}<tr><td class="font-mono text-slate-500">{{ m.rut or '-' }}</td><td class="font-bold">{{ m.nombre }}</td><td>{{ m.especialidad }}</td><td><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('mecanico', '{{m.id}}', 'Mecánico {{m.nombre}}', [{db: 'especialidad', label: 'Especialidad', val: '{{m.especialidad}}'},{db: 'estado', label: 'Estado', val: '{{m.estado}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}</tbody></table>
+                    <table class="table-custom table-searchable"><thead><tr><th>RUT</th><th>Nombre Mecánico</th><th>Especialidad</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mants %}{% endfor %}{% for m in mecanicos %}<tr><td class="font-mono text-slate-500">{{ m.rut or '-' }}</td><td class="font-bold">{{ m.nombre }}</td><td>{{ m.especialidad }}</td><td><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('mecanico', '{{m.id}}', 'Mecánico {{m.nombre}}', [{db: 'especialidad', label: 'Especialidad', val: '{{m.especialidad}}'},{db: 'estado', label: 'Estado', val: '{{m.estado}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}</tbody></table>
                 </div>
             </div>
         </div>
@@ -377,7 +388,7 @@
             <div id="chatter-feed" class="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50 relative border-l-2 border-slate-200 ml-6 mr-6 mt-4"></div>
             <div class="p-4 border-t border-slate-100 bg-white rounded-b-2xl shrink-0">
                 <div class="flex gap-3">
-                    <textarea id="chatter-msg" class="flex-1 border border-slate-200 rounded-xl p-3 text-sm focus:border-blue-500 outline-none resize-none" rows="2" placeholder="Escribe una nota o adjunta archivo..."></textarea>
+                    <textarea id="chatter-msg" class="flex-1 border border-slate-200 rounded-xl p-3 text-sm focus:border-blue-500 outline-none resize-none" rows="2" placeholder="Escribe una nota..."></textarea>
                     <div class="flex flex-col justify-end gap-2">
                         <label class="cursor-pointer bg-slate-100 text-slate-600 px-3 py-2 rounded-lg text-[11px] font-bold hover:bg-slate-200 text-center border border-slate-200 transition-colors">
                             📎 Adjuntar
@@ -428,7 +439,6 @@
             }
         }
 
-        // LÓGICA DE EDICIÓN MEDIANTE MODAL
         let editData = {};
         function abrirEditModal(tabla, id, titulo, campos) {
             editData = { tabla, id, campos: [] };
@@ -445,9 +455,7 @@
             document.getElementById('edit-modal').classList.remove('hidden');
         }
 
-        function cerrarEditModal() {
-            document.getElementById('edit-modal').classList.add('hidden');
-        }
+        function cerrarEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
 
         function guardarEdicion() {
             let promises = editData.campos.map(campo => {
@@ -460,9 +468,7 @@
             Promise.all(promises).then(() => location.reload());
         }
 
-        // LÓGICA DEL CHATTER
-        let currentChatterModel = '';
-        let currentChatterId = '';
+        let currentChatterModel = ''; let currentChatterId = '';
         function abrirChatter(modelo, id, titulo) {
             currentChatterModel = modelo; currentChatterId = id;
             document.getElementById('chatter-title').innerText = titulo;
@@ -503,23 +509,17 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Asignación de Mecánico Automático + Chatter Audit
             document.querySelectorAll('.kanban-mecanico-sel').forEach(sel => {
                 sel.addEventListener('change', function() {
-                    let id = this.dataset.id;
-                    let mecanico = this.value;
+                    let id = this.dataset.id; let mecanico = this.value;
                     fetch('/update_inline', {
                         method: 'POST', headers: {'Content-Type': 'application/json'}, 
                         body: JSON.stringify({codigo: id, campo: 'mecanico', valor: mecanico, tabla: 'ot'})
                     }).then(r => r.json()).then(d => { 
                         if(d.status === 'success') {
-                            // Registrar acción en el Chatter automáticamente
-                            let fData = new FormData();
-                            fData.append('modelo_ref', 'ot');
-                            fData.append('registro_id', id);
+                            let fData = new FormData(); fData.append('modelo_ref', 'ot'); fData.append('registro_id', id);
                             fData.append('mensaje', `Asignó la Orden de Trabajo al mecánico: ${mecanico}`);
-                            fetch('/api/chatter/add', { method: 'POST', body: fData })
-                            .then(() => location.reload());
+                            fetch('/api/chatter/add', { method: 'POST', body: fData }).then(() => location.reload());
                         }
                     });
                 });
@@ -552,25 +552,15 @@
 
             try {
                 if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
-                    let evts = [];
-                    let eventMap = {};
-                    
+                    let evts = []; let eventMap = {};
                     mDataPrev.filter(m => m.fecha_iso).forEach(m => { 
                         let key = m.fecha_iso + '_' + m.codigo + '_PM';
-                        if(!eventMap[key]){
-                            evts.push({ title: m.codigo + ' (PM)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#2563EB' });
-                            eventMap[key] = true;
-                        }
+                        if(!eventMap[key]){ evts.push({ title: m.codigo + ' (PM)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#2563EB' }); eventMap[key] = true; }
                     });
-                    
                     mDataCorr.filter(m => m.fecha_iso).forEach(m => { 
                         let key = m.fecha_iso + '_' + m.codigo + '_Corr';
-                        if(!eventMap[key]){
-                            evts.push({ title: m.codigo + ' (Avería)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#DC2626' });
-                            eventMap[key] = true;
-                        }
+                        if(!eventMap[key]){ evts.push({ title: m.codigo + ' (Avería)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#DC2626' }); eventMap[key] = true; }
                     });
-                    
                     window.calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
                         initialView: 'dayGridMonth', locale: 'es', height: '100%', expandRows: true,
                         events: evts, eventClick: function(info) { info.jsEvent.preventDefault(); if(info.event.url) window.open(info.event.url, "_blank"); }
@@ -584,6 +574,10 @@
                     new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '70%', data: { labels: ['Operativos', 'Fuera de Servicio', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'], borderWidth:0 }] }, options: { maintainAspectRatio:false }});
                     new Chart(document.getElementById('chartCostosMensuales'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión (CLP)', data: cData.costos_mensuales.data, borderColor: '#2563EB', fill: true }] }, options: { maintainAspectRatio:false }});
                     new Chart(document.getElementById('chartFallas'), { type: 'bar', data: { labels: fData.labels, datasets: [{ label: 'N° Averías', data: fData.data, backgroundColor: '#EF4444', borderRadius: 4 }] }, options: { maintainAspectRatio:false }});
+                    
+                    // --- NUEVOS GRÁFICOS: TOP 7 PREVENTIVAS Y CORRECTIVAS ---
+                    new Chart(document.getElementById('chartTop7Prev'), { type: 'bar', data: { labels: cData.costos_top7.prev_labels, datasets: [{ label: 'Inversión Preventiva (CLP)', data: cData.costos_top7.prev_data, backgroundColor: '#2563EB', borderRadius: 4 }] }, options: { maintainAspectRatio:false, indexAxis: 'y', scales: { x: { beginAtZero: true } } } });
+                    new Chart(document.getElementById('chartTop7Corr'), { type: 'bar', data: { labels: cData.costos_top7.corr_labels, datasets: [{ label: 'Inversión Correctiva (CLP)', data: cData.costos_top7.corr_data, backgroundColor: '#DC2626', borderRadius: 4 }] }, options: { maintainAspectRatio:false, indexAxis: 'y', scales: { x: { beginAtZero: true } } } });
                 }
             } catch(e) {}
         };
