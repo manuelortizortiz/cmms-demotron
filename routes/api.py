@@ -12,7 +12,7 @@ from models.historial import HistorialLectura, CompraRepuesto
 from models.personal import Personal, Mecanico, RegistroUsoEquipo
 from models.chatter import RegistroChatter
 from models.bodega import InventarioBodega
-from utils.formatters import clean_int, clean_float, format_num, format_clp
+from utils.formatters import clean_int, clean_float
 
 api_bp = Blueprint('api', __name__)
 
@@ -228,120 +228,111 @@ def add_chatter():
     db.session.commit()
     return jsonify({"status": "success", "log": log.to_dict()})
 
-# --- NUEVA RUTA PARA VER Y ENVIAR A IMPRESIÓN LA OT ---
-@api_bp.route('/ver_ot/<int:ot_id>')
+
+# --- NUEVO MÓDULO: FICHA TÉCNICA DEL EQUIPO (IMPRIMIBLE) ---
+@api_bp.route('/api/imprimir_equipo/<codigo>')
 @login_required
-def ver_ot(ot_id):
-    ot = OrdenTrabajo.query.get_or_404(ot_id)
-    eq = Equipo.query.filter_by(codigo=ot.codigo_equipo).first()
+def imprimir_equipo(codigo):
+    eq = Equipo.query.filter_by(codigo=codigo).first_or_404()
+    filtros = FiltroEquipo.query.filter_by(codigo_equipo=codigo).all()
+    ots = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, estado='Finalizada').order_by(OrdenTrabajo.fecha.desc()).limit(10).all()
     
-    lectura_str = format_num(ot.lectura)
-    costo_str = format_clp(ot.costo_mantencion_clp)
-    fecha_str = ot.fecha.strftime('%d/%m/%Y') if ot.fecha else 'S/F'
-    tipo_eq_str = eq.tipo_equipo if eq else 'S/E'
-    ctrl_eq_str = eq.control_base if eq else ''
-    
-    html = """
+    html = f"""
     <!DOCTYPE html>
     <html lang="es">
     <head>
         <meta charset="UTF-8">
-        <title>{{ ot.folio }} - {{ ot.codigo_equipo }}</title>
+        <title>Ficha Técnica - {eq.codigo}</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            @media print {
-                body { background: white; padding: 0; margin: 0; }
-                .print\\:hidden { display: none !important; }
-                .shadow-2xl { box-shadow: none !important; }
-                .border { border-color: #cbd5e1 !important; }
-                @page { margin: 1cm; }
-            }
+            @media print {{ 
+                body {{ background: white; }} 
+                .print\\:hidden {{ display: none !important; }} 
+                @page {{ margin: 1cm; }}
+            }}
+            table {{ page-break-inside: auto; }}
+            tr {{ page-break-inside: avoid; page-break-after: auto; }}
         </style>
     </head>
-    <body class="bg-slate-100 p-8 font-sans text-slate-800">
-        <div class="max-w-4xl mx-auto bg-white p-12 rounded-2xl shadow-2xl border border-slate-200">
-            <div class="flex justify-between items-start mb-8 border-b-2 border-slate-100 pb-8">
-                <div class="flex items-center gap-6">
-                    <div class="w-20 h-20 bg-blue-700 text-white flex items-center justify-center rounded-2xl text-3xl font-black tracking-tighter">DT</div>
+    <body class="bg-slate-50 p-8 font-sans text-slate-800 max-w-4xl mx-auto">
+        <div class="bg-white p-10 rounded-2xl shadow-xl border border-slate-200">
+            
+            <div class="flex justify-between items-center border-b-2 border-slate-800 pb-4 mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 bg-blue-700 text-white flex items-center justify-center rounded-xl text-2xl font-black">DT</div>
                     <div>
-                        <h1 class="text-3xl font-extrabold text-slate-800 mb-1">ORDEN DE TRABAJO</h1>
-                        <p class="text-slate-500 font-mono text-xl font-bold bg-slate-100 inline-block px-3 py-1 rounded-md">{{ ot.folio }}</p>
+                        <h1 class="text-2xl font-black text-slate-900 leading-tight">FICHA DE EQUIPO</h1>
+                        <p class="text-xl text-blue-700 font-bold tracking-widest">{eq.codigo}</p>
                     </div>
                 </div>
                 <div class="text-right">
-                    <button onclick="window.print()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow-md print:hidden hover:bg-blue-700 transition duration-200">🖨️ Imprimir OT</button>
-                    <p class="text-sm font-bold text-slate-400 mt-4 uppercase print:block hidden">Folio No.</p>
-                    <p class="font-mono text-xl font-bold print:block hidden">{{ ot.folio }}</p>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-8 mb-8">
-                <div class="bg-slate-50 p-6 rounded-xl border border-slate-200">
-                    <p class="text-[10px] text-blue-600 font-bold uppercase tracking-widest mb-3">Información del Equipo</p>
-                    <p class="font-black text-2xl text-slate-800 mb-2">{{ ot.codigo_equipo }}</p>
-                    <p class="text-sm text-slate-600 mb-1">Tipo de Equipo: <b class="text-slate-800">{{ tipo_eq_str }}</b></p>
-                    <p class="text-sm text-slate-600">Lectura Actual: <b class="text-slate-800">{{ lectura_str }} {{ ctrl_eq_str }}</b></p>
-                </div>
-                <div class="bg-slate-50 p-6 rounded-xl border border-slate-200">
-                    <p class="text-[10px] text-blue-600 font-bold uppercase tracking-widest mb-3">Detalles de Intervención</p>
-                    <p class="font-black text-xl text-slate-800 mb-2">{{ ot.tipo_ot }}</p>
-                    <p class="text-sm text-slate-600 mb-1">Fecha Emisión: <b class="text-slate-800">{{ fecha_str }}</b></p>
-                    <p class="text-sm text-slate-600 mb-1">Responsable: <b class="text-slate-800">{{ ot.mecanico }}</b></p>
-                    <p class="text-sm text-slate-600">Estado: <span class="bg-slate-200 px-2 py-0.5 rounded font-bold text-slate-700 border border-slate-300">{{ ot.estado }}</span></p>
+                    <p class="text-sm font-bold text-slate-500">Demotron S.A.</p>
+                    <p class="text-xs text-slate-400">Emisión: {datetime.now().strftime('%d/%m/%Y')}</p>
                 </div>
             </div>
 
-            <div class="mb-12">
-                <h3 class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-3 border-b-2 border-slate-100 pb-2">Diagnóstico y Tareas Ejecutadas</h3>
-                {% if ot.tipo_ot == 'Correctiva' %}
-                    <div class="mb-4">
-                        <p class="text-sm text-slate-500 mb-1">Sistema Afectado</p>
-                        <p class="text-base font-bold text-slate-800">{{ ot.sistema_falla }}</p>
-                    </div>
-                    <div class="bg-red-50 p-5 rounded-xl border border-red-100">
-                        <p class="text-sm text-red-500 font-bold mb-1 uppercase text-[10px] tracking-wider">Avería Detectada / Causa Raíz</p>
-                        <p class="text-base text-red-900 font-semibold">{{ ot.causa_raiz }}</p>
-                    </div>
-                {% else %}
-                    <div class="bg-green-50 p-5 rounded-xl border border-green-100">
-                        <p class="text-sm text-green-600 font-bold mb-1 uppercase text-[10px] tracking-wider">Pauta Aplicada</p>
-                        <p class="text-base text-green-900 font-semibold">{{ ot.tipo_mantencion }}</p>
-                    </div>
-                {% endif %}
-            </div>
-            
-            <div class="grid grid-cols-2 gap-12 mt-16 pt-8 print:mt-32">
-                <div class="text-center">
-                    <div class="border-b-2 border-slate-300 w-3/4 mx-auto mb-2"></div>
-                    <p class="text-xs font-bold text-slate-600 uppercase">{{ ot.mecanico }}</p>
-                    <p class="text-[10px] text-slate-400">Firma Mecánico Responsable</p>
+            <div class="grid grid-cols-2 gap-6 mb-8">
+                <div class="border border-slate-200 rounded-lg p-5 bg-slate-50">
+                    <h3 class="text-xs font-black text-blue-700 uppercase mb-3 tracking-wider">Identificación</h3>
+                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Tipo:</span> <span class="font-bold">{eq.tipo_equipo}</span></p>
+                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Marca:</span> {eq.marca}</p>
+                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Modelo:</span> {eq.modelo}</p>
+                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Ubicación:</span> {eq.ubicacion}</p>
+                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Operador:</span> {eq.responsable}</p>
+                    <p class="text-sm"><span class="font-bold text-slate-500 w-24 inline-block">Estado:</span> <span class="bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold text-xs">{eq.estado_base}</span></p>
                 </div>
-                <div class="text-center">
-                    <div class="border-b-2 border-slate-300 w-3/4 mx-auto mb-2"></div>
-                    <p class="text-xs font-bold text-slate-600 uppercase">Jefatura de Taller</p>
-                    <p class="text-[10px] text-slate-400">V°B° Supervisor</p>
+                <div class="border border-slate-200 rounded-lg p-5 bg-slate-50">
+                    <h3 class="text-xs font-black text-blue-700 uppercase mb-3 tracking-wider">Mecánica y Control</h3>
+                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Patente:</span> <span class="font-mono bg-slate-200 px-2 py-0.5 rounded font-bold">{eq.patente}</span></p>
+                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">VIN/Chasis:</span> <span class="font-mono text-xs">{eq.vin}</span></p>
+                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">N° Motor:</span> <span class="font-mono text-xs">{eq.n_motor}</span></p>
+                    <p class="text-sm mb-1 mt-3"><span class="font-bold text-slate-500 w-24 inline-block">Medidor:</span> {eq.control_base}</p>
+                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Lectura Act:</span> <span class="font-bold text-blue-600">{eq.lectura_actual or 0}</span></p>
+                    <p class="text-sm"><span class="font-bold text-slate-500 w-24 inline-block">Mto. Restante:</span> <span class="font-bold text-orange-600">{eq.margen}</span></p>
                 </div>
             </div>
 
-            <div class="border-t-2 border-slate-100 mt-16 pt-6 flex justify-between items-center bg-slate-50 p-4 rounded-lg">
-                <p class="text-slate-400 text-xs font-bold">Generado por CMMS Demotron S.A.</p>
-                <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">Costo Total: <span class="text-blue-600 font-black text-xl ml-2">{{ costo_str }}</span></p>
+            <h3 class="text-sm font-bold text-slate-800 uppercase mb-3 border-b-2 border-slate-200 pb-1">Maestro de Filtros y Repuestos</h3>
+            <table class="w-full text-left text-xs mb-10 border border-slate-200">
+                <thead>
+                    <tr class="bg-slate-800 text-white">
+                        <th class="p-2 border border-slate-300">Sistema</th>
+                        <th class="p-2 border border-slate-300 text-center">Cant</th>
+                        <th class="p-2 border border-slate-300">Fleetguard</th>
+                        <th class="p-2 border border-slate-300">Baldwin</th>
+                        <th class="p-2 border border-slate-300">Originales</th>
+                        <th class="p-2 border border-slate-300">Donaldson</th>
+                        <th class="p-2 border border-slate-300">Alternativo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {"".join([f"<tr class='odd:bg-white even:bg-slate-50'><td class='p-2 border border-slate-200 font-bold text-slate-700'>{f.sistema}</td><td class='p-2 border border-slate-200 text-center font-bold'>{f.cant}</td><td class='p-2 border border-slate-200 font-mono text-[10px]'>{f.fleetguard}</td><td class='p-2 border border-slate-200 font-mono text-[10px]'>{f.baldwind}</td><td class='p-2 border border-slate-200 font-mono text-[10px]'>{f.originales}</td><td class='p-2 border border-slate-200 font-mono text-[10px]'>{f.donaldson}</td><td class='p-2 border border-slate-200 font-mono text-[10px]'>{f.otra}</td></tr>" for f in filtros])}
+                </tbody>
+            </table>
+
+            <h3 class="text-sm font-bold text-slate-800 uppercase mb-3 border-b-2 border-slate-200 pb-1">Últimas 10 Mantenciones Ejecutadas</h3>
+            <table class="w-full text-left text-[11px] mb-8 border border-slate-200">
+                <thead>
+                    <tr class="bg-slate-100 text-slate-600">
+                        <th class="p-2 border border-slate-200">Fecha</th>
+                        <th class="p-2 border border-slate-200">Folio</th>
+                        <th class="p-2 border border-slate-200">Clase</th>
+                        <th class="p-2 border border-slate-200">Falla o Intervención</th>
+                        <th class="p-2 border border-slate-200">Mecánico</th>
+                        <th class="p-2 border border-slate-200">Odo/Hor.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {"".join([f"<tr class='odd:bg-white even:bg-slate-50'><td class='p-2 border border-slate-200'>{o.fecha.strftime('%d/%m/%Y') if o.fecha else ''}</td><td class='p-2 border border-slate-200 font-bold'>{o.folio}</td><td class='p-2 border border-slate-200 font-bold text-{'red' if o.tipo_ot == 'Correctiva' else 'green'}-600'>{o.tipo_ot}</td><td class='p-2 border border-slate-200'>{o.tipo_mantencion}</td><td class='p-2 border border-slate-200'>{o.mecanico}</td><td class='p-2 border border-slate-200 font-mono'>{o.lectura}</td></tr>" for o in ots])}
+                </tbody>
+            </table>
+            
+            <div class="text-center mt-12 pt-6 border-t border-slate-200 print:hidden flex justify-center gap-4">
+                <button onclick="window.print()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition flex items-center gap-2">🖨️ Imprimir Ficha Oficial</button>
+                <button onclick="window.close()" class="bg-slate-200 text-slate-700 px-8 py-3 rounded-xl font-bold shadow hover:bg-slate-300 transition">Cerrar Pestaña</button>
             </div>
         </div>
     </body>
     </html>
     """
-    return render_template_string(html, ot=ot, eq=eq, lectura_str=lectura_str, costo_str=costo_str, fecha_str=fecha_str, tipo_eq_str=tipo_eq_str, ctrl_eq_str=ctrl_eq_str)
-
-@api_bp.route('/api/edit_ot/<int:ot_id>', methods=['POST'])
-@login_required
-def edit_ot(ot_id):
-    pass 
-@api_bp.route('/api/edit_lectura/<int:lid>', methods=['POST'])
-@login_required
-def edit_lectura(lid):
-    pass 
-@api_bp.route('/api/edit_equipo/<codigo>', methods=['POST'])
-@login_required
-def edit_equipo(codigo):
-    pass
+    return render_template_string(html)
