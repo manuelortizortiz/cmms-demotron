@@ -77,7 +77,6 @@ def dashboard():
         top_7_prev_list = sorted(costos_prev_eq.items(), key=lambda x: x[1], reverse=True)[:7]
         top_7_preventivas = [{'codigo': x[0], 'costo': x[1], 'costo_str': format_clp(x[1])} for x in top_7_prev_list]
 
-        # CALCULADORA INTELIGENTE DE EVENTOS FUTUROS (CALENDARIO)
         cercanos_seguro = []
         eventos_futuros = []
         for e in eqs_db:
@@ -98,15 +97,14 @@ def dashboard():
                         'pct': round(pct, 1)
                     })
 
-                    # Proyección en Calendario si el margen es menor a 150
                     if m_val <= 150:
                         dias_est = int(m_val / 8) if e.control_base == 'HORAS' else int(m_val / 100)
-                        dias_est = max(1, dias_est) # Al menos 1 día de diferencia
+                        dias_est = max(1, dias_est) 
                         fecha_est = (datetime.now() + timedelta(days=dias_est)).strftime('%Y-%m-%d')
                         eventos_futuros.append({
                             'title': f"⏳ {e.codigo} (PM Proyectada)",
                             'start': fecha_est,
-                            'color': '#F59E0B' # Color Naranja
+                            'color': '#F59E0B'
                         })
             except Exception:
                 pass
@@ -180,7 +178,7 @@ def dashboard():
                                kanban=kanban_tareas, operadores=[{'id': p.id, 'nombre': p.nombre, 'cargo': p.cargo, 'estado': p.estado, 'equipo_asignado': p.equipo_asignado} for p in operadores_db], 
                                mecanicos=mecanicos_list, bodega=bodega_list,
                                top_7_preventivas=top_7_preventivas, top_7_cercanos=top_7_cercanos,
-                               eventos_futuros=eventos_futuros, # <--- ENVIADO AL CALENDARIO
+                               eventos_futuros=eventos_futuros,
                                usos=[{'id': u.id, 'fecha': u.fecha.strftime('%d/%m/%Y'), 'operador': u.operador, 'codigo_equipo': u.codigo_equipo, 'observacion': u.observacion} for u in usos_db])
     except Exception as e:
         return f"Error en Dashboard: {str(e)}"
