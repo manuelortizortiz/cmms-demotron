@@ -229,107 +229,129 @@ def add_chatter():
     return jsonify({"status": "success", "log": log.to_dict()})
 
 
-# --- NUEVO MÓDULO: FICHA TÉCNICA DEL EQUIPO (IMPRIMIBLE) ---
+# --- NUEVA PAUTA MAESTRA IMPRIMIBLE (CÓDIGO GIGANTE, DATOS Y COMPATIBLES) ---
 @api_bp.route('/api/imprimir_equipo/<codigo>')
 @login_required
 def imprimir_equipo(codigo):
     eq = Equipo.query.filter_by(codigo=codigo).first_or_404()
     filtros = FiltroEquipo.query.filter_by(codigo_equipo=codigo).all()
-    ots = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, estado='Finalizada').order_by(OrdenTrabajo.fecha.desc()).limit(10).all()
+    
+    # LÓGICA INTELIGENTE: BÚSQUEDA DE EQUIPOS QUE USAN LOS MISMOS FILTROS
+    signature_actual = set()
+    for f in filtros:
+        row_data = (f.sistema, f.fleetguard, f.baldwind, f.originales, f.donaldson, f.otra)
+        # Solo sumamos a la firma si tiene al menos un código de repuesto real
+        if any(val not in ['-', '', 'nan', None] for val in [f.fleetguard, f.baldwind, f.originales, f.donaldson, f.otra]):
+            signature_actual.add(row_data)
+    
+    equipos_similares = []
+    if signature_actual:
+        todos_filtros = FiltroEquipo.query.filter(FiltroEquipo.codigo_equipo != codigo).all()
+        from collections import defaultdict
+        mapa_filtros = defaultdict(list)
+        for f in todos_filtros:
+            mapa_filtros[f.codigo_equipo].append(f)
+        
+        for cod_eq, lista_f in mapa_filtros.items():
+            sig_eq = set()
+            for f in lista_f:
+                row_data = (f.sistema, f.fleetguard, f.baldwind, f.originales, f.donaldson, f.otra)
+                if any(val not in ['-', '', 'nan', None] for val in [f.fleetguard, f.baldwind, f.originales, f.donaldson, f.otra]):
+                    sig_eq.add(row_data)
+            
+            # Si el equipo analizado tiene exactamente los mismos filtros, es compatible
+            if sig_eq and sig_eq == signature_actual:
+                equipos_similares.append(cod_eq)
+                
+    equipos_similares = sorted(equipos_similares)
     
     html = f"""
     <!DOCTYPE html>
     <html lang="es">
     <head>
         <meta charset="UTF-8">
-        <title>Ficha Técnica - {eq.codigo}</title>
+        <title>Pauta de Filtros - {eq.codigo}</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
             @media print {{ 
                 body {{ background: white; }} 
                 .print\\:hidden {{ display: none !important; }} 
-                @page {{ margin: 1cm; }}
+                .shadow-xl {{ box-shadow: none !important; border-color: transparent !important; }}
+                @page {{ margin: 1cm; size: auto; }}
             }}
             table {{ page-break-inside: auto; }}
             tr {{ page-break-inside: avoid; page-break-after: auto; }}
         </style>
     </head>
     <body class="bg-slate-50 p-8 font-sans text-slate-800 max-w-4xl mx-auto">
-        <div class="bg-white p-10 rounded-2xl shadow-xl border border-slate-200">
+        <div class="bg-white p-10 rounded-2xl shadow-xl border border-slate-200 print:p-0 print:border-none">
             
-            <div class="flex justify-between items-center border-b-2 border-slate-800 pb-4 mb-6">
-                <div class="flex items-center gap-4">
-                    <div class="w-16 h-16 bg-blue-700 text-white flex items-center justify-center rounded-xl text-2xl font-black">DT</div>
-                    <div>
-                        <h1 class="text-2xl font-black text-slate-900 leading-tight">FICHA DE EQUIPO</h1>
-                        <p class="text-xl text-blue-700 font-bold tracking-widest">{eq.codigo}</p>
+            <!-- CABECERA PRINCIPAL (CÓDIGO GIGANTE ARRIBA A LA DERECHA) -->
+            <div class="flex justify-between items-start border-b-4 border-slate-800 pb-4 mb-6">
+                <div>
+                    <h1 class="text-3xl font-black text-slate-900 leading-tight uppercase">PAUTA DE MANTENCIÓN Y FILTROS</h1>
+                    <p class="text-sm font-bold text-slate-500 mt-1">Gestión de Flota - Demotron S.A.</p>
+                    <p class="text-xs text-slate-400 mt-1">Emisión: {datetime.now().strftime('%d/%m/%Y')}</p>
+                </div>
+                <div class="text-right flex flex-col items-end">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Código de Equipo</span>
+                    <div class="bg-slate-900 text-white px-6 py-2 rounded-xl text-5xl font-black tracking-tighter print:border-4 print:border-slate-900 print:text-slate-900 print:bg-white">
+                        {eq.codigo}
                     </div>
                 </div>
-                <div class="text-right">
-                    <p class="text-sm font-bold text-slate-500">Demotron S.A.</p>
-                    <p class="text-xs text-slate-400">Emisión: {datetime.now().strftime('%d/%m/%Y')}</p>
-                </div>
             </div>
 
+            <!-- ESPECIFICACIONES Y COMPATIBILIDAD -->
             <div class="grid grid-cols-2 gap-6 mb-8">
-                <div class="border border-slate-200 rounded-lg p-5 bg-slate-50">
-                    <h3 class="text-xs font-black text-blue-700 uppercase mb-3 tracking-wider">Identificación</h3>
-                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Tipo:</span> <span class="font-bold">{eq.tipo_equipo}</span></p>
-                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Marca:</span> {eq.marca}</p>
-                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Modelo:</span> {eq.modelo}</p>
-                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Ubicación:</span> {eq.ubicacion}</p>
-                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Operador:</span> {eq.responsable}</p>
-                    <p class="text-sm"><span class="font-bold text-slate-500 w-24 inline-block">Estado:</span> <span class="bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold text-xs">{eq.estado_base}</span></p>
+                <div class="border-2 border-slate-200 rounded-xl p-5 bg-slate-50">
+                    <h3 class="text-xs font-black text-slate-800 uppercase mb-3 tracking-widest border-b border-slate-200 pb-2">Especificaciones Técnicas</h3>
+                    <div class="grid grid-cols-2 gap-y-4">
+                        <p><span class="font-bold text-slate-500 block text-[10px] uppercase">Marca</span> <span class="font-black text-slate-800 text-lg leading-none">{eq.marca or 'S/I'}</span></p>
+                        <p><span class="font-bold text-slate-500 block text-[10px] uppercase">Modelo</span> <span class="font-black text-slate-800 text-lg leading-none">{eq.modelo or 'S/I'}</span></p>
+                        <p class="col-span-2"><span class="font-bold text-slate-500 block text-[10px] uppercase">VIN / Número de Chasis</span> <span class="font-mono font-bold text-slate-700 text-base">{eq.vin or 'S/I'}</span></p>
+                        <p class="col-span-2"><span class="font-bold text-slate-500 block text-[10px] uppercase">Número de Motor</span> <span class="font-mono font-bold text-slate-700 text-base">{eq.n_motor or 'S/I'}</span></p>
+                    </div>
                 </div>
-                <div class="border border-slate-200 rounded-lg p-5 bg-slate-50">
-                    <h3 class="text-xs font-black text-blue-700 uppercase mb-3 tracking-wider">Mecánica y Control</h3>
-                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Patente:</span> <span class="font-mono bg-slate-200 px-2 py-0.5 rounded font-bold">{eq.patente}</span></p>
-                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">VIN/Chasis:</span> <span class="font-mono text-xs">{eq.vin}</span></p>
-                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">N° Motor:</span> <span class="font-mono text-xs">{eq.n_motor}</span></p>
-                    <p class="text-sm mb-1 mt-3"><span class="font-bold text-slate-500 w-24 inline-block">Medidor:</span> {eq.control_base}</p>
-                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Lectura Act:</span> <span class="font-bold text-blue-600">{eq.lectura_actual or 0}</span></p>
-                    <p class="text-sm"><span class="font-bold text-slate-500 w-24 inline-block">Mto. Restante:</span> <span class="font-bold text-orange-600">{eq.margen}</span></p>
+                
+                <div class="border-2 border-slate-200 rounded-xl p-5 bg-slate-50 flex flex-col">
+                    <h3 class="text-xs font-black text-slate-800 uppercase mb-3 tracking-widest border-b border-slate-200 pb-2">Compatibilidad de Flota</h3>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase mb-3">Equipos que ocupan exactamente los mismos filtros:</p>
+                    <div class="flex flex-wrap gap-2 flex-1 content-start">
+"""
+    
+    if equipos_similares:
+        for sim in equipos_similares:
+            html += f"<span class='bg-slate-200 text-slate-800 font-bold px-3 py-1 rounded-md text-sm border border-slate-300 print:bg-white'>{sim}</span>"
+    else:
+        html += "<span class='text-slate-400 text-sm italic font-semibold'>Este equipo tiene una pauta única de repuestos en la flota.</span>"
+        
+    html += f"""
+                    </div>
                 </div>
             </div>
 
-            <h3 class="text-sm font-bold text-slate-800 uppercase mb-3 border-b-2 border-slate-200 pb-1">Maestro de Filtros y Repuestos</h3>
-            <table class="w-full text-left text-xs mb-10 border border-slate-200">
+            <!-- TABLA MAESTRA DE FILTROS -->
+            <h3 class="text-sm font-bold text-slate-800 uppercase mb-3 border-b-2 border-slate-200 pb-1">Tabla de Repuestos y Filtros</h3>
+            <table class="w-full text-left text-sm mb-10 border-2 border-slate-300">
                 <thead>
-                    <tr class="bg-slate-800 text-white">
-                        <th class="p-2 border border-slate-300">Sistema</th>
-                        <th class="p-2 border border-slate-300 text-center">Cant</th>
-                        <th class="p-2 border border-slate-300">Fleetguard</th>
-                        <th class="p-2 border border-slate-300">Baldwin</th>
-                        <th class="p-2 border border-slate-300">Originales</th>
-                        <th class="p-2 border border-slate-300">Donaldson</th>
-                        <th class="p-2 border border-slate-300">Alternativo</th>
+                    <tr class="bg-slate-800 text-white print:bg-slate-100 print:text-slate-800">
+                        <th class="p-3 border border-slate-300 uppercase text-xs tracking-wider">Sistema</th>
+                        <th class="p-3 border border-slate-300 text-center uppercase text-xs tracking-wider">Cant</th>
+                        <th class="p-3 border border-slate-300 uppercase text-xs tracking-wider">Fleetguard</th>
+                        <th class="p-3 border border-slate-300 uppercase text-xs tracking-wider">Baldwin</th>
+                        <th class="p-3 border border-slate-300 uppercase text-xs tracking-wider">Originales</th>
+                        <th class="p-3 border border-slate-300 uppercase text-xs tracking-wider">Donaldson</th>
+                        <th class="p-3 border border-slate-300 uppercase text-xs tracking-wider">Alternativo</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {"".join([f"<tr class='odd:bg-white even:bg-slate-50'><td class='p-2 border border-slate-200 font-bold text-slate-700'>{f.sistema}</td><td class='p-2 border border-slate-200 text-center font-bold'>{f.cant}</td><td class='p-2 border border-slate-200 font-mono text-[10px]'>{f.fleetguard}</td><td class='p-2 border border-slate-200 font-mono text-[10px]'>{f.baldwind}</td><td class='p-2 border border-slate-200 font-mono text-[10px]'>{f.originales}</td><td class='p-2 border border-slate-200 font-mono text-[10px]'>{f.donaldson}</td><td class='p-2 border border-slate-200 font-mono text-[10px]'>{f.otra}</td></tr>" for f in filtros])}
-                </tbody>
-            </table>
-
-            <h3 class="text-sm font-bold text-slate-800 uppercase mb-3 border-b-2 border-slate-200 pb-1">Últimas 10 Mantenciones Ejecutadas</h3>
-            <table class="w-full text-left text-[11px] mb-8 border border-slate-200">
-                <thead>
-                    <tr class="bg-slate-100 text-slate-600">
-                        <th class="p-2 border border-slate-200">Fecha</th>
-                        <th class="p-2 border border-slate-200">Folio</th>
-                        <th class="p-2 border border-slate-200">Clase</th>
-                        <th class="p-2 border border-slate-200">Falla o Intervención</th>
-                        <th class="p-2 border border-slate-200">Mecánico</th>
-                        <th class="p-2 border border-slate-200">Odo/Hor.</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {"".join([f"<tr class='odd:bg-white even:bg-slate-50'><td class='p-2 border border-slate-200'>{o.fecha.strftime('%d/%m/%Y') if o.fecha else ''}</td><td class='p-2 border border-slate-200 font-bold'>{o.folio}</td><td class='p-2 border border-slate-200 font-bold text-{'red' if o.tipo_ot == 'Correctiva' else 'green'}-600'>{o.tipo_ot}</td><td class='p-2 border border-slate-200'>{o.tipo_mantencion}</td><td class='p-2 border border-slate-200'>{o.mecanico}</td><td class='p-2 border border-slate-200 font-mono'>{o.lectura}</td></tr>" for o in ots])}
+                    {"".join([f"<tr class='odd:bg-white even:bg-slate-50'><td class='p-3 border border-slate-300 font-bold text-slate-800'>{f.sistema}</td><td class='p-3 border border-slate-300 text-center font-bold text-lg'>{f.cant}</td><td class='p-3 border border-slate-300 font-mono text-sm font-semibold'>{f.fleetguard}</td><td class='p-3 border border-slate-300 font-mono text-sm font-semibold'>{f.baldwind}</td><td class='p-3 border border-slate-300 font-mono text-sm font-semibold'>{f.originales}</td><td class='p-3 border border-slate-300 font-mono text-sm font-semibold'>{f.donaldson}</td><td class='p-3 border border-slate-300 font-mono text-sm font-semibold'>{f.otra}</td></tr>" for f in filtros])}
                 </tbody>
             </table>
             
             <div class="text-center mt-12 pt-6 border-t border-slate-200 print:hidden flex justify-center gap-4">
-                <button onclick="window.print()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition flex items-center gap-2">🖨️ Imprimir Ficha Oficial</button>
-                <button onclick="window.close()" class="bg-slate-200 text-slate-700 px-8 py-3 rounded-xl font-bold shadow hover:bg-slate-300 transition">Cerrar Pestaña</button>
+                <button onclick="window.print()" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition flex items-center gap-2 text-lg">🖨️ Imprimir Pauta Técnica</button>
+                <button onclick="window.close()" class="bg-slate-200 text-slate-700 px-8 py-3 rounded-xl font-bold shadow hover:bg-slate-300 transition text-lg">Cerrar Pestaña</button>
             </div>
         </div>
     </body>
