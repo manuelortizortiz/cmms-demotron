@@ -1,3 +1,164 @@
-<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Equipos</title><link rel='stylesheet' href='/static/css/styles.css'></head><body><div class="topbar"><div class="logo">DEMOTRON</div><nav class="nav">
-<a href="/">▦ Dashboard</a><a href="/equipos">⚙ Equipos</a><a href="/ot">🛠 OT</a><a href="/lecturas">▤ Lecturas</a><a href="/mantenciones">🧰 Mantenciones</a><a href="/compras">🛒 Compras</a><a href="/bodega">▣ Bodega</a><a href="/proyeccion">📈 Proyección</a></nav>
-<input class="search" placeholder="Buscar..."><div>{{user}}</div><a class="btn" href="/logout">Salir</a></div><main class='data-page'><div class='data-head'><h2>Equipos</h2><a class='btn' href='/admin/importar-cmms'>Importar CMMS</a></div><div class='table-card'><table><thead><tr><th>Código</th><th>Tipo de Equipo</th><th>Familia</th><th>Marca</th><th>Modelo</th><th>Año</th><th>Ubicación</th><th>Responsable</th><th>Lectura Actual</th><th>Unidad</th><th>Próxima PM</th><th>Estado</th></tr></thead><tbody id='tablaEquipos'></tbody></table></div></main><script src='/static/js/equipos.js'></script></body></html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial {{ equipo.codigo }} - DEMOTRON</title>
+    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; font-size: 13px; background-color: #F8FAFC; color: #334155; margin: 0; }
+        .sidebar-bg { background-color: #FFFFFF; border-right: 1px solid #E2E8F0; }
+        .card-custom { background: white; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); padding: 24px; margin-bottom: 24px;}
+        .table-custom { width: 100%; border-collapse: collapse; }
+        .table-custom th { font-size: 11px; color: #64748B; padding: 12px; border-bottom: 1px solid #E2E8F0; text-align: left; }
+        .table-custom td { padding: 12px; border-bottom: 1px solid #F1F5F9; }
+        
+        /* 🖨️ MAGIA DE IMPRESIÓN (Transforma la web en un documento) */
+        @media print {
+            body { background: white !important; color: black; }
+            aside, header, nav, .print\:hidden { display: none !important; }
+            main { width: 100% !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
+            .card-custom { box-shadow: none !important; border: 1px solid #cbd5e1 !important; break-inside: avoid; padding: 16px; margin-bottom: 16px; }
+            .bg-slate-50 { background-color: transparent !important; }
+            @page { margin: 1cm; size: auto; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+    
+    <!-- BARRA LATERAL (Desaparece al Imprimir) -->
+    <aside class="w-64 sidebar-bg flex flex-col z-20 shrink-0 print:hidden">
+        <div class="h-24 flex items-center justify-center border-b border-slate-100 p-4">
+            <img src="{{ url_for('static', filename='Logo Azul.png') }}" alt="Demotron Logo" class="h-full object-contain" onerror="this.outerHTML='<span class=\'text-2xl font-bold text-blue-800\'>DEMOTRON</span>';">
+        </div>
+        <nav class="flex-1 py-6 overflow-y-auto">
+            <a href="/?tab=dash" class="block px-6 py-3 text-blue-600 font-bold hover:bg-blue-50 transition-colors">⬅ Volver al Dashboard</a>
+        </nav>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="flex-1 flex flex-col bg-[#F8FAFC] min-w-0 overflow-y-auto print:bg-white print:overflow-visible">
+        
+        <!-- HEADER (Desaparece al Imprimir) -->
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 print:hidden">
+            <h1 class="text-xl font-bold text-slate-800">Historial Técnico: {{ equipo.codigo }}</h1>
+            <button onclick="window.print()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold shadow-md hover:bg-blue-700 transition flex items-center gap-2">
+                🖨️ Imprimir Hoja de Vida
+            </button>
+        </header>
+
+        <div class="p-8 max-w-6xl mx-auto w-full">
+            
+            <!-- CABECERA DEL DOCUMENTO IMPRESO (Solo visible al imprimir) -->
+            <div class="hidden print:flex justify-between items-center border-b-2 border-slate-800 pb-4 mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 bg-blue-700 text-white flex items-center justify-center rounded-xl text-2xl font-black">DT</div>
+                    <div>
+                        <h1 class="text-2xl font-black text-slate-900 leading-tight">HOJA DE VIDA DE EQUIPO</h1>
+                        <p class="text-xl text-blue-700 font-bold tracking-widest">{{ equipo.codigo }}</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-bold text-slate-500">Demotron S.A.</p>
+                    <p class="text-xs text-slate-400">Generado: <script>document.write(new Date().toLocaleDateString('es-CL') + ' ' + new Date().toLocaleTimeString('es-CL'));</script></p>
+                </div>
+            </div>
+
+            <!-- TARJETAS DE DATOS DUROS -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="card-custom bg-slate-50">
+                    <h3 class="text-xs font-black text-blue-700 uppercase mb-4 tracking-wider">Identificación del Equipo</h3>
+                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">Tipo:</span> <b>{{ equipo.tipo_equipo }}</b></p>
+                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">Marca:</span> <b>{{ equipo.marca }}</b></p>
+                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">Modelo:</span> <b>{{ equipo.modelo }}</b></p>
+                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">VIN / Chasis:</span> <span class="font-mono text-slate-600 font-bold">{{ equipo.vin }}</span></p>
+                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">N° Motor:</span> <span class="font-mono text-slate-600 font-bold">{{ equipo.n_motor }}</span></p>
+                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">Patente:</span> <span class="bg-slate-200 print:border print:border-slate-300 px-2 py-0.5 rounded font-mono font-bold">{{ equipo.patente }}</span></p>
+                </div>
+                
+                <div class="card-custom bg-slate-50">
+                    <h3 class="text-xs font-black text-blue-700 uppercase mb-4 tracking-wider">Estado Operativo</h3>
+                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Ubicación:</span> <b>{{ equipo.ubicacion }}</b></p>
+                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Operador Titular:</span> <b>{{ equipo.responsable }}</b></p>
+                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Estado Actual:</span> <span class="bg-green-100 text-green-800 print:border print:border-green-300 px-2 py-0.5 rounded font-bold text-xs">{{ equipo.estado_base }}</span></p>
+                    <div class="my-4 border-t border-slate-200"></div>
+                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Tipo Control:</span> <b>{{ equipo.control_base }}</b></p>
+                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Lectura Vigente:</span> <b class="text-blue-600 text-lg">{{ equipo.lectura_actual }}</b></p>
+                </div>
+            </div>
+
+            <!-- REGISTRO DE ÓRDENES DE TRABAJO (PREVENTIVAS Y CORRECTIVAS) -->
+            <div class="card-custom">
+                <h3 class="text-sm font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Registro de Mantenciones (Historial OTs)</h3>
+                {% if mantenimientos %}
+                <div class="overflow-x-auto">
+                    <table class="table-custom">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>N° Folio</th>
+                                <th>Clasificación</th>
+                                <th>Intervención / Avería Diagnosticada</th>
+                                <th>Mecánico a Cargo</th>
+                                <th>Valor Ref.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in mantenimientos %}
+                            <tr>
+                                <td class="font-bold whitespace-nowrap">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F' }}</td>
+                                <td class="font-mono text-slate-500 font-bold whitespace-nowrap">{{ m.folio }}</td>
+                                <td class="font-bold text-xs uppercase {% if m.tipo_ot == 'Preventiva' %}text-green-600{% else %}text-red-600{% endif %}">
+                                    {{ m.tipo_ot }}
+                                </td>
+                                <td>{{ m.tipo_mantencion }}</td>
+                                <td class="text-slate-600">{{ m.mecanico }}</td>
+                                <td class="font-mono font-bold">{{ m.lectura }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-xs text-slate-400 italic">No hay historial de órdenes de trabajo para este equipo.</p>
+                {% endif %}
+            </div>
+
+            <!-- HISTORIAL DE LECTURAS (HORÓMETROS / KM) -->
+            <div class="card-custom">
+                <h3 class="text-sm font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Tracking de Lecturas de Terreno</h3>
+                {% if lecturas %}
+                <div class="overflow-x-auto">
+                    <table class="table-custom">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th>Fecha de Captura</th>
+                                <th>Valor Registrado</th>
+                                <th>Unidad de Medida</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for l in lecturas %}
+                            <tr>
+                                <td class="font-bold whitespace-nowrap">{{ l.fecha.strftime('%d/%m/%Y') if l.fecha else 'S/F' }}</td>
+                                <td class="font-mono font-bold text-blue-600 text-sm">
+                                    {% if l.horometro and l.horometro > 0 %}{{ "{:,.0f}".format(l.horometro).replace(',','.') }}{% else %}{{ "{:,.0f}".format(l.kilometraje).replace(',','.') }}{% endif %}
+                                </td>
+                                <td><span class="bg-slate-100 px-2 py-0.5 rounded font-bold text-[10px] text-slate-500 uppercase tracking-widest">{% if l.horometro and l.horometro > 0 %}Horas{% else %}Kilómetros{% endif %}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-xs text-slate-400 italic">No existen lecturas históricas almacenadas.</p>
+                {% endif %}
+            </div>
+
+        </div>
+    </main>
+</body>
+</html>
