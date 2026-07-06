@@ -228,9 +228,8 @@ def add_chatter():
     db.session.commit()
     return jsonify({"status": "success", "log": log.to_dict()})
 
-
 # =====================================================================
-# 1. MÓDULO: REGISTRO HISTÓRICO COMPLETO (HOJA DE VIDA)
+# 1. MÓDULO: REGISTRO HISTÓRICO COMPLETO (HOJA DE VIDA) - DISEÑO PULCRO
 # =====================================================================
 @api_bp.route('/api/imprimir_registro/<codigo>')
 @login_required
@@ -251,7 +250,7 @@ def imprimir_registro(codigo):
                 body {{ background: white; }} 
                 .print\\:hidden {{ display: none !important; }} 
                 .shadow-xl {{ box-shadow: none !important; border-color: transparent !important; }}
-                @page {{ margin: 1cm; size: auto; }}
+                @page {{ margin: 1cm; size: letter; }}
             }}
             table {{ page-break-inside: auto; }}
             tr {{ page-break-inside: avoid; page-break-after: auto; }}
@@ -262,10 +261,10 @@ def imprimir_registro(codigo):
             
             <div class="flex justify-between items-center border-b-2 border-slate-800 pb-4 mb-6">
                 <div class="flex items-center gap-4">
-                    <div class="w-16 h-16 bg-indigo-700 text-white flex items-center justify-center rounded-xl text-2xl font-black">DT</div>
+                    <div class="w-16 h-16 border-2 border-slate-900 text-slate-900 flex items-center justify-center rounded-xl text-2xl font-black">DT</div>
                     <div>
                         <h1 class="text-2xl font-black text-slate-900 leading-tight">REGISTRO TÉCNICO COMPLETO</h1>
-                        <p class="text-xl text-indigo-700 font-bold tracking-widest">{eq.codigo}</p>
+                        <p class="text-xl text-slate-700 font-bold tracking-widest">{eq.codigo}</p>
                     </div>
                 </div>
                 <div class="text-right">
@@ -276,61 +275,59 @@ def imprimir_registro(codigo):
 
             <!-- TARJETAS DE DATOS DUROS -->
             <div class="grid grid-cols-2 gap-6 mb-8">
-                <div class="border border-slate-200 rounded-lg p-5 bg-slate-50">
-                    <h3 class="text-xs font-black text-indigo-700 uppercase mb-3 tracking-wider">Identificación y Motor</h3>
+                <div class="border border-slate-300 rounded-lg p-5 bg-white">
+                    <h3 class="text-xs font-black text-slate-800 uppercase mb-3 tracking-wider border-b border-slate-200 pb-1">Identificación y Motor</h3>
                     <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Tipo:</span> <span class="font-bold">{eq.tipo_equipo}</span></p>
                     <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">Marca/Mod:</span> {eq.marca} {eq.modelo}</p>
-                    <p class="text-sm mb-1 mt-2"><span class="font-bold text-slate-500 w-24 inline-block">Patente:</span> <span class="font-mono bg-slate-200 px-2 py-0.5 rounded font-bold">{eq.patente or 'S/I'}</span></p>
+                    <p class="text-sm mb-1 mt-2"><span class="font-bold text-slate-500 w-24 inline-block">Patente:</span> <span class="font-mono bg-slate-100 border border-slate-300 px-2 py-0.5 rounded font-bold">{eq.patente or 'S/I'}</span></p>
                     <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">VIN:</span> <span class="font-mono text-xs">{eq.vin or 'S/I'}</span></p>
                     <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-24 inline-block">N° Motor:</span> <span class="font-mono text-xs">{eq.n_motor or 'S/I'}</span></p>
                 </div>
-                <div class="border border-slate-200 rounded-lg p-5 bg-slate-50">
-                    <h3 class="text-xs font-black text-indigo-700 uppercase mb-3 tracking-wider">Estado y Operatividad</h3>
+                <div class="border border-slate-300 rounded-lg p-5 bg-white">
+                    <h3 class="text-xs font-black text-slate-800 uppercase mb-3 tracking-wider border-b border-slate-200 pb-1">Estado y Operatividad</h3>
                     <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-28 inline-block">Ubicación:</span> {eq.ubicacion}</p>
                     <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-28 inline-block">Operador:</span> {eq.responsable}</p>
-                    <p class="text-sm mb-3"><span class="font-bold text-slate-500 w-28 inline-block">Estado:</span> <span class="bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold text-xs">{eq.estado_base}</span></p>
+                    <p class="text-sm mb-3"><span class="font-bold text-slate-500 w-28 inline-block">Estado:</span> <span class="border border-slate-400 text-slate-800 px-2 py-0.5 rounded font-bold text-xs">{eq.estado_base}</span></p>
                     <div class="border-t border-slate-200 pt-3"></div>
-                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-28 inline-block">Lectura Act:</span> <span class="font-bold text-indigo-600 text-lg">{eq.lectura_actual or 0} {eq.control_base}</span></p>
-                    <p class="text-sm"><span class="font-bold text-slate-500 w-28 inline-block">Mto. Restante:</span> <span class="font-bold text-orange-600">{eq.margen} {eq.control_base}</span></p>
+                    <p class="text-sm mb-1"><span class="font-bold text-slate-500 w-28 inline-block">Lectura Act:</span> <span class="font-bold text-slate-800 text-lg">{eq.lectura_actual or 0} {eq.control_base}</span></p>
+                    <p class="text-sm"><span class="font-bold text-slate-500 w-28 inline-block">Mto. Restante:</span> <span class="font-bold text-slate-600">{eq.margen} {eq.control_base}</span></p>
                 </div>
             </div>
 
-            <!-- REGISTRO DE ÚLTIMAS MANTENCIONES -->
-            <h3 class="text-sm font-bold text-slate-800 uppercase mb-3 border-b-2 border-slate-200 pb-1">Últimas Intervenciones (Preventivas y Correctivas)</h3>
-            <table class="w-full text-left text-[11px] mb-8 border border-slate-200">
+            <h3 class="text-sm font-bold text-slate-800 uppercase mb-3 border-b-2 border-slate-200 pb-1">Últimas Intervenciones</h3>
+            <table class="w-full text-left text-[11px] mb-8 border border-slate-300">
                 <thead>
-                    <tr class="bg-slate-100 text-slate-600">
-                        <th class="p-2 border border-slate-200">Fecha</th>
-                        <th class="p-2 border border-slate-200">Folio</th>
-                        <th class="p-2 border border-slate-200">Clase</th>
-                        <th class="p-2 border border-slate-200">Falla o Intervención</th>
-                        <th class="p-2 border border-slate-200">Mecánico</th>
-                        <th class="p-2 border border-slate-200">Odo/Hor.</th>
+                    <tr class="bg-slate-100 text-slate-700 border-b border-slate-300">
+                        <th class="p-2 border-r border-slate-300 uppercase tracking-wider">Fecha</th>
+                        <th class="p-2 border-r border-slate-300 uppercase tracking-wider">Folio</th>
+                        <th class="p-2 border-r border-slate-300 uppercase tracking-wider">Clase</th>
+                        <th class="p-2 border-r border-slate-300 uppercase tracking-wider">Intervención</th>
+                        <th class="p-2 border-r border-slate-300 uppercase tracking-wider">Mecánico</th>
+                        <th class="p-2 uppercase tracking-wider">Odo/Hor.</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {"".join([f"<tr class='odd:bg-white even:bg-slate-50'><td class='p-2 border border-slate-200'>{o.fecha.strftime('%d/%m/%Y') if o.fecha else ''}</td><td class='p-2 border border-slate-200 font-bold'>{o.folio}</td><td class='p-2 border border-slate-200 font-bold text-{'red' if o.tipo_ot == 'Correctiva' else 'green'}-600'>{o.tipo_ot}</td><td class='p-2 border border-slate-200'>{o.tipo_mantencion}</td><td class='p-2 border border-slate-200'>{o.mecanico}</td><td class='p-2 border border-slate-200 font-mono'>{o.lectura}</td></tr>" for o in ots])}
+                    {"".join([f"<tr class='border-b border-slate-200'><td class='p-2 border-r border-slate-300'>{o.fecha.strftime('%d/%m/%Y') if o.fecha else ''}</td><td class='p-2 border-r border-slate-300 font-bold'>{o.folio}</td><td class='p-2 border-r border-slate-300 font-bold uppercase'>{o.tipo_ot}</td><td class='p-2 border-r border-slate-300'>{o.tipo_mantencion}</td><td class='p-2 border-r border-slate-300'>{o.mecanico}</td><td class='p-2 font-mono'>{o.lectura}</td></tr>" for o in ots])}
                 </tbody>
             </table>
 
-            <!-- REGISTRO DE LECTURAS -->
             <h3 class="text-sm font-bold text-slate-800 uppercase mb-3 border-b-2 border-slate-200 pb-1">Historial de Lecturas Terreno</h3>
-            <table class="w-full text-left text-[11px] mb-8 border border-slate-200">
+            <table class="w-full text-left text-[11px] mb-8 border border-slate-300">
                 <thead>
-                    <tr class="bg-slate-100 text-slate-600">
-                        <th class="p-2 border border-slate-200">Fecha de Captura</th>
-                        <th class="p-2 border border-slate-200">Valor Registrado</th>
-                        <th class="p-2 border border-slate-200">Tipo de Medida</th>
+                    <tr class="bg-slate-100 text-slate-700 border-b border-slate-300">
+                        <th class="p-2 border-r border-slate-300 uppercase tracking-wider">Fecha de Captura</th>
+                        <th class="p-2 border-r border-slate-300 uppercase tracking-wider">Valor Registrado</th>
+                        <th class="p-2 uppercase tracking-wider">Tipo de Medida</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {"".join([f"<tr class='odd:bg-white even:bg-slate-50'><td class='p-2 border border-slate-200'>{l.fecha.strftime('%d/%m/%Y') if l.fecha else ''}</td><td class='p-2 border border-slate-200 font-mono font-bold text-indigo-600'>{'{:,.0f}'.format(l.horometro if l.horometro and l.horometro > 0 else l.kilometraje).replace(',','.')}</td><td class='p-2 border border-slate-200 font-bold text-slate-500'>{'HORAS' if l.horometro and l.horometro > 0 else 'KILÓMETROS'}</td></tr>" for l in lecturas])}
+                    {"".join([f"<tr class='border-b border-slate-200'><td class='p-2 border-r border-slate-300'>{l.fecha.strftime('%d/%m/%Y') if l.fecha else ''}</td><td class='p-2 border-r border-slate-300 font-mono font-bold text-slate-800'>{'{:,.0f}'.format(l.horometro if l.horometro and l.horometro > 0 else l.kilometraje).replace(',','.')}</td><td class='p-2 font-bold text-slate-600 uppercase'>{'HORAS' if l.horometro and l.horometro > 0 else 'KILÓMETROS'}</td></tr>" for l in lecturas])}
                 </tbody>
             </table>
             
             <div class="text-center mt-12 pt-6 border-t border-slate-200 print:hidden flex justify-center gap-4">
-                <button onclick="window.print()" class="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition flex items-center gap-2 text-lg">🖨️ Imprimir Registro Completo</button>
-                <button onclick="window.close()" class="bg-slate-200 text-slate-700 px-8 py-3 rounded-xl font-bold shadow hover:bg-slate-300 transition text-lg">Cerrar Pestaña</button>
+                <button onclick="window.print()" class="bg-slate-800 text-white px-8 py-3 rounded font-bold shadow hover:bg-slate-700 transition">Imprimir Registro Completo</button>
+                <button onclick="window.close()" class="bg-slate-200 text-slate-700 px-8 py-3 rounded font-bold shadow hover:bg-slate-300 transition">Cerrar</button>
             </div>
         </div>
     </body>
@@ -340,7 +337,7 @@ def imprimir_registro(codigo):
 
 
 # =====================================================================
-# 2. MÓDULO: PAUTA DE MANTENCIÓN / FILTROS (DISEÑO GIGANTE)
+# 2. MÓDULO: PAUTA DE MANTENCIÓN Y FILTROS (TAMAÑO CARTA Y LIMPIO)
 # =====================================================================
 @api_bp.route('/api/imprimir_filtros/<codigo>')
 @login_required
@@ -348,7 +345,6 @@ def imprimir_filtros(codigo):
     eq = Equipo.query.filter_by(codigo=codigo).first_or_404()
     filtros = FiltroEquipo.query.filter_by(codigo_equipo=codigo).all()
     
-    # LÓGICA INTELIGENTE: BÚSQUEDA DE EQUIPOS QUE USAN LOS MISMOS FILTROS
     signature_actual = set()
     for f in filtros:
         row_data = (f.sistema, f.fleetguard, f.baldwind, f.originales, f.donaldson, f.otra)
@@ -387,77 +383,105 @@ def imprimir_filtros(codigo):
                 body {{ background: white; }} 
                 .print\\:hidden {{ display: none !important; }} 
                 .shadow-xl {{ box-shadow: none !important; border-color: transparent !important; }}
-                @page {{ margin: 1cm; size: auto; }}
+                @page {{ margin: 1cm; size: letter; }}
             }}
-            table {{ page-break-inside: auto; }}
+            table {{ page-break-inside: auto; font-size: 11px; }}
             tr {{ page-break-inside: avoid; page-break-after: auto; }}
+            th, td {{ padding: 6px 8px !important; }}
         </style>
     </head>
-    <body class="bg-slate-50 p-8 font-sans text-slate-800 max-w-4xl mx-auto">
-        <div class="bg-white p-10 rounded-2xl shadow-xl border border-slate-200 print:p-0 print:border-none">
+    <body class="bg-slate-50 p-4 font-sans text-slate-800 max-w-4xl mx-auto">
+        <div class="bg-white p-6 rounded-xl shadow-xl border border-slate-200 print:p-0 print:border-none">
             
-            <div class="flex justify-between items-start border-b-4 border-slate-800 pb-4 mb-6">
+            <div class="flex justify-between items-start border-b-2 border-slate-800 pb-2 mb-4">
                 <div>
-                    <h1 class="text-3xl font-black text-slate-900 leading-tight uppercase">PAUTA DE MANTENCIÓN Y FILTROS</h1>
-                    <p class="text-sm font-bold text-slate-500 mt-1">Gestión de Flota - Demotron S.A.</p>
-                    <p class="text-xs text-slate-400 mt-1">Emisión: {datetime.now().strftime('%d/%m/%Y')}</p>
+                    <h1 class="text-xl font-black text-slate-900 uppercase">PAUTA DE MANTENCIÓN Y FILTROS</h1>
+                    <p class="text-xs font-bold text-slate-500">Gestión de Flota - Demotron S.A.</p>
+                    <p class="text-[10px] text-slate-400">Emisión: {datetime.now().strftime('%d/%m/%Y')}</p>
                 </div>
                 <div class="text-right flex flex-col items-end">
-                    <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Código de Equipo</span>
-                    <div class="bg-slate-900 text-white px-6 py-2 rounded-xl text-5xl font-black tracking-tighter print:border-4 print:border-slate-900 print:text-slate-900 print:bg-white">
+                    <span class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">Código de Equipo</span>
+                    <div class="border-2 border-slate-900 text-slate-900 px-4 py-1 rounded-lg text-3xl font-black tracking-tighter print:bg-white">
                         {eq.codigo}
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-6 mb-8">
-                <div class="border-2 border-slate-200 rounded-xl p-5 bg-slate-50">
-                    <h3 class="text-xs font-black text-slate-800 uppercase mb-3 tracking-widest border-b border-slate-200 pb-2">Especificaciones Técnicas</h3>
-                    <div class="grid grid-cols-2 gap-y-4">
-                        <p><span class="font-bold text-slate-500 block text-[10px] uppercase">Marca</span> <span class="font-black text-slate-800 text-lg leading-none">{eq.marca or 'S/I'}</span></p>
-                        <p><span class="font-bold text-slate-500 block text-[10px] uppercase">Modelo</span> <span class="font-black text-slate-800 text-lg leading-none">{eq.modelo or 'S/I'}</span></p>
-                        <p class="col-span-2"><span class="font-bold text-slate-500 block text-[10px] uppercase">VIN / Número de Chasis</span> <span class="font-mono font-bold text-slate-700 text-base">{eq.vin or 'S/I'}</span></p>
-                        <p class="col-span-2"><span class="font-bold text-slate-500 block text-[10px] uppercase">Número de Motor</span> <span class="font-mono font-bold text-slate-700 text-base">{eq.n_motor or 'S/I'}</span></p>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="border border-slate-300 rounded p-3 bg-white">
+                    <h3 class="text-[10px] font-black text-slate-800 uppercase mb-2 border-b border-slate-200 pb-1">Especificaciones Técnicas</h3>
+                    <div class="grid grid-cols-2 gap-1 text-xs">
+                        <p><span class="font-bold text-slate-500 uppercase text-[9px]">Marca:</span> <br><span class="font-bold">{eq.marca or 'S/I'}</span></p>
+                        <p><span class="font-bold text-slate-500 uppercase text-[9px]">Modelo:</span> <br><span class="font-bold">{eq.modelo or 'S/I'}</span></p>
+                        <p><span class="font-bold text-slate-500 uppercase text-[9px]">VIN / Chasis:</span> <br><span class="font-mono">{eq.vin or 'S/I'}</span></p>
+                        <p><span class="font-bold text-slate-500 uppercase text-[9px]">Motor:</span> <br><span class="font-mono">{eq.n_motor or 'S/I'}</span></p>
                     </div>
                 </div>
                 
-                <div class="border-2 border-slate-200 rounded-xl p-5 bg-slate-50 flex flex-col">
-                    <h3 class="text-xs font-black text-slate-800 uppercase mb-3 tracking-widest border-b border-slate-200 pb-2">Compatibilidad de Flota</h3>
-                    <p class="text-[10px] font-bold text-slate-500 uppercase mb-3">Equipos que ocupan exactamente los mismos filtros:</p>
-                    <div class="flex flex-wrap gap-2 flex-1 content-start">
+                <div class="border border-slate-300 rounded p-3 bg-white flex flex-col">
+                    <h3 class="text-[10px] font-black text-slate-800 uppercase mb-2 border-b border-slate-200 pb-1">Compatibilidad de Flota</h3>
+                    <p class="text-[9px] text-slate-500 mb-1 uppercase">Equipos con los mismos filtros:</p>
+                    <div class="flex flex-wrap gap-1">
 """
     if equipos_similares:
         for sim in equipos_similares:
-            html += f"<span class='bg-slate-200 text-slate-800 font-bold px-3 py-1 rounded-md text-sm border border-slate-300 print:bg-white'>{sim}</span>"
+            html += f"<span class='border border-slate-400 text-slate-800 font-bold px-2 py-0.5 rounded text-[10px] bg-slate-50'>{sim}</span>"
     else:
-        html += "<span class='text-slate-400 text-sm italic font-semibold'>Este equipo tiene una pauta única de repuestos en la flota.</span>"
+        html += "<span class='text-slate-400 text-[10px] italic'>Pauta única en la flota.</span>"
         
     html += f"""
                     </div>
                 </div>
             </div>
 
-            <h3 class="text-sm font-bold text-slate-800 uppercase mb-3 border-b-2 border-slate-200 pb-1">Tabla de Repuestos y Filtros</h3>
-            <table class="w-full text-left text-sm mb-10 border-2 border-slate-300">
+            <table class="w-full text-left border border-slate-400 mb-4">
                 <thead>
-                    <tr class="bg-slate-800 text-white print:bg-slate-100 print:text-slate-800">
-                        <th class="p-3 border border-slate-300 uppercase text-xs tracking-wider">Sistema</th>
-                        <th class="p-3 border border-slate-300 text-center uppercase text-xs tracking-wider">Cant</th>
-                        <th class="p-3 border border-slate-300 uppercase text-xs tracking-wider">Fleetguard</th>
-                        <th class="p-3 border border-slate-300 uppercase text-xs tracking-wider">Baldwin</th>
-                        <th class="p-3 border border-slate-300 uppercase text-xs tracking-wider">Originales</th>
-                        <th class="p-3 border border-slate-300 uppercase text-xs tracking-wider">Donaldson</th>
-                        <th class="p-3 border border-slate-300 uppercase text-xs tracking-wider">Alternativo</th>
+                    <tr class="bg-slate-100 text-slate-800 border-b border-slate-400">
+                        <th class="uppercase text-[10px] tracking-wider border-r border-slate-300">Sistema</th>
+                        <th class="text-center uppercase text-[10px] tracking-wider border-r border-slate-300">Cant</th>
+                        <th class="uppercase text-[10px] tracking-wider border-r border-slate-300">Fleetguard</th>
+                        <th class="uppercase text-[10px] tracking-wider border-r border-slate-300">Baldwin</th>
+                        <th class="uppercase text-[10px] tracking-wider border-r border-slate-300">Originales</th>
+                        <th class="uppercase text-[10px] tracking-wider border-r border-slate-300">Donaldson</th>
+                        <th class="uppercase text-[10px] tracking-wider">Alternativo</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {"".join([f"<tr class='odd:bg-white even:bg-slate-50'><td class='p-3 border border-slate-300 font-bold text-slate-800'>{f.sistema}</td><td class='p-3 border border-slate-300 text-center font-bold text-lg'>{f.cant}</td><td class='p-3 border border-slate-300 font-mono text-sm font-semibold'>{f.fleetguard}</td><td class='p-3 border border-slate-300 font-mono text-sm font-semibold'>{f.baldwind}</td><td class='p-3 border border-slate-300 font-mono text-sm font-semibold'>{f.originales}</td><td class='p-3 border border-slate-300 font-mono text-sm font-semibold'>{f.donaldson}</td><td class='p-3 border border-slate-300 font-mono text-sm font-semibold'>{f.otra}</td></tr>" for f in filtros])}
+"""
+    for f in filtros:
+        html += f"""
+                    <tr class="border-b border-slate-300">
+                        <td class="font-bold text-slate-800 border-r border-slate-300">{f.sistema}</td>
+                        <td class="text-center font-bold border-r border-slate-300">{f.cant}</td>
+                        <td class="font-mono border-r border-slate-300">{f.fleetguard}</td>
+                        <td class="font-mono border-r border-slate-300">{f.baldwind}</td>
+                        <td class="font-mono border-r border-slate-300">{f.originales}</td>
+                        <td class="font-mono border-r border-slate-300">{f.donaldson}</td>
+                        <td class="font-mono">{f.otra}</td>
+                    </tr>
+        """
+    
+    # Añadir 2 filas en blanco para anotaciones
+    for _ in range(2):
+        html += """
+                    <tr class="border-b border-slate-300">
+                        <td class="h-6 border-r border-slate-300"></td>
+                        <td class="border-r border-slate-300"></td>
+                        <td class="border-r border-slate-300"></td>
+                        <td class="border-r border-slate-300"></td>
+                        <td class="border-r border-slate-300"></td>
+                        <td class="border-r border-slate-300"></td>
+                        <td></td>
+                    </tr>
+        """
+        
+    html += f"""
                 </tbody>
             </table>
             
-            <div class="text-center mt-12 pt-6 border-t border-slate-200 print:hidden flex justify-center gap-4">
-                <button onclick="window.print()" class="bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-emerald-700 transition flex items-center gap-2 text-lg">🖨️ Imprimir Pauta de Filtros</button>
-                <button onclick="window.close()" class="bg-slate-200 text-slate-700 px-8 py-3 rounded-xl font-bold shadow hover:bg-slate-300 transition text-lg">Cerrar Pestaña</button>
+            <div class="text-center mt-6 pt-4 border-t border-slate-200 print:hidden flex justify-center gap-4">
+                <button onclick="window.print()" class="bg-slate-800 text-white px-6 py-2 rounded font-bold shadow hover:bg-slate-700 transition">Imprimir Pauta</button>
+                <button onclick="window.close()" class="bg-slate-200 text-slate-700 px-6 py-2 rounded font-bold hover:bg-slate-300 transition">Cerrar</button>
             </div>
         </div>
     </body>
