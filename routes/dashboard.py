@@ -102,7 +102,7 @@ def dashboard():
                         dias_est = max(1, dias_est) 
                         fecha_est = (datetime.now() + timedelta(days=dias_est)).strftime('%Y-%m-%d')
                         eventos_futuros.append({
-                            'title': f"⏳ {e.codigo} (PM Proyectada)",
+                            'title': f"{e.codigo} (Proyección PM)",
                             'start': fecha_est,
                             'color': '#F59E0B'
                         })
