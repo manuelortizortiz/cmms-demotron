@@ -81,7 +81,7 @@ def cargar_sql_final():
             
         for op in operadores_set:
             if not Personal.query.filter_by(nombre=op).first():
-                db.session.add(Personal(nombre=op, cargo="Operador", estado="Active", equipo_asignado="Varios"))
+                db.session.add(Personal(nombre=op, cargo="Operador", estado="Activo", equipo_asignado="Varios"))
         db.session.commit()
 
         # --- 2. HOJA LECTURAS ---
@@ -103,12 +103,21 @@ def cargar_sql_final():
             else:
                 hor, kil = clean_int(row.iloc[2], 0), clean_int(row.iloc[3], 0)
 
-            if not HistorialLectura.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, horometro=hor, kilometraje=kil).first():
+            # EVITAR DUPLICADOS DE LECTURAS EN EL MISMO DÍA
+            lecs_existentes = HistorialLectura.query.filter_by(codigo_equipo=cod, fecha=fecha_dt).all()
+            if lecs_existentes:
+                lec_prin = lecs_existentes[0]
+                lec_prin.horometro = hor
+                lec_prin.kilometraje = kil
+                # Borra basura duplicada
+                for copia in lecs_existentes[1:]:
+                    db.session.delete(copia)
+            else:
                 db.session.add(HistorialLectura(fecha=fecha_dt, codigo_equipo=cod, horometro=hor, kilometraje=kil, obra_ubicacion='', responsable='', observacion=''))
                 reporte['lecturas'] += 1
         db.session.commit()
 
-        # --- 3. HOJA MANTENCIONES (PREVENTIVAS) ---
+        # --- 3. HOJA MANTENCIONES (PREVENTIVAS - CORRECCIÓN DE DUPLICADOS) ---
         df_man = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
         df_man.columns = df_man.columns.str.strip()
         for indice, row in df_man.iterrows():
@@ -128,11 +137,21 @@ def cargar_sql_final():
             es_pm_raw = clean_string(str(row.get('EsPM', 'No') or 'No')).lower()
             tipo_ot = 'Preventiva' if es_pm_raw in ['sí','si','s','yes','1','true'] else 'Correctiva'
             
-            ot_existente = OrdenTrabajo.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, tipo_mantencion=tipo).first()
-            if ot_existente:
-                ot_existente.lectura = clean_int(row.get('Lectura'), 0)
-                ot_existente.costo_mantencion_clp = clean_float(row.get('Costo Mantencion CLP'), 0.0)
-                ot_existente.folio = folio_str
+            # BUSCAMOS POR EQUIPO, FECHA y TIPO (Ignoramos si le cambiaste el nombre a la pauta)
+            ots_existentes = OrdenTrabajo.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, tipo_ot=tipo_ot).all()
+            
+            if ots_existentes:
+                ot_principal = ots_existentes[0]
+                # Actualizamos la OT con el nombre correcto de tu Excel nuevo
+                ot_principal.tipo_mantencion = tipo
+                ot_principal.lectura = clean_int(row.get('Lectura'), 0)
+                ot_principal.costo_mantencion_clp = clean_float(row.get('Costo Mantencion CLP'), 0.0)
+                if folio_str: ot_principal.folio = folio_str
+                
+                # PURGA DE FANTASMAS: Si hay registros duplicados en ese día, los elimina
+                for copia in ots_existentes[1:]:
+                    db.session.delete(copia)
+                reporte['preventivas'] += 1
             else:
                 db.session.add(OrdenTrabajo(
                     fecha=fecha_dt, codigo_equipo=cod, tipo_ot=tipo_ot, tipo_mantencion=tipo,
@@ -141,7 +160,7 @@ def cargar_sql_final():
                     costo_mantencion_clp=clean_float(row.get('Costo Mantencion CLP'), 0.0),
                     estado=clean_string(str(row.get('Estado', '') or 'Finalizada')) or 'Finalizada', mecanico='Sin Asignar'
                 ))
-            reporte['preventivas'] += 1
+                reporte['preventivas'] += 1
         db.session.commit()
 
         # --- 4. HOJA CORRECTIVAS ---
@@ -177,12 +196,19 @@ def cargar_sql_final():
                 elif any(x in falla_lower for x in ['neumatico','rueda','llanta']): sistema_val='Neumáticos'
                 else: sistema_val='Estructura'
                 
-                ot_existente = OrdenTrabajo.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, tipo_mantencion=falla).first()
-                if ot_existente:
-                    ot_existente.lectura = lectura_val
-                    ot_existente.costo_mantencion_clp = costo_val
-                    ot_existente.folio = folio_val
-                    ot_existente.sistema_falla = sistema_val
+                # Aquí sí buscamos por tipo de falla para no pisar dos reparaciones distintas en un día
+                ots_existentes = OrdenTrabajo.query.filter_by(codigo_equipo=cod, fecha=fecha_dt, tipo_ot='Correctiva', tipo_mantencion=falla).all()
+                if ots_existentes:
+                    ot_principal = ots_existentes[0]
+                    ot_principal.lectura = lectura_val
+                    ot_principal.costo_mantencion_clp = costo_val
+                    if folio_val != ot_principal.folio and not ot_principal.folio.startswith('OT-CR-'): 
+                        ot_principal.folio = folio_val
+                    ot_principal.sistema_falla = sistema_val
+                    ot_principal.causa_raiz = falla
+                    
+                    for copia in ots_existentes[1:]:
+                        db.session.delete(copia)
                 else:
                     db.session.add(OrdenTrabajo(
                         fecha=fecha_dt, codigo_equipo=cod, tipo_ot='Correctiva', tipo_mantencion=falla,
@@ -196,14 +222,28 @@ def cargar_sql_final():
 
         # --- 5. COMPRAS PM ---
         try:
-            db.session.execute(text("SELECT 1")) # Keepalive
-        except Exception: pass
+            df_com = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
+            df_com.columns = df_com.columns.str.strip()
+            for indice, row in df_com.iterrows():
+                cod = clean_string(str(row.get('Codigo', '') or '')).upper()
+                oc_str = clean_string(str(row.get('OC', '') or ''))
+                if not oc_str or oc_str.lower() in ['none','nan']: continue
+                fecha_dt = parse_date(row.get('Fecha'))
+                if not CompraRepuesto.query.filter_by(codigo_equipo=cod, oc=oc_str).first():
+                    db.session.add(CompraRepuesto(
+                        fecha=fecha_dt, oc=oc_str, codigo_equipo=cod,
+                        descripcion=clean_string(str(row.get('Descripcion', '') or '')),
+                        proveedor=clean_string(str(row.get('Proveedor', '') or '')),
+                        costo_pm_clp=clean_float(row.get('Costo PM CLP'), 0.0), estado_oc=clean_string(str(row.get('Estado OC', '') or ''))
+                    ))
+            db.session.commit()
+        except Exception as e: pass
 
-        # --- 6. IMPORTADOR DE FILTROS TOTALMENTE DEPURADO (EVITA DUPLICADOS HISTÓRICOS) ---
+        # --- 6. SUPER IMPORTADOR DE FILTROS ---
         if archivo_filtros:
             reporte['mensajes'].append(f"🔍 Archivo de filtros encontrado: {archivo_filtros}")
             try:
-                # ACCIÓN CLAVE: Vaciar por completo la tabla para purgar duplicados antiguos
+                # Vaciado absoluto para evitar duplicados en actualizaciones masivas
                 db.session.query(FiltroEquipo).delete()
                 db.session.commit()
 
@@ -265,7 +305,6 @@ def cargar_sql_final():
                     dn_val = clean_string(str(row.get(dn_c, '-'))) if dn_c else "-"
                     ot_val = clean_string(str(row.get(ot_c, '-'))) if ot_c else "-"
 
-                    # Al estar la tabla limpia, insertamos los registros puros del CSV directo
                     db.session.add(FiltroEquipo(
                         codigo_equipo=eq.codigo, sistema=sistema_f, cant=cant_val,
                         fleetguard=fg_val, baldwind=bw_val, originales=or_val, donaldson=dn_val, otra=ot_val
