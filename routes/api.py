@@ -230,7 +230,7 @@ def add_chatter():
 
 
 # =====================================================================
-# 1. MÓDULO: REGISTRO HISTÓRICO COMPLETO (HOJA DE VIDA)
+# 1. IMPRIMIBLE: FICHA TÉCNICA DEL EQUIPO (REGISTRO COMPLETO)
 # =====================================================================
 @api_bp.route('/api/imprimir_registro/<codigo>')
 @login_required
@@ -244,30 +244,30 @@ def imprimir_registro(codigo):
     <html lang="es">
     <head>
         <meta charset="UTF-8">
-        <title>Registro Histórico - {eq.codigo}</title>
+        <title>Ficha Técnica - {eq.codigo}</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
             @media print {{ 
                 body {{ background: white; }} 
                 .print\\:hidden {{ display: none !important; }} 
                 .shadow-xl {{ box-shadow: none !important; border-color: transparent !important; }}
-                @page {{ margin: 1cm; size: letter; }}
+                @page {{ margin: 10mm; size: letter; }}
             }}
             table {{ page-break-inside: auto; }}
             tr {{ page-break-inside: avoid; page-break-after: auto; }}
         </style>
     </head>
     <body class="bg-slate-50 p-6 font-sans text-slate-800 max-w-4xl mx-auto print:p-0 print:max-w-none">
-        <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-200 print:p-0 print:border-none print:shadow-none">
+        <div class="bg-white p-8 rounded-xl shadow-xl border border-slate-200 print:p-0 print:border-none print:shadow-none">
             
             <div class="flex justify-between items-center border-b-2 border-slate-800 pb-3 mb-5">
                 <div>
-                    <h1 class="text-xl font-black text-slate-900 leading-tight">REGISTRO TÉCNICO COMPLETO</h1>
+                    <h1 class="text-xl font-black text-slate-900 leading-tight">FICHA TÉCNICA DEL EQUIPO</h1>
                     <p class="text-lg text-slate-700 font-bold tracking-widest">{eq.codigo}</p>
                 </div>
                 <div class="text-right">
-                    <p class="text-xs font-bold text-slate-500">Demotron S.A.</p>
-                    <p class="text-[10px] text-slate-400">Emisión: {datetime.now().strftime('%d/%m/%Y')}</p>
+                    <p class="text-xs font-bold text-slate-500 uppercase">Demotron S.A.</p>
+                    <p class="text-[10px] text-slate-400 font-mono mt-1">Emisión: {datetime.now().strftime('%d/%m/%Y')}</p>
                 </div>
             </div>
 
@@ -291,20 +291,20 @@ def imprimir_registro(codigo):
                 </div>
             </div>
 
-            <h3 class="text-xs font-bold text-slate-800 uppercase mb-2 border-b border-slate-200 pb-1">Últimas Intervenciones (Preventivas y Correctivas)</h3>
+            <h3 class="text-xs font-bold text-slate-800 uppercase mb-2 border-b border-slate-200 pb-1">Últimas Intervenciones Registradas</h3>
             <table class="w-full text-left text-[10px] mb-6 border border-slate-200">
                 <thead>
                     <tr class="bg-slate-100 text-slate-600">
-                        <th class="p-1.5 border border-slate-200">Fecha</th>
-                        <th class="p-1.5 border border-slate-200">Folio</th>
-                        <th class="p-1.5 border border-slate-200">Clase</th>
-                        <th class="p-1.5 border border-slate-200">Falla o Intervención</th>
-                        <th class="p-1.5 border border-slate-200">Mecánico</th>
-                        <th class="p-1.5 border border-slate-200">Odo/Hor.</th>
+                        <th class="p-1.5 border border-slate-200 uppercase tracking-wider">Fecha</th>
+                        <th class="p-1.5 border border-slate-200 uppercase tracking-wider">Folio</th>
+                        <th class="p-1.5 border border-slate-200 uppercase tracking-wider">Clase</th>
+                        <th class="p-1.5 border border-slate-200 uppercase tracking-wider">Intervención</th>
+                        <th class="p-1.5 border border-slate-200 uppercase tracking-wider">Mecánico</th>
+                        <th class="p-1.5 border border-slate-200 uppercase tracking-wider">Odo/Hor.</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {"".join([f"<tr class='odd:bg-white even:bg-slate-50'><td class='p-1.5 border border-slate-200'>{o.fecha.strftime('%d/%m/%Y') if o.fecha else ''}</td><td class='p-1.5 border border-slate-200 font-bold'>{o.folio}</td><td class='p-1.5 border border-slate-200 font-bold text-slate-600 uppercase'>{o.tipo_ot}</td><td class='p-1.5 border border-slate-200'>{o.tipo_mantencion}</td><td class='p-1.5 border border-slate-200'>{o.mecanico}</td><td class='p-1.5 border border-slate-200 font-mono'>{o.lectura}</td></tr>" for o in ots])}
+                    {"".join([f"<tr class='odd:bg-white even:bg-slate-50'><td class='p-1.5 border border-slate-200'>{o.fecha.strftime('%d/%m/%Y') if o.fecha else ''}</td><td class='p-1.5 border border-slate-200 font-bold text-slate-700'>{o.folio}</td><td class='p-1.5 border border-slate-200 font-bold text-slate-700 uppercase'>{o.tipo_ot}</td><td class='p-1.5 border border-slate-200 text-slate-800'>{o.tipo_mantencion}</td><td class='p-1.5 border border-slate-200 text-slate-600'>{o.mecanico}</td><td class='p-1.5 border border-slate-200 font-mono'>{o.lectura}</td></tr>" for o in ots])}
                 </tbody>
             </table>
 
@@ -312,9 +312,9 @@ def imprimir_registro(codigo):
             <table class="w-full text-left text-[10px] mb-6 border border-slate-200">
                 <thead>
                     <tr class="bg-slate-100 text-slate-600">
-                        <th class="p-1.5 border border-slate-200">Fecha de Captura</th>
-                        <th class="p-1.5 border border-slate-200">Valor Registrado</th>
-                        <th class="p-1.5 border border-slate-200">Tipo de Medida</th>
+                        <th class="p-1.5 border border-slate-200 uppercase tracking-wider">Fecha de Captura</th>
+                        <th class="p-1.5 border border-slate-200 uppercase tracking-wider">Valor Registrado</th>
+                        <th class="p-1.5 border border-slate-200 uppercase tracking-wider">Tipo de Medida</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -323,8 +323,8 @@ def imprimir_registro(codigo):
             </table>
             
             <div class="text-center mt-8 pt-4 border-t border-slate-200 print:hidden flex justify-center gap-3">
-                <button onclick="window.print()" class="bg-slate-800 text-white px-4 py-1.5 rounded text-xs font-semibold shadow hover:bg-slate-700 transition">Imprimir Registro</button>
-                <button onclick="window.close()" class="bg-slate-200 text-slate-700 px-4 py-1.5 rounded text-xs font-semibold shadow hover:bg-slate-300 transition">Cerrar</button>
+                <button onclick="window.print()" class="bg-slate-800 text-white px-5 py-1.5 rounded text-xs font-bold shadow hover:bg-slate-700 transition uppercase tracking-wider">Imprimir</button>
+                <button onclick="window.close()" class="bg-slate-200 text-slate-700 px-5 py-1.5 rounded text-xs font-bold shadow hover:bg-slate-300 transition uppercase tracking-wider">Cerrar</button>
             </div>
         </div>
     </body>
@@ -334,7 +334,7 @@ def imprimir_registro(codigo):
 
 
 # =====================================================================
-# 2. MÓDULO: PAUTA DE FILTROS (DISEÑO GIGANTE - SIN ICONOS)
+# 2. IMPRIMIBLE: PAUTA DE FILTROS (DISEÑO CARTA - SOBRIO)
 # =====================================================================
 @api_bp.route('/api/imprimir_filtros/<codigo>')
 @login_required
@@ -387,13 +387,13 @@ def imprimir_filtros(codigo):
         </style>
     </head>
     <body class="bg-slate-50 p-4 font-sans text-slate-800 max-w-4xl mx-auto print:p-0 print:max-w-none">
-        <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-200 print:p-0 print:border-none print:shadow-none">
+        <div class="bg-white p-6 rounded-xl shadow-xl border border-slate-200 print:p-0 print:border-none print:shadow-none">
             
             <div class="flex justify-between items-start border-b-2 border-slate-800 pb-2 mb-4">
                 <div>
-                    <h1 class="text-xl font-black text-slate-900 leading-tight uppercase">PAUTA DE FILTROS</h1>
-                    <p class="text-[11px] font-bold text-slate-500 mt-1">Gestión de Flota - Demotron S.A.</p>
-                    <p class="text-[10px] text-slate-400 mt-1">Emisión: {datetime.now().strftime('%d/%m/%Y')}</p>
+                    <h1 class="text-2xl font-black text-slate-900 leading-tight uppercase tracking-tighter">PAUTA DE FILTROS</h1>
+                    <p class="text-[11px] font-bold text-slate-500 mt-1 uppercase">Gestión de Flota - Demotron S.A.</p>
+                    <p class="text-[10px] text-slate-400 mt-0.5 font-mono">Emisión: {datetime.now().strftime('%d/%m/%Y')}</p>
                 </div>
                 <div class="text-right flex flex-col items-end">
                     <span class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">Código de Equipo</span>
@@ -421,7 +421,7 @@ def imprimir_filtros(codigo):
     """
     if equipos_similares:
         for sim in equipos_similares:
-            html += f"<span class='bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded text-[11px] border border-slate-300 print:bg-white'>{sim}</span>"
+            html += f"<span class='bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded text-[11px] border border-slate-300 print:bg-white print:border-slate-500'>{sim}</span>"
     else:
         html += "<span class='text-slate-400 text-[11px] italic font-semibold'>Este equipo tiene una pauta única en la flota.</span>"
         
@@ -444,20 +444,20 @@ def imprimir_filtros(codigo):
                     </tr>
                 </thead>
                 <tbody>
-                    {"".join([f"<tr class='odd:bg-white even:bg-slate-50'><td class='p-1.5 border border-slate-300 font-bold text-slate-800'>{f.sistema}</td><td class='p-1.5 border border-slate-300 text-center font-bold text-sm'>{f.cant}</td><td class='p-1.5 border border-slate-300 font-mono text-[11px] font-semibold'>{f.fleetguard}</td><td class='p-1.5 border border-slate-300 font-mono text-[11px] font-semibold'>{f.baldwind}</td><td class='p-1.5 border border-slate-300 font-mono text-[11px] font-semibold'>{f.originales}</td><td class='p-1.5 border border-slate-300 font-mono text-[11px] font-semibold'>{f.donaldson}</td><td class='p-1.5 border border-slate-300 font-mono text-[11px] font-semibold'>{f.otra}</td></tr>" for f in filtros])}
+                    {"".join([f"<tr class='odd:bg-white even:bg-slate-50'><td class='p-1.5 border border-slate-300 font-bold text-slate-800'>{f.sistema}</td><td class='p-1.5 border border-slate-300 text-center font-bold text-sm'>{f.cant}</td><td class='p-1.5 border border-slate-300 font-mono text-[11px] font-semibold text-slate-700'>{f.fleetguard}</td><td class='p-1.5 border border-slate-300 font-mono text-[11px] font-semibold text-slate-700'>{f.baldwind}</td><td class='p-1.5 border border-slate-300 font-mono text-[11px] font-semibold text-slate-700'>{f.originales}</td><td class='p-1.5 border border-slate-300 font-mono text-[11px] font-semibold text-slate-700'>{f.donaldson}</td><td class='p-1.5 border border-slate-300 font-mono text-[11px] font-semibold text-slate-700'>{f.otra}</td></tr>" for f in filtros])}
                     <tr class='bg-white'><td class='p-1.5 border border-slate-300 h-6'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td></tr>
                     <tr class='bg-white'><td class='p-1.5 border border-slate-300 h-6'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td></tr>
                 </tbody>
             </table>
             
             <div class="mt-4 border border-slate-300 p-3 rounded bg-slate-50">
-                <p class="text-[9px] font-bold text-slate-600 uppercase mb-1">Nota Técnica - Homologación y Sustitución</p>
-                <p class="text-[9px] text-slate-700">Debido a la disponibilidad de inventario o equivalencias de ingeniería, algunos elementos filtrantes descritos pueden haber sido sustituidos por alternativas OEM certificadas. Se requiere registrar obligatoriamente en las líneas dispuestas superiormente cualquier divergencia, cambio de marca/código o repuesto faltante detectado durante la intervención.</p>
+                <p class="text-[9px] font-bold text-slate-700 uppercase mb-1 tracking-wider">Nota Técnica - Homologación y Sustitución de Componentes</p>
+                <p class="text-[9px] text-slate-600 text-justify">Por motivos de disponibilidad de inventario o equivalencias de ingeniería, los elementos filtrantes detallados pueden ser sustituidos por alternativas OEM certificadas de igual o mayor estándar. Es mandato registrar en las líneas dispuestas superiormente cualquier divergencia técnica, actualización de código o faltante de repuesto detectado durante el proceso de intervención.</p>
             </div>
             
             <div class="text-center mt-6 pt-4 border-t border-slate-200 print:hidden flex justify-center gap-3">
-                <button onclick="window.print()" class="bg-slate-800 text-white px-4 py-1.5 rounded text-xs font-semibold shadow hover:bg-slate-700 transition">Imprimir Pauta</button>
-                <button onclick="window.close()" class="bg-slate-200 text-slate-700 px-4 py-1.5 rounded text-xs font-semibold shadow hover:bg-slate-300 transition">Cerrar</button>
+                <button onclick="window.print()" class="bg-slate-800 text-white px-5 py-1.5 rounded text-xs font-bold shadow hover:bg-slate-700 transition uppercase tracking-wider">Imprimir</button>
+                <button onclick="window.close()" class="bg-slate-200 text-slate-700 px-5 py-1.5 rounded text-xs font-bold shadow hover:bg-slate-300 transition uppercase tracking-wider">Cerrar</button>
             </div>
         </div>
     </body>
