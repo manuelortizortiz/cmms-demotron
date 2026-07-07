@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Historial {{ equipo.codigo }} - DEMOTRON</title>
-    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; font-size: 13px; background-color: #F8FAFC; color: #334155; margin: 0; }
         .sidebar-bg { background-color: #FFFFFF; border-right: 1px solid #E2E8F0; }
-        .card-custom { background: white; border-radius: 16px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); padding: 24px; margin-bottom: 24px;}
+        .card-custom { background: white; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); padding: 24px; margin-bottom: 24px;}
         .table-custom { width: 100%; border-collapse: collapse; }
-        .table-custom th { font-size: 11px; color: #64748B; padding: 12px; border-bottom: 1px solid #E2E8F0; text-align: left; }
+        .table-custom th { font-size: 11px; color: #64748B; padding: 12px; border-bottom: 1px solid #E2E8F0; text-align: left; text-transform: uppercase; letter-spacing: 0.05em; }
         .table-custom td { padding: 12px; border-bottom: 1px solid #F1F5F9; }
     </style>
 </head>
@@ -19,20 +18,23 @@
     
     <aside class="w-64 sidebar-bg flex flex-col z-20 shrink-0">
         <div class="h-24 flex items-center justify-center border-b border-slate-100 p-4">
-            <span class='text-2xl font-bold text-blue-800'>DEMOTRON</span>
+            <span class='text-2xl font-black text-blue-800 tracking-tighter'>DEMOTRON</span>
         </div>
         <nav class="flex-1 py-6 overflow-y-auto">
-            <a href="/?tab=dash" class="block px-6 py-3 text-blue-600 font-bold hover:bg-blue-50 transition-colors">Volver al Dashboard</a>
+            <a href="/?tab=dash" class="block px-6 py-3 text-slate-600 font-bold hover:bg-slate-50 transition-colors uppercase text-xs tracking-wider">Volver al Dashboard</a>
         </nav>
     </aside>
 
     <main class="flex-1 flex flex-col bg-[#F8FAFC] min-w-0 overflow-y-auto">
         
         <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
-            <h1 class="text-xl font-bold text-slate-800">Historial Técnico: {{ equipo.codigo }}</h1>
+            <div>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Historial Técnico</p>
+                <h1 class="text-2xl font-black text-slate-800">{{ equipo.codigo }}</h1>
+            </div>
             <div class="flex items-center gap-3">
-                <a href="/api/imprimir_registro/{{ equipo.codigo }}" target="_blank" class="bg-indigo-600 text-white px-4 py-1.5 rounded text-xs font-semibold shadow hover:bg-indigo-700 transition">Imprimir Registro</a>
-                <a href="/api/imprimir_filtros/{{ equipo.codigo }}" target="_blank" class="bg-emerald-600 text-white px-4 py-1.5 rounded text-xs font-semibold shadow hover:bg-emerald-700 transition">Imprimir Filtros</a>
+                <a href="/api/imprimir_registro/{{ equipo.codigo }}" target="_blank" class="bg-slate-800 text-white px-5 py-2 rounded text-xs font-semibold shadow hover:bg-slate-700 transition uppercase tracking-wider">Imprimir Ficha Técnica</a>
+                <a href="/api/imprimir_filtros/{{ equipo.codigo }}" target="_blank" class="bg-blue-600 text-white px-5 py-2 rounded text-xs font-semibold shadow hover:bg-blue-700 transition uppercase tracking-wider">Imprimir Pauta Filtros</a>
             </div>
         </header>
 
@@ -40,20 +42,20 @@
             
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="card-custom bg-slate-50">
-                    <h3 class="text-xs font-black text-blue-700 uppercase mb-4 tracking-wider">Identificación del Equipo</h3>
+                    <h3 class="text-[10px] font-black text-slate-800 uppercase mb-4 tracking-wider border-b border-slate-200 pb-2">Identificación del Equipo</h3>
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">Tipo:</span> <b>{{ equipo.tipo_equipo }}</b></p>
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">Marca:</span> <b>{{ equipo.marca }}</b></p>
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">Modelo:</span> <b>{{ equipo.modelo }}</b></p>
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">VIN / Chasis:</span> <span class="font-mono text-slate-600 font-bold">{{ equipo.vin }}</span></p>
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">N° Motor:</span> <span class="font-mono text-slate-600 font-bold">{{ equipo.n_motor }}</span></p>
-                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">Patente:</span> <span class="bg-slate-200 px-2 py-0.5 rounded font-mono font-bold">{{ equipo.patente }}</span></p>
+                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">Patente:</span> <span class="bg-slate-200 px-2 py-0.5 rounded font-mono font-bold text-slate-800">{{ equipo.patente }}</span></p>
                 </div>
                 
                 <div class="card-custom bg-slate-50">
-                    <h3 class="text-xs font-black text-blue-700 uppercase mb-4 tracking-wider">Estado Operativo</h3>
+                    <h3 class="text-[10px] font-black text-slate-800 uppercase mb-4 tracking-wider border-b border-slate-200 pb-2">Estado Operativo</h3>
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Ubicación:</span> <b>{{ equipo.ubicacion }}</b></p>
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Operador Titular:</span> <b>{{ equipo.responsable }}</b></p>
-                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Estado Actual:</span> <span class="bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold text-xs">{{ equipo.estado_base }}</span></p>
+                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Estado Actual:</span> <span class="bg-slate-200 text-slate-800 px-2 py-0.5 rounded font-bold text-xs">{{ equipo.estado_base }}</span></p>
                     <div class="my-4 border-t border-slate-200"></div>
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Tipo Control:</span> <b>{{ equipo.control_base }}</b></p>
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Lectura Vigente:</span> <b class="text-blue-600 text-lg">{{ equipo.lectura_actual }}</b></p>
@@ -61,7 +63,7 @@
             </div>
 
             <div class="card-custom">
-                <h3 class="text-sm font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Registro de Mantenciones (Historial OTs)</h3>
+                <h3 class="text-xs font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2 uppercase tracking-wider">Registro de Mantenciones (Historial OTs)</h3>
                 {% if mantenimientos %}
                 <div class="overflow-x-auto">
                     <table class="table-custom">
@@ -78,14 +80,12 @@
                         <tbody>
                             {% for m in mantenimientos %}
                             <tr>
-                                <td class="font-bold whitespace-nowrap">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F' }}</td>
+                                <td class="font-bold text-slate-700 whitespace-nowrap">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else 'S/F' }}</td>
                                 <td class="font-mono text-slate-500 font-bold whitespace-nowrap">{{ m.folio }}</td>
-                                <td class="font-bold text-xs uppercase {% if m.tipo_ot == 'Preventiva' %}text-green-600{% else %}text-red-600{% endif %}">
-                                    {{ m.tipo_ot }}
-                                </td>
-                                <td>{{ m.tipo_mantencion }}</td>
+                                <td class="font-bold text-xs uppercase text-slate-700">{{ m.tipo_ot }}</td>
+                                <td class="text-slate-800">{{ m.tipo_mantencion }}</td>
                                 <td class="text-slate-600">{{ m.mecanico }}</td>
-                                <td class="font-mono font-bold">{{ m.lectura }}</td>
+                                <td class="font-mono font-bold text-slate-700">{{ m.lectura }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -97,7 +97,7 @@
             </div>
 
             <div class="card-custom">
-                <h3 class="text-sm font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Tracking de Lecturas de Terreno</h3>
+                <h3 class="text-xs font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2 uppercase tracking-wider">Tracking de Lecturas de Terreno</h3>
                 {% if lecturas %}
                 <div class="overflow-x-auto">
                     <table class="table-custom">
@@ -111,7 +111,7 @@
                         <tbody>
                             {% for l in lecturas %}
                             <tr>
-                                <td class="font-bold whitespace-nowrap">{{ l.fecha.strftime('%d/%m/%Y') if l.fecha else 'S/F' }}</td>
+                                <td class="font-bold text-slate-700 whitespace-nowrap">{{ l.fecha.strftime('%d/%m/%Y') if l.fecha else 'S/F' }}</td>
                                 <td class="font-mono font-bold text-blue-600 text-sm">
                                     {% if l.horometro and l.horometro > 0 %}{{ "{:,.0f}".format(l.horometro).replace(',','.') }}{% else %}{{ "{:,.0f}".format(l.kilometraje).replace(',','.') }}{% endif %}
                                 </td>
