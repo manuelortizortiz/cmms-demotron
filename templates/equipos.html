@@ -13,61 +13,31 @@
         .table-custom { width: 100%; border-collapse: collapse; }
         .table-custom th { font-size: 11px; color: #64748B; padding: 12px; border-bottom: 1px solid #E2E8F0; text-align: left; }
         .table-custom td { padding: 12px; border-bottom: 1px solid #F1F5F9; }
-        
-        /* 🖨️ MAGIA DE IMPRESIÓN (Transforma la web en un documento) */
-        @media print {
-            body { background: white !important; color: black; }
-            aside, header, nav, .print\:hidden { display: none !important; }
-            main { width: 100% !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
-            .card-custom { box-shadow: none !important; border: 1px solid #cbd5e1 !important; break-inside: avoid; padding: 16px; margin-bottom: 16px; }
-            .bg-slate-50 { background-color: transparent !important; }
-            @page { margin: 1cm; size: auto; }
-            table { page-break-inside: auto; }
-            tr { page-break-inside: avoid; page-break-after: auto; }
-        }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
     
-    <!-- BARRA LATERAL (Desaparece al Imprimir) -->
-    <aside class="w-64 sidebar-bg flex flex-col z-20 shrink-0 print:hidden">
+    <aside class="w-64 sidebar-bg flex flex-col z-20 shrink-0">
         <div class="h-24 flex items-center justify-center border-b border-slate-100 p-4">
-            <img src="{{ url_for('static', filename='Logo Azul.png') }}" alt="Demotron Logo" class="h-full object-contain" onerror="this.outerHTML='<span class=\'text-2xl font-bold text-blue-800\'>DEMOTRON</span>';">
+            <span class='text-2xl font-bold text-blue-800'>DEMOTRON</span>
         </div>
         <nav class="flex-1 py-6 overflow-y-auto">
-            <a href="/?tab=dash" class="block px-6 py-3 text-blue-600 font-bold hover:bg-blue-50 transition-colors">⬅ Volver al Dashboard</a>
+            <a href="/?tab=dash" class="block px-6 py-3 text-blue-600 font-bold hover:bg-blue-50 transition-colors">Volver al Dashboard</a>
         </nav>
     </aside>
 
-    <!-- CONTENIDO PRINCIPAL -->
-    <main class="flex-1 flex flex-col bg-[#F8FAFC] min-w-0 overflow-y-auto print:bg-white print:overflow-visible">
+    <main class="flex-1 flex flex-col bg-[#F8FAFC] min-w-0 overflow-y-auto">
         
-        <!-- HEADER (Desaparece al Imprimir) -->
-        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 print:hidden">
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
             <h1 class="text-xl font-bold text-slate-800">Historial Técnico: {{ equipo.codigo }}</h1>
-            <button onclick="window.print()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold shadow-md hover:bg-blue-700 transition flex items-center gap-2">
-                🖨️ Imprimir Hoja de Vida
-            </button>
+            <div class="flex items-center gap-3">
+                <a href="/api/imprimir_registro/{{ equipo.codigo }}" target="_blank" class="bg-indigo-600 text-white px-4 py-1.5 rounded text-xs font-semibold shadow hover:bg-indigo-700 transition">Imprimir Registro</a>
+                <a href="/api/imprimir_filtros/{{ equipo.codigo }}" target="_blank" class="bg-emerald-600 text-white px-4 py-1.5 rounded text-xs font-semibold shadow hover:bg-emerald-700 transition">Imprimir Filtros</a>
+            </div>
         </header>
 
         <div class="p-8 max-w-6xl mx-auto w-full">
             
-            <!-- CABECERA DEL DOCUMENTO IMPRESO (Solo visible al imprimir) -->
-            <div class="hidden print:flex justify-between items-center border-b-2 border-slate-800 pb-4 mb-6">
-                <div class="flex items-center gap-4">
-                    <div class="w-16 h-16 bg-blue-700 text-white flex items-center justify-center rounded-xl text-2xl font-black">DT</div>
-                    <div>
-                        <h1 class="text-2xl font-black text-slate-900 leading-tight">HOJA DE VIDA DE EQUIPO</h1>
-                        <p class="text-xl text-blue-700 font-bold tracking-widest">{{ equipo.codigo }}</p>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <p class="text-sm font-bold text-slate-500">Demotron S.A.</p>
-                    <p class="text-xs text-slate-400">Generado: <script>document.write(new Date().toLocaleDateString('es-CL') + ' ' + new Date().toLocaleTimeString('es-CL'));</script></p>
-                </div>
-            </div>
-
-            <!-- TARJETAS DE DATOS DUROS -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="card-custom bg-slate-50">
                     <h3 class="text-xs font-black text-blue-700 uppercase mb-4 tracking-wider">Identificación del Equipo</h3>
@@ -76,21 +46,20 @@
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">Modelo:</span> <b>{{ equipo.modelo }}</b></p>
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">VIN / Chasis:</span> <span class="font-mono text-slate-600 font-bold">{{ equipo.vin }}</span></p>
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">N° Motor:</span> <span class="font-mono text-slate-600 font-bold">{{ equipo.n_motor }}</span></p>
-                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">Patente:</span> <span class="bg-slate-200 print:border print:border-slate-300 px-2 py-0.5 rounded font-mono font-bold">{{ equipo.patente }}</span></p>
+                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-28">Patente:</span> <span class="bg-slate-200 px-2 py-0.5 rounded font-mono font-bold">{{ equipo.patente }}</span></p>
                 </div>
                 
                 <div class="card-custom bg-slate-50">
                     <h3 class="text-xs font-black text-blue-700 uppercase mb-4 tracking-wider">Estado Operativo</h3>
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Ubicación:</span> <b>{{ equipo.ubicacion }}</b></p>
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Operador Titular:</span> <b>{{ equipo.responsable }}</b></p>
-                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Estado Actual:</span> <span class="bg-green-100 text-green-800 print:border print:border-green-300 px-2 py-0.5 rounded font-bold text-xs">{{ equipo.estado_base }}</span></p>
+                    <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Estado Actual:</span> <span class="bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold text-xs">{{ equipo.estado_base }}</span></p>
                     <div class="my-4 border-t border-slate-200"></div>
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Tipo Control:</span> <b>{{ equipo.control_base }}</b></p>
                     <p class="mb-2 text-sm"><span class="font-bold text-slate-500 inline-block w-32">Lectura Vigente:</span> <b class="text-blue-600 text-lg">{{ equipo.lectura_actual }}</b></p>
                 </div>
             </div>
 
-            <!-- REGISTRO DE ÓRDENES DE TRABAJO (PREVENTIVAS Y CORRECTIVAS) -->
             <div class="card-custom">
                 <h3 class="text-sm font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Registro de Mantenciones (Historial OTs)</h3>
                 {% if mantenimientos %}
@@ -127,7 +96,6 @@
                 {% endif %}
             </div>
 
-            <!-- HISTORIAL DE LECTURAS (HORÓMETROS / KM) -->
             <div class="card-custom">
                 <h3 class="text-sm font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Tracking de Lecturas de Terreno</h3>
                 {% if lecturas %}
