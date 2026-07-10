@@ -4,8 +4,8 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 import random
 from flask_login import login_required, current_user
-from flask_mail import Message
-from extensions import db, mail
+from werkzeug.security import generate_password_hash, check_password_hash
+from extensions import db
 from models.equipo import Equipo, FiltroEquipo
 from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
@@ -17,29 +17,38 @@ from utils.formatters import clean_int, clean_float
 api_bp = Blueprint('api', __name__)
 
 # =====================================================================
-# NUEVO MÓDULO DE SEGURIDAD: CAMBIO DE CONTRASEÑA
+# MÓDULO DE SEGURIDAD: CAMBIO DE CONTRASEÑA
 # =====================================================================
 @api_bp.route('/api/cambiar_password', methods=['POST'])
 @login_required
 def cambiar_password():
-    from werkzeug.security import generate_password_hash, check_password_hash
     data = request.json
     actual = data.get('actual')
     nueva = data.get('nueva')
     
-    # Validación Híbrida (soporta si la clave antigua estaba o no encriptada)
-    if current_user.password.startswith('scrypt:') or current_user.password.startswith('pbkdf2:'):
-        if not check_password_hash(current_user.password, actual):
-            return jsonify({"status": "error", "message": "La contraseña actual no es correcta."})
+    es_valido = False
+    
+    # 1. Intentar verificar con formato hash (seguro)
+    if current_user.password.startswith('pbkdf2:') or current_user.password.startswith('scrypt:'):
+        if check_password_hash(current_user.password, actual):
+            es_valido = True
     else:
-        if current_user.password != actual:
-            return jsonify({"status": "error", "message": "La contraseña actual no es correcta."})
+        # 2. Si no es hash, verificar texto plano (para claves antiguas)
+        if current_user.password == actual:
+            es_valido = True
             
-    # Guarda la nueva contraseña con el máximo nivel de encriptación de Flask
+    if not es_valido:
+        return jsonify({"status": "error", "message": "La contraseña actual no coincide."})
+            
+    # Guardar nueva clave encriptada de forma segura
     current_user.password = generate_password_hash(nueva)
     db.session.commit()
-    return jsonify({"status": "success", "message": "Contraseña actualizada con éxito. Usa esta nueva clave en tu próximo ingreso."})
+    return jsonify({"status": "success", "message": "Clave actualizada correctamente."})
 
+
+# =====================================================================
+# MÓDULOS DE GESTIÓN DE DATOS (CRUD)
+# =====================================================================
 @api_bp.route('/update_kanban', methods=['POST'])
 @login_required
 def update_kanban():
@@ -253,6 +262,9 @@ def add_chatter():
     return jsonify({"status": "success", "log": log.to_dict()})
 
 
+# =====================================================================
+# IMPRIMIBLE 1: FICHA TÉCNICA DEL EQUIPO (REGISTRO COMPLETO)
+# =====================================================================
 @api_bp.route('/api/imprimir_registro/<codigo>')
 @login_required
 def imprimir_registro(codigo):
@@ -354,6 +366,9 @@ def imprimir_registro(codigo):
     return render_template_string(html)
 
 
+# =====================================================================
+# IMPRIMIBLE 2: PAUTA DE FILTROS (DISEÑO CARTA - SOBRIO)
+# =====================================================================
 @api_bp.route('/api/imprimir_filtros/<codigo>')
 @login_required
 def imprimir_filtros(codigo):
