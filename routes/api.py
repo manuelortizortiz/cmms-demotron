@@ -16,6 +16,30 @@ from utils.formatters import clean_int, clean_float
 
 api_bp = Blueprint('api', __name__)
 
+# =====================================================================
+# NUEVO MÓDULO DE SEGURIDAD: CAMBIO DE CONTRASEÑA
+# =====================================================================
+@api_bp.route('/api/cambiar_password', methods=['POST'])
+@login_required
+def cambiar_password():
+    from werkzeug.security import generate_password_hash, check_password_hash
+    data = request.json
+    actual = data.get('actual')
+    nueva = data.get('nueva')
+    
+    # Validación Híbrida (soporta si la clave antigua estaba o no encriptada)
+    if current_user.password.startswith('scrypt:') or current_user.password.startswith('pbkdf2:'):
+        if not check_password_hash(current_user.password, actual):
+            return jsonify({"status": "error", "message": "La contraseña actual no es correcta."})
+    else:
+        if current_user.password != actual:
+            return jsonify({"status": "error", "message": "La contraseña actual no es correcta."})
+            
+    # Guarda la nueva contraseña con el máximo nivel de encriptación de Flask
+    current_user.password = generate_password_hash(nueva)
+    db.session.commit()
+    return jsonify({"status": "success", "message": "Contraseña actualizada con éxito. Usa esta nueva clave en tu próximo ingreso."})
+
 @api_bp.route('/update_kanban', methods=['POST'])
 @login_required
 def update_kanban():
@@ -229,9 +253,6 @@ def add_chatter():
     return jsonify({"status": "success", "log": log.to_dict()})
 
 
-# =====================================================================
-# 1. IMPRIMIBLE: FICHA TÉCNICA DEL EQUIPO (REGISTRO COMPLETO)
-# =====================================================================
 @api_bp.route('/api/imprimir_registro/<codigo>')
 @login_required
 def imprimir_registro(codigo):
@@ -333,9 +354,6 @@ def imprimir_registro(codigo):
     return render_template_string(html)
 
 
-# =====================================================================
-# 2. IMPRIMIBLE: PAUTA DE FILTROS (DISEÑO CARTA - SOBRIO)
-# =====================================================================
 @api_bp.route('/api/imprimir_filtros/<codigo>')
 @login_required
 def imprimir_filtros(codigo):
