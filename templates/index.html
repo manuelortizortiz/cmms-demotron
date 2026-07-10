@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>DEMOTRON ERP CMMS</title>
-    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -36,7 +35,7 @@
 
     <aside class="w-64 sidebar-bg flex flex-col z-20 shadow-sm shrink-0">
         <div class="h-24 flex items-center justify-center border-b border-slate-100 p-4">
-            <span class="text-2xl font-bold text-slate-800 tracking-tighter">DEMOTRON</span>
+            <span class='text-2xl font-black text-blue-800 tracking-tighter'>DEMOTRON</span>
         </div>
         <nav class="flex-1 py-6 overflow-y-auto hide-scrollbar">
             <p class="px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Principal</p>
@@ -58,9 +57,9 @@
         </nav>
         <div class="mt-auto border-t border-slate-200 p-4 bg-slate-50">
             <div class="flex items-center justify-between">
-                <div class="truncate pr-2">
+                <div class="truncate pr-2 cursor-pointer hover:bg-slate-200 p-1.5 rounded transition" onclick="document.getElementById('modal-password').classList.remove('hidden')" title="Cambiar Contraseña">
                     <p class="text-xs font-bold text-slate-800 truncate">{{ current_user.nombre }}</p>
-                    <p class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">{{ current_user.role }}</p>
+                    <p class="text-[9px] text-blue-600 uppercase font-bold tracking-wider">Cambiar Clave</p>
                 </div>
                 <a href="/logout" class="text-red-500 hover:text-white hover:bg-red-500 border border-red-200 p-2 rounded-lg transition-colors font-bold text-xs">Salir</a>
             </div>
@@ -91,7 +90,7 @@
 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
                     <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-center">
-                        <p class="text-[11px] font-bold text-slate-500 uppercase mb-1">Disponibilidad Mecánica</p>
+                        <p class="text-[11px] font-bold text-slate-500 uppercase mb-1">Disp. Mecánica</p>
                         <p class="text-2xl font-bold text-green-600">{{ kpis.disponibilidad_pct }}%</p>
                         <div class="w-full bg-slate-100 h-1.5 rounded-full mt-2"><div class="bg-green-500 h-1.5 rounded-full" style="width: {{ kpis.disponibilidad_pct }}%"></div></div>
                     </div>
@@ -166,10 +165,10 @@
                             <td class="font-bold {% if e.margen < 0 %}text-red-600{% elif e.margen <= 150 %}text-orange-500{% else %}text-green-600{% endif %}">{{ e.margen_str }}</td>
                             <td>{{ e.estado }}</td>
                             <td class="text-right whitespace-nowrap">
-                                <a href="/api/imprimir_registro/{{e.codigo}}" target="_blank" class="text-indigo-600 font-bold text-[10px] border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-50 mr-1 uppercase">Registro</a>
-                                <a href="/api/imprimir_filtros/{{e.codigo}}" target="_blank" class="text-emerald-600 font-bold text-[10px] border border-emerald-200 px-2 py-1 rounded hover:bg-emerald-50 mr-2 uppercase">Filtros</a>
-                                <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Equipo {{e.codigo}}', [{db: 'ubicacion', label: 'Ubicación', val: '{{e.ubicacion}}'},{db: 'responsable', label: 'Operador', val: '{{e.responsable}}'},{db: 'estado_base', label: 'Estado', val: '{{e.estado}}'}])" class="text-slate-600 font-bold text-[10px] border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 mr-2 uppercase">Editar</button>
-                                <button onclick="abrirChatter('equipo', '{{e.codigo}}', 'Equipo {{e.codigo}}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 font-bold text-[10px] px-2 py-1 rounded uppercase">Notas</button>
+                                <a href="/api/imprimir_registro/{{e.codigo}}" target="_blank" class="text-indigo-600 font-bold text-xs border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-50 mr-1">Registro</a>
+                                <a href="/api/imprimir_filtros/{{e.codigo}}" target="_blank" class="text-emerald-600 font-bold text-xs border border-emerald-200 px-2 py-1 rounded hover:bg-emerald-50 mr-2">Filtros</a>
+                                <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Equipo {{e.codigo}}', [{db: 'ubicacion', label: 'Ubicación', val: '{{e.ubicacion}}'},{db: 'responsable', label: 'Operador', val: '{{e.responsable}}'},{db: 'estado_base', label: 'Estado', val: '{{e.estado}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button>
+                                <button onclick="abrirChatter('equipo', '{{e.codigo}}', 'Equipo {{e.codigo}}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 font-bold text-xs px-2 py-1 rounded">Notas</button>
                             </td>
                         </tr>{% endfor %}</tbody>
                     </table>
@@ -184,9 +183,9 @@
                             <td class="font-bold text-blue-600 cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
                             <td>{{ e.tipo }}</td><td>{{ e.marca }}</td><td>{{ e.modelo }}</td><td class="text-slate-500 font-mono">{{ e.vin }}</td><td class="text-slate-500 font-mono">{{ e.motor }}</td><td class="font-bold">{{ e.patente }}</td>
                             <td class="text-right whitespace-nowrap">
-                                <a href="/api/imprimir_registro/{{e.codigo}}" target="_blank" class="text-indigo-600 font-bold text-[10px] border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-50 mr-1 uppercase">Registro</a>
-                                <a href="/api/imprimir_filtros/{{e.codigo}}" target="_blank" class="text-emerald-600 font-bold text-[10px] border border-emerald-200 px-2 py-1 rounded hover:bg-emerald-50 mr-2 uppercase">Filtros</a>
-                                <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Datos {{e.codigo}}', [{db: 'vin', label: 'VIN', val: '{{e.vin}}'},{db: 'n_motor', label: 'Motor', val: '{{e.motor}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'}])" class="text-slate-600 font-bold text-[10px] border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 uppercase">Editar</button>
+                                <a href="/api/imprimir_registro/{{e.codigo}}" target="_blank" class="text-indigo-600 font-bold text-xs border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-50 mr-1">Registro</a>
+                                <a href="/api/imprimir_filtros/{{e.codigo}}" target="_blank" class="text-emerald-600 font-bold text-xs border border-emerald-200 px-2 py-1 rounded hover:bg-emerald-50 mr-2">Filtros</a>
+                                <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Datos {{e.codigo}}', [{db: 'vin', label: 'VIN', val: '{{e.vin}}'},{db: 'n_motor', label: 'Motor', val: '{{e.motor}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50">Editar</button>
                             </td>
                         </tr>{% endfor %}</tbody>
                     </table>
@@ -216,10 +215,10 @@
                             <div class="bg-white p-3 rounded-lg shadow-sm border {% if t.vencida %}border-red-400{% else %}border-slate-200{% endif %} cursor-grab" data-id="{{ t.id }}">
                                 <div class="flex justify-between items-start mb-2">
                                     <h4 class="font-bold text-slate-800 text-sm">{{ t.codigo }}</h4>
-                                    <div class="flex gap-3 items-center">
-                                        <button onclick="borrarRegistro('ot', '{{t.id}}')" class="text-slate-300 hover:text-red-500 font-bold px-1 text-base">&times;</button>
-                                        <a href="/imprimir_ot/{{ t.id }}" target="_blank" class="text-slate-400 hover:text-blue-600 transition-colors text-[9px] uppercase font-bold border border-slate-200 px-1.5 py-0.5 rounded">
-                                            Imprimir
+                                    <div class="flex gap-2">
+                                        <button onclick="borrarRegistro('ot', '{{t.id}}')" class="text-slate-300 hover:text-red-500 font-bold px-1">&times;</button>
+                                        <a href="/imprimir_ot/{{ t.id }}" target="_blank" title="Imprimir" class="text-slate-400 hover:text-blue-600 transition-colors uppercase text-[9px] font-bold border border-slate-200 px-1 rounded">
+                                            Ver
                                         </a>
                                     </div>
                                 </div>
@@ -227,7 +226,8 @@
                                 <p class="text-[11px] text-slate-500 mb-2 leading-tight">{{ t.tipo[:45] }}</p>
                                 
                                 <div class="flex items-center gap-1 mb-2">
-                                    <select class="kanban-mecanico-sel w-full text-[10px] border border-slate-200 rounded p-1 text-slate-600 outline-none focus:border-blue-400 font-semibold uppercase" data-id="{{ t.id }}">
+                                    <span class="text-[10px] text-slate-400 font-bold">Encargado:</span>
+                                    <select class="kanban-mecanico-sel w-full text-[10px] border border-slate-200 rounded p-1 text-slate-600 outline-none focus:border-blue-400 font-semibold" data-id="{{ t.id }}">
                                         <option value="Sin Asignar" {% if t.mecanico == 'Sin Asignar' or not t.mecanico %}selected{% endif %}>Sin Asignar</option>
                                         {% for m in mecanicos %}
                                         <option value="{{ m.nombre }}" {% if t.mecanico == m.nombre %}selected{% endif %}>{{ m.nombre }}</option>
@@ -237,10 +237,10 @@
 
                                 <div class="flex justify-between items-center mt-3 border-t border-slate-100 pt-2">
                                     <div class="flex items-center gap-1">
-                                        <span class="text-[9px] text-slate-400 font-semibold">{{ t.fecha }}</span>
-                                        {% if t.vencida %}<span class="text-[9px] font-bold text-red-500 bg-red-50 px-1 rounded">Vencida: {{ t.dias }}d</span>{% endif %}
+                                        <span class="text-[9px] text-slate-400">{{ t.fecha }}</span>
+                                        {% if t.vencida %}<span class="text-[9px] font-bold text-red-500 bg-red-50 px-1 rounded">Atraso: {{ t.dias }}d</span>{% endif %}
                                     </div>
-                                    <button onclick="abrirChatter('ot', '{{ t.id }}', 'OT {{ t.codigo }}')" class="text-[9px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-bold hover:bg-blue-100 uppercase">Notas</button>
+                                    <button onclick="abrirChatter('ot', '{{ t.id }}', 'OT {{ t.codigo }}')" class="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-bold hover:bg-blue-100 uppercase tracking-wider">Notas</button>
                                 </div>
                             </div>
                             {% endfor %}
@@ -256,18 +256,18 @@
                 <div class="card-custom mb-6 bg-slate-50">
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
                         <input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/?tab=ot">
-                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div>
-                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Folio (Opcional)</label><input type="text" name="folio" class="form-input" placeholder="Automático"></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Pauta Preventiva</label><input list="lista_pautas" name="tipo" class="form-input" required></div>
-                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Odo/Hor. (Opcional)</label><input type="number" name="lectura" class="form-input" placeholder="Automático"></div>
-                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Costo (CLP)</label><input type="number" name="costo" class="form-input" required></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Mecánico</label>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Folio (Opcional)</label><input type="text" name="folio" class="form-input" placeholder="Automático"></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Pauta Preventiva</label><input list="lista_pautas" name="tipo" class="form-input" required></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Odo/Hor. (Opcional)</label><input type="number" name="lectura" class="form-input" placeholder="Automático"></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Mecánico</label>
                             <select name="mecanico" class="form-input">
                                 <option value="Sin Asignar">Sin Asignar</option>
                                 {% for m in mecanicos %}<option value="{{ m.nombre }}">{{ m.nombre }}</option>{% endfor %}
                             </select>
                         </div>
-                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap uppercase text-[11px]">Agregar OT Preventiva</button>
+                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar OT Preventiva</button>
                     </form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
@@ -278,10 +278,10 @@
                             <td class="font-bold text-blue-800">{{ m.codigo }}</td><td>{{ m.tipo_mantencion }}</td><td>{{ m.mecanico }}</td><td>{{ m.lectura_str }}</td><td class="font-bold">{{ m.costo_str }}</td>
                             <td><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-300">{{ m.estado }}</span></td>
                             <td class="text-right whitespace-nowrap">
-                                <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="text-indigo-600 font-bold text-[10px] uppercase border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-50 mr-1">Ver</a>
-                                <button onclick="abrirEditModal('ot', '{{m.id}}', 'OT {{m.ot_generada}}', [{db: 'folio', label: 'Folio', val: '{{m.ot_generada}}'},{db: 'mecanico', label: 'Mecánico', val: '{{m.mecanico}}'}])" class="text-slate-600 font-bold text-[10px] uppercase border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 mr-1">Editar</button>
-                                <button onclick="abrirChatter('ot', '{{m.id}}', 'OT {{m.ot_generada}}')" class="text-blue-600 font-bold text-[10px] uppercase bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded mr-1">Notas</button>
-                                <button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-red-500 font-bold text-[10px] uppercase">Borrar</button>
+                                <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="text-indigo-600 font-bold text-xs border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-50 mr-2">Ver</a>
+                                <button onclick="abrirEditModal('ot', '{{m.id}}', 'OT {{m.ot_generada}}', [{db: 'folio', label: 'Folio', val: '{{m.ot_generada}}'},{db: 'mecanico', label: 'Mecánico', val: '{{m.mecanico}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button>
+                                <button onclick="abrirChatter('ot', '{{m.id}}', 'OT {{m.ot_generada}}')" class="text-blue-600 font-bold text-xs mr-2">Notas</button>
+                                <button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-red-500 font-bold text-xs">Borrar</button>
                             </td>
                         </tr>{% endfor %}</tbody>
                     </table>
@@ -292,17 +292,17 @@
                 <div class="card-custom mb-6 bg-red-50 border-red-200">
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
                         <input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="referer" value="/?tab=ot_corr">
-                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Equipo</label><input type="text" name="codigo" class="form-input border-red-200 uppercase" required></div>
-                        <div class="flex-1 min-w-[150px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Sistema Falla</label><select name="sistema_falla" class="form-input border-red-200"><option value="Motor">Motor</option><option value="Hidráulico">Hidráulico</option><option value="Eléctrico">Eléctrico</option><option value="Frenos">Frenos</option><option value="Estructura">Estructura</option><option value="Neumáticos">Neumáticos</option></select></div>
-                        <div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Diagnóstico / Causa</label><input type="text" name="causa_raiz" class="form-input border-red-200" placeholder="Ej: Fuga" required></div>
-                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Folio (Opcional)</label><input type="text" name="folio" class="form-input border-red-200" placeholder="Ej: 15910"></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Mecánico</label>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input border-red-200 uppercase" required></div>
+                        <div class="flex-1 min-w-[150px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Sistema Falla</label><select name="sistema_falla" class="form-input border-red-200"><option value="Motor">Motor</option><option value="Hidráulico">Hidráulico</option><option value="Eléctrico">Eléctrico</option><option value="Frenos">Frenos</option><option value="Estructura">Estructura</option><option value="Neumáticos">Neumáticos</option></select></div>
+                        <div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Diagnóstico / Causa</label><input type="text" name="causa_raiz" class="form-input border-red-200" placeholder="Ej: Fuga" required></div>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Folio (Opcional)</label><input type="text" name="folio" class="form-input border-red-200" placeholder="Ej: 15910"></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Mecánico</label>
                             <select name="mecanico" class="form-input border-red-200">
                                 <option value="Sin Asignar">Sin Asignar</option>
                                 {% for m in mecanicos %}<option value="{{ m.nombre }}">{{ m.nombre }}</option>{% endfor %}
                             </select>
                         </div>
-                        <button type="submit" class="btn-danger mb-1 whitespace-nowrap uppercase text-[11px]">Reportar Mant. Correctiva</button>
+                        <button type="submit" class="btn-danger mb-1 whitespace-nowrap">Reportar Mant. Correctiva</button>
                     </form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
@@ -313,10 +313,10 @@
                             <td class="font-bold text-blue-800">{{ m.codigo }}</td><td>{{ m.sistema_falla }}</td><td>{{ m.causa_raiz }}</td><td>{{ m.mecanico }}</td><td class="font-bold">{{ m.lectura_str }}</td><td class="font-bold">{{ m.costo_str }}</td>
                             <td><span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">{{ m.estado }}</span></td>
                             <td class="text-right whitespace-nowrap">
-                                <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="text-indigo-600 font-bold text-[10px] uppercase border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-50 mr-1">Ver</a>
-                                <button onclick="abrirEditModal('ot', '{{m.id}}', 'OT {{m.ot_generada}}', [{db: 'folio', label: 'Folio', val: '{{m.ot_generada.replace('OT-CR-','')}}'},{db: 'mecanico', label: 'Mecánico', val: '{{m.mecanico}}'}])" class="text-slate-600 font-bold text-[10px] uppercase border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 mr-1">Editar</button>
-                                <button onclick="abrirChatter('ot', '{{m.id}}', 'OT {{m.ot_generada}}')" class="text-blue-600 font-bold text-[10px] uppercase bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded mr-1">Notas</button>
-                                <button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-red-500 font-bold text-[10px] uppercase">Borrar</button>
+                                <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="text-indigo-600 font-bold text-xs border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-50 mr-2">Ver</a>
+                                <button onclick="abrirEditModal('ot', '{{m.id}}', 'OT {{m.ot_generada}}', [{db: 'folio', label: 'Folio', val: '{{m.ot_generada.replace('OT-CR-','')}}'},{db: 'mecanico', label: 'Mecánico', val: '{{m.mecanico}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button>
+                                <button onclick="abrirChatter('ot', '{{m.id}}', 'OT {{m.ot_generada}}')" class="text-blue-600 font-bold text-xs mr-2">Notas</button>
+                                <button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-red-500 font-bold text-xs">Borrar</button>
                             </td>
                         </tr>{% endfor %}</tbody>
                     </table>
@@ -328,18 +328,18 @@
                     <div class="flex justify-between items-center mb-4"><span class="font-bold text-slate-700">INVENTARIO DE BODEGA</span></div>
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
                         <input type="hidden" name="tabla" value="bodega"><input type="hidden" name="referer" value="/?tab=bodega">
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Código (Opcional)</label><input type="text" name="codigo_item" class="form-input uppercase"></div>
-                        <div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Nombre del Insumo / Kit</label><input type="text" name="nombre" class="form-input" required></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Categoría</label>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Código (Opcional)</label><input type="text" name="codigo_item" class="form-input uppercase"></div>
+                        <div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Nombre del Insumo / Kit</label><input type="text" name="nombre" class="form-input" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Categoría</label>
                             <select name="categoria" class="form-input">
                                 <option value="Filtro">Filtro</option><option value="Lubricante">Lubricante</option>
                                 <option value="Kit de Mantención">Kit de Mantención</option><option value="Repuesto">Repuesto</option>
                                 <option value="Herramienta">Herramienta</option>
                             </select>
                         </div>
-                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Cantidad</label><input type="number" name="cantidad" class="form-input" value="1" required></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Ubicación</label><input type="text" name="ubicacion" class="form-input" placeholder="Ej: Estante A"></div>
-                        <button type="submit" class="btn-primary mb-1 uppercase text-[11px]">Agregar Insumo</button>
+                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Cantidad</label><input type="number" name="cantidad" class="form-input" value="1" required></div>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Ubicación</label><input type="text" name="ubicacion" class="form-input" placeholder="Ej: Estante A"></div>
+                        <button type="submit" class="btn-primary mb-1">Agregar Insumo</button>
                     </form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
@@ -348,19 +348,19 @@
                         <tbody>{% for b in bodega %}<tr>
                             <td class="font-mono text-slate-500">{{ b.codigo_item or '-' }}</td><td class="font-bold">{{ b.nombre }}</td><td>{{ b.categoria }}</td><td class="font-bold text-blue-600">{{ b.cantidad }}</td><td>{{ b.ubicacion }}</td>
                             <td class="text-right whitespace-nowrap">
-                                <button onclick="abrirEditModal('bodega', '{{b.id}}', 'Insumo', [{db: 'nombre', label: 'Nombre', val: '{{b.nombre}}'},{db: 'cantidad', label: 'Stock', val: '{{b.cantidad}}'}])" class="text-slate-600 font-bold text-[10px] uppercase border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 mr-1">Editar</button>
-                                <button onclick="borrarRegistro('bodega', '{{b.id}}')" class="text-red-500 font-bold text-[10px] uppercase">Borrar</button>
+                                <button onclick="abrirEditModal('bodega', '{{b.id}}', 'Insumo', [{db: 'nombre', label: 'Nombre', val: '{{b.nombre}}'},{db: 'cantidad', label: 'Stock', val: '{{b.cantidad}}'}])" class="text-blue-500 font-bold text-xs mr-2">Editar</button>
+                                <button onclick="borrarRegistro('bodega', '{{b.id}}')" class="text-red-500 font-bold text-xs">Borrar</button>
                             </td>
                         </tr>{% endfor %}</tbody>
                     </table>
                 </div>
             </div>
 
-            <div id="compras" class="seccion"><div class="card-custom mb-6 bg-slate-50"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="compra"><input type="hidden" name="referer" value="/?tab=compras"><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">OC</label><input type="text" name="oc" class="form-input" placeholder="Auto-Generada si vacío"></div><div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Descripción</label><input type="text" name="descripcion" class="form-input"></div><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Costo (CLP)</label><input type="number" name="costo" class="form-input"></div><button type="submit" class="btn-primary mb-1 whitespace-nowrap uppercase text-[11px]">Agregar Compra</button></form></div>
+            <div id="compras" class="seccion"><div class="card-custom mb-6 bg-slate-50"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="compra"><input type="hidden" name="referer" value="/?tab=compras"><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">OC</label><input type="text" name="oc" class="form-input" placeholder="Auto-Generada si vacío"></div><div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Descripción</label><input type="text" name="descripcion" class="form-input"></div><div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Costo (CLP)</label><input type="number" name="costo" class="form-input"></div><button type="submit" class="btn-primary mb-1 whitespace-nowrap">Agregar Compra</button></form></div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
                     <table class="table-custom table-searchable"><thead><tr><th>Fecha</th><th>OC</th><th>Equipo</th><th>Descripción</th><th>Costo</th><th class="text-right">Acción</th></tr></thead>
                     <tbody>{% for c in compras %}<tr><td>{{ c.fecha }}</td><td>{{ c.oc }}</td><td class="font-bold text-blue-800">{{ c.codigo }}</td><td>{{ c.descripcion }}</td><td class="font-bold">{{ c.costo_str }}</td>
-                    <td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('compra', '{{c.id}}', 'Compra {{c.oc}}', [{db: 'descripcion', label: 'Descripción', val: '{{c.descripcion}}'},{db: 'costo_pm_clp', label: 'Costo CLP', val: '{{c.costo_str.replace('.', '').replace('$', '')}}'}])" class="text-slate-600 font-bold text-[10px] uppercase border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 mr-1">Editar</button><button onclick="borrarRegistro('compra', '{{c.id}}')" class="text-red-500 font-bold text-[10px] uppercase">Borrar</button></td></tr>{% endfor %}</tbody>
+                    <td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('compra', '{{c.id}}', 'Compra {{c.oc}}', [{db: 'descripcion', label: 'Descripción', val: '{{c.descripcion}}'},{db: 'costo_pm_clp', label: 'Costo CLP', val: '{{c.costo_str.replace('.', '').replace('$', '')}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button><button onclick="borrarRegistro('compra', '{{c.id}}')" class="text-red-500 font-bold text-xs">Borrar</button></td></tr>{% endfor %}</tbody>
                     </table>
                 </div>
             </div>
@@ -369,9 +369,9 @@
                 <div class="card-custom mb-6 bg-slate-50">
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
                         <input type="hidden" name="tabla" value="lectura"><input type="hidden" name="referer" value="/?tab=lec">
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Equipo</label><input type="text" name="codigo" class="form-input uppercase" placeholder="Ej: EX-01" required></div>
-                        <div class="flex-[2] min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Valor Numérico (Auto-detecta HR/KM)</label><input type="number" name="valor" class="form-input" required></div>
-                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap uppercase text-[11px]">Registrar Lectura</button>
+                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Equipo</label><input type="text" name="codigo" class="form-input uppercase" placeholder="Ej: EX-01" required></div>
+                        <div class="flex-[2] min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1">Valor Numérico (Auto-detecta HR/KM)</label><input type="number" name="valor" class="form-input" required></div>
+                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Registrar Lectura</button>
                     </form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
@@ -380,33 +380,58 @@
                         <tbody>{% for l in lecturas %}<tr>
                             <td>{{ l.fecha }}</td><td class="font-bold text-blue-800">{{ l.codigo }}</td><td>{{ l.tipo_equipo }}</td><td class="font-bold">{{ l.valor_str }} <span class="text-[10px] text-slate-500">{{ l.tipo }}</span></td>
                             <td class="text-right whitespace-nowrap">
-                                <button onclick="abrirEditModal('lectura', '{{l.id}}', 'Lectura {{l.codigo}}', [{db: '{{ 'horometro' if l.tipo == 'HR' else 'kilometraje' }}', label: 'Valor Nuevo', val: '{{l.valor_str.replace('.', '')}}'}])" class="text-slate-600 font-bold text-[10px] uppercase border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 mr-1">Editar</button>
-                                <button onclick="borrarRegistro('lectura', '{{l.id}}')" class="text-red-500 font-bold text-[10px] uppercase">Borrar</button>
+                                <button onclick="abrirEditModal('lectura', '{{l.id}}', 'Lectura {{l.codigo}}', [{db: '{{ 'horometro' if l.tipo == 'HR' else 'kilometraje' }}', label: 'Valor Nuevo', val: '{{l.valor_str.replace('.', '')}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button>
+                                <button onclick="borrarRegistro('lectura', '{{l.id}}')" class="text-red-500 font-bold text-xs">Borrar</button>
                             </td>
                         </tr>{% endfor %}</tbody>
                     </table>
                 </div>
             </div>
 
-            <div id="cond" class="seccion space-y-6"><div class="card-custom-nopad bg-white flex flex-col"><div class="px-6 py-4 bg-slate-50 border-b flex flex-wrap justify-between items-center gap-4"><h3 class="font-bold text-slate-700">NÓMINA DE OPERADORES</h3><form action="/api/add_record" method="POST" class="m-0 flex gap-4"><input type="hidden" name="tabla" value="personal"><input type="hidden" name="referer" value="/?tab=cond"><input type="text" name="nombre" placeholder="Nombre Completo" class="form-input w-48" required><input type="text" name="equipo" placeholder="Equipo Asignado" class="form-input w-32 uppercase" required><button type="submit" class="btn-primary whitespace-nowrap text-[11px] uppercase">Añadir Operador</button></form></div><div class="table-wrapper max-h-[40vh] overflow-y-auto"><table class="table-custom table-searchable"><thead><tr><th>Nombre Operador</th><th>Equipo Asignado</th><th>Cargo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>{% for op in operadores %}<tr><td class="font-bold">{{ op.nombre }}</td><td class="font-bold text-blue-600">{{ op.equipo_asignado }}</td><td>{{ op.cargo }}</td><td><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ op.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('personal', '{{op.id}}', 'Operador {{op.nombre}}', [{db: 'equipo_asignado', label: 'Equipo', val: '{{op.equipo_asignado}}'},{db: 'estado', label: 'Estado', val: '{{op.estado}}'}])" class="text-slate-600 font-bold text-[10px] uppercase border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 mr-1">Editar</button><button onclick="borrarRegistro('personal', '{{op.id}}')" class="text-red-500 font-bold text-[10px] uppercase">Eliminar</button></td></tr>{% endfor %}</tbody></table></div></div></div>
+            <div id="cond" class="seccion space-y-6"><div class="card-custom-nopad bg-white flex flex-col"><div class="px-6 py-4 bg-slate-50 border-b flex flex-wrap justify-between items-center gap-4"><h3 class="font-bold text-slate-700">NÓMINA DE OPERADORES</h3><form action="/api/add_record" method="POST" class="m-0 flex gap-4"><input type="hidden" name="tabla" value="personal"><input type="hidden" name="referer" value="/?tab=cond"><input type="text" name="nombre" placeholder="Nombre Completo" class="form-input w-48" required><input type="text" name="equipo" placeholder="Equipo Asignado" class="form-input w-32 uppercase" required><button type="submit" class="btn-primary whitespace-nowrap text-xs">Añadir Operador</button></form></div><div class="table-wrapper max-h-[40vh] overflow-y-auto"><table class="table-custom table-searchable"><thead><tr><th>Nombre Operador</th><th>Equipo Asignado</th><th>Cargo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>{% for op in operadores %}<tr><td class="font-bold">{{ op.nombre }}</td><td class="font-bold text-blue-600">{{ op.equipo_asignado }}</td><td>{{ op.cargo }}</td><td><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ op.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('personal', '{{op.id}}', 'Operador {{op.nombre}}', [{db: 'equipo_asignado', label: 'Equipo', val: '{{op.equipo_asignado}}'},{db: 'estado', label: 'Estado', val: '{{op.estado}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button><button onclick="borrarRegistro('personal', '{{op.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}</tbody></table></div></div></div>
             
             <div id="mecanicos" class="seccion">
                 <div class="card-custom mb-6 bg-slate-50 flex flex-wrap justify-between items-center gap-4">
                     <span class="font-bold text-slate-700">EQUIPO TÉCNICO Y MECÁNICOS</span>
-                    <form action="/api/add_record" method="POST" class="m-0 flex flex-wrap gap-4"><input type="hidden" name="tabla" value="mecanico"><input type="hidden" name="referer" value="/?tab=mecanicos"><input type="text" name="rut" placeholder="RUT" class="form-input w-32"><input type="text" name="nombre" placeholder="Nombre" class="form-input w-64" required><input type="text" name="especialidad" placeholder="Especialidad" class="form-input w-48"><button type="submit" class="btn-primary text-[11px] uppercase">Añadir Mecánico</button></form>
+                    <form action="/api/add_record" method="POST" class="m-0 flex flex-wrap gap-4"><input type="hidden" name="tabla" value="mecanico"><input type="hidden" name="referer" value="/?tab=mecanicos"><input type="text" name="rut" placeholder="RUT" class="form-input w-32"><input type="text" name="nombre" placeholder="Nombre" class="form-input w-64" required><input type="text" name="especialidad" placeholder="Especialidad" class="form-input w-48"><button type="submit" class="btn-primary">Añadir Mecánico</button></form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
-                    <table class="table-custom table-searchable"><thead><tr><th>RUT</th><th>Nombre Mecánico</th><th>Especialidad</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mecanicos %}<tr><td class="font-mono text-slate-500">{{ m.rut or '-' }}</td><td class="font-bold">{{ m.nombre }}</td><td>{{ m.especialidad }}</td><td><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('mecanico', '{{m.id}}', 'Mecánico {{m.nombre}}', [{db: 'especialidad', label: 'Especialidad', val: '{{m.especialidad}}'},{db: 'estado', label: 'Estado', val: '{{m.estado}}'}])" class="text-slate-600 font-bold text-[10px] uppercase border border-slate-200 px-2 py-1 rounded hover:bg-slate-50 mr-1">Editar</button><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="text-red-500 font-bold text-[10px] uppercase">Eliminar</button></td></tr>{% endfor %}</tbody></table>
+                    <table class="table-custom table-searchable"><thead><tr><th>RUT</th><th>Nombre Mecánico</th><th>Especialidad</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mecanicos %}<tr><td class="font-mono text-slate-500">{{ m.rut or '-' }}</td><td class="font-bold">{{ m.nombre }}</td><td>{{ m.especialidad }}</td><td><span class="px-2 py-1 bg-slate-100 rounded-full text-xs border border-slate-200">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('mecanico', '{{m.id}}', 'Mecánico {{m.nombre}}', [{db: 'especialidad', label: 'Especialidad', val: '{{m.especialidad}}'},{db: 'estado', label: 'Estado', val: '{{m.estado}}'}])" class="text-blue-500 font-bold text-xs border border-blue-200 px-2 py-1 rounded hover:bg-blue-50 mr-2">Editar</button><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="text-red-500 font-bold text-xs">Eliminar</button></td></tr>{% endfor %}</tbody></table>
                 </div>
             </div>
         </div>
     </main>
 
+    <!-- MODAL CAMBIAR CONTRASEÑA -->
+    <div id="modal-password" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-xl flex flex-col overflow-hidden">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-slate-800">Cambiar Contraseña</h3>
+                <button onclick="document.getElementById('modal-password').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-xl">&times;</button>
+            </div>
+            <div class="p-6 flex flex-col gap-4">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Contraseña Actual</label>
+                    <input type="password" id="pass_actual" class="form-input">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Nueva Contraseña</label>
+                    <input type="password" id="pass_nueva" class="form-input">
+                </div>
+                <p id="pass_msg" class="text-xs font-bold text-red-500 hidden"></p>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 text-right">
+                <button onclick="document.getElementById('modal-password').classList.add('hidden')" class="px-4 py-2 text-slate-600 font-bold text-xs hover:text-slate-800 mr-2">Cancelar</button>
+                <button onclick="cambiarPassword()" class="bg-blue-600 text-white px-6 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-sm">Actualizar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL CHATTER -->
     <div id="chatter-modal" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl flex flex-col max-h-[90vh]">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl shrink-0">
-                <h3 class="font-bold text-slate-800 flex items-center gap-2">Historial y Notas <span id="chatter-title" class="text-xs bg-slate-200 text-slate-700 px-2 py-1 rounded"></span></h3>
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">Historial y Notas <span id="chatter-title" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded"></span></h3>
                 <button onclick="cerrarChatter()" class="text-slate-400 hover:text-red-500 font-bold text-xl">&times;</button>
             </div>
             <div id="chatter-feed" class="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50 relative border-l-2 border-slate-200 ml-6 mr-6 mt-4"></div>
@@ -414,11 +439,11 @@
                 <div class="flex gap-3">
                     <textarea id="chatter-msg" class="flex-1 border border-slate-200 rounded-xl p-3 text-sm focus:border-blue-500 outline-none resize-none" rows="2" placeholder="Escribe una nota o adjunta archivo..."></textarea>
                     <div class="flex flex-col justify-end gap-2">
-                        <label class="cursor-pointer bg-slate-100 text-slate-600 px-3 py-2 rounded-lg text-[11px] font-bold hover:bg-slate-200 text-center border border-slate-200 transition-colors uppercase">
+                        <label class="cursor-pointer bg-slate-100 text-slate-600 px-3 py-2 rounded-lg text-[11px] font-bold hover:bg-slate-200 text-center border border-slate-200 transition-colors">
                             Adjuntar
                             <input type="file" id="chatter-file" class="hidden">
                         </label>
-                        <button onclick="enviarChatter()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-[11px] font-bold hover:bg-blue-700 shadow-sm transition-colors uppercase">Enviar</button>
+                        <button onclick="enviarChatter()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-sm transition-colors">Enviar</button>
                     </div>
                 </div>
             </div>
@@ -434,13 +459,42 @@
             </div>
             <div class="p-6 flex flex-col gap-4" id="edit-fields"></div>
             <div class="p-4 border-t border-slate-100 bg-slate-50 text-right">
-                <button onclick="cerrarEditModal()" class="px-4 py-2 text-slate-600 font-bold text-xs hover:text-slate-800 mr-2 uppercase">Cancelar</button>
-                <button onclick="guardarEdicion()" class="bg-blue-600 text-white px-6 py-2 rounded-lg text-[11px] font-bold hover:bg-blue-700 shadow-sm uppercase">Guardar Cambios</button>
+                <button onclick="cerrarEditModal()" class="px-4 py-2 text-slate-600 font-bold text-xs hover:text-slate-800 mr-2">Cancelar</button>
+                <button onclick="guardarEdicion()" class="bg-blue-600 text-white px-6 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-sm">Guardar Cambios</button>
             </div>
         </div>
     </div>
 
     <script>
+        function cambiarPassword() {
+            const actual = document.getElementById('pass_actual').value;
+            const nueva = document.getElementById('pass_nueva').value;
+            const msg = document.getElementById('pass_msg');
+            
+            if(!actual || !nueva) {
+                msg.innerText = "Por favor completa ambos campos.";
+                msg.classList.remove('hidden');
+                return;
+            }
+            
+            fetch('/api/cambiar_password', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({actual: actual, nueva: nueva})
+            }).then(r => r.json()).then(data => {
+                if(data.status === 'success') {
+                    alert(data.message);
+                    document.getElementById('modal-password').classList.add('hidden');
+                    document.getElementById('pass_actual').value = '';
+                    document.getElementById('pass_nueva').value = '';
+                    msg.classList.add('hidden');
+                } else {
+                    msg.innerText = data.message;
+                    msg.classList.remove('hidden');
+                }
+            });
+        }
+
         function switchTab(t, el) {
             document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
@@ -508,14 +562,14 @@
                 feed.innerHTML = '';
                 if(logs.length === 0) return feed.innerHTML = '<p class="text-slate-400 text-xs italic">No hay notas.</p>';
                 logs.forEach(log => {
-                    let icon = 'N'; let iconBg = 'bg-blue-100 text-blue-800';
-                    if(log.accion === 'cambio_estado') { icon = 'E'; iconBg = 'bg-orange-100 text-orange-800'; }
-                    if(log.accion === 'adjunto') { icon = 'A'; iconBg = 'bg-green-100 text-green-800'; }
+                    let iconBg = 'bg-blue-100';
+                    if(log.accion === 'cambio_estado') { iconBg = 'bg-orange-100'; }
+                    if(log.accion === 'adjunto') { iconBg = 'bg-green-100'; }
                     let content = log.accion === 'cambio_estado' 
                         ? `<p class="text-xs text-slate-600">Estado: <span class="line-through text-slate-400">${log.valor_anterior}</span> ➔ <span class="font-bold">${log.valor_nuevo}</span></p>`
                         : `<p class="text-[13px] text-slate-700 bg-white p-3 rounded-xl border shadow-sm">${log.mensaje}</p>`;
-                    let fileHtml = log.archivo_url ? `<a href="${log.archivo_url}" target="_blank" class="mt-2 inline-flex text-blue-600 font-bold text-[10px] uppercase">Archivo Adjunto</a>` : '';
-                    feed.innerHTML += `<div class="relative pl-6 mb-6"><span class="absolute -left-[11px] top-0 w-5 h-5 rounded-full ${iconBg} font-bold border-2 border-white flex items-center justify-center text-[10px] z-10">${icon}</span><div class="flex items-center gap-2 mb-1"><span class="font-bold text-slate-700 text-xs">${log.autor}</span><span class="text-[9px] text-slate-400">${log.fecha}</span></div>${content}<br>${fileHtml}</div>`;
+                    let fileHtml = log.archivo_url ? `<a href="${log.archivo_url}" target="_blank" class="mt-2 inline-flex text-blue-600 font-bold text-[10px]">Archivo Adjunto</a>` : '';
+                    feed.innerHTML += `<div class="relative pl-6 mb-6"><span class="absolute -left-[11px] top-0 w-5 h-5 rounded-full ${iconBg} border-2 border-white flex items-center justify-center text-[10px] z-10"></span><div class="flex items-center gap-2 mb-1"><span class="font-bold text-slate-700 text-xs">${log.autor}</span><span class="text-[9px] text-slate-400">${log.fecha}</span></div>${content}<br>${fileHtml}</div>`;
                 });
             });
         }
