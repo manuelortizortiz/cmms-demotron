@@ -3,6 +3,8 @@ import os
 from werkzeug.utils import secure_filename
 from datetime import datetime
 from flask_login import login_required, current_user
+from sqlalchemy import text
+from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
 from models.equipo import Equipo, FiltroEquipo
 from models.orden_trabajo import OrdenTrabajo
@@ -17,15 +19,23 @@ api_bp = Blueprint('api', __name__)
 # --- FUNCIÓN INTERNA DE AUDITORÍA ---
 def registrar_auditoria(mensaje):
     try:
+        UserClass = current_user.__class__
+        columnas = list(UserClass.__table__.columns.keys())
+        col_nombre = next((c for c in ['nombre', 'username', 'usuario', 'user'] if c in columnas), 'nombre')
+        autor_name = getattr(current_user, col_nombre, 'Sistema') if current_user.is_authenticated else 'Sistema'
+        
         log = RegistroChatter(
             modelo_ref='sistema', registro_id='0', 
-            autor=current_user.nombre if current_user.is_authenticated else 'Sistema', 
+            autor=autor_name, 
             accion='auditoria', mensaje=mensaje
         )
         db.session.add(log)
     except Exception: pass
 
-# --- CAMBIO DE CONTRASEÑA (A PRUEBA DE FALLOS) ---
+
+# =====================================================================
+# MÓDULO DE SEGURIDAD: CAMBIO DE CONTRASEÑA AUTODETECTABLE
+# =====================================================================
 @api_bp.route('/api/cambiar_password', methods=['POST'])
 @login_required
 def cambiar_password():
@@ -37,28 +47,46 @@ def cambiar_password():
         if not actual or not nueva:
             return jsonify({"status": "error", "message": "Faltan datos."})
 
+        # Detección dinámica de la columna de contraseña
+        UserClass = current_user.__class__
+        columnas = UserClass.__table__.columns.keys()
+        col_pass = next((c for c in ['password', 'clave', 'contrasena', 'contraseña', 'pwd'] if c in columnas), None)
+
+        if not col_pass:
+            return jsonify({"status": "error", "message": "Fallo crítico: No se detecta columna de contraseña en la base de datos."})
+
+        clave_db = getattr(current_user, col_pass, '')
+        
         valido = False
-        if current_user.password == actual:
+        if clave_db == actual:
             valido = True
         else:
-            from werkzeug.security import check_password_hash
             try:
-                if check_password_hash(current_user.password, actual):
+                if check_password_hash(clave_db, actual):
                     valido = True
             except: pass
 
         if not valido:
             return jsonify({"status": "error", "message": "La contraseña actual no es correcta."})
         
-        from werkzeug.security import generate_password_hash
-        current_user.password = generate_password_hash(nueva)
-        registrar_auditoria(f"Actualizó su contraseña de acceso.")
+        # Auto-ampliar tamaño de columna por seguridad
+        try:
+            db.session.execute(text(f"ALTER TABLE {UserClass.__tablename__} ALTER COLUMN {col_pass} TYPE VARCHAR(255)"))
+            db.session.commit()
+        except:
+            db.session.rollback()
+
+        setattr(current_user, col_pass, generate_password_hash(nueva))
+        registrar_auditoria("ACTUALIZÓ SUS CREDENCIALES DE ACCESO.")
         db.session.commit()
         return jsonify({"status": "success", "message": "Clave actualizada con éxito."})
     except Exception as e:
         return jsonify({"status": "error", "message": f"Error interno: {str(e)}"})
 
-# --- GESTIÓN DE DATOS ---
+
+# =====================================================================
+# MÓDULOS DE GESTIÓN DE DATOS (CRUD)
+# =====================================================================
 @api_bp.route('/update_kanban', methods=['POST'])
 @login_required
 def update_kanban():
@@ -68,7 +96,7 @@ def update_kanban():
         ot.estado = data.get('estado')
         if ot.estado == 'Finalizada' and not ot.fecha_cierre:
             ot.fecha_cierre = datetime.now()
-        registrar_auditoria(f"Movió la OT {ot.folio} al estado '{ot.estado}' en Kanban.")
+        registrar_auditoria(f"MOVIÓ LA OT {ot.folio} AL ESTADO '{ot.estado}'.")
         db.session.commit()
     return jsonify({"status": "success"})
 
@@ -85,20 +113,17 @@ def add_record():
         k_val = val if eq and eq.control_base == 'KM' else 0
         db.session.add(HistorialLectura(codigo_equipo=codigo, horometro=h_val, kilometraje=k_val, observacion='', fecha=datetime.now(), responsable=''))
         if eq: eq.lectura_actual = val
-        registrar_auditoria(f"Registró nueva lectura para el equipo {codigo}: {val}")
+        registrar_auditoria(f"REGISTRÓ LECTURA PARA {codigo}: {val}")
 
     elif tabla == 'ot' or tabla == 'ot_corr':
         eq = Equipo.query.filter_by(codigo=codigo).first()
         lectura_req = clean_int(request.form.get('lectura'))
         if lectura_req == 0 and eq: lectura_req = eq.lectura_actual
-        
         folio_req = request.form.get('folio', '').strip()
         tipo_ot = 'Preventiva' if tabla == 'ot' else 'Correctiva'
-        
         if not folio_req:
             prefix = "OT-" if tipo_ot == 'Preventiva' else "OT-CR-"
             folio_req = f"{prefix}{datetime.now().strftime('%M%S%f')[:5]}"
-        
         falla = request.form.get('falla', request.form.get('tipo', 'PM1'))
         db.session.add(OrdenTrabajo(
             codigo_equipo=codigo, folio=folio_req, tipo_ot=tipo_ot, tipo_mantencion=falla, lectura=lectura_req, 
@@ -106,7 +131,7 @@ def add_record():
             mecanico=request.form.get('mecanico', 'Sin Asignar'), sistema_falla=request.form.get('sistema_falla', ''), 
             causa_raiz=request.form.get('causa_raiz', ''), fecha=datetime.now()
         ))
-        registrar_auditoria(f"Creó la Orden de Trabajo {tipo_ot} folio {folio_req} para {codigo}")
+        registrar_auditoria(f"CREÓ ORDEN {tipo_ot} FOLIO {folio_req} PARA {codigo}")
 
     elif tabla == 'compra':
         oc_segura = request.form.get('oc', '').strip() or f"OC-{datetime.now().strftime('%Y%m%d%H%M')}"
@@ -114,7 +139,7 @@ def add_record():
             codigo_equipo=codigo, oc=oc_segura, descripcion=request.form.get('descripcion', 'Insumos'), 
             costo_pm_clp=clean_float(request.form.get('costo'), 0.0), fecha=datetime.now()
         ))
-        registrar_auditoria(f"Registró la compra {oc_segura} para el equipo {codigo}")
+        registrar_auditoria(f"REGISTRÓ COMPRA {oc_segura} PARA {codigo}")
         
     elif tabla == 'bodega':
         item = request.form.get('nombre', '').strip()
@@ -123,17 +148,17 @@ def add_record():
             categoria=request.form.get('categoria', 'Filtro'), cantidad=clean_int(request.form.get('cantidad'), 0),
             ubicacion=request.form.get('ubicacion', '').strip()
         ))
-        registrar_auditoria(f"Agregó el ítem '{item}' a Bodega")
+        registrar_auditoria(f"AGREGÓ AL INVENTARIO EL ÍTEM '{item}'")
         
     elif tabla == 'personal':
         nom = request.form.get('nombre', '')
         db.session.add(Personal(nombre=nom, cargo='Operador', estado='Activo', equipo_asignado=request.form.get('equipo', 'Ninguno')))
-        registrar_auditoria(f"Registró al operador {nom}")
+        registrar_auditoria(f"REGISTRÓ AL OPERADOR {nom}")
         
     elif tabla == 'mecanico':
         nom = request.form.get('nombre', '')
         db.session.add(Mecanico(rut=request.form.get('rut', ''), nombre=nom, especialidad=request.form.get('especialidad', 'General'), estado='Activo'))
-        registrar_auditoria(f"Registró al mecánico {nom}")
+        registrar_auditoria(f"REGISTRÓ AL MECÁNICO {nom}")
 
     db.session.commit()
     return redirect(request.form.get('referer', '/'))
@@ -151,7 +176,7 @@ def delete_record(tabla, id):
     
     if obj:
         db.session.delete(obj)
-        registrar_auditoria(f"Eliminó permanentemente un registro en el módulo '{tabla}' (ID: {id})")
+        registrar_auditoria(f"ELIMINÓ REGISTRO PERMANENTEMENTE EN LA TABLA '{tabla}' (ID: {id})")
         db.session.commit()
         return jsonify({"status": "success"})
     return jsonify({"status": "error"}), 404
@@ -178,10 +203,11 @@ def update_inline():
         if campo in ['costo_mantencion_clp', 'costo_pm_clp', 'horometro', 'kilometraje', 'lectura', 'cant', 'cantidad']:
             valor = clean_float(valor, 0.0) if 'costo' in campo else clean_int(valor)
         setattr(obj, campo, valor)
-        registrar_auditoria(f"Modificó el campo '{campo}' a '{valor}' en el módulo '{tabla}'")
+        registrar_auditoria(f"MODIFICÓ ATRIBUTO '{campo}' A '{valor}' EN TABLA '{tabla}'")
         db.session.commit()
         return jsonify({"status": "success"})
     return jsonify({"status": "error"}), 404
+
 
 @api_bp.route('/api/cambiar_estado_ot/<int:ot_id>', methods=['POST'])
 @login_required
@@ -195,8 +221,12 @@ def cambiar_estado_ot(ot_id):
         if nuevo == 'Finalizada' and not ot.fecha_cierre: ot.fecha_cierre = datetime.now()
         
         if estado_anterior != nuevo:
-            db.session.add(RegistroChatter(modelo_ref='ot', registro_id=str(ot.id), autor=current_user.nombre, accion='cambio_estado', valor_anterior=estado_anterior, valor_nuevo=nuevo))
-            registrar_auditoria(f"Cambió el estado de la OT {ot.folio} a {nuevo}")
+            UserClass = current_user.__class__
+            columnas = list(UserClass.__table__.columns.keys())
+            col_nombre = next((c for c in ['nombre', 'username', 'usuario', 'user'] if c in columnas), 'nombre')
+            autor_name = getattr(current_user, col_nombre, 'Sistema')
+            db.session.add(RegistroChatter(modelo_ref='ot', registro_id=str(ot.id), autor=autor_name, accion='cambio_estado', valor_anterior=estado_anterior, valor_nuevo=nuevo))
+            registrar_auditoria(f"MODIFICÓ STATUS OT {ot.folio} HACIA {nuevo}")
             
         db.session.commit()
         return jsonify({"status": "success", "estado": nuevo})
@@ -230,13 +260,19 @@ def add_chatter():
 
     if not mensaje and not archivo_url: return jsonify({"status": "error"}), 400
 
-    log = RegistroChatter(modelo_ref=modelo, registro_id=registro_id, autor=current_user.nombre, accion=accion, mensaje=mensaje, archivo_url=archivo_url)
+    UserClass = current_user.__class__
+    columnas = list(UserClass.__table__.columns.keys())
+    col_nombre = next((c for c in ['nombre', 'username', 'usuario', 'user'] if c in columnas), 'nombre')
+    autor_name = getattr(current_user, col_nombre, 'Sistema')
+
+    log = RegistroChatter(modelo_ref=modelo, registro_id=registro_id, autor=autor_name, accion=accion, mensaje=mensaje, archivo_url=archivo_url)
     db.session.add(log)
     db.session.commit()
     return jsonify({"status": "success", "log": log.to_dict()})
 
+
 # =====================================================================
-# IMPRIMIBLES (REGISTRO Y FILTROS)
+# IMPRIMIBLES (REGISTRO Y FILTROS) - CERO ICONOS
 # =====================================================================
 @api_bp.route('/api/imprimir_registro/<codigo>')
 @login_required
@@ -244,6 +280,7 @@ def imprimir_registro(codigo):
     eq = Equipo.query.filter_by(codigo=codigo).first_or_404()
     ots = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, estado='Finalizada').order_by(OrdenTrabajo.fecha.desc()).limit(15).all()
     lecturas = HistorialLectura.query.filter_by(codigo_equipo=codigo).order_by(HistorialLectura.fecha.desc()).limit(15).all()
+    
     html = f"""
     <!DOCTYPE html>
     <html lang="es">
