@@ -23,58 +23,77 @@ admin_bp = Blueprint('admin', __name__)
 @admin_bp.route('/admin/usuarios', methods=['GET', 'POST'])
 @login_required
 def gestionar_usuarios():
-    # Bloqueo de seguridad: Solo admin o gerencia pueden entrar aquí
+    # Bloqueo de seguridad
     if current_user.role not in ['admin', 'gerencia']:
-        return "Acceso Denegado: Solo perfil Administrador o Gerencia pueden acceder al Panel de Seguridad.", 403
+        return "ACCESO DENEGADO: PERMISOS INSUFICIENTES.", 403
 
-    # Detección del modelo de Usuario de forma dinámica
-    try:
-        from models.user import User
-    except ImportError:
-        from models.personal import User
+    # Detección infalible del modelo de base de datos
+    UserClass = current_user.__class__
 
     if request.method == 'POST':
-        username = request.form.get('username').strip()
-        password = request.form.get('password').strip()
-        role = request.form.get('role').strip()
-        
-        # Evitar crear nombres duplicados
-        if not User.query.filter_by(nombre=username).first():
-            nuevo = User(nombre=username, password=generate_password_hash(password), role=role)
-            db.session.add(nuevo)
+        try:
+            username = request.form.get('username').strip()
+            password = request.form.get('password').strip()
+            role = request.form.get('role').strip()
             
-            # Dejar huella en la auditoría
-            log = RegistroChatter(modelo_ref='sistema', registro_id='0', autor=current_user.nombre, accion='auditoria', mensaje=f"Creó el acceso para el usuario: {username} ({role})")
-            db.session.add(log)
-            db.session.commit()
-        return redirect('/admin/usuarios')
+            # Evitar crear nombres duplicados
+            if not UserClass.query.filter_by(nombre=username).first():
+                
+                # Auto-reparación preventiva: Intentar ampliar columna de password a 255 chars
+                try:
+                    db.session.execute(text(f"ALTER TABLE {UserClass.__tablename__} ALTER COLUMN password TYPE VARCHAR(255)"))
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+
+                # Guardado seguro
+                nuevo = UserClass(nombre=username, password=generate_password_hash(password), role=role)
+                db.session.add(nuevo)
+                
+                # Huella de auditoría
+                log = RegistroChatter(
+                    modelo_ref='sistema', registro_id='0', autor=current_user.nombre, 
+                    accion='auditoria', mensaje=f"CREACIÓN DE ACCESO: Usuario {username} ({role})"
+                )
+                db.session.add(log)
+                db.session.commit()
+            return redirect('/admin/usuarios')
+            
+        except Exception as e:
+            db.session.rollback()
+            return f"ERROR TÉCNICO AL CREAR USUARIO: {str(e)}", 500
         
-    usuarios = User.query.all()
-    # Extraer los últimos 150 movimientos (Trazabilidad de cambios de todos los usuarios)
+    usuarios = UserClass.query.all()
     actividad = RegistroChatter.query.filter_by(modelo_ref='sistema').order_by(RegistroChatter.fecha.desc()).limit(150).all()
     
     return render_template('usuarios.html', usuarios=usuarios, actividad=actividad)
+
 
 @admin_bp.route('/admin/usuarios/eliminar/<int:id>', methods=['POST'])
 @login_required
 def eliminar_usuario(id):
     if current_user.role != 'admin':
-        return "Acceso Denegado", 403
+        return "ACCESO DENEGADO: PERMISOS INSUFICIENTES.", 403
         
+    UserClass = current_user.__class__
     try:
-        from models.user import User
-    except ImportError:
-        from models.personal import User
-
-    u = User.query.get_or_404(id)
-    # Evitar que el administrador se borre a sí mismo por error
-    if u.nombre != current_user.nombre:
-        nombre_borrado = u.nombre
-        db.session.delete(u)
-        log = RegistroChatter(modelo_ref='sistema', registro_id='0', autor=current_user.nombre, accion='auditoria', mensaje=f"Eliminó permanentemente el usuario: {nombre_borrado}")
-        db.session.add(log)
-        db.session.commit()
+        u = UserClass.query.get_or_404(id)
+        # Seguro contra auto-eliminación
+        if u.nombre != current_user.nombre:
+            nombre_borrado = u.nombre
+            db.session.delete(u)
+            log = RegistroChatter(
+                modelo_ref='sistema', registro_id='0', autor=current_user.nombre, 
+                accion='auditoria', mensaje=f"REVOCACIÓN DE ACCESO: Se eliminó el usuario {nombre_borrado}"
+            )
+            db.session.add(log)
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return f"ERROR TÉCNICO AL ELIMINAR USUARIO: {str(e)}", 500
+        
     return redirect('/admin/usuarios')
+
 
 # =====================================================================
 # MOTOR DE IMPORTACIÓN Y LIMPIEZA DE BASE DE DATOS EXCEL
@@ -83,7 +102,7 @@ def eliminar_usuario(id):
 @login_required
 def cargar_sql_final():
     if current_user.role not in ['admin', 'gerencia']:
-        return "Acceso denegado.", 403
+        return "ACCESO DENEGADO: PERMISOS INSUFICIENTES.", 403
 
     reporte = {"equipos": 0, "lecturas": 0, "preventivas": 0, "correctivas": 0, "compras": 0, "filtros": 0, "mensajes": []}
     
@@ -109,7 +128,7 @@ def cargar_sql_final():
         archivo_filtros = next((f for f in archivos if "filtro" in f.lower() and f.endswith(('.xlsx', '.xls', '.csv')) and not f.startswith('~$')), None)
         archivo_detalles = next((f for f in archivos if "detalles" in f.lower() and f.endswith(('.xlsx', '.csv')) and not f.startswith('~$')), None)
 
-        if not excel_principal: return "Error: Falta el archivo principal CMMS DEMOTRON (.xlsx)."
+        if not excel_principal: return "ERROR: NO SE DETECTA ARCHIVO CMMS (.xlsx) EN LA RAÍZ DEL SERVIDOR."
 
         # --- 1. EQUIPOS ---
         df_eq = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Equipos", skiprows=2).replace({np.nan: None})
@@ -245,7 +264,7 @@ def cargar_sql_final():
                     ))
                 reporte['correctivas'] += 1
             db.session.commit()
-        except Exception as e: pass
+        except Exception: pass
 
         # --- 5. COMPRAS ---
         try:
@@ -262,7 +281,7 @@ def cargar_sql_final():
                         proveedor=clean_string(str(row.get('Proveedor', '') or '')), costo_pm_clp=clean_float(row.get('Costo PM CLP'), 0.0), estado_oc=clean_string(str(row.get('Estado OC', '') or ''))
                     ))
             db.session.commit()
-        except Exception as e: pass
+        except Exception: pass
 
         # --- 6. FILTROS ---
         if archivo_filtros:
@@ -310,20 +329,17 @@ def cargar_sql_final():
                         db.session.commit()
                         reporte['equipos'] += 1
 
-                    cant_val = clean_int(row.get(can_c), 1) if can_c else 1
-                    fg_val = clean_string(str(row.get(fg_c, '-'))) if fg_c else "-"
-                    bw_val = clean_string(str(row.get(bw_c, '-'))) if bw_c else "-"
-                    or_val = clean_string(str(row.get(or_c, '-'))) if or_c else "-"
-                    dn_val = clean_string(str(row.get(dn_c, '-'))) if dn_c else "-"
-                    ot_val = clean_string(str(row.get(ot_c, '-'))) if ot_c else "-"
-
                     db.session.add(FiltroEquipo(
-                        codigo_equipo=eq.codigo, sistema=sistema_f.upper(), cant=cant_val,
-                        fleetguard=fg_val, baldwind=bw_val, originales=or_val, donaldson=dn_val, otra=ot_val
+                        codigo_equipo=eq.codigo, sistema=sistema_f.upper(), cant=clean_int(row.get(can_c), 1) if can_c else 1,
+                        fleetguard=clean_string(str(row.get(fg_c, '-'))) if fg_c else "-", 
+                        baldwind=clean_string(str(row.get(bw_c, '-'))) if bw_c else "-", 
+                        originales=clean_string(str(row.get(or_c, '-'))) if or_c else "-", 
+                        donaldson=clean_string(str(row.get(dn_c, '-'))) if dn_c else "-", 
+                        otra=clean_string(str(row.get(ot_c, '-'))) if ot_c else "-"
                     ))
                     reporte['filtros'] += 1
                 db.session.commit()
-            except Exception as e: reporte['mensajes'].append(f"Error procesando Filtros: {str(e)}")
+            except Exception as e: reporte['mensajes'].append(f"ERROR EN FILTROS: {str(e)}")
 
         for eq in Equipo.query.all():
             u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
@@ -346,27 +362,28 @@ def cargar_sql_final():
                         eq.vin = clean_string(row.get('N° Chasis', ''))
                         eq.n_motor = clean_string(row.get('N° Motor', ''))
                 db.session.commit()
-            except Exception as e: pass
+            except Exception: pass
 
         # Registro Global
-        log = RegistroChatter(modelo_ref='sistema', registro_id='0', autor=current_user.nombre, accion='auditoria', mensaje="Ejecutó sincronización y purga maestra de base de datos Excel.")
+        log = RegistroChatter(modelo_ref='sistema', registro_id='0', autor=current_user.nombre, accion='auditoria', mensaje="EJECUTÓ SINCRONIZACIÓN Y PURGA MAESTRA DE DATOS EXCEL.")
         db.session.add(log)
         db.session.commit()
 
         html_report = f"""
         <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 40px auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px;">
-            <h2 style="color: #16a34a; text-align: center;">SINCRONIZACIÓN EXITOSA</h2>
-            <ul style="list-style: none; padding: 0; font-size: 14px; color: #334155;">
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">Equipos en Sistema: <b>{reporte['equipos']}</b></li>
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">Lecturas: <b>{reporte['lecturas']}</b></li>
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">Preventivas (PM): <b>{reporte['preventivas']}</b></li>
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">Correctivas: <b>{reporte['correctivas']}</b></li>
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; background: #eff6ff;"><b>Filtros Vinculados: <span style="color: #2563eb;">{reporte['filtros']}</span></b></li>
+            <h2 style="color: #16a34a; text-align: center; text-transform: uppercase; letter-spacing: 2px;">SINCRONIZACIÓN EXITOSA</h2>
+            <ul style="list-style: none; padding: 0; font-size: 14px; color: #334155; text-transform: uppercase; font-weight: bold;">
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">EQUIPOS: <b style="float: right;">{reporte['equipos']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">LECTURAS: <b style="float: right;">{reporte['lecturas']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">PREVENTIVAS: <b style="float: right;">{reporte['preventivas']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">CORRECTIVAS: <b style="float: right;">{reporte['correctivas']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; background: #eff6ff;">FILTROS VINCULADOS: <span style="color: #2563eb; float: right;">{reporte['filtros']}</span></li>
             </ul>
+            <div style='text-align: center; margin-top: 24px;'><a href='/' style='background: #1e293b; color: white; padding: 10px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; text-transform: uppercase;'>VOLVER AL SISTEMA</a></div>
+        </div>
         """
-        html_report += "<div style='text-align: center; margin-top: 24px;'><a href='/' style='background: #1e293b; color: white; padding: 10px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;'>Volver al Sistema</a></div></div>"
         return html_report
 
     except Exception as e:
         db.session.rollback()
-        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error:</b> {str(e)}</div>"
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>FALLO TÉCNICO ESTRUCTURAL:</b> {str(e)}</div>"
