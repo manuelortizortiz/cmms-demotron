@@ -18,7 +18,7 @@ from utils.formatters import clean_string, clean_int, clean_float, parse_date
 admin_bp = Blueprint('admin', __name__)
 
 # =====================================================================
-# GESTIÓN DE USUARIOS Y AUDITORÍA GLOBAL (SISTEMA AUTODETECTABLE)
+# GESTIÓN DE USUARIOS Y AUDITORÍA GLOBAL (CALIBRADO)
 # =====================================================================
 @admin_bp.route('/admin/usuarios', methods=['GET', 'POST'])
 @login_required
@@ -28,13 +28,13 @@ def gestionar_usuarios():
     if rol_actual not in ['admin', 'gerencia']:
         return "ACCESO DENEGADO: PERMISOS INSUFICIENTES.", 403
 
-    # Detección inteligente de cómo se llaman tus columnas en Python
     UserClass = current_user.__class__
     columnas_python = list(UserClass.__table__.columns.keys())
 
-    col_nombre = next((c for c in ['nombre', 'username', 'usuario', 'user'] if c in columnas_python), 'nombre')
-    col_pass = next((c for c in ['password', 'clave', 'contrasena', 'contraseña', 'pwd'] if c in columnas_python), None)
-    col_role = next((c for c in ['role', 'rol', 'perfil', 'tipo'] if c in columnas_python), 'role')
+    # Mapeo Exacto según el diagnóstico de tu BD
+    col_nombre = 'username' if 'username' in columnas_python else 'nombre'
+    col_pass = 'password_hash' if 'password_hash' in columnas_python else next((c for c in ['password', 'clave', 'pwd'] if c in columnas_python), None)
+    col_role = 'role' if 'role' in columnas_python else 'rol'
 
     if request.method == 'POST':
         try:
@@ -43,9 +43,9 @@ def gestionar_usuarios():
             role = request.form.get('role').strip()
             
             if not col_pass:
-                return f"ERROR CRÍTICO: No se encontró la columna de contraseña. Tu base tiene estas columnas: {columnas_python}", 500
+                return f"ERROR CRÍTICO: No se encontró la columna de contraseña.", 500
 
-            # Validar que el usuario no exista usando el nombre dinámico
+            # Validar que el usuario no exista
             if not UserClass.query.filter(getattr(UserClass, col_nombre) == username).first():
                 
                 # Auto-ampliar tamaño de columna por seguridad
@@ -55,18 +55,28 @@ def gestionar_usuarios():
                 except:
                     db.session.rollback()
 
-                # Crear usuario burlando el bloqueo de Keyword Argument
+                # Crear usuario
                 nuevo = UserClass()
                 setattr(nuevo, col_nombre, username)
+                # Si también existe la columna 'nombre', la llenamos igual para que no quede vacía
+                if 'nombre' in columnas_python and col_nombre != 'nombre':
+                    setattr(nuevo, 'nombre', username)
+                
                 setattr(nuevo, col_pass, generate_password_hash(pwd))
                 
                 if col_role in columnas_python:
                     setattr(nuevo, col_role, role)
                 
+                # Si existe la columna 'activo', la seteamos en True
+                if 'activo' in columnas_python:
+                    setattr(nuevo, 'activo', True)
+                
                 db.session.add(nuevo)
                 
+                # Auditoría
+                autor_log = getattr(current_user, col_nombre, getattr(current_user, 'nombre', 'Admin'))
                 log = RegistroChatter(
-                    modelo_ref='sistema', registro_id='0', autor=getattr(current_user, col_nombre, 'Admin'), 
+                    modelo_ref='sistema', registro_id='0', autor=autor_log, 
                     accion='auditoria', mensaje=f"CREACIÓN DE ACCESO: Usuario {username} ({role})"
                 )
                 db.session.add(log)
@@ -75,15 +85,14 @@ def gestionar_usuarios():
             
         except Exception as e:
             db.session.rollback()
-            return f"ERROR TÉCNICO AL CREAR USUARIO: {str(e)}<br>Columnas Detectadas: {columnas_python}", 500
+            return f"ERROR TÉCNICO AL CREAR USUARIO: {str(e)}<br>Columnas: {columnas_python}", 500
         
     usuarios_db = UserClass.query.all()
-    # Mapeo limpio para el HTML
     usuarios_limpios = []
     for u in usuarios_db:
         usuarios_limpios.append({
             'id': u.id,
-            'nombre': getattr(u, col_nombre, 'S/I'),
+            'nombre': getattr(u, col_nombre, getattr(u, 'nombre', 'S/I')),
             'role': getattr(u, col_role, 'usuario') if col_role in columnas_python else 'usuario'
         })
         
@@ -102,7 +111,7 @@ def eliminar_usuario(id):
     try:
         u = UserClass.query.get_or_404(id)
         columnas = UserClass.__table__.columns.keys()
-        col_nombre = next((c for c in ['nombre', 'username', 'usuario', 'user'] if c in columnas), 'nombre')
+        col_nombre = 'username' if 'username' in columnas else 'nombre'
         
         nombre_u = getattr(u, col_nombre, 'Desconocido')
         nombre_actual = getattr(current_user, col_nombre, 'Actual')
@@ -120,7 +129,6 @@ def eliminar_usuario(id):
         return f"ERROR TÉCNICO AL ELIMINAR USUARIO: {str(e)}", 500
         
     return redirect('/admin/usuarios')
-
 
 # =====================================================================
 # MOTOR DE IMPORTACIÓN Y LIMPIEZA DE BASE DE DATOS EXCEL
@@ -158,7 +166,7 @@ def cargar_sql_final():
 
         if not excel_principal: return "ERROR: NO SE DETECTA ARCHIVO CMMS (.xlsx) EN LA RAÍZ DEL SERVIDOR."
 
-        # --- 1. EQUIPOS ---
+        # --- EQUIPOS ---
         df_eq = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Equipos", skiprows=2).replace({np.nan: None})
         df_eq.columns = df_eq.columns.str.strip()
         operadores_set = set()
@@ -186,7 +194,7 @@ def cargar_sql_final():
             if not Personal.query.filter_by(nombre=op).first(): db.session.add(Personal(nombre=op, cargo="Operador", estado="Activo", equipo_asignado="Varios"))
         db.session.commit()
 
-        # --- 2. LECTURAS ---
+        # --- LECTURAS ---
         df_lec = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
         for indice, row in df_lec.iterrows():
             if len(row) < 4: continue
@@ -210,7 +218,7 @@ def cargar_sql_final():
                 reporte['lecturas'] += 1
         db.session.commit()
 
-        # --- 3. PREVENTIVAS ---
+        # --- PREVENTIVAS ---
         df_man = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
         df_man.columns = df_man.columns.str.strip()
         for indice, row in df_man.iterrows():
@@ -247,7 +255,7 @@ def cargar_sql_final():
                 reporte['preventivas'] += 1
         db.session.commit()
 
-        # --- 4. CORRECTIVAS ---
+        # --- CORRECTIVAS ---
         try:
             df_corr = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Correctivas", skiprows=2).replace({np.nan: None})
             df_corr.columns = df_corr.columns.str.strip()  
@@ -294,7 +302,7 @@ def cargar_sql_final():
             db.session.commit()
         except Exception: pass
 
-        # --- 5. COMPRAS ---
+        # --- COMPRAS ---
         try:
             df_com = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
             df_com.columns = df_com.columns.str.strip()
@@ -311,7 +319,7 @@ def cargar_sql_final():
             db.session.commit()
         except Exception: pass
 
-        # --- 6. FILTROS ---
+        # --- FILTROS ---
         if archivo_filtros:
             try:
                 db.session.query(FiltroEquipo).delete()
@@ -393,7 +401,11 @@ def cargar_sql_final():
             except Exception: pass
 
         # Registro Global
-        nombre_actual = getattr(current_user, 'nombre', getattr(current_user, 'username', 'Administrador'))
+        UserClass = current_user.__class__
+        columnas = UserClass.__table__.columns.keys()
+        col_nombre = 'username' if 'username' in columnas else 'nombre'
+        nombre_actual = getattr(current_user, col_nombre, getattr(current_user, 'nombre', 'Administrador'))
+        
         log = RegistroChatter(modelo_ref='sistema', registro_id='0', autor=nombre_actual, accion='auditoria', mensaje="EJECUTÓ SINCRONIZACIÓN Y PURGA MAESTRA DE DATOS EXCEL.")
         db.session.add(log)
         db.session.commit()
