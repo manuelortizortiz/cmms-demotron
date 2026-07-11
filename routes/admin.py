@@ -18,12 +18,11 @@ from utils.formatters import clean_string, clean_int, clean_float, parse_date
 admin_bp = Blueprint('admin', __name__)
 
 # =====================================================================
-# GESTIÓN DE USUARIOS Y AUDITORÍA GLOBAL (CALIBRADO)
+# GESTIÓN DE USUARIOS Y AUDITORÍA GLOBAL (CALIBRADO CON EMAIL)
 # =====================================================================
 @admin_bp.route('/admin/usuarios', methods=['GET', 'POST'])
 @login_required
 def gestionar_usuarios():
-    # Seguridad básica
     rol_actual = getattr(current_user, 'role', getattr(current_user, 'rol', 'usuario'))
     if rol_actual not in ['admin', 'gerencia']:
         return "ACCESO DENEGADO: PERMISOS INSUFICIENTES.", 403
@@ -31,7 +30,6 @@ def gestionar_usuarios():
     UserClass = current_user.__class__
     columnas_python = list(UserClass.__table__.columns.keys())
 
-    # Mapeo Exacto según el diagnóstico de tu BD
     col_nombre = 'username' if 'username' in columnas_python else 'nombre'
     col_pass = 'password_hash' if 'password_hash' in columnas_python else next((c for c in ['password', 'clave', 'pwd'] if c in columnas_python), None)
     col_role = 'role' if 'role' in columnas_python else 'rol'
@@ -41,39 +39,43 @@ def gestionar_usuarios():
             username = request.form.get('username').strip()
             pwd = request.form.get('password').strip()
             role = request.form.get('role').strip()
+            email = request.form.get('email', '').strip()
             
             if not col_pass:
                 return f"ERROR CRÍTICO: No se encontró la columna de contraseña.", 500
 
-            # Validar que el usuario no exista
+            # Salvavidas automático: Si no hay email, creamos uno falso para que la BD no explote
+            if not email:
+                email_limpio = username.replace(' ', '').lower()
+                email = f"{email_limpio}@demotron.cl"
+
             if not UserClass.query.filter(getattr(UserClass, col_nombre) == username).first():
-                
-                # Auto-ampliar tamaño de columna por seguridad
                 try:
                     db.session.execute(text(f"ALTER TABLE {UserClass.__tablename__} ALTER COLUMN {col_pass} TYPE VARCHAR(255)"))
                     db.session.commit()
                 except:
                     db.session.rollback()
 
-                # Crear usuario
                 nuevo = UserClass()
                 setattr(nuevo, col_nombre, username)
-                # Si también existe la columna 'nombre', la llenamos igual para que no quede vacía
+                
                 if 'nombre' in columnas_python and col_nombre != 'nombre':
                     setattr(nuevo, 'nombre', username)
-                
+                    
                 setattr(nuevo, col_pass, generate_password_hash(pwd))
                 
                 if col_role in columnas_python:
                     setattr(nuevo, col_role, role)
                 
-                # Si existe la columna 'activo', la seteamos en True
+                # INYECCIÓN DEL EMAIL PARA EVITAR EL NOT NULL VIOLATION
+                if 'email' in columnas_python:
+                    setattr(nuevo, 'email', email)
+                
                 if 'activo' in columnas_python:
                     setattr(nuevo, 'activo', True)
                 
                 db.session.add(nuevo)
                 
-                # Auditoría
                 autor_log = getattr(current_user, col_nombre, getattr(current_user, 'nombre', 'Admin'))
                 log = RegistroChatter(
                     modelo_ref='sistema', registro_id='0', autor=autor_log, 
@@ -93,11 +95,11 @@ def gestionar_usuarios():
         usuarios_limpios.append({
             'id': u.id,
             'nombre': getattr(u, col_nombre, getattr(u, 'nombre', 'S/I')),
+            'email': getattr(u, 'email', 'S/I'),
             'role': getattr(u, col_role, 'usuario') if col_role in columnas_python else 'usuario'
         })
         
     actividad = RegistroChatter.query.filter_by(modelo_ref='sistema').order_by(RegistroChatter.fecha.desc()).limit(150).all()
-    
     return render_template('usuarios.html', usuarios=usuarios_limpios, actividad=actividad)
 
 @admin_bp.route('/admin/usuarios/eliminar/<int:id>', methods=['POST'])
@@ -129,6 +131,7 @@ def eliminar_usuario(id):
         return f"ERROR TÉCNICO AL ELIMINAR USUARIO: {str(e)}", 500
         
     return redirect('/admin/usuarios')
+
 
 # =====================================================================
 # MOTOR DE IMPORTACIÓN Y LIMPIEZA DE BASE DE DATOS EXCEL
@@ -400,7 +403,6 @@ def cargar_sql_final():
                 db.session.commit()
             except Exception: pass
 
-        # Registro Global
         UserClass = current_user.__class__
         columnas = UserClass.__table__.columns.keys()
         col_nombre = 'username' if 'username' in columnas else 'nombre'
