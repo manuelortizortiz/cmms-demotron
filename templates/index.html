@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>DEMOTRON ERP CMMS</title>
+    <link rel="icon" href="{{ url_for('static', filename='Logo Azul.png') }}" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -37,7 +38,6 @@
     <datalist id="lista_mecanicos">{% for m in mecanicos %}<option value="{{ m.nombre }}"></option>{% endfor %}</datalist>
     <datalist id="lista_pautas"><option value="PM1"></option><option value="PM2"></option><option value="PM3"></option><option value="PM4"></option><option value="PM5"></option></datalist>
 
-    <!-- BARRA LATERAL -->
     <aside class="w-64 sidebar-bg flex flex-col z-20 shadow-sm shrink-0">
         <div class="h-20 flex items-center justify-center border-b border-slate-100 p-4">
             <span class='text-2xl font-black text-blue-900 tracking-tighter'>DEMOTRON</span>
@@ -63,16 +63,14 @@
             <a onclick="switchTab('cond', this)" class="nav-link">Operadores</a>
             <a onclick="switchTab('mecanicos', this)" class="nav-link">Mecánicos</a>
 
-            <!-- ENLACE AL NUEVO PANEL DE USUARIOS Y AUDITORÍA -->
             <p class="px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 mt-6">Administración</p>
             <a href="/admin/usuarios" class="nav-link text-indigo-700">Usuarios y Auditoría</a>
         </nav>
         
-        <!-- SECCIÓN USUARIO Y CAMBIO DE CLAVE -->
         <div class="mt-auto border-t border-slate-200 p-4 bg-slate-50">
             <div class="flex items-center justify-between">
                 <div class="truncate pr-2 cursor-pointer hover:bg-slate-200 p-1.5 rounded transition" onclick="document.getElementById('modal-password').classList.remove('hidden')" title="Cambiar Contraseña">
-                    <p class="text-xs font-black text-slate-800 truncate uppercase">{{ current_user.nombre }}</p>
+                    <p class="text-xs font-black text-slate-800 truncate uppercase">{{ current_user.nombre if current_user.nombre else current_user.username }}</p>
                     <p class="text-[9px] text-blue-700 uppercase font-bold tracking-widest mt-0.5">Cambiar Clave</p>
                 </div>
                 <a href="/logout" class="text-slate-500 hover:text-white hover:bg-red-600 border border-slate-300 p-2 rounded transition-colors font-bold text-[10px] uppercase tracking-wider">Salir</a>
@@ -81,7 +79,6 @@
     </aside>
 
     <main class="flex-1 flex flex-col bg-[#F8FAFC] min-w-0">
-        <!-- HEADER SUPERIOR -->
         <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
             <h1 id="title" class="text-lg font-black text-slate-800 uppercase tracking-wider truncate">Dashboard</h1>
             <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="Buscar registro..." class="form-input w-64 bg-slate-50 ml-4 hidden md:block border-slate-300">
@@ -91,7 +88,6 @@
             
             <!-- VISTA DASHBOARD -->
             <div id="dash" class="seccion active">
-                <!-- KPIs SUPERIORES -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
                     <div class="card-custom border-t-4 border-slate-800"><p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total Flota</p><p class="text-4xl font-black text-slate-800 tracking-tighter">{{ kpis.total }}</p></div>
                     <div class="card-custom border-t-4 border-emerald-500"><p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Equipos Operativos</p><p class="text-4xl font-black text-emerald-600 tracking-tighter">{{ kpis.operativos }}</p></div>
@@ -99,14 +95,12 @@
                     <div class="card-custom border-t-4 border-blue-600"><p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Órdenes Abiertas</p><p class="text-4xl font-black text-blue-700 tracking-tighter">{{ kpis.ot_abiertas }}</p></div>
                 </div>
 
-                <!-- GRÁFICOS PRINCIPALES -->
                 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
                     <div class="card-custom"><h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Estado Operativo</h3><div class="h-48 relative w-full"><canvas id="chartEstado"></canvas></div></div>
                     <div class="card-custom"><h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Inversión Mensual</h3><div class="h-48 relative w-full"><canvas id="chartCostosMensuales"></canvas></div></div>
                     <div class="card-custom"><h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Pareto de Fallas</h3><div class="h-48 relative w-full"><canvas id="chartFallas"></canvas></div></div>
                 </div>
 
-                <!-- KPIs SECUNDARIOS -->
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
                     <div class="bg-white border border-slate-200 rounded p-5 shadow-sm">
                         <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Disponibilidad Mecánica</p>
@@ -130,7 +124,6 @@
                     </div>
                 </div>
 
-                <!-- RANKINGS -->
                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
                     <div class="card-custom">
                         <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Top 7 Costos Preventivos</h3>
@@ -490,17 +483,7 @@
                     </form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
-                    <table class="table-custom table-searchable">
-                        <thead><tr><th>RUT Oficial</th><th>Nombre Técnico</th><th>Especialidad Operativa</th><th>Status</th><th class="text-right">Acciones Administrativas</th></tr></thead>
-                        <tbody>{% for m in mecanicos %}<tr>
-                            <td class="font-mono text-slate-500 text-xs font-bold">{{ m.rut or 'SIN REGISTRO' }}</td><td class="font-black text-slate-800">{{ m.nombre }}</td><td class="text-xs uppercase font-semibold text-slate-600 tracking-wider">{{ m.especialidad }}</td>
-                            <td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-bold uppercase tracking-widest text-slate-600 border border-slate-200">{{ m.estado }}</span></td>
-                            <td class="text-right whitespace-nowrap">
-                                <button onclick="abrirEditModal('mecanico', '{{m.id}}', 'Mecánico {{m.nombre}}', [{db: 'especialidad', label: 'Especialidad', val: '{{m.especialidad}}'},{db: 'estado', label: 'Estado', val: '{{m.estado}}'}])" class="btn-action text-blue-600">Modificar</button>
-                                <button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Desvincular</button>
-                            </td>
-                        </tr>{% endfor %}</tbody>
-                    </table>
+                    <table class="table-custom table-searchable"><thead><tr><th>RUT Oficial</th><th>Nombre Técnico</th><th>Especialidad Operativa</th><th>Status</th><th class="text-right">Acciones Administrativas</th></tr></thead><tbody>{% for m in mecanicos %}<tr><td class="font-mono text-slate-500 text-xs font-bold">{{ m.rut or 'SIN REGISTRO' }}</td><td class="font-black text-slate-800">{{ m.nombre }}</td><td class="text-xs uppercase font-semibold text-slate-600 tracking-wider">{{ m.especialidad }}</td><td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-bold uppercase tracking-widest text-slate-600 border border-slate-200">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('mecanico', '{{m.id}}', 'Mecánico {{m.nombre}}', [{db: 'especialidad', label: 'Especialidad', val: '{{m.especialidad}}'},{db: 'estado', label: 'Estado', val: '{{m.estado}}'}])" class="btn-action text-blue-600">Modificar</button><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Desvincular</button></td></tr>{% endfor %}</tbody></table>
                 </div>
             </div>
         </div>
@@ -773,7 +756,9 @@
             try {
                 if (typeof Chart !== 'undefined') {
                     Chart.defaults.font.family = "'Inter', sans-serif";
-                    Chart.defaults.color = '#64748B';
+                    Chart.defaults.color = '#1E293B'; // Color de letras oscurecido a azul corporativo
+                    Chart.defaults.font.weight = 'bold'; // Textos en negrita
+                    
                     new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '75%', data: { labels: ['Operativos', 'Fuera de Servicio', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'], borderWidth:0 }] }, options: { maintainAspectRatio:false, plugins: { legend: { position: 'bottom', labels: { font: { size: 10, weight: 'bold' } } } } }});
                     new Chart(document.getElementById('chartCostosMensuales'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión (CLP)', data: cData.costos_mensuales.data, borderColor: '#1E293B', backgroundColor: 'rgba(30, 41, 59, 0.1)', fill: true, tension: 0.3 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } } }});
                     new Chart(document.getElementById('chartFallas'), { type: 'bar', data: { labels: fData.labels, datasets: [{ label: 'N° Averías', data: fData.data, backgroundColor: '#DC2626', borderRadius: 4 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } } }});
