@@ -21,8 +21,8 @@ def registrar_auditoria(mensaje):
     try:
         UserClass = current_user.__class__
         columnas = list(UserClass.__table__.columns.keys())
-        col_nombre = next((c for c in ['nombre', 'username', 'usuario', 'user'] if c in columnas), 'nombre')
-        autor_name = getattr(current_user, col_nombre, 'Sistema') if current_user.is_authenticated else 'Sistema'
+        col_nombre = 'username' if 'username' in columnas else 'nombre'
+        autor_name = getattr(current_user, col_nombre, getattr(current_user, 'nombre', 'Sistema')) if current_user.is_authenticated else 'Sistema'
         
         log = RegistroChatter(
             modelo_ref='sistema', registro_id='0', 
@@ -34,7 +34,7 @@ def registrar_auditoria(mensaje):
 
 
 # =====================================================================
-# MÓDULO DE SEGURIDAD: CAMBIO DE CONTRASEÑA AUTODETECTABLE
+# MÓDULO DE SEGURIDAD: CAMBIO DE CONTRASEÑA CALIBRADO
 # =====================================================================
 @api_bp.route('/api/cambiar_password', methods=['POST'])
 @login_required
@@ -47,13 +47,13 @@ def cambiar_password():
         if not actual or not nueva:
             return jsonify({"status": "error", "message": "Faltan datos."})
 
-        # Detección dinámica de la columna de contraseña
+        # Detección de la columna correcta (Sabemos que es password_hash)
         UserClass = current_user.__class__
         columnas = UserClass.__table__.columns.keys()
-        col_pass = next((c for c in ['password', 'clave', 'contrasena', 'contraseña', 'pwd'] if c in columnas), None)
+        col_pass = 'password_hash' if 'password_hash' in columnas else next((c for c in ['password', 'clave', 'pwd'] if c in columnas), None)
 
         if not col_pass:
-            return jsonify({"status": "error", "message": "Fallo crítico: No se detecta columna de contraseña en la base de datos."})
+            return jsonify({"status": "error", "message": "Fallo crítico: No se detecta columna de contraseña."})
 
         clave_db = getattr(current_user, col_pass, '')
         
@@ -223,8 +223,9 @@ def cambiar_estado_ot(ot_id):
         if estado_anterior != nuevo:
             UserClass = current_user.__class__
             columnas = list(UserClass.__table__.columns.keys())
-            col_nombre = next((c for c in ['nombre', 'username', 'usuario', 'user'] if c in columnas), 'nombre')
-            autor_name = getattr(current_user, col_nombre, 'Sistema')
+            col_nombre = 'username' if 'username' in columnas else 'nombre'
+            autor_name = getattr(current_user, col_nombre, getattr(current_user, 'nombre', 'Sistema'))
+            
             db.session.add(RegistroChatter(modelo_ref='ot', registro_id=str(ot.id), autor=autor_name, accion='cambio_estado', valor_anterior=estado_anterior, valor_nuevo=nuevo))
             registrar_auditoria(f"MODIFICÓ STATUS OT {ot.folio} HACIA {nuevo}")
             
@@ -262,8 +263,8 @@ def add_chatter():
 
     UserClass = current_user.__class__
     columnas = list(UserClass.__table__.columns.keys())
-    col_nombre = next((c for c in ['nombre', 'username', 'usuario', 'user'] if c in columnas), 'nombre')
-    autor_name = getattr(current_user, col_nombre, 'Sistema')
+    col_nombre = 'username' if 'username' in columnas else 'nombre'
+    autor_name = getattr(current_user, col_nombre, getattr(current_user, 'nombre', 'Sistema'))
 
     log = RegistroChatter(modelo_ref=modelo, registro_id=registro_id, autor=autor_name, accion=accion, mensaje=mensaje, archivo_url=archivo_url)
     db.session.add(log)
