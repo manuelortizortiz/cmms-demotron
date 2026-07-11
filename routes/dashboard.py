@@ -67,12 +67,27 @@ def dashboard():
             for k, v in eq_fallas_counter.most_common(5)
         ]
 
+        # === CORRECCIÓN DE COSTOS: INCLUIR COMPRAS Y MANTENCIONES JUNTAS ===
+        costos = {2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0, 10:0, 11:0, 12:0}
         costos_prev_eq = {}
+        
         for o in ots_db:
+            costo_ot = float(o.costo_mantencion_clp or 0.0)
+            if o.fecha and o.fecha.year >= 2025 and o.fecha.month in costos: 
+                costos[o.fecha.month] += costo_ot
+            
             if o.tipo_ot == 'Preventiva':
                 cod = o.codigo_equipo
-                costo = float(o.costo_mantencion_clp or 0.0)
-                costos_prev_eq[cod] = costos_prev_eq.get(cod, 0.0) + costo
+                costos_prev_eq[cod] = costos_prev_eq.get(cod, 0.0) + costo_ot
+
+        for c in compras_db:
+            costo_compra = float(c.costo_pm_clp or 0.0)
+            if c.fecha and c.fecha.year >= 2025 and c.fecha.month in costos:
+                costos[c.fecha.month] += costo_compra
+                
+            cod = c.codigo_equipo
+            costos_prev_eq[cod] = costos_prev_eq.get(cod, 0.0) + costo_compra
+        # ===================================================================
 
         top_7_prev_list = sorted(costos_prev_eq.items(), key=lambda x: x[1], reverse=True)[:7]
         top_7_preventivas = [{'codigo': x[0], 'costo': x[1], 'costo_str': format_clp(x[1])} for x in top_7_prev_list]
@@ -102,7 +117,7 @@ def dashboard():
                         dias_est = max(1, dias_est) 
                         fecha_est = (datetime.now() + timedelta(days=dias_est)).strftime('%Y-%m-%d')
                         eventos_futuros.append({
-                            'title': f"{e.codigo} (Proyección PM)",
+                            'title': f"{e.codigo} (PM Proyectada)",
                             'start': fecha_est,
                             'color': '#F59E0B'
                         })
@@ -140,10 +155,6 @@ def dashboard():
                 'vencida': dias_abierta > 7 and estado_k != 'Finalizada'
             })
 
-        costos = {2:0, 3:0, 4:0, 5:0, 6:0, 7:0}
-        for ot in ots_db:
-            if ot.fecha and ot.fecha.year >= 2026 and ot.fecha.month in costos: costos[ot.fecha.month] += (ot.costo_mantencion_clp or 0)
-
         correctivas_cerradas = [ot for ot in ots_db if ot.tipo_ot == 'Correctiva' and ot.estado == 'Finalizada' and ot.fecha_cierre and ot.fecha]
         if correctivas_cerradas:
             horas_totales = sum((ot.fecha_cierre - ot.fecha).total_seconds() / 3600 for ot in correctivas_cerradas)
@@ -160,9 +171,17 @@ def dashboard():
             'correctivas_mes': correctivas_mes
         }
 
+        # Generar data de meses desde Febrero hasta el actual
+        meses_nombres = {1:'Ene', 2:'Feb', 3:'Mar', 4:'Abr', 5:'May', 6:'Jun', 7:'Jul', 8:'Ago', 9:'Sep', 10:'Oct', 11:'Nov', 12:'Dic'}
+        meses_labels = []
+        costos_data = []
+        for m in range(2, mes_actual + 1):
+            meses_labels.append(meses_nombres[m])
+            costos_data.append(costos.get(m, 0))
+
         charts = {
             'estado': conteo_estado,
-            'costos_mensuales': {'labels': ['Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul'], 'data': list(costos.values())},
+            'costos_mensuales': {'labels': meses_labels, 'data': costos_data},
             'costos_top7': {
                 'prev_labels': [x['codigo'] for x in top_7_preventivas],
                 'prev_data': [x['costo'] for x in top_7_preventivas]
