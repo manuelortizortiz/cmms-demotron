@@ -13,12 +13,31 @@ from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
 from models.personal import Personal, RegistroUsoEquipo, Mecanico
 from models.chatter import RegistroChatter
-from utils.formatters import clean_string, clean_int, clean_float, parse_date
+from utils.formatters import clean_string, parse_date
 
 admin_bp = Blueprint('admin', __name__)
 
+# --- FUNCIONES DE LIMPIEZA DE NÚMEROS CHILENOS A PRUEBA DE FALLOS ---
+def safe_clean_int(val, default=0):
+    if pd.isna(val) or val in [None, '']: return default
+    if isinstance(val, (int, float)): return int(val)
+    s = str(val).replace(' ', '').replace(',', '.')
+    if s.count('.') > 1: s = s.replace('.', '')
+    elif s.count('.') == 1 and len(s.split('.')[1]) == 3: s = s.replace('.', '')
+    try: return int(float(s))
+    except: return default
+
+def safe_clean_float(val, default=0.0):
+    if pd.isna(val) or val in [None, '']: return default
+    if isinstance(val, (int, float)): return float(val)
+    s = str(val).replace('$', '').replace('CLP', '').replace(' ', '').replace(',', '.')
+    if s.count('.') > 1: s = s.replace('.', '')
+    elif s.count('.') == 1 and len(s.split('.')[1]) == 3: s = s.replace('.', '')
+    try: return float(s)
+    except: return default
+
 # =====================================================================
-# GESTIÓN DE USUARIOS Y AUDITORÍA GLOBAL (CALIBRADO CON EMAIL)
+# GESTIÓN DE USUARIOS Y AUDITORÍA GLOBAL
 # =====================================================================
 @admin_bp.route('/admin/usuarios', methods=['GET', 'POST'])
 @login_required
@@ -44,7 +63,6 @@ def gestionar_usuarios():
             if not col_pass:
                 return f"ERROR CRÍTICO: No se encontró la columna de contraseña.", 500
 
-            # Salvavidas automático: Si no hay email, creamos uno falso para que la BD no explote
             if not email:
                 email_limpio = username.replace(' ', '').lower()
                 email = f"{email_limpio}@demotron.cl"
@@ -67,7 +85,6 @@ def gestionar_usuarios():
                 if col_role in columnas_python:
                     setattr(nuevo, col_role, role)
                 
-                # INYECCIÓN DEL EMAIL PARA EVITAR EL NOT NULL VIOLATION
                 if 'email' in columnas_python:
                     setattr(nuevo, 'email', email)
                 
@@ -87,7 +104,7 @@ def gestionar_usuarios():
             
         except Exception as e:
             db.session.rollback()
-            return f"ERROR TÉCNICO AL CREAR USUARIO: {str(e)}<br>Columnas: {columnas_python}", 500
+            return f"ERROR TÉCNICO AL CREAR USUARIO: {str(e)}", 500
         
     usuarios_db = UserClass.query.all()
     usuarios_limpios = []
@@ -106,30 +123,20 @@ def gestionar_usuarios():
 @login_required
 def eliminar_usuario(id):
     rol_actual = getattr(current_user, 'role', getattr(current_user, 'rol', 'usuario'))
-    if rol_actual != 'admin':
-        return "ACCESO DENEGADO: SOLO ADMINISTRADOR.", 403
-        
+    if rol_actual != 'admin': return "ACCESO DENEGADO", 403
     UserClass = current_user.__class__
     try:
         u = UserClass.query.get_or_404(id)
         columnas = UserClass.__table__.columns.keys()
         col_nombre = 'username' if 'username' in columnas else 'nombre'
-        
         nombre_u = getattr(u, col_nombre, 'Desconocido')
         nombre_actual = getattr(current_user, col_nombre, 'Actual')
-        
         if nombre_u != nombre_actual:
             db.session.delete(u)
-            log = RegistroChatter(
-                modelo_ref='sistema', registro_id='0', autor=nombre_actual, 
-                accion='auditoria', mensaje=f"REVOCACIÓN DE ACCESO: Se eliminó el usuario {nombre_u}"
-            )
+            log = RegistroChatter(modelo_ref='sistema', registro_id='0', autor=nombre_actual, accion='auditoria', mensaje=f"REVOCACIÓN DE ACCESO: Se eliminó el usuario {nombre_u}")
             db.session.add(log)
             db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return f"ERROR TÉCNICO AL ELIMINAR USUARIO: {str(e)}", 500
-        
+    except Exception: db.session.rollback()
     return redirect('/admin/usuarios')
 
 
@@ -140,8 +147,7 @@ def eliminar_usuario(id):
 @login_required
 def cargar_sql_final():
     rol_actual = getattr(current_user, 'role', getattr(current_user, 'rol', 'usuario'))
-    if rol_actual not in ['admin', 'gerencia']:
-        return "ACCESO DENEGADO: PERMISOS INSUFICIENTES.", 403
+    if rol_actual not in ['admin', 'gerencia']: return "ACCESO DENEGADO", 403
 
     reporte = {"equipos": 0, "lecturas": 0, "preventivas": 0, "correctivas": 0, "compras": 0, "filtros": 0, "mensajes": []}
     
@@ -167,7 +173,7 @@ def cargar_sql_final():
         archivo_filtros = next((f for f in archivos if "filtro" in f.lower() and f.endswith(('.xlsx', '.xls', '.csv')) and not f.startswith('~$')), None)
         archivo_detalles = next((f for f in archivos if "detalles" in f.lower() and f.endswith(('.xlsx', '.csv')) and not f.startswith('~$')), None)
 
-        if not excel_principal: return "ERROR: NO SE DETECTA ARCHIVO CMMS (.xlsx) EN LA RAÍZ DEL SERVIDOR."
+        if not excel_principal: return "ERROR: NO SE DETECTA ARCHIVO CMMS (.xlsx)."
 
         # --- EQUIPOS ---
         df_eq = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Equipos", skiprows=2).replace({np.nan: None})
@@ -190,7 +196,7 @@ def cargar_sql_final():
             eq.responsable = responsable
             eq.estado_base = clean_string(str(row.get('Estado Base', '') or 'Operativo')) or 'Operativo'
             eq.control_base = clean_string(str(row.get('Control Base', '') or 'HORAS')) or 'HORAS'
-            eq.frecuencia_base = clean_int(row.get('Frecuencia Base'), 250)
+            eq.frecuencia_base = safe_clean_int(row.get('Frecuencia Base'), 250)
             reporte['equipos'] += 1
             
         for op in operadores_set:
@@ -207,9 +213,9 @@ def cargar_sql_final():
             fecha_dt = parse_date(row.iloc[0])
             eq = Equipo.query.filter_by(codigo=cod).first()
             if eq:
-                if eq.control_base == 'HORAS': hor, kil = clean_int(row.iloc[2], 0), 0
-                else: hor, kil = 0, clean_int(row.iloc[3], 0)
-            else: hor, kil = clean_int(row.iloc[2], 0), clean_int(row.iloc[3], 0)
+                if eq.control_base == 'HORAS': hor, kil = safe_clean_int(row.iloc[2]), 0
+                else: hor, kil = 0, safe_clean_int(row.iloc[3])
+            else: hor, kil = safe_clean_int(row.iloc[2]), safe_clean_int(row.iloc[3])
 
             lecs_existentes = HistorialLectura.query.filter_by(codigo_equipo=cod, fecha=fecha_dt).all()
             if lecs_existentes:
@@ -242,17 +248,17 @@ def cargar_sql_final():
             if ots_existentes:
                 ot_principal = ots_existentes[0]
                 ot_principal.tipo_mantencion = tipo
-                ot_principal.lectura = clean_int(row.get('Lectura'), 0)
-                ot_principal.costo_mantencion_clp = clean_float(row.get('Costo Mantencion CLP'), 0.0)
+                ot_principal.lectura = safe_clean_int(row.get('Lectura'))
+                ot_principal.costo_mantencion_clp = safe_clean_float(row.get('Costo Mantencion CLP'))
                 if folio_str: ot_principal.folio = folio_str
                 for copia in ots_existentes[1:]: db.session.delete(copia)
                 reporte['preventivas'] += 1
             else:
                 db.session.add(OrdenTrabajo(
                     fecha=fecha_dt, codigo_equipo=cod, tipo_ot=tipo_ot, tipo_mantencion=tipo,
-                    lectura=clean_int(row.get('Lectura'), 0), es_pm=clean_string(str(row.get('EsPM', '') or '')),
+                    lectura=safe_clean_int(row.get('Lectura')), es_pm=clean_string(str(row.get('EsPM', '') or '')),
                     folio=folio_str, lugar=clean_string(str(row.get('Lugar', '') or '')),
-                    costo_mantencion_clp=clean_float(row.get('Costo Mantencion CLP'), 0.0),
+                    costo_mantencion_clp=safe_clean_float(row.get('Costo Mantencion CLP')),
                     estado=clean_string(str(row.get('Estado', '') or 'Finalizada')) or 'Finalizada', mecanico='Sin Asignar'
                 ))
                 reporte['preventivas'] += 1
@@ -276,8 +282,9 @@ def cargar_sql_final():
                 else: folio_val = f"OT-CR-{random.randint(1000,9999)}"
                 mecanico_val = clean_string(str(row.get('Mecanico', '') or 'Sin Asignar')) or 'Sin Asignar'
                 estado_val = clean_string(str(row.get('Estado', '') or 'Finalizada')) or 'Finalizada'
-                lectura_val = clean_int(row.iloc[4], 0) if len(row) > 4 else 0
-                costo_val = 0.0
+                lectura_val = safe_clean_int(row.iloc[4]) if len(row) > 4 else 0
+                costo_val = safe_clean_float(row.get('Costo CLP', 0.0))
+                
                 falla_lower = falla.lower()
                 if any(x in falla_lower for x in ['motor','aceite','filtro','refrig','radiador','correa']): sistema_val='Motor'
                 elif any(x in falla_lower for x in ['hidraulic','manguera','bomba','cilindro','oring','fuga']): sistema_val='Hidráulico'
@@ -317,7 +324,7 @@ def cargar_sql_final():
                 if not CompraRepuesto.query.filter_by(codigo_equipo=cod, oc=oc_str).first():
                     db.session.add(CompraRepuesto(
                         fecha=fecha_dt, oc=oc_str, codigo_equipo=cod, descripcion=clean_string(str(row.get('Descripcion', '') or '')),
-                        proveedor=clean_string(str(row.get('Proveedor', '') or '')), costo_pm_clp=clean_float(row.get('Costo PM CLP'), 0.0), estado_oc=clean_string(str(row.get('Estado OC', '') or ''))
+                        proveedor=clean_string(str(row.get('Proveedor', '') or '')), costo_pm_clp=safe_clean_float(row.get('Costo PM CLP')), estado_oc=clean_string(str(row.get('Estado OC', '') or ''))
                     ))
             db.session.commit()
         except Exception: pass
@@ -369,7 +376,7 @@ def cargar_sql_final():
                         reporte['equipos'] += 1
 
                     db.session.add(FiltroEquipo(
-                        codigo_equipo=eq.codigo, sistema=sistema_f.upper(), cant=clean_int(row.get(can_c), 1) if can_c else 1,
+                        codigo_equipo=eq.codigo, sistema=sistema_f.upper(), cant=safe_clean_int(row.get(can_c), 1),
                         fleetguard=clean_string(str(row.get(fg_c, '-'))) if fg_c else "-", 
                         baldwind=clean_string(str(row.get(bw_c, '-'))) if bw_c else "-", 
                         originales=clean_string(str(row.get(or_c, '-'))) if or_c else "-", 
@@ -417,7 +424,7 @@ def cargar_sql_final():
             <h2 style="color: #16a34a; text-align: center; text-transform: uppercase; letter-spacing: 2px;">SINCRONIZACIÓN EXITOSA</h2>
             <ul style="list-style: none; padding: 0; font-size: 14px; color: #334155; text-transform: uppercase; font-weight: bold;">
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">EQUIPOS: <b style="float: right;">{reporte['equipos']}</b></li>
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">LECTURAS: <b style="float: right;">{reporte['lecturas']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">LECTURAS CORREGIDAS: <b style="float: right;">{reporte['lecturas']}</b></li>
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">PREVENTIVAS: <b style="float: right;">{reporte['preventivas']}</b></li>
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">CORRECTIVAS: <b style="float: right;">{reporte['correctivas']}</b></li>
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; background: #eff6ff;">FILTROS VINCULADOS: <span style="color: #2563eb; float: right;">{reporte['filtros']}</span></li>
