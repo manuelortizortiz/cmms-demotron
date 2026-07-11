@@ -18,41 +18,55 @@ from utils.formatters import clean_string, clean_int, clean_float, parse_date
 admin_bp = Blueprint('admin', __name__)
 
 # =====================================================================
-# GESTIÓN DE USUARIOS Y AUDITORÍA GLOBAL
+# GESTIÓN DE USUARIOS Y AUDITORÍA GLOBAL (SISTEMA AUTODETECTABLE)
 # =====================================================================
 @admin_bp.route('/admin/usuarios', methods=['GET', 'POST'])
 @login_required
 def gestionar_usuarios():
-    # Bloqueo de seguridad
-    if current_user.role not in ['admin', 'gerencia']:
+    # Seguridad básica
+    rol_actual = getattr(current_user, 'role', getattr(current_user, 'rol', 'usuario'))
+    if rol_actual not in ['admin', 'gerencia']:
         return "ACCESO DENEGADO: PERMISOS INSUFICIENTES.", 403
 
-    # Detección infalible del modelo de base de datos
+    # Detección inteligente de cómo se llaman tus columnas en Python
     UserClass = current_user.__class__
+    columnas_python = list(UserClass.__table__.columns.keys())
+
+    col_nombre = next((c for c in ['nombre', 'username', 'usuario', 'user'] if c in columnas_python), 'nombre')
+    col_pass = next((c for c in ['password', 'clave', 'contrasena', 'contraseña', 'pwd'] if c in columnas_python), None)
+    col_role = next((c for c in ['role', 'rol', 'perfil', 'tipo'] if c in columnas_python), 'role')
 
     if request.method == 'POST':
         try:
             username = request.form.get('username').strip()
-            password = request.form.get('password').strip()
+            pwd = request.form.get('password').strip()
             role = request.form.get('role').strip()
             
-            # Evitar crear nombres duplicados
-            if not UserClass.query.filter_by(nombre=username).first():
+            if not col_pass:
+                return f"ERROR CRÍTICO: No se encontró la columna de contraseña. Tu base tiene estas columnas: {columnas_python}", 500
+
+            # Validar que el usuario no exista usando el nombre dinámico
+            if not UserClass.query.filter(getattr(UserClass, col_nombre) == username).first():
                 
-                # Auto-reparación preventiva: Intentar ampliar columna de password a 255 chars
+                # Auto-ampliar tamaño de columna por seguridad
                 try:
-                    db.session.execute(text(f"ALTER TABLE {UserClass.__tablename__} ALTER COLUMN password TYPE VARCHAR(255)"))
+                    db.session.execute(text(f"ALTER TABLE {UserClass.__tablename__} ALTER COLUMN {col_pass} TYPE VARCHAR(255)"))
                     db.session.commit()
-                except Exception:
+                except:
                     db.session.rollback()
 
-                # Guardado seguro
-                nuevo = UserClass(nombre=username, password=generate_password_hash(password), role=role)
+                # Crear usuario burlando el bloqueo de Keyword Argument
+                nuevo = UserClass()
+                setattr(nuevo, col_nombre, username)
+                setattr(nuevo, col_pass, generate_password_hash(pwd))
+                
+                if col_role in columnas_python:
+                    setattr(nuevo, col_role, role)
+                
                 db.session.add(nuevo)
                 
-                # Huella de auditoría
                 log = RegistroChatter(
-                    modelo_ref='sistema', registro_id='0', autor=current_user.nombre, 
+                    modelo_ref='sistema', registro_id='0', autor=getattr(current_user, col_nombre, 'Admin'), 
                     accion='auditoria', mensaje=f"CREACIÓN DE ACCESO: Usuario {username} ({role})"
                 )
                 db.session.add(log)
@@ -61,30 +75,43 @@ def gestionar_usuarios():
             
         except Exception as e:
             db.session.rollback()
-            return f"ERROR TÉCNICO AL CREAR USUARIO: {str(e)}", 500
+            return f"ERROR TÉCNICO AL CREAR USUARIO: {str(e)}<br>Columnas Detectadas: {columnas_python}", 500
         
-    usuarios = UserClass.query.all()
+    usuarios_db = UserClass.query.all()
+    # Mapeo limpio para el HTML
+    usuarios_limpios = []
+    for u in usuarios_db:
+        usuarios_limpios.append({
+            'id': u.id,
+            'nombre': getattr(u, col_nombre, 'S/I'),
+            'role': getattr(u, col_role, 'usuario') if col_role in columnas_python else 'usuario'
+        })
+        
     actividad = RegistroChatter.query.filter_by(modelo_ref='sistema').order_by(RegistroChatter.fecha.desc()).limit(150).all()
     
-    return render_template('usuarios.html', usuarios=usuarios, actividad=actividad)
-
+    return render_template('usuarios.html', usuarios=usuarios_limpios, actividad=actividad)
 
 @admin_bp.route('/admin/usuarios/eliminar/<int:id>', methods=['POST'])
 @login_required
 def eliminar_usuario(id):
-    if current_user.role != 'admin':
-        return "ACCESO DENEGADO: PERMISOS INSUFICIENTES.", 403
+    rol_actual = getattr(current_user, 'role', getattr(current_user, 'rol', 'usuario'))
+    if rol_actual != 'admin':
+        return "ACCESO DENEGADO: SOLO ADMINISTRADOR.", 403
         
     UserClass = current_user.__class__
     try:
         u = UserClass.query.get_or_404(id)
-        # Seguro contra auto-eliminación
-        if u.nombre != current_user.nombre:
-            nombre_borrado = u.nombre
+        columnas = UserClass.__table__.columns.keys()
+        col_nombre = next((c for c in ['nombre', 'username', 'usuario', 'user'] if c in columnas), 'nombre')
+        
+        nombre_u = getattr(u, col_nombre, 'Desconocido')
+        nombre_actual = getattr(current_user, col_nombre, 'Actual')
+        
+        if nombre_u != nombre_actual:
             db.session.delete(u)
             log = RegistroChatter(
-                modelo_ref='sistema', registro_id='0', autor=current_user.nombre, 
-                accion='auditoria', mensaje=f"REVOCACIÓN DE ACCESO: Se eliminó el usuario {nombre_borrado}"
+                modelo_ref='sistema', registro_id='0', autor=nombre_actual, 
+                accion='auditoria', mensaje=f"REVOCACIÓN DE ACCESO: Se eliminó el usuario {nombre_u}"
             )
             db.session.add(log)
             db.session.commit()
@@ -101,7 +128,8 @@ def eliminar_usuario(id):
 @admin_bp.route('/admin/cargar_sql_final', strict_slashes=False)
 @login_required
 def cargar_sql_final():
-    if current_user.role not in ['admin', 'gerencia']:
+    rol_actual = getattr(current_user, 'role', getattr(current_user, 'rol', 'usuario'))
+    if rol_actual not in ['admin', 'gerencia']:
         return "ACCESO DENEGADO: PERMISOS INSUFICIENTES.", 403
 
     reporte = {"equipos": 0, "lecturas": 0, "preventivas": 0, "correctivas": 0, "compras": 0, "filtros": 0, "mensajes": []}
@@ -365,7 +393,8 @@ def cargar_sql_final():
             except Exception: pass
 
         # Registro Global
-        log = RegistroChatter(modelo_ref='sistema', registro_id='0', autor=current_user.nombre, accion='auditoria', mensaje="EJECUTÓ SINCRONIZACIÓN Y PURGA MAESTRA DE DATOS EXCEL.")
+        nombre_actual = getattr(current_user, 'nombre', getattr(current_user, 'username', 'Administrador'))
+        log = RegistroChatter(modelo_ref='sistema', registro_id='0', autor=nombre_actual, accion='auditoria', mensaje="EJECUTÓ SINCRONIZACIÓN Y PURGA MAESTRA DE DATOS EXCEL.")
         db.session.add(log)
         db.session.commit()
 
