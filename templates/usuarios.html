@@ -7,7 +7,8 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; color: #334155; }
         .card-custom { background: white; border-radius: 12px; border: 1px solid #E2E8F0; padding: 24px; }
-        .form-input { border: 1px solid #E2E8F0; padding: 10px; border-radius: 6px; width: 100%; font-size: 12px; }
+        .form-input { border: 1px solid #E2E8F0; padding: 10px; border-radius: 6px; width: 100%; font-size: 12px; outline: none;}
+        .form-input:focus { border-color: #3B82F6; }
     </style>
 </head>
 <body class="p-8">
@@ -22,62 +23,68 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            <!-- GESTIÓN DE USUARIOS (COLUMNA IZQUIERDA) -->
+            <!-- GESTIÓN DE USUARIOS -->
             <div class="lg:col-span-1 space-y-8">
                 
-                <!-- CREAR USUARIO -->
                 <div class="card-custom">
                     <h2 class="text-xs font-black uppercase mb-4 tracking-widest text-slate-800 border-b border-slate-100 pb-2">Crear Nuevo Usuario</h2>
                     <form method="POST" class="space-y-4">
                         <div>
                             <label class="text-[10px] font-bold uppercase text-slate-500 mb-1 block">Nombre de Usuario</label>
-                            <input type="text" name="username" class="form-input" required autocomplete="off">
+                            <input type="text" name="username" class="form-input font-bold" required autocomplete="off">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold uppercase text-slate-500 mb-1 block">Correo Electrónico (Opcional)</label>
+                            <input type="email" name="email" class="form-input" placeholder="ejemplo@demotron.cl" autocomplete="off">
                         </div>
                         <div>
                             <label class="text-[10px] font-bold uppercase text-slate-500 mb-1 block">Contraseña de Acceso</label>
-                            <input type="password" name="password" class="form-input" required>
+                            <input type="password" name="password" class="form-input font-mono" required>
                         </div>
                         <div>
                             <label class="text-[10px] font-bold uppercase text-slate-500 mb-1 block">Privilegios (Rol)</label>
-                            <select name="role" class="form-input">
+                            <select name="role" class="form-input font-semibold">
                                 <option value="usuario">Usuario Estándar</option>
                                 <option value="gerencia">Gerencia (Visualización)</option>
                                 <option value="admin">Administrador Total</option>
                             </select>
                         </div>
-                        <button type="submit" class="w-full bg-slate-800 text-white font-bold py-2 rounded text-xs uppercase tracking-wider hover:bg-slate-700 transition">Crear Credencial</button>
+                        <button type="submit" class="w-full bg-slate-800 text-white font-bold py-2.5 rounded text-xs uppercase tracking-wider hover:bg-slate-700 transition">Crear Credencial</button>
                     </form>
                 </div>
 
-                <!-- LISTA DE USUARIOS -->
                 <div class="card-custom">
                     <h2 class="text-xs font-black uppercase mb-4 tracking-widest text-slate-800 border-b border-slate-100 pb-2">Usuarios Activos</h2>
-                    <table class="w-full text-left text-xs">
-                        <thead>
-                            <tr class="text-[9px] uppercase text-slate-400 bg-slate-50">
-                                <th class="p-2">Identificación</th>
-                                <th class="p-2">Rol</th>
-                                <th class="p-2 text-right">Revocar</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for u in usuarios %}
-                            <tr class="border-b border-slate-100">
-                                <td class="p-2 font-bold text-slate-700">{{ u.nombre }}</td>
-                                <td class="p-2 uppercase font-semibold text-slate-500 text-[10px]">{{ u.role }}</td>
-                                <td class="p-2 text-right">
-                                    <form action="/admin/usuarios/eliminar/{{ u.id }}" method="POST" onsubmit="return confirm('¿Está seguro que desea eliminar el acceso de este usuario?')">
-                                        <button type="submit" class="text-red-600 font-bold text-[10px] uppercase hover:underline">Eliminar</button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="text-[9px] uppercase text-slate-400 bg-slate-50">
+                                    <th class="p-2">Identificación</th>
+                                    <th class="p-2">Correo</th>
+                                    <th class="p-2">Rol</th>
+                                    <th class="p-2 text-right">Revocar</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for u in usuarios %}
+                                <tr class="border-b border-slate-100">
+                                    <td class="p-2 font-bold text-slate-700">{{ u.nombre }}</td>
+                                    <td class="p-2 text-[10px] text-slate-500">{{ u.email }}</td>
+                                    <td class="p-2 uppercase font-semibold text-slate-500 text-[9px]">{{ u.role }}</td>
+                                    <td class="p-2 text-right">
+                                        <form action="/admin/usuarios/eliminar/{{ u.id }}" method="POST" onsubmit="return confirm('¿Está seguro que desea eliminar el acceso de este usuario?')">
+                                            <button type="submit" class="text-red-600 font-bold text-[9px] uppercase hover:underline">Eliminar</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <!-- REGISTRO DE AUDITORÍA GLOBAL (COLUMNA DERECHA) -->
+            <!-- REGISTRO DE AUDITORÍA GLOBAL -->
             <div class="lg:col-span-2">
                 <div class="card-custom h-full flex flex-col">
                     <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
@@ -89,17 +96,17 @@
                         <table class="w-full text-left text-[11px]">
                             <thead>
                                 <tr class="text-[9px] uppercase text-slate-400 sticky top-0 bg-white">
-                                    <th class="p-2 pb-3 w-32 border-b border-slate-200">Fecha y Hora</th>
-                                    <th class="p-2 pb-3 w-40 border-b border-slate-200">Usuario Responsable</th>
-                                    <th class="p-2 pb-3 border-b border-slate-200">Acción Ejecutada en el Sistema</th>
+                                    <th class="p-2 pb-3 w-24 border-b border-slate-200">Fecha/Hora</th>
+                                    <th class="p-2 pb-3 w-32 border-b border-slate-200">Usuario</th>
+                                    <th class="p-2 pb-3 border-b border-slate-200">Acción Ejecutada</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for a in actividad %}
                                 <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-                                    <td class="p-2 text-slate-500 font-mono">{{ a.fecha.strftime('%d/%m/%Y %H:%M') if a.fecha else '' }}</td>
-                                    <td class="p-2 font-bold text-slate-700 uppercase tracking-wide">{{ a.autor }}</td>
-                                    <td class="p-2 text-slate-600">{{ a.mensaje }}</td>
+                                    <td class="p-2 text-slate-500 font-mono text-[9px]">{{ a.fecha.strftime('%d/%m %H:%M') if a.fecha else '' }}</td>
+                                    <td class="p-2 font-bold text-slate-700 uppercase tracking-wide text-[10px]">{{ a.autor }}</td>
+                                    <td class="p-2 text-slate-600 font-medium">{{ a.mensaje }}</td>
                                 </tr>
                                 {% endfor %}
                                 {% if not actividad %}
