@@ -62,12 +62,15 @@ def dashboard():
         correctivas_mes = len([o for o in ots_db if o.tipo_ot=='Correctiva' and o.fecha and o.fecha.month==mes_actual and o.fecha.year==anio_actual])
 
         eq_fallas_counter = Counter(o.codigo_equipo for o in ots_db if o.tipo_ot=='Correctiva')
-        top_equipos_fallas = [
-            {'codigo': k, 'cantidad': v, 'foto_url': buscar_foto_por_tipo(next((e.tipo_equipo for e in eqs_db if e.codigo==k), ''), '')}
-            for k, v in eq_fallas_counter.most_common(5)
-        ]
+        
+        # INYECCIÓN CORREGIDA DE IMÁGENES PARA EL RANKING DE FALLAS
+        top_equipos_fallas = []
+        for k, v in eq_fallas_counter.most_common(5):
+            eq_obj = next((e for e in eqs_db if e.codigo == k), None)
+            f_url = buscar_foto_por_tipo(eq_obj.tipo_equipo, eq_obj.marca) if eq_obj else ''
+            top_equipos_fallas.append({'codigo': k, 'cantidad': v, 'foto_url': f_url})
 
-        # === CORRECCIÓN DE COSTOS: INCLUIR COMPRAS Y MANTENCIONES JUNTAS ===
+        # SUMATORIA DE COSTOS: MANTENCIONES + COMPRAS
         costos = {2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0, 10:0, 11:0, 12:0}
         costos_prev_eq = {}
         
@@ -87,7 +90,6 @@ def dashboard():
                 
             cod = c.codigo_equipo
             costos_prev_eq[cod] = costos_prev_eq.get(cod, 0.0) + costo_compra
-        # ===================================================================
 
         top_7_prev_list = sorted(costos_prev_eq.items(), key=lambda x: x[1], reverse=True)[:7]
         top_7_preventivas = [{'codigo': x[0], 'costo': x[1], 'costo_str': format_clp(x[1])} for x in top_7_prev_list]
@@ -171,7 +173,6 @@ def dashboard():
             'correctivas_mes': correctivas_mes
         }
 
-        # Generar data de meses desde Febrero hasta el actual
         meses_nombres = {1:'Ene', 2:'Feb', 3:'Mar', 4:'Abr', 5:'May', 6:'Jun', 7:'Jul', 8:'Ago', 9:'Sep', 10:'Oct', 11:'Nov', 12:'Dic'}
         meses_labels = []
         costos_data = []
