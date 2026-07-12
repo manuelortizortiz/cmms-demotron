@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>DEMOTRON ERP CMMS</title>
-    <link rel="icon" href="{{ url_for('static', filename='Logo Azul.png') }}" type="image/png">
+    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -86,39 +86,38 @@
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-8">
             
-            <!-- VISTA DASHBOARD -->
             <div id="dash" class="seccion active">
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-                    <div class="card-custom border-t-4 border-slate-800"><p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total Flota</p><p class="text-4xl font-black text-slate-800 tracking-tighter">{{ kpis.total }}</p></div>
-                    <div class="card-custom border-t-4 border-emerald-500"><p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Equipos Operativos</p><p class="text-4xl font-black text-emerald-600 tracking-tighter">{{ kpis.operativos }}</p></div>
-                    <div class="card-custom border-t-4 border-red-600"><p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Atrasados (PM)</p><p class="text-4xl font-black text-red-600 tracking-tighter">{{ kpis.atrasados }}</p></div>
-                    <div class="card-custom border-t-4 border-blue-600"><p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Órdenes Abiertas</p><p class="text-4xl font-black text-blue-700 tracking-tighter">{{ kpis.ot_abiertas }}</p></div>
+                    <div class="card-custom border-t-4 border-slate-800 text-center"><p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total Flota</p><p class="text-4xl font-black text-slate-800 tracking-tighter">{{ kpis.total }}</p></div>
+                    <div class="card-custom border-t-4 border-emerald-500 text-center"><p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Equipos Operativos</p><p class="text-4xl font-black text-emerald-600 tracking-tighter">{{ kpis.operativos }}</p></div>
+                    <div class="card-custom border-t-4 border-red-600 text-center"><p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Atrasados (PM)</p><p class="text-4xl font-black text-red-600 tracking-tighter">{{ kpis.atrasados }}</p></div>
+                    <div class="card-custom border-t-4 border-blue-600 text-center"><p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Órdenes Abiertas</p><p class="text-4xl font-black text-blue-700 tracking-tighter">{{ kpis.ot_abiertas }}</p></div>
                 </div>
 
                 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
                     <div class="card-custom"><h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Estado Operativo</h3><div class="h-48 relative w-full"><canvas id="chartEstado"></canvas></div></div>
                     <div class="card-custom"><h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Inversión Mensual</h3><div class="h-48 relative w-full"><canvas id="chartCostosMensuales"></canvas></div></div>
-                    <div class="card-custom"><h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Pareto de Fallas</h3><div class="h-48 relative w-full"><canvas id="chartFallas"></canvas></div></div>
+                    <div class="card-custom"><h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Pareto de Fallas (Desde 2020)</h3><div class="h-48 relative w-full"><canvas id="chartFallas"></canvas></div></div>
                 </div>
 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-white border border-slate-200 rounded p-5 shadow-sm">
+                    <div class="bg-white border border-slate-200 rounded p-5 shadow-sm text-center">
                         <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Disponibilidad Mecánica</p>
                         <p class="text-2xl font-black text-slate-800">{{ kpis.disponibilidad_pct }}%</p>
                         <div class="w-full bg-slate-100 h-1 mt-3"><div class="bg-emerald-500 h-1" style="width: {{ kpis.disponibilidad_pct }}%"></div></div>
                     </div>
-                    <div class="bg-white border border-slate-200 rounded p-5 shadow-sm">
+                    <div class="bg-white border border-slate-200 rounded p-5 shadow-sm text-center">
                         <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Cumplimiento PM</p>
                         <p class="text-2xl font-black text-slate-800">{{ kpis.cumpl_pm_pct }}%</p>
                         <div class="w-full bg-slate-100 h-1 mt-3"><div class="bg-blue-600 h-1" style="width: {{ kpis.cumpl_pm_pct }}%"></div></div>
                     </div>
-                    <div class="bg-white border border-slate-200 rounded p-5 shadow-sm">
+                    <div class="bg-white border border-slate-200 rounded p-5 shadow-sm text-center">
                         <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">MTTR (Tiempo Reparación)</p>
                         <p class="text-2xl font-black text-slate-800">{{ kpis.mttr }}</p>
                         <p class="text-[9px] text-slate-400 mt-1 uppercase font-semibold">Promedio Cierre OT</p>
                     </div>
-                    <div class="bg-white border border-slate-200 rounded p-5 shadow-sm">
-                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Correctivas Mensuales</p>
+                    <div class="bg-white border border-slate-200 rounded p-5 shadow-sm text-center">
+                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">M. Correctivas Mensuales</p>
                         <p class="text-2xl font-black text-red-600">{{ kpis.correctivas_mes }}</p>
                         <p class="text-[9px] text-slate-400 mt-1 uppercase font-semibold">Averías Registradas</p>
                     </div>
@@ -158,6 +157,7 @@
                         <div class="flex overflow-x-auto gap-4 hide-scrollbar pb-2">
                             {% for eq in top_equipos_fallas %}
                             <div class="border border-slate-200 rounded p-4 text-center min-w-[140px] bg-slate-50">
+                                <img src="{{ eq.foto_url }}" class="h-16 object-contain mx-auto mb-2 drop-shadow-sm" onerror="this.outerHTML='<div class=\'h-16 flex items-center justify-center text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-2 border border-dashed border-slate-300 rounded bg-white\'>SIN FOTO</div>';">
                                 <p class="font-black text-slate-800 text-sm uppercase tracking-wider mb-2">{{ eq.codigo }}</p>
                                 <span class="inline-block px-3 py-1 bg-red-100 text-red-700 font-bold text-[10px] uppercase tracking-widest rounded">{{ eq.cantidad }} Fallas</span>
                             </div>
@@ -185,7 +185,6 @@
                 </div>
             </div>
 
-            <!-- TABLA DE EQUIPOS -->
             <div id="eq" class="seccion">
                 <div class="card-custom-nopad bg-white table-wrapper">
                     <table class="table-custom table-searchable">
@@ -206,7 +205,6 @@
                 </div>
             </div>
             
-            <!-- DATOS TÉCNICOS -->
             <div id="datos" class="seccion">
                 <div class="card-custom-nopad bg-white table-wrapper">
                     <table class="table-custom table-searchable">
@@ -224,7 +222,6 @@
                 </div>
             </div>
 
-            <!-- PLANIFICACIÓN KANBAN -->
             <div id="plan" class="seccion">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Panel de Ejecución Operativa</p>
@@ -289,7 +286,6 @@
 
             <div id="cal" class="seccion"><div class="card-custom-nopad p-6 flex flex-col" style="height: calc(100vh - 150px);"><div id="calendar" class="flex-1 w-full h-full"></div></div></div>
 
-            <!-- OTs PREVENTIVAS -->
             <div id="ot" class="seccion">
                 <div class="card-custom mb-6 bg-slate-50">
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
@@ -326,7 +322,6 @@
                 </div>
             </div>
             
-            <!-- OTs CORRECTIVAS -->
             <div id="ot_corr" class="seccion">
                 <div class="card-custom mb-6 bg-red-50 border-red-200">
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
@@ -362,7 +357,6 @@
                 </div>
             </div>
 
-            <!-- BODEGA -->
             <div id="bodega" class="seccion">
                 <div class="card-custom mb-6 bg-slate-50">
                     <div class="flex justify-between items-center mb-4 border-b border-slate-200 pb-2"><span class="font-black text-slate-800 uppercase tracking-widest text-xs">Inventario General</span></div>
@@ -396,7 +390,6 @@
                 </div>
             </div>
 
-            <!-- COMPRAS -->
             <div id="compras" class="seccion">
                 <div class="card-custom mb-6 bg-slate-50">
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
@@ -419,7 +412,6 @@
                 </div>
             </div>
             
-            <!-- LECTURAS -->
             <div id="lec" class="seccion">
                 <div class="card-custom mb-6 bg-slate-50">
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
@@ -443,7 +435,6 @@
                 </div>
             </div>
 
-            <!-- PERSONAL -->
             <div id="cond" class="seccion space-y-6">
                 <div class="card-custom-nopad bg-white flex flex-col">
                     <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-wrap justify-between items-center gap-4">
@@ -756,11 +747,29 @@
             try {
                 if (typeof Chart !== 'undefined') {
                     Chart.defaults.font.family = "'Inter', sans-serif";
-                    Chart.defaults.color = '#1E293B'; // Color de letras oscurecido a azul corporativo
-                    Chart.defaults.font.weight = 'bold'; // Textos en negrita
+                    Chart.defaults.color = '#1E293B';
+                    Chart.defaults.font.weight = 'bold';
                     
-                    new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '75%', data: { labels: ['Operativos', 'Fuera de Servicio', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'], borderWidth:0 }] }, options: { maintainAspectRatio:false, plugins: { legend: { position: 'bottom', labels: { font: { size: 10, weight: 'bold' } } } } }});
-                    new Chart(document.getElementById('chartCostosMensuales'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión (CLP)', data: cData.costos_mensuales.data, borderColor: '#1E293B', backgroundColor: 'rgba(30, 41, 59, 0.1)', fill: true, tension: 0.3 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } } }});
+                    new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '75%', data: { labels: ['Operativos', 'Fuera de Servicio', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'], borderWidth:0 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } } }});
+                    
+                    new Chart(document.getElementById('chartCostosMensuales'), { 
+                        type: 'line', 
+                        data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión (CLP)', data: cData.costos_mensuales.data, borderColor: '#1E293B', backgroundColor: 'rgba(30, 41, 59, 0.1)', fill: true, tension: 0.3 }] }, 
+                        options: { 
+                            maintainAspectRatio:false, 
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: {
+                                    ticks: {
+                                        callback: function(value) {
+                                            return (value / 1000000) + 'mm';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
                     new Chart(document.getElementById('chartFallas'), { type: 'bar', data: { labels: fData.labels, datasets: [{ label: 'N° Averías', data: fData.data, backgroundColor: '#DC2626', borderRadius: 4 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } } }});
                     
                     new Chart(document.getElementById('chartTop7Prev'), { 
