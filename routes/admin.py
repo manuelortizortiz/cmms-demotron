@@ -17,7 +17,6 @@ from utils.formatters import clean_string, parse_date
 
 admin_bp = Blueprint('admin', __name__)
 
-# --- FUNCIONES DE LIMPIEZA DE NÚMEROS CHILENOS A PRUEBA DE FALLOS ---
 def safe_clean_int(val, default=0):
     if pd.isna(val) or val in [None, '']: return default
     if isinstance(val, (int, float)): return int(val)
@@ -60,45 +59,28 @@ def gestionar_usuarios():
             role = request.form.get('role').strip()
             email = request.form.get('email', '').strip()
             
-            if not col_pass:
-                return f"ERROR CRÍTICO: No se encontró la columna de contraseña.", 500
+            if not col_pass: return f"ERROR CRÍTICO: No se encontró la columna de contraseña.", 500
 
             if not email:
-                email_limpio = username.replace(' ', '').lower()
-                email = f"{email_limpio}@demotron.cl"
+                email = f"{username.replace(' ', '').lower()}@demotron.cl"
 
             if not UserClass.query.filter(getattr(UserClass, col_nombre) == username).first():
                 try:
                     db.session.execute(text(f"ALTER TABLE {UserClass.__tablename__} ALTER COLUMN {col_pass} TYPE VARCHAR(255)"))
                     db.session.commit()
-                except:
-                    db.session.rollback()
+                except: db.session.rollback()
 
                 nuevo = UserClass()
                 setattr(nuevo, col_nombre, username)
-                
-                if 'nombre' in columnas_python and col_nombre != 'nombre':
-                    setattr(nuevo, 'nombre', username)
-                    
+                if 'nombre' in columnas_python and col_nombre != 'nombre': setattr(nuevo, 'nombre', username)
                 setattr(nuevo, col_pass, generate_password_hash(pwd))
-                
-                if col_role in columnas_python:
-                    setattr(nuevo, col_role, role)
-                
-                if 'email' in columnas_python:
-                    setattr(nuevo, 'email', email)
-                
-                if 'activo' in columnas_python:
-                    setattr(nuevo, 'activo', True)
+                if col_role in columnas_python: setattr(nuevo, col_role, role)
+                if 'email' in columnas_python: setattr(nuevo, 'email', email)
+                if 'activo' in columnas_python: setattr(nuevo, 'activo', True)
                 
                 db.session.add(nuevo)
-                
                 autor_log = getattr(current_user, col_nombre, getattr(current_user, 'nombre', 'Admin'))
-                log = RegistroChatter(
-                    modelo_ref='sistema', registro_id='0', autor=autor_log, 
-                    accion='auditoria', mensaje=f"CREACIÓN DE ACCESO: Usuario {username} ({role})"
-                )
-                db.session.add(log)
+                db.session.add(RegistroChatter(modelo_ref='sistema', registro_id='0', autor=autor_log, accion='auditoria', mensaje=f"CREACIÓN DE ACCESO: Usuario {username} ({role})"))
                 db.session.commit()
             return redirect('/admin/usuarios')
             
@@ -107,15 +89,7 @@ def gestionar_usuarios():
             return f"ERROR TÉCNICO AL CREAR USUARIO: {str(e)}", 500
         
     usuarios_db = UserClass.query.all()
-    usuarios_limpios = []
-    for u in usuarios_db:
-        usuarios_limpios.append({
-            'id': u.id,
-            'nombre': getattr(u, col_nombre, getattr(u, 'nombre', 'S/I')),
-            'email': getattr(u, 'email', 'S/I'),
-            'role': getattr(u, col_role, 'usuario') if col_role in columnas_python else 'usuario'
-        })
-        
+    usuarios_limpios = [{'id': u.id, 'nombre': getattr(u, col_nombre, getattr(u, 'nombre', 'S/I')), 'email': getattr(u, 'email', 'S/I'), 'role': getattr(u, col_role, 'usuario') if col_role in columnas_python else 'usuario'} for u in usuarios_db]
     actividad = RegistroChatter.query.filter_by(modelo_ref='sistema').order_by(RegistroChatter.fecha.desc()).limit(150).all()
     return render_template('usuarios.html', usuarios=usuarios_limpios, actividad=actividad)
 
@@ -127,21 +101,19 @@ def eliminar_usuario(id):
     UserClass = current_user.__class__
     try:
         u = UserClass.query.get_or_404(id)
-        columnas = UserClass.__table__.columns.keys()
-        col_nombre = 'username' if 'username' in columnas else 'nombre'
+        col_nombre = 'username' if 'username' in UserClass.__table__.columns.keys() else 'nombre'
         nombre_u = getattr(u, col_nombre, 'Desconocido')
         nombre_actual = getattr(current_user, col_nombre, 'Actual')
         if nombre_u != nombre_actual:
             db.session.delete(u)
-            log = RegistroChatter(modelo_ref='sistema', registro_id='0', autor=nombre_actual, accion='auditoria', mensaje=f"REVOCACIÓN DE ACCESO: Se eliminó el usuario {nombre_u}")
-            db.session.add(log)
+            db.session.add(RegistroChatter(modelo_ref='sistema', registro_id='0', autor=nombre_actual, accion='auditoria', mensaje=f"REVOCACIÓN DE ACCESO: Se eliminó el usuario {nombre_u}"))
             db.session.commit()
     except Exception: db.session.rollback()
     return redirect('/admin/usuarios')
 
 
 # =====================================================================
-# MOTOR DE IMPORTACIÓN Y LIMPIEZA DE BASE DE DATOS EXCEL
+# MOTOR DE IMPORTACIÓN Y LIMPIEZA (REPARADO PARA COMPRAS)
 # =====================================================================
 @admin_bp.route('/admin/cargar_sql_final', strict_slashes=False)
 @login_required
@@ -312,20 +284,34 @@ def cargar_sql_final():
             db.session.commit()
         except Exception: pass
 
-        # --- COMPRAS ---
+        # --- COMPRAS PM (REPARADO PARA MÚLTIPLES REPUESTOS EN UNA MISMA OC) ---
         try:
             df_com = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
             df_com.columns = df_com.columns.str.strip()
+            
+            # Recolectar OCs del excel para limpiar la base de datos de manera segura y permitir re-ingresar múltiples items
+            ocs_en_excel = []
+            for idx, r in df_com.iterrows():
+                o = clean_string(str(r.get('OC', '')))
+                if o and o.lower() not in ['none', 'nan']: ocs_en_excel.append(o)
+            
+            if ocs_en_excel:
+                CompraRepuesto.query.filter(CompraRepuesto.oc.in_(set(ocs_en_excel))).delete(synchronize_session=False)
+                db.session.commit()
+
             for indice, row in df_com.iterrows():
                 cod = clean_string(str(row.get('Codigo', '') or '')).upper()
                 oc_str = clean_string(str(row.get('OC', '') or ''))
                 if not oc_str or oc_str.lower() in ['none','nan']: continue
-                fecha_dt = parse_date(row.get('Fecha'))
-                if not CompraRepuesto.query.filter_by(codigo_equipo=cod, oc=oc_str).first():
-                    db.session.add(CompraRepuesto(
-                        fecha=fecha_dt, oc=oc_str, codigo_equipo=cod, descripcion=clean_string(str(row.get('Descripcion', '') or '')),
-                        proveedor=clean_string(str(row.get('Proveedor', '') or '')), costo_pm_clp=safe_clean_float(row.get('Costo PM CLP')), estado_oc=clean_string(str(row.get('Estado OC', '') or ''))
-                    ))
+                
+                db.session.add(CompraRepuesto(
+                    fecha=parse_date(row.get('Fecha')), oc=oc_str, codigo_equipo=cod, 
+                    descripcion=clean_string(str(row.get('Descripcion', '') or '')),
+                    proveedor=clean_string(str(row.get('Proveedor', '') or '')), 
+                    costo_pm_clp=safe_clean_float(row.get('Costo PM CLP')), 
+                    estado_oc=clean_string(str(row.get('Estado OC', '') or ''))
+                ))
+                reporte['compras'] += 1
             db.session.commit()
         except Exception: pass
 
@@ -424,9 +410,10 @@ def cargar_sql_final():
             <h2 style="color: #16a34a; text-align: center; text-transform: uppercase; letter-spacing: 2px;">SINCRONIZACIÓN EXITOSA</h2>
             <ul style="list-style: none; padding: 0; font-size: 14px; color: #334155; text-transform: uppercase; font-weight: bold;">
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">EQUIPOS: <b style="float: right;">{reporte['equipos']}</b></li>
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">LECTURAS CORREGIDAS: <b style="float: right;">{reporte['lecturas']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">LECTURAS: <b style="float: right;">{reporte['lecturas']}</b></li>
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">PREVENTIVAS: <b style="float: right;">{reporte['preventivas']}</b></li>
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">CORRECTIVAS: <b style="float: right;">{reporte['correctivas']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">REPUESTOS (COMPRAS): <b style="float: right;">{reporte['compras']}</b></li>
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; background: #eff6ff;">FILTROS VINCULADOS: <span style="color: #2563eb; float: right;">{reporte['filtros']}</span></li>
             </ul>
             <div style='text-align: center; margin-top: 24px;'><a href='/' style='background: #1e293b; color: white; padding: 10px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; text-transform: uppercase;'>VOLVER AL SISTEMA</a></div>
