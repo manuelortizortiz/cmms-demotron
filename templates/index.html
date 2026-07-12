@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>DEMOTRON ERP CMMS</title>
-    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
+    <link rel="icon" href="{{ url_for('static', filename='Logo Azul.png') }}" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -778,7 +778,23 @@
                             labels: cData.costos_top7.prev_labels, 
                             datasets: [{ label: 'Costo Acumulado (CLP)', data: cData.costos_top7.prev_data, backgroundColor: '#1D4ED8', borderRadius: 2 }] 
                         }, 
-                        options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#F1F5F9' } }, y: { grid: { display: false }, ticks: { font: { weight: 'bold' } } } } }
+                        options: { 
+                            indexAxis: 'y', 
+                            maintainAspectRatio: false, 
+                            plugins: { legend: { display: false } }, 
+                            scales: { 
+                                x: { 
+                                    beginAtZero: true, 
+                                    grid: { color: '#F1F5F9' },
+                                    ticks: {
+                                        callback: function(value) {
+                                            return (value / 1000000) + 'mm';
+                                        }
+                                    }
+                                }, 
+                                y: { grid: { display: false }, ticks: { font: { weight: 'bold' } } } 
+                            } 
+                        }
                     });
                 }
             } catch(e) {}
