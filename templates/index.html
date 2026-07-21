@@ -9,6 +9,11 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- LIBRERÍAS DEL NUEVO MAPA NATIVO (LEAFLET) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <style>
         body { font-family: 'Inter', sans-serif; font-size: 13px; background-color: #F8FAFC; color: #334155; margin: 0; }
         .seccion { display: none; } .seccion.active { display: block; }
@@ -31,8 +36,6 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .btn-action { font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; border: 1px solid #E2E8F0; transition: all 0.2s; margin-right: 4px; }
         .btn-action:hover { background-color: #F8FAFC; }
-        .mapa-input { background: transparent; border: none; outline: none; font-size: 11px; font-weight: bold; width: 100%; padding: 4px; transition: all 0.2s; }
-        .mapa-input:focus { background: white; border: 1px solid #3B82F6; border-radius: 4px; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden relative">
@@ -50,10 +53,8 @@
             <a onclick="switchTab('eq', this)" class="nav-link">Equipos</a>
             <a onclick="switchTab('datos', this)" class="nav-link">Datos Técnicos</a>
             
-            <!-- NUEVO ENLACE DE MAPA DE FLOTA -->
-            <a onclick="switchTab('mapa', this)" class="nav-link text-emerald-700 font-bold border border-emerald-100 bg-emerald-50/50 mt-2 mb-4 mx-4 !rounded-lg text-center">📍 Geolocalización</a>
-            
             <p class="px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 mt-6">Gestión de Flota</p>
+            <a onclick="switchTab('mapa', this)" class="nav-link">Ubicación de Flota</a>
             <a onclick="switchTab('plan', this)" class="nav-link">Planificación Kanban</a>
             <a onclick="switchTab('cal', this)" class="nav-link">Calendario</a>
             <a onclick="switchTab('ot', this)" class="nav-link">OT Preventivas</a>
@@ -190,38 +191,33 @@
                 </div>
             </div>
 
-            <!-- MÓDULO GOOGLE MAPS -->
+            <!-- MÓDULO GOOGLE MAPS NATIVO (LEAFLET + COORDENADAS EXACTAS) -->
             <div id="mapa" class="seccion">
-                <div class="flex h-[calc(100vh-140px)] bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="flex h-[calc(100vh-140px)] bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
                     
-                    <!-- Panel Excel Editable -->
                     <div class="w-1/3 border-r border-slate-200 bg-slate-50 flex flex-col">
                         <div class="p-4 border-b border-slate-200 bg-white shadow-sm z-10 flex justify-between items-center">
                             <div>
                                 <h3 class="font-black text-slate-800 uppercase tracking-widest text-xs">Ubicación de Unidades</h3>
-                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Edite las ciudades/obras</p>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Tabla de Edición Masiva</p>
                             </div>
-                            <button onclick="guardarUbicacionesMasa()" id="btn-save-map" class="bg-emerald-600 text-white px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-widest shadow hover:bg-emerald-700 transition">Guardar</button>
+                            <button onclick="guardarUbicacionesMasa()" id="btn-save-map" class="bg-blue-700 text-white px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-widest shadow hover:bg-blue-800 transition">Guardar</button>
                         </div>
                         
-                        <div class="flex-1 overflow-y-auto p-0">
+                        <div class="flex-1 overflow-y-auto p-0 hide-scrollbar">
                             <table class="w-full text-left table-searchable" id="tabla-ubicaciones">
-                                <thead>
-                                    <tr class="bg-slate-100 border-b border-slate-200">
-                                        <th class="p-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest">Código</th>
-                                        <th class="p-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest">Ciudad / Ubicación</th>
-                                        <th class="p-3 text-center text-[9px] font-bold text-slate-500 uppercase tracking-widest">Ver</th>
+                                <thead class="sticky top-0 bg-slate-100 shadow-sm z-10">
+                                    <tr class="border-b border-slate-200">
+                                        <th class="p-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-4">Equipo</th>
+                                        <th class="p-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest">Ciudad, Obra o Coordenada (-35.0, -71.0)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for e in eqs %}
-                                    <tr class="border-b border-slate-200 bg-white hover:bg-slate-50 transition">
-                                        <td class="p-2 font-black text-blue-800 text-xs tracking-wide pl-4">{{ e.codigo }}</td>
-                                        <td class="p-2">
-                                            <input type="text" class="mapa-input ubicacion-editable" data-codigo="{{ e.codigo }}" value="{{ e.ubicacion if e.ubicacion != 'None' else '' }}" placeholder="Sin Ubicación">
-                                        </td>
-                                        <td class="p-2 text-center">
-                                            <button onclick="localizarEnMapa(this.parentElement.previousElementSibling.querySelector('input').value, '{{ e.codigo }}')" class="bg-slate-800 text-white rounded w-6 h-6 flex items-center justify-center hover:bg-blue-600 transition shadow mx-auto">📍</button>
+                                    <tr class="border-b border-slate-100 bg-white hover:bg-slate-50 transition">
+                                        <td class="p-2 font-black text-blue-800 text-xs tracking-wide pl-4 w-24 cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
+                                        <td class="p-2 pr-4">
+                                            <input type="text" class="w-full bg-transparent border-b border-dashed border-slate-300 focus:border-blue-500 outline-none text-slate-800 font-bold text-[11px] uppercase tracking-wider py-1 ubicacion-editable" data-codigo="{{ e.codigo }}" value="{{ e.ubicacion if e.ubicacion != 'None' else '' }}" placeholder="COORDENADA O CIUDAD">
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -230,16 +226,19 @@
                         </div>
                     </div>
 
-                    <!-- Visor Google Maps -->
-                    <div class="w-2/3 bg-slate-200 relative flex flex-col">
-                        <div class="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur px-5 py-3 rounded-lg shadow-lg border border-slate-200 pointer-events-none">
-                            <span class="text-[10px] font-black text-slate-800 uppercase tracking-widest block mb-1">Visualizando Unidad:</span>
-                            <span id="mapa-titulo" class="text-blue-700 font-bold text-sm uppercase tracking-wider">MAPA GENERAL (CHILE)</span>
+                    <div class="w-2/3 bg-slate-200 relative flex flex-col z-0">
+                        <div id="map-container" class="w-full h-full"></div>
+                        <div class="absolute bottom-6 left-6 z-[400] bg-white/90 backdrop-blur px-5 py-3 rounded shadow-lg border border-slate-200 pointer-events-none">
+                            <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 border-b border-slate-200 pb-1">Simbología GPS</p>
+                            <p class="text-[10px] font-bold text-slate-800 mt-2 uppercase tracking-wide">📍 EXACTITUD GPS</p>
+                            <p class="text-[9px] text-slate-500 italic mt-0.5">Use latitud, longitud (ej. -35.3855, -71.6385) para fijar el pin en un metro cuadrado exacto.</p>
+                            
+                            <p class="text-[10px] font-bold text-slate-800 mt-2 uppercase tracking-wide">📍 TEXTO / CIUDAD</p>
+                            <p class="text-[9px] text-slate-500 italic mt-0.5">Escriba el nombre de la ciudad o faena. El motor lo geocodificará al centro de la zona.</p>
+
+                            <p class="text-[10px] font-bold text-slate-800 mt-2 uppercase tracking-wide">📍 REGLA DE TALLER</p>
+                            <p class="text-[9px] text-slate-500 italic mt-0.5">Equipos en estado "Taller" se fijarán automáticamente en Demotron S.A. (Panguilemu).</p>
                         </div>
-                        <iframe id="gmap-iframe" class="w-full h-full border-0" 
-                                src="https://maps.google.com/maps?q=Chile&t=&z=5&ie=UTF8&iwloc=&output=embed" 
-                                allowfullscreen>
-                        </iframe>
                     </div>
                 </div>
             </div>
@@ -539,7 +538,7 @@
         </div>
     </main>
 
-    <!-- MODAL CAMBIAR CONTRASEÑA -->
+    <!-- MODALES Y SCRIPTS -->
     <div id="modal-password" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden border border-slate-300">
             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
@@ -564,7 +563,6 @@
         </div>
     </div>
 
-    <!-- MODAL CHATTER -->
     <div id="chatter-modal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-2xl rounded shadow-2xl flex flex-col max-h-[90vh] border border-slate-300">
             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 shrink-0">
@@ -592,7 +590,6 @@
         </div>
     </div>
 
-    <!-- MODAL EDICIÓN GENÉRICA -->
     <div id="edit-modal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden border border-slate-300">
             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
@@ -612,28 +609,14 @@
             const actual = document.getElementById('pass_actual').value;
             const nueva = document.getElementById('pass_nueva').value;
             const msg = document.getElementById('pass_msg');
-            
-            if(!actual || !nueva) {
-                msg.innerText = "ES REQUISITO COMPLETAR AMBAS CREDENCIALES.";
-                msg.classList.remove('hidden');
-                return;
-            }
-            
-            fetch('/api/cambiar_password', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({actual: actual, nueva: nueva})
-            }).then(r => r.json()).then(data => {
+            if(!actual || !nueva) { msg.innerText = "ES REQUISITO COMPLETAR AMBAS CREDENCIALES."; msg.classList.remove('hidden'); return; }
+            fetch('/api/cambiar_password', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({actual: actual, nueva: nueva}) })
+            .then(r => r.json()).then(data => {
                 if(data.status === 'success') {
-                    alert("ACTUALIZACIÓN DE SEGURIDAD EXITOSA. UTILICE SU NUEVA CLAVE AL REINGRESAR.");
+                    alert("ACTUALIZACIÓN DE SEGURIDAD EXITOSA.");
                     document.getElementById('modal-password').classList.add('hidden');
-                    document.getElementById('pass_actual').value = '';
-                    document.getElementById('pass_nueva').value = '';
                     msg.classList.add('hidden');
-                } else {
-                    msg.innerText = data.message;
-                    msg.classList.remove('hidden');
-                }
+                } else { msg.innerText = data.message; msg.classList.remove('hidden'); }
             });
         }
 
@@ -644,7 +627,9 @@
             document.getElementById('title').innerText = el.innerText.trim();
             const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + t;
             window.history.replaceState({path:newUrl}, '', newUrl);
+            
             if(t==='cal' && window.calendar) { setTimeout(() => window.calendar.render(), 100); }
+            if(t==='mapa') { setTimeout(() => initMap(), 300); }
         }
 
         function filtrarTablas(q) {
@@ -660,11 +645,104 @@
             }
         }
 
-        // --- SISTEMA DE GUARDADO EN MASA DE MAPAS ---
+        // --- SISTEMA NATIVO DE MAPAS (GPS + GEOCODIFICACIÓN) ---
+        let mapInstance = null;
+        let markersLayer = null;
+        const equiposData = {{ eqs|tojson }};
+        
+        // Coordenada Fija de la Empresa
+        const DEMOTRON_COORDS = [-35.3855, -71.6385];
+        const coordCache = { "taller": DEMOTRON_COORDS, "panguilemu": DEMOTRON_COORDS, "demotron": DEMOTRON_COORDS };
+
+        function getNormalizedLocation(eq) {
+            if (eq.estado.toLowerCase() === 'taller') return "TALLER DEMOTRON";
+            let ubi = eq.ubicacion ? eq.ubicacion.trim() : "";
+            if (!ubi || ubi.toLowerCase() === 'none' || ubi.toLowerCase() === 'sin asignacion') return null;
+            if (ubi.toLowerCase().includes('taller') || ubi.toLowerCase().includes('panguilemu')) return "TALLER DEMOTRON";
+            return ubi;
+        }
+
+        function esCoordenada(str) {
+            let partes = str.split(',');
+            if(partes.length === 2) {
+                let lat = parseFloat(partes[0].trim());
+                let lon = parseFloat(partes[1].trim());
+                if(!isNaN(lat) && !isNaN(lon)) return [lat, lon];
+            }
+            return null;
+        }
+
+        async function initMap() {
+            if (!mapInstance) {
+                mapInstance = L.map('map-container').setView([-35.4264, -71.6554], 7);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap',
+                    maxZoom: 19
+                }).addTo(mapInstance);
+                markersLayer = L.layerGroup().addTo(mapInstance);
+            } else {
+                mapInstance.invalidateSize();
+            }
+            renderMapPins();
+        }
+
+        async function renderMapPins() {
+            markersLayer.clearLayers();
+            let grouped = {};
+            
+            equiposData.forEach(eq => {
+                let loc = getNormalizedLocation(eq);
+                if (loc) {
+                    if(!grouped[loc]) grouped[loc] = [];
+                    grouped[loc].push(eq);
+                }
+            });
+
+            for (let loc of Object.keys(grouped)) {
+                let coords = coordCache[loc.toLowerCase()];
+                let esGPS = esCoordenada(loc);
+
+                if (esGPS) {
+                    coords = esGPS;
+                } else if (!coords) {
+                    try {
+                        // Busca en OpenStreetMap
+                        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(loc + ', Chile')}`);
+                        let data = await res.json();
+                        if (data && data.length > 0) {
+                            coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                            coordCache[loc.toLowerCase()] = coords; // Guardar en caché para no saturar la API
+                        }
+                    } catch(e) { console.error("Error geocodificando: ", loc); }
+                }
+
+                if (coords) {
+                    let displayName = esGPS ? "UBICACIÓN GPS" : loc;
+                    let popupHtml = `<div class="p-1 min-w-[220px]">
+                        <h4 class="font-black text-slate-800 uppercase tracking-widest text-[11px] mb-2 border-b border-slate-200 pb-1">📍 ${displayName}</h4>
+                        <ul class="space-y-1.5 max-h-48 overflow-y-auto hide-scrollbar">`;
+                    
+                    grouped[loc].forEach(eq => {
+                        let badge = eq.estado === 'Operativo' ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-100 text-orange-800';
+                        if(eq.estado === 'Taller') badge = 'bg-red-100 text-red-800';
+                        
+                        popupHtml += `<li><a href="/equipo/${eq.codigo}" target="_blank" title="Abrir Historial" class="block bg-slate-50 p-2 rounded border border-slate-200 hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer" style="text-decoration:none;">
+                            <span class="font-black text-blue-700 text-xs uppercase tracking-wider">${eq.codigo}</span> 
+                            <span class="float-right text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${badge}">${eq.estado}</span>
+                        </a></li>`;
+                    });
+                    
+                    popupHtml += `</ul></div>`;
+                    let marker = L.marker(coords).bindPopup(popupHtml);
+                    markersLayer.addLayer(marker);
+                }
+            }
+        }
+
         function guardarUbicacionesMasa() {
             const btn = document.getElementById('btn-save-map');
             btn.innerText = 'GUARDANDO...';
-            btn.classList.replace('bg-emerald-600', 'bg-orange-500');
+            btn.classList.replace('bg-blue-700', 'bg-orange-500');
             
             let cambios = [];
             document.querySelectorAll('.ubicacion-editable').forEach(input => {
@@ -677,7 +755,7 @@
 
             if(cambios.length === 0) {
                 btn.innerText = 'GUARDAR';
-                btn.classList.replace('bg-orange-500', 'bg-emerald-600');
+                btn.classList.replace('bg-orange-500', 'bg-blue-700');
                 return;
             }
 
@@ -687,22 +765,17 @@
                 body: JSON.stringify({ cambios: cambios })
             }).then(r => r.json()).then(data => {
                 if(data.status === 'success') {
+                    cambios.forEach(c => {
+                        let eq = equiposData.find(e => e.codigo === c.codigo);
+                        if(eq) eq.ubicacion = c.ubicacion;
+                    });
                     document.querySelectorAll('.ubicacion-editable').forEach(input => { input.setAttribute('value', input.value); });
                     btn.innerText = '¡LISTO!';
-                    btn.classList.replace('bg-orange-500', 'bg-blue-600');
-                    setTimeout(() => { btn.innerText = 'GUARDAR'; btn.classList.replace('bg-blue-600', 'bg-emerald-600'); }, 2000);
+                    btn.classList.replace('bg-orange-500', 'bg-emerald-600');
+                    renderMapPins(); 
+                    setTimeout(() => { btn.innerText = 'GUARDAR'; btn.classList.replace('bg-emerald-600', 'bg-blue-700'); }, 2000);
                 }
             });
-        }
-
-        function localizarEnMapa(ubicacion, codigo) {
-            if(!ubicacion || ubicacion.toLowerCase() === 'none') {
-                alert('Este equipo no tiene una ubicación registrada para mostrar en el mapa.');
-                return;
-            }
-            document.getElementById('mapa-titulo').innerText = codigo + ' (' + ubicacion + ')';
-            const url = "https://maps.google.com/maps?q=" + encodeURIComponent(ubicacion) + "&t=&z=14&ie=UTF8&iwloc=&output=embed";
-            document.getElementById('gmap-iframe').src = url;
         }
 
         let editData = {};
