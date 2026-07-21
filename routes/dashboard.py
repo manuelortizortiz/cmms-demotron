@@ -62,14 +62,12 @@ def dashboard():
         correctivas_mes = len([o for o in ots_db if o.tipo_ot=='Correctiva' and o.fecha and o.fecha.month==mes_actual and o.fecha.year==anio_actual])
 
         eq_fallas_counter = Counter(o.codigo_equipo for o in ots_db if o.tipo_ot=='Correctiva')
-        
         top_equipos_fallas = []
         for k, v in eq_fallas_counter.most_common(5):
             eq_obj = next((e for e in eqs_db if e.codigo == k), None)
             f_url = buscar_foto_por_tipo(eq_obj.tipo_equipo, eq_obj.marca) if eq_obj else ''
             top_equipos_fallas.append({'codigo': k, 'cantidad': v, 'foto_url': f_url})
 
-        # SUMATORIA DE COSTOS REPARADA: SOLO AÑO VIGENTE (2026) PARA EL TOP 7 Y GRÁFICO MENSUAL
         costos = {2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0, 10:0, 11:0, 12:0}
         costos_prev_eq = {}
         
@@ -77,8 +75,6 @@ def dashboard():
             costo_ot = float(o.costo_mantencion_clp or 0.0)
             if o.fecha and o.fecha.year == 2026 and o.fecha.month in costos: 
                 costos[o.fecha.month] += costo_ot
-            
-            # El top 7 solo sumará gastos preventivos si ocurrieron desde enero 2026 en adelante
             if o.tipo_ot == 'Preventiva' and o.fecha and o.fecha.year >= 2026:
                 cod = o.codigo_equipo
                 costos_prev_eq[cod] = costos_prev_eq.get(cod, 0.0) + costo_ot
@@ -87,13 +83,10 @@ def dashboard():
             costo_compra = float(c.costo_pm_clp or 0.0)
             if c.fecha and c.fecha.year == 2026 and c.fecha.month in costos:
                 costos[c.fecha.month] += costo_compra
-                
-            # Igual para las compras
             if c.fecha and c.fecha.year >= 2026:
                 cod = c.codigo_equipo
                 costos_prev_eq[cod] = costos_prev_eq.get(cod, 0.0) + costo_compra
 
-        # Top 7 filtrado
         top_7_prev_list = sorted(costos_prev_eq.items(), key=lambda x: x[1], reverse=True)[:7]
         top_7_preventivas = [{'codigo': x[0], 'costo': x[1], 'costo_str': format_clp(x[1])} for x in top_7_prev_list]
 
