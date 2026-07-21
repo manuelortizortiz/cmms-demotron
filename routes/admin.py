@@ -113,7 +113,7 @@ def eliminar_usuario(id):
 
 
 # =====================================================================
-# MOTOR DE IMPORTACIÓN Y LIMPIEZA (REPARADO PARA COMPRAS)
+# MOTOR DE IMPORTACIÓN Y LIMPIEZA DE BASE DE DATOS EXCEL
 # =====================================================================
 @admin_bp.route('/admin/cargar_sql_final', strict_slashes=False)
 @login_required
@@ -122,6 +122,7 @@ def cargar_sql_final():
     if rol_actual not in ['admin', 'gerencia']: return "ACCESO DENEGADO", 403
 
     reporte = {"equipos": 0, "lecturas": 0, "preventivas": 0, "correctivas": 0, "compras": 0, "filtros": 0, "mensajes": []}
+    estado_ubicaciones = "NO DETECTADO"
     
     try:
         try:
@@ -144,6 +145,9 @@ def cargar_sql_final():
         excel_principal = next((f for f in archivos if "CMMS" in f.upper() and f.endswith(('.xlsx', '.xls')) and not f.startswith('~$')), None)
         archivo_filtros = next((f for f in archivos if "filtro" in f.lower() and f.endswith(('.xlsx', '.xls', '.csv')) and not f.startswith('~$')), None)
         archivo_detalles = next((f for f in archivos if "detalles" in f.lower() and f.endswith(('.xlsx', '.csv')) and not f.startswith('~$')), None)
+        
+        # NUEVO: Detector de archivo de Ubicaciones Externo
+        archivo_ubicaciones = next((f for f in archivos if "ubicacion" in f.lower() and f.endswith(('.xlsx', '.csv', '.xls')) and not f.startswith('~$')), None)
 
         if not excel_principal: return "ERROR: NO SE DETECTA ARCHIVO CMMS (.xlsx)."
 
@@ -284,12 +288,11 @@ def cargar_sql_final():
             db.session.commit()
         except Exception: pass
 
-        # --- COMPRAS PM (REPARADO PARA MÚLTIPLES REPUESTOS EN UNA MISMA OC) ---
+        # --- COMPRAS PM ---
         try:
             df_com = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
             df_com.columns = df_com.columns.str.strip()
             
-            # Recolectar OCs del excel para limpiar la base de datos de manera segura y permitir re-ingresar múltiples items
             ocs_en_excel = []
             for idx, r in df_com.iterrows():
                 o = clean_string(str(r.get('OC', '')))
@@ -373,6 +376,33 @@ def cargar_sql_final():
                 db.session.commit()
             except Exception as e: reporte['mensajes'].append(f"ERROR EN FILTROS: {str(e)}")
 
+        # --- IMPORTADOR MASIVO DE UBICACIONES / MAPA ---
+        if archivo_ubicaciones:
+            try:
+                if archivo_ubicaciones.endswith('.xlsx') or archivo_ubicaciones.endswith('.xls'): 
+                    df_ubi = pd.read_excel(archivo_ubicaciones, engine='openpyxl')
+                else: 
+                    df_ubi = pd.read_csv(archivo_ubicaciones)
+                
+                df_ubi.columns = [str(c).strip().lower() for c in df_ubi.columns]
+                
+                cod_col = next((c for c in df_ubi.columns if 'cod' in c or 'equipo' in c), None)
+                ubi_col = next((c for c in df_ubi.columns if 'ubic' in c or 'ciudad' in c or 'obra' in c), None)
+
+                if cod_col and ubi_col:
+                    for indice, row in df_ubi.iterrows():
+                        cod = str(row.get(cod_col, '')).strip().upper()
+                        ubi = clean_string(str(row.get(ubi_col, '')))
+                        if cod and ubi and ubi.lower() != 'none':
+                            eq = Equipo.query.filter_by(codigo=cod).first()
+                            if eq: eq.ubicacion = ubi
+                    db.session.commit()
+                    estado_ubicaciones = "ACTUALIZADO CON ÉXITO"
+                else:
+                    estado_ubicaciones = "ERROR: FALTAN COLUMNAS 'CODIGO' O 'UBICACION'"
+            except Exception as e:
+                estado_ubicaciones = f"ERROR: {str(e)}"
+
         for eq in Equipo.query.all():
             u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if u_lec: eq.lectura_actual = u_lec.horometro if eq.control_base == 'HORAS' else u_lec.kilometraje
@@ -410,11 +440,12 @@ def cargar_sql_final():
             <h2 style="color: #16a34a; text-align: center; text-transform: uppercase; letter-spacing: 2px;">SINCRONIZACIÓN EXITOSA</h2>
             <ul style="list-style: none; padding: 0; font-size: 14px; color: #334155; text-transform: uppercase; font-weight: bold;">
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">EQUIPOS: <b style="float: right;">{reporte['equipos']}</b></li>
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">LECTURAS: <b style="float: right;">{reporte['lecturas']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">LECTURAS CORREGIDAS: <b style="float: right;">{reporte['lecturas']}</b></li>
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">PREVENTIVAS: <b style="float: right;">{reporte['preventivas']}</b></li>
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">CORRECTIVAS: <b style="float: right;">{reporte['correctivas']}</b></li>
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">REPUESTOS (COMPRAS): <b style="float: right;">{reporte['compras']}</b></li>
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; background: #eff6ff;">FILTROS VINCULADOS: <span style="color: #2563eb; float: right;">{reporte['filtros']}</span></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">FILTROS VINCULADOS: <span style="color: #2563eb; float: right;">{reporte['filtros']}</span></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; background: #f0fdf4;">MAPAS Y UBICACIONES EXCEL: <span style="color: #16a34a; float: right;">{estado_ubicaciones}</span></li>
             </ul>
             <div style='text-align: center; margin-top: 24px;'><a href='/' style='background: #1e293b; color: white; padding: 10px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; text-transform: uppercase;'>VOLVER AL SISTEMA</a></div>
         </div>
