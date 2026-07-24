@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>DEMOTRON ERP CMMS</title>
     <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
@@ -21,8 +22,9 @@
         .nav-link { color: #64748B; display: block; padding: 12px 24px; cursor: pointer; transition: all 0.2s; border-radius: 0 24px 24px 0; margin-right: 16px; margin-bottom: 4px; font-weight: 600; font-size: 12px; }
         .nav-link:hover { background: #F1F5F9; color: #0F172A; }
         .nav-link.active { background: #EFF6FF; color: #1D4ED8; border-left: 4px solid #1D4ED8; }
-        .card-custom { background: white; border-radius: 8px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02); overflow: hidden; padding: 24px;}
+        .card-custom { background: white; border-radius: 8px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02); overflow: hidden; padding: 16px;}
         .card-custom-nopad { background: white; border-radius: 8px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02); overflow: hidden;}
+        @media (min-width: 768px) { .card-custom { padding: 24px; } }
         .table-wrapper { width: 100%; overflow-x: auto; }
         .table-custom { width: 100%; border-collapse: collapse; min-width: 600px; }
         .table-custom th { font-size: 10px; color: #64748B; padding: 16px; border-bottom: 1px solid #E2E8F0; text-align: left; font-weight: 700; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -36,6 +38,8 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .btn-action { font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; border: 1px solid #E2E8F0; transition: all 0.2s; margin-right: 4px; }
         .btn-action:hover { background-color: #F8FAFC; }
+        .mapa-input { background: transparent; border: none; outline: none; font-size: 11px; font-weight: bold; width: 100%; padding: 4px; transition: all 0.2s; }
+        .mapa-input:focus { background: white; border: 1px solid #3B82F6; border-radius: 4px; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden relative">
@@ -43,9 +47,14 @@
     <datalist id="lista_mecanicos">{% for m in mecanicos %}<option value="{{ m.nombre }}"></option>{% endfor %}</datalist>
     <datalist id="lista_pautas"><option value="PM1"></option><option value="PM2"></option><option value="PM3"></option><option value="PM4"></option><option value="PM5"></option></datalist>
 
-    <aside class="w-64 sidebar-bg flex flex-col z-20 shadow-sm shrink-0">
-        <div class="h-20 flex items-center justify-center border-b border-slate-100 p-4">
+    <!-- FONDO OSCURO PARA MENÚ EN MÓVILES -->
+    <div id="sidebar-backdrop" onclick="toggleMenu()" class="fixed inset-0 bg-slate-900/50 z-30 hidden md:hidden backdrop-blur-sm"></div>
+
+    <!-- MENÚ LATERAL RESPONSIVO -->
+    <aside id="sidebar" class="w-64 sidebar-bg flex flex-col z-40 shadow-xl shrink-0 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out">
+        <div class="h-16 md:h-20 flex items-center justify-between px-6 border-b border-slate-100">
             <span class='text-2xl font-black text-blue-900 tracking-tighter'>DEMOTRON</span>
+            <button onclick="toggleMenu()" class="md:hidden text-slate-400 hover:text-slate-800 text-2xl font-black">&times;</button>
         </div>
         <nav class="flex-1 py-6 overflow-y-auto hide-scrollbar">
             <p class="px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Principal</p>
@@ -84,64 +93,66 @@
         </div>
     </aside>
 
-    <main class="flex-1 flex flex-col bg-[#F8FAFC] min-w-0">
-        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
-            <h1 id="title" class="text-lg font-black text-slate-800 uppercase tracking-wider truncate">Dashboard</h1>
-            <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="Buscar registro..." class="form-input w-64 bg-slate-50 ml-4 hidden md:block border-slate-300">
+    <main class="flex-1 flex flex-col bg-[#F8FAFC] min-w-0 w-full">
+        <!-- CABECERA RESPONSIVA -->
+        <header class="h-16 md:h-20 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleMenu()" class="md:hidden text-slate-800 p-1 text-2xl font-black leading-none focus:outline-none">☰</button>
+                <h1 id="title" class="text-base md:text-lg font-black text-slate-800 uppercase tracking-wider truncate">Dashboard</h1>
+            </div>
+            <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="Buscar registro..." class="form-input w-32 md:w-64 bg-slate-50 border-slate-300">
         </header>
 
-        <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-8">
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8">
             
             <div id="dash" class="seccion active">
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-                    <div class="card-custom border-t-4 border-slate-800 text-center"><p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total Flota</p><p class="text-4xl font-black text-slate-800 tracking-tighter">{{ kpis.total }}</p></div>
-                    <div class="card-custom border-t-4 border-emerald-500 text-center"><p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Equipos Operativos</p><p class="text-4xl font-black text-emerald-600 tracking-tighter">{{ kpis.operativos }}</p></div>
-                    <div class="card-custom border-t-4 border-red-600 text-center"><p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Atrasados (PM)</p><p class="text-4xl font-black text-red-600 tracking-tighter">{{ kpis.atrasados }}</p></div>
-                    <div class="card-custom border-t-4 border-blue-600 text-center"><p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Órdenes Abiertas</p><p class="text-4xl font-black text-blue-700 tracking-tighter">{{ kpis.ot_abiertas }}</p></div>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+                    <div class="card-custom border-t-4 border-slate-800 text-center"><p class="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 md:mb-2">Total Flota</p><p class="text-2xl md:text-4xl font-black text-slate-800 tracking-tighter">{{ kpis.total }}</p></div>
+                    <div class="card-custom border-t-4 border-emerald-500 text-center"><p class="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 md:mb-2">Operativos</p><p class="text-2xl md:text-4xl font-black text-emerald-600 tracking-tighter">{{ kpis.operativos }}</p></div>
+                    <div class="card-custom border-t-4 border-red-600 text-center"><p class="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 md:mb-2">Atrasados</p><p class="text-2xl md:text-4xl font-black text-red-600 tracking-tighter">{{ kpis.atrasados }}</p></div>
+                    <div class="card-custom border-t-4 border-blue-600 text-center"><p class="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 md:mb-2">Órdenes Activas</p><p class="text-2xl md:text-4xl font-black text-blue-700 tracking-tighter">{{ kpis.ot_abiertas }}</p></div>
                 </div>
 
-                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-                    <div class="card-custom"><h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Estado Operativo</h3><div class="h-48 relative w-full"><canvas id="chartEstado"></canvas></div></div>
-                    <div class="card-custom"><h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Inversión Mensual</h3><div class="h-48 relative w-full"><canvas id="chartCostosMensuales"></canvas></div></div>
-                    <div class="card-custom"><h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Pareto de Fallas (Desde 2020)</h3><div class="h-48 relative w-full"><canvas id="chartFallas"></canvas></div></div>
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+                    <div class="card-custom"><h3 class="text-[11px] md:text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Estado Operativo</h3><div class="h-40 md:h-48 relative w-full"><canvas id="chartEstado"></canvas></div></div>
+                    <div class="card-custom"><h3 class="text-[11px] md:text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Inversión Mensual</h3><div class="h-40 md:h-48 relative w-full"><canvas id="chartCostosMensuales"></canvas></div></div>
+                    <div class="card-custom"><h3 class="text-[11px] md:text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Pareto de Fallas (Desde 2020)</h3><div class="h-40 md:h-48 relative w-full"><canvas id="chartFallas"></canvas></div></div>
                 </div>
 
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-white border border-slate-200 rounded p-5 shadow-sm text-center">
-                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Disponibilidad Mecánica</p>
-                        <p class="text-2xl font-black text-slate-800">{{ kpis.disponibilidad_pct }}%</p>
-                        <div class="w-full bg-slate-100 h-1 mt-3"><div class="bg-emerald-500 h-1" style="width: {{ kpis.disponibilidad_pct }}%"></div></div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+                    <div class="bg-white border border-slate-200 rounded p-4 md:p-5 shadow-sm text-center">
+                        <p class="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Disponibilidad</p>
+                        <p class="text-lg md:text-2xl font-black text-slate-800">{{ kpis.disponibilidad_pct }}%</p>
+                        <div class="w-full bg-slate-100 h-1 mt-2 md:mt-3"><div class="bg-emerald-500 h-1" style="width: {{ kpis.disponibilidad_pct }}%"></div></div>
                     </div>
-                    <div class="bg-white border border-slate-200 rounded p-5 shadow-sm text-center">
-                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Cumplimiento PM</p>
-                        <p class="text-2xl font-black text-slate-800">{{ kpis.cumpl_pm_pct }}%</p>
-                        <div class="w-full bg-slate-100 h-1 mt-3"><div class="bg-blue-600 h-1" style="width: {{ kpis.cumpl_pm_pct }}%"></div></div>
+                    <div class="bg-white border border-slate-200 rounded p-4 md:p-5 shadow-sm text-center">
+                        <p class="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Cumplimiento PM</p>
+                        <p class="text-lg md:text-2xl font-black text-slate-800">{{ kpis.cumpl_pm_pct }}%</p>
+                        <div class="w-full bg-slate-100 h-1 mt-2 md:mt-3"><div class="bg-blue-600 h-1" style="width: {{ kpis.cumpl_pm_pct }}%"></div></div>
                     </div>
-                    <div class="bg-white border border-slate-200 rounded p-5 shadow-sm text-center">
-                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">MTTR (Tiempo Reparación)</p>
-                        <p class="text-2xl font-black text-slate-800">{{ kpis.mttr }}</p>
-                        <p class="text-[9px] text-slate-400 mt-1 uppercase font-semibold">Promedio Cierre OT</p>
+                    <div class="bg-white border border-slate-200 rounded p-4 md:p-5 shadow-sm text-center flex flex-col justify-center">
+                        <p class="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">MTTR Promedio</p>
+                        <p class="text-lg md:text-2xl font-black text-slate-800">{{ kpis.mttr }}</p>
                     </div>
-                    <div class="bg-white border border-slate-200 rounded p-5 shadow-sm text-center">
-                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">M. Correctivas Mensuales</p>
-                        <p class="text-2xl font-black text-red-600">{{ kpis.correctivas_mes }}</p>
-                        <p class="text-[9px] text-slate-400 mt-1 uppercase font-semibold">Averías Registradas</p>
+                    <div class="bg-white border border-slate-200 rounded p-4 md:p-5 shadow-sm text-center flex flex-col justify-center">
+                        <p class="text-[8px] md:text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">M. Correctivas Mes</p>
+                        <p class="text-lg md:text-2xl font-black text-red-600">{{ kpis.correctivas_mes }}</p>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
                     <div class="card-custom">
-                        <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Top 7 Costos Preventivos</h3>
-                        <div class="h-64 relative w-full"><canvas id="chartTop7Prev"></canvas></div>
+                        <h3 class="text-[11px] md:text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Top 7 Costos Preventivos</h3>
+                        <div class="h-48 md:h-64 relative w-full"><canvas id="chartTop7Prev"></canvas></div>
                     </div>
                     <div class="card-custom">
-                        <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Equipos Próximos a Mantención</h3>
-                        <div class="space-y-5 mt-4 overflow-y-auto max-h-64 pr-2 hide-scrollbar">
+                        <h3 class="text-[11px] md:text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Próximos a Mantención</h3>
+                        <div class="space-y-4 md:space-y-5 mt-4 overflow-y-auto max-h-48 md:max-h-64 pr-2 hide-scrollbar">
                             {% for eq in top_7_cercanos %}
                             <div>
-                                <div class="flex justify-between items-end mb-1.5">
-                                    <span class="text-xs font-black text-slate-800 uppercase tracking-wider">{{ eq.codigo }}</span>
-                                    <span class="text-[10px] font-black uppercase tracking-widest {% if eq.pct >= 85 %}text-red-600{% elif eq.pct >= 70 %}text-orange-500{% else %}text-emerald-600{% endif %}">
+                                <div class="flex justify-between items-end mb-1">
+                                    <span class="text-[10px] md:text-xs font-black text-slate-800 uppercase tracking-wider">{{ eq.codigo }}</span>
+                                    <span class="text-[9px] md:text-[10px] font-black uppercase tracking-widest {% if eq.pct >= 85 %}text-red-600{% elif eq.pct >= 70 %}text-orange-500{% else %}text-emerald-600{% endif %}">
                                         Restan {{ eq.margen_str }}
                                     </span>
                                 </div>
@@ -150,38 +161,35 @@
                                 </div>
                             </div>
                             {% endfor %}
-                            {% if not top_7_cercanos %}
-                            <p class="text-[10px] text-slate-400 uppercase font-bold text-center py-6 tracking-widest">No hay equipos con margen positivo</p>
-                            {% endif %}
                         </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
                     <div class="card-custom col-span-1 lg:col-span-2">
-                        <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Equipos con más Averías</h3>
-                        <div class="flex overflow-x-auto gap-4 hide-scrollbar pb-2">
+                        <h3 class="text-[11px] md:text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Equipos con más Averías</h3>
+                        <div class="flex overflow-x-auto gap-3 md:gap-4 hide-scrollbar pb-2">
                             {% for eq in top_equipos_fallas %}
-                            <div class="border border-slate-200 rounded p-4 text-center min-w-[140px] bg-slate-50">
-                                <img src="{{ eq.foto_url }}" class="h-16 object-contain mx-auto mb-2 drop-shadow-sm" onerror="this.outerHTML='<div class=\'h-16 flex items-center justify-center text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-2 border border-dashed border-slate-300 rounded bg-white\'>SIN FOTO</div>';">
-                                <p class="font-black text-slate-800 text-sm uppercase tracking-wider mb-2">{{ eq.codigo }}</p>
-                                <span class="inline-block px-3 py-1 bg-red-100 text-red-700 font-bold text-[10px] uppercase tracking-widest rounded">{{ eq.cantidad }} Fallas</span>
+                            <div class="border border-slate-200 rounded p-3 md:p-4 text-center min-w-[120px] md:min-w-[140px] bg-slate-50">
+                                <img src="{{ eq.foto_url }}" class="h-12 md:h-16 object-contain mx-auto mb-2 drop-shadow-sm" onerror="this.outerHTML='<div class=\'h-12 md:h-16 flex items-center justify-center text-[8px] text-slate-400 font-bold uppercase tracking-widest mb-2 border border-dashed border-slate-300 rounded bg-white\'>SIN FOTO</div>';">
+                                <p class="font-black text-slate-800 text-[11px] md:text-sm uppercase tracking-wider mb-2">{{ eq.codigo }}</p>
+                                <span class="inline-block px-2 py-1 md:px-3 bg-red-100 text-red-700 font-bold text-[9px] md:text-[10px] uppercase tracking-widest rounded">{{ eq.cantidad }} Fallas</span>
                             </div>
                             {% endfor %}
                         </div>
                     </div>
                     <div class="card-custom-nopad border border-red-200 flex flex-col">
-                        <div class="px-6 py-4 bg-red-50 border-b border-red-100">
-                            <h3 class="font-black text-red-700 text-xs uppercase tracking-widest">Alertas Críticas: Atrasados</h3>
+                        <div class="px-4 md:px-6 py-3 md:py-4 bg-red-50 border-b border-red-100">
+                            <h3 class="font-black text-red-700 text-[10px] md:text-xs uppercase tracking-widest">Alertas Críticas</h3>
                         </div>
                         <div class="flex-1 overflow-y-auto max-h-[160px] p-2">
                             <table class="w-full text-left">
-                                <thead><tr><th class="p-2 text-[9px] text-slate-500 uppercase tracking-widest">Equipo</th><th class="p-2 text-[9px] text-slate-500 uppercase tracking-widest text-right">Atraso</th></tr></thead>
+                                <thead><tr><th class="p-2 text-[8px] md:text-[9px] text-slate-500 uppercase tracking-widest">Equipo</th><th class="p-2 text-[8px] md:text-[9px] text-slate-500 uppercase tracking-widest text-right">Atraso</th></tr></thead>
                                 <tbody>
                                     {% for c in criticos %}
                                     <tr>
-                                        <td class="p-2 font-bold text-slate-800 cursor-pointer hover:text-blue-700 border-b border-slate-100" onclick="window.location.href='/equipo/{{c.codigo}}'">{{ c.codigo }}</td>
-                                        <td class="p-2 text-right text-red-600 font-bold border-b border-slate-100 font-mono">{{ c.margen_str }}</td>
+                                        <td class="p-2 font-bold text-[10px] md:text-xs text-slate-800 cursor-pointer hover:text-blue-700 border-b border-slate-100" onclick="window.location.href='/equipo/{{c.codigo}}'">{{ c.codigo }}</td>
+                                        <td class="p-2 text-right text-[10px] md:text-xs text-red-600 font-bold border-b border-slate-100 font-mono">{{ c.margen_str }}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -191,33 +199,34 @@
                 </div>
             </div>
 
-            <!-- MÓDULO GOOGLE MAPS NATIVO (LEAFLET + COORDENADAS EXACTAS) -->
-            <div id="mapa" class="seccion">
-                <div class="flex h-[calc(100vh-140px)] bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
+            <!-- MÓDULO GOOGLE MAPS NATIVO (RESPONSIVO MÓVIL Y PC) -->
+            <div id="mapa" class="seccion h-full">
+                <div class="flex flex-col md:flex-row h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
                     
-                    <div class="w-1/3 border-r border-slate-200 bg-slate-50 flex flex-col">
-                        <div class="p-4 border-b border-slate-200 bg-white shadow-sm z-10 flex justify-between items-center">
+                    <!-- Panel Excel Editable (Arriba en celular, Izquierda en PC) -->
+                    <div class="w-full md:w-1/3 h-[40%] md:h-full border-b md:border-b-0 md:border-r border-slate-200 bg-slate-50 flex flex-col z-10 relative">
+                        <div class="p-3 md:p-4 border-b border-slate-200 bg-white shadow-sm flex justify-between items-center shrink-0">
                             <div>
-                                <h3 class="font-black text-slate-800 uppercase tracking-widest text-xs">Ubicación de Unidades</h3>
-                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Tabla de Edición Masiva</p>
+                                <h3 class="font-black text-slate-800 uppercase tracking-widest text-[11px] md:text-xs">Ubicaciones</h3>
+                                <p class="text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Edición Masiva</p>
                             </div>
-                            <button onclick="guardarUbicacionesMasa()" id="btn-save-map" class="bg-blue-700 text-white px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-widest shadow hover:bg-blue-800 transition">Guardar</button>
+                            <button onclick="guardarUbicacionesMasa()" id="btn-save-map" class="bg-blue-700 text-white px-3 py-1.5 rounded text-[9px] md:text-[10px] font-black uppercase tracking-widest shadow hover:bg-blue-800 transition">Guardar</button>
                         </div>
                         
                         <div class="flex-1 overflow-y-auto p-0 hide-scrollbar">
                             <table class="w-full text-left table-searchable" id="tabla-ubicaciones">
                                 <thead class="sticky top-0 bg-slate-100 shadow-sm z-10">
                                     <tr class="border-b border-slate-200">
-                                        <th class="p-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-4">Equipo</th>
-                                        <th class="p-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest">Ciudad, Obra o Coordenada (-35.0, -71.0)</th>
+                                        <th class="p-2 md:p-3 text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-3 md:pl-4">Equipo</th>
+                                        <th class="p-2 md:p-3 text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest">Coordenada o Ciudad</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for e in eqs %}
                                     <tr class="border-b border-slate-100 bg-white hover:bg-slate-50 transition">
-                                        <td class="p-2 font-black text-blue-800 text-xs tracking-wide pl-4 w-24 cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
-                                        <td class="p-2 pr-4">
-                                            <input type="text" class="w-full bg-transparent border-b border-dashed border-slate-300 focus:border-blue-500 outline-none text-slate-800 font-bold text-[11px] uppercase tracking-wider py-1 ubicacion-editable" data-codigo="{{ e.codigo }}" value="{{ e.ubicacion if e.ubicacion != 'None' else '' }}" placeholder="COORDENADA O CIUDAD">
+                                        <td class="p-2 font-black text-blue-800 text-[10px] md:text-xs tracking-wide pl-3 md:pl-4 w-20 md:w-24 cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
+                                        <td class="p-2 pr-2 md:pr-4">
+                                            <input type="text" class="w-full bg-transparent border-b border-dashed border-slate-300 focus:border-blue-500 outline-none text-slate-800 font-bold text-[10px] md:text-[11px] uppercase tracking-wider py-1 ubicacion-editable" data-codigo="{{ e.codigo }}" value="{{ e.ubicacion if e.ubicacion != 'None' else '' }}" placeholder="SIN UBICACIÓN">
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -226,18 +235,12 @@
                         </div>
                     </div>
 
-                    <div class="w-2/3 bg-slate-200 relative flex flex-col z-0">
+                    <!-- Visor de Mapa (Abajo en celular, Derecha en PC) -->
+                    <div class="w-full md:w-2/3 h-[60%] md:h-full bg-slate-200 relative flex flex-col z-0">
                         <div id="map-container" class="w-full h-full"></div>
-                        <div class="absolute bottom-6 left-6 z-[400] bg-white/90 backdrop-blur px-5 py-3 rounded shadow-lg border border-slate-200 pointer-events-none">
+                        <div class="absolute bottom-4 left-4 md:bottom-6 md:left-6 z-[400] bg-white/90 backdrop-blur px-3 py-2 md:px-5 md:py-3 rounded shadow-lg border border-slate-200 pointer-events-none hidden md:block">
                             <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 border-b border-slate-200 pb-1">Simbología GPS</p>
-                            <p class="text-[10px] font-bold text-slate-800 mt-2 uppercase tracking-wide">📍 EXACTITUD GPS</p>
-                            <p class="text-[9px] text-slate-500 italic mt-0.5">Use latitud, longitud (ej. -35.3855, -71.6385) para fijar el pin en un metro cuadrado exacto.</p>
-                            
-                            <p class="text-[10px] font-bold text-slate-800 mt-2 uppercase tracking-wide">📍 TEXTO / CIUDAD</p>
-                            <p class="text-[9px] text-slate-500 italic mt-0.5">Escriba el nombre de la ciudad o faena. El motor lo geocodificará al centro de la zona.</p>
-
-                            <p class="text-[10px] font-bold text-slate-800 mt-2 uppercase tracking-wide">📍 REGLA DE TALLER</p>
-                            <p class="text-[9px] text-slate-500 italic mt-0.5">Equipos en estado "Taller" se fijarán automáticamente en Demotron S.A. (Panguilemu).</p>
+                            <p class="text-[10px] font-bold text-slate-800 mt-2 uppercase tracking-wide">📍 REGLA TALLER = PANGUILEMU</p>
                         </div>
                     </div>
                 </div>
@@ -253,10 +256,8 @@
                             <td class="font-mono font-bold {% if e.margen < 0 %}text-red-600{% elif e.margen <= 150 %}text-orange-500{% else %}text-emerald-600{% endif %}">{{ e.margen_str }}</td>
                             <td><span class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider {% if e.estado == 'Operativo' %}bg-emerald-100 text-emerald-800{% elif e.estado == 'Taller' %}bg-orange-100 text-orange-800{% else %}bg-slate-200 text-slate-700{% endif %}">{{ e.estado }}</span></td>
                             <td class="text-right whitespace-nowrap">
-                                <a href="/api/imprimir_registro/{{e.codigo}}" target="_blank" class="btn-action text-slate-600 hover:text-slate-900">Registro</a>
-                                <a href="/api/imprimir_filtros/{{e.codigo}}" target="_blank" class="btn-action text-slate-600 hover:text-slate-900">Filtros</a>
+                                <a href="/api/imprimir_registro/{{e.codigo}}" target="_blank" class="btn-action text-slate-600 hover:text-slate-900">Ficha</a>
                                 <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Equipo {{e.codigo}}', [{db: 'responsable', label: 'Operador', val: '{{e.responsable}}'},{db: 'estado_base', label: 'Estado', val: '{{e.estado}}'}])" class="btn-action text-blue-600">Editar</button>
-                                <button onclick="abrirChatter('equipo', '{{e.codigo}}', 'Equipo {{e.codigo}}')" class="btn-action text-indigo-600">Notas</button>
                             </td>
                         </tr>{% endfor %}</tbody>
                     </table>
@@ -271,8 +272,6 @@
                             <td class="font-black text-blue-700 cursor-pointer hover:underline uppercase tracking-wide" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
                             <td>{{ e.tipo }}</td><td class="font-bold text-slate-700">{{ e.marca }}</td><td class="font-bold text-slate-700">{{ e.modelo }}</td><td class="text-slate-500 font-mono text-[11px]">{{ e.vin }}</td><td class="text-slate-500 font-mono text-[11px]">{{ e.motor }}</td><td class="font-mono font-bold bg-slate-100 px-2 py-1 rounded inline-block mt-1">{{ e.patente }}</td>
                             <td class="text-right whitespace-nowrap">
-                                <a href="/api/imprimir_registro/{{e.codigo}}" target="_blank" class="btn-action text-slate-600 hover:text-slate-900">Registro</a>
-                                <a href="/api/imprimir_filtros/{{e.codigo}}" target="_blank" class="btn-action text-slate-600 hover:text-slate-900">Filtros</a>
                                 <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Datos {{e.codigo}}', [{db: 'vin', label: 'VIN', val: '{{e.vin}}'},{db: 'n_motor', label: 'Motor', val: '{{e.motor}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'}])" class="btn-action text-blue-600">Editar</button>
                             </td>
                         </tr>{% endfor %}</tbody>
@@ -282,45 +281,41 @@
 
             <div id="plan" class="seccion">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">Panel de Ejecución Operativa</p>
-                    <form action="/api/add_record" method="POST" class="flex gap-3 items-end bg-white p-4 rounded border border-slate-200 shadow-sm w-full md:w-auto">
+                    <p class="text-[11px] md:text-xs font-bold text-slate-500 uppercase tracking-widest">Ejecución Operativa</p>
+                    <form action="/api/add_record" method="POST" class="flex flex-wrap md:flex-nowrap gap-3 items-end bg-white p-4 rounded border border-slate-200 shadow-sm w-full md:w-auto">
                         <input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/?tab=plan"><input type="hidden" name="estado" value="Pendiente"><input type="hidden" name="lectura" value="0"><input type="hidden" name="costo" value="0">
-                        <div>
+                        <div class="w-full md:w-24">
                             <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Equipo</label>
-                            <input type="text" name="codigo" class="form-input w-24 uppercase font-bold" required>
+                            <input type="text" name="codigo" class="form-input uppercase font-bold w-full" required>
                         </div>
-                        <div>
-                            <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Pauta (Ej: PM1)</label>
-                            <input list="lista_pautas" name="tipo" class="form-input w-32" required>
+                        <div class="w-full md:w-32">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Pauta</label>
+                            <input list="lista_pautas" name="tipo" class="form-input w-full" required>
                         </div>
-                        <button type="submit" class="btn-primary whitespace-nowrap">Programar OT</button>
+                        <button type="submit" class="btn-primary w-full md:w-auto whitespace-nowrap mt-2 md:mt-0">Programar OT</button>
                     </form>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-start hide-scrollbar">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6 items-start hide-scrollbar">
                     {% for estado, col_id in [('Pendiente','kb-pendiente'), ('En Progreso','kb-progreso'), ('En Revisión','kb-revision'), ('Finalizada','kb-completado')] %}
-                    <div class="bg-slate-50 border border-slate-200 rounded p-4 flex flex-col h-[70vh]">
-                        <div class="flex justify-between items-center mb-4 px-2 border-b border-slate-200 pb-2">
-                            <h3 class="font-black text-slate-800 text-xs uppercase tracking-widest">{{ estado }}</h3>
+                    <div class="bg-slate-50 border border-slate-200 rounded p-4 flex flex-col max-h-[60vh] md:max-h-none md:h-[70vh]">
+                        <div class="flex justify-between items-center mb-4 px-2 border-b border-slate-200 pb-2 shrink-0">
+                            <h3 class="font-black text-slate-800 text-[11px] md:text-xs uppercase tracking-widest">{{ estado }}</h3>
                             <span class="bg-slate-200 text-slate-700 text-[10px] px-2 py-0.5 rounded font-bold">{{ kanban[estado]|length }}</span>
                         </div>
-                        <div id="{{ col_id }}" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar pb-10" data-status="{{ estado }}">
+                        <div id="{{ col_id }}" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar pb-6" data-status="{{ estado }}">
                             {% for t in kanban[estado] %}
-                            <div class="bg-white p-4 rounded shadow-sm border {% if t.vencida %}border-red-400{% else %}border-slate-200{% endif %} cursor-grab" data-id="{{ t.id }}">
+                            <div class="bg-white p-3 md:p-4 rounded shadow-sm border {% if t.vencida %}border-red-400{% else %}border-slate-200{% endif %} cursor-grab" data-id="{{ t.id }}">
                                 <div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-2">
                                     <h4 class="font-black text-slate-900 text-sm uppercase tracking-wider">{{ t.codigo }}</h4>
-                                    <div class="flex gap-1">
-                                        <button onclick="borrarRegistro('ot', '{{t.id}}')" class="text-slate-300 hover:text-red-600 font-bold px-1 text-xs">ELIMINAR</button>
-                                        <a href="/imprimir_ot/{{ t.id }}" target="_blank" class="text-blue-600 hover:text-blue-800 font-bold text-[10px] uppercase bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 transition">VER</a>
-                                    </div>
+                                    <a href="/imprimir_ot/{{ t.id }}" target="_blank" class="text-blue-600 hover:text-blue-800 font-bold text-[10px] uppercase bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 transition">VER OT</a>
                                 </div>
                                 <div class="mb-2"><span class="text-[9px] px-2 py-1 rounded font-bold uppercase tracking-widest {% if t.clasificacion=='Preventiva' %}bg-emerald-100 text-emerald-800{% else %}bg-red-100 text-red-800{% endif %}">{{ t.clasificacion }}</span></div>
-                                <p class="text-xs text-slate-700 font-semibold mb-3 leading-tight">{{ t.tipo[:45] }}</p>
+                                <p class="text-[11px] md:text-xs text-slate-700 font-semibold mb-3 leading-tight">{{ t.tipo[:45] }}</p>
                                 
                                 <div class="mb-3">
-                                    <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Mecánico Encargado</label>
-                                    <select class="kanban-mecanico-sel w-full text-[11px] border border-slate-200 rounded p-1.5 text-slate-700 outline-none focus:border-blue-400 font-bold bg-slate-50" data-id="{{ t.id }}">
-                                        <option value="Sin Asignar" {% if t.mecanico == 'Sin Asignar' or not t.mecanico %}selected{% endif %}>Sin Asignar</option>
+                                    <select class="kanban-mecanico-sel w-full text-[10px] md:text-[11px] border border-slate-200 rounded p-1.5 text-slate-700 outline-none focus:border-blue-400 font-bold bg-slate-50" data-id="{{ t.id }}">
+                                        <option value="Sin Asignar" {% if t.mecanico == 'Sin Asignar' or not t.mecanico %}selected{% endif %}>Mecánico Sin Asignar</option>
                                         {% for m in mecanicos %}
                                         <option value="{{ m.nombre }}" {% if t.mecanico == m.nombre %}selected{% endif %}>{{ m.nombre }}</option>
                                         {% endfor %}
@@ -328,11 +323,8 @@
                                 </div>
 
                                 <div class="flex justify-between items-center mt-2 pt-2 border-t border-slate-100">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-[10px] font-mono text-slate-500 font-bold">{{ t.fecha }}</span>
-                                        {% if t.vencida %}<span class="text-[9px] font-bold text-red-700 bg-red-100 px-1.5 py-0.5 rounded uppercase tracking-wider">Atraso: {{ t.dias }}d</span>{% endif %}
-                                    </div>
-                                    <button onclick="abrirChatter('ot', '{{ t.id }}', 'OT {{ t.codigo }}')" class="text-[9px] text-slate-600 hover:text-slate-900 font-bold uppercase tracking-widest border border-slate-200 px-2 py-1 rounded bg-slate-50">Notas</button>
+                                    <span class="text-[9px] md:text-[10px] font-mono text-slate-500 font-bold">{{ t.fecha }}</span>
+                                    <button onclick="borrarRegistro('ot', '{{t.id}}')" class="text-[9px] text-red-600 hover:underline font-bold uppercase tracking-widest">Borrar</button>
                                 </div>
                             </div>
                             {% endfor %}
@@ -342,24 +334,24 @@
                 </div>
             </div>
 
-            <div id="cal" class="seccion"><div class="card-custom-nopad p-6 flex flex-col" style="height: calc(100vh - 150px);"><div id="calendar" class="flex-1 w-full h-full"></div></div></div>
+            <!-- CALENDARIO EN DISPOSITIVO MÓVIL OPTIMIZADO -->
+            <div id="cal" class="seccion h-full">
+                <div class="card-custom-nopad p-2 md:p-6 flex flex-col h-[calc(100vh-120px)] md:h-[calc(100vh-150px)]">
+                    <div id="calendar" class="flex-1 w-full h-full text-xs md:text-sm"></div>
+                </div>
+            </div>
 
+            <!-- LAS TABLAS ESTÁNDAR SE MANTIENEN FLUIDAS POR EL WRAPPER -->
             <div id="ot" class="seccion">
                 <div class="card-custom mb-6 bg-slate-50">
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
                         <input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/?tab=ot">
-                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Equipo</label><input type="text" name="codigo" class="form-input uppercase font-bold" required></div>
-                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Folio</label><input type="text" name="folio" class="form-input font-mono" placeholder="Auto"></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Pauta</label><input list="lista_pautas" name="tipo" class="form-input" required></div>
-                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Odo/Hor.</label><input type="number" name="lectura" class="form-input font-mono" placeholder="Auto"></div>
-                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Costo CLP</label><input type="number" name="costo" class="form-input font-mono" required></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Mecánico</label>
-                            <select name="mecanico" class="form-input font-semibold">
-                                <option value="Sin Asignar">Sin Asignar</option>
-                                {% for m in mecanicos %}<option value="{{ m.nombre }}">{{ m.nombre }}</option>{% endfor %}
-                            </select>
-                        </div>
-                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Registrar PM</button>
+                        <div class="min-w-[120px] flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Equipo</label><input type="text" name="codigo" class="form-input uppercase font-bold" required></div>
+                        <div class="min-w-[120px] flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Folio</label><input type="text" name="folio" class="form-input font-mono" placeholder="Auto"></div>
+                        <div class="min-w-[120px] flex-[2]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Pauta</label><input list="lista_pautas" name="tipo" class="form-input" required></div>
+                        <div class="min-w-[100px] flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Odo/Hor.</label><input type="number" name="lectura" class="form-input font-mono" placeholder="Auto"></div>
+                        <div class="min-w-[100px] flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Costo CLP</label><input type="number" name="costo" class="form-input font-mono" required></div>
+                        <button type="submit" class="btn-primary mb-1 w-full md:w-auto">Registrar PM</button>
                     </form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
@@ -371,8 +363,6 @@
                             <td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-bold text-slate-600 uppercase tracking-widest">{{ m.estado }}</span></td>
                             <td class="text-right whitespace-nowrap">
                                 <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="btn-action text-slate-600 hover:text-slate-900">Ver</a>
-                                <button onclick="abrirEditModal('ot', '{{m.id}}', 'OT {{m.ot_generada}}', [{db: 'folio', label: 'Folio', val: '{{m.ot_generada}}'},{db: 'mecanico', label: 'Mecánico', val: '{{m.mecanico}}'}])" class="btn-action text-blue-600">Editar</button>
-                                <button onclick="abrirChatter('ot', '{{m.id}}', 'OT {{m.ot_generada}}')" class="btn-action text-indigo-600">Notas</button>
                                 <button onclick="borrarRegistro('ot', '{{m.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Borrar</button>
                             </td>
                         </tr>{% endfor %}</tbody>
@@ -384,17 +374,11 @@
                 <div class="card-custom mb-6 bg-red-50 border-red-200">
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
                         <input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="referer" value="/?tab=ot_corr">
-                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Equipo</label><input type="text" name="codigo" class="form-input border-red-200 uppercase font-bold text-red-900" required></div>
-                        <div class="flex-1 min-w-[150px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Sistema Falla</label><select name="sistema_falla" class="form-input border-red-200 font-semibold text-red-900"><option value="Motor">Motor</option><option value="Hidráulico">Hidráulico</option><option value="Eléctrico">Eléctrico</option><option value="Frenos">Frenos</option><option value="Estructura">Estructura</option><option value="Neumáticos">Neumáticos</option></select></div>
-                        <div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Diagnóstico / Causa</label><input type="text" name="causa_raiz" class="form-input border-red-200" placeholder="Descripción breve" required></div>
-                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Folio</label><input type="text" name="folio" class="form-input border-red-200 font-mono" placeholder="Auto"></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Mecánico</label>
-                            <select name="mecanico" class="form-input border-red-200 font-semibold">
-                                <option value="Sin Asignar">Sin Asignar</option>
-                                {% for m in mecanicos %}<option value="{{ m.nombre }}">{{ m.nombre }}</option>{% endfor %}
-                            </select>
-                        </div>
-                        <button type="submit" class="btn-danger mb-1 whitespace-nowrap">Reportar Avería</button>
+                        <div class="min-w-[120px] flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Equipo</label><input type="text" name="codigo" class="form-input border-red-200 uppercase font-bold text-red-900" required></div>
+                        <div class="min-w-[150px] flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Sistema Falla</label><select name="sistema_falla" class="form-input border-red-200 font-semibold text-red-900"><option value="Motor">Motor</option><option value="Hidráulico">Hidráulico</option><option value="Eléctrico">Eléctrico</option><option value="Frenos">Frenos</option><option value="Estructura">Estructura</option><option value="Neumáticos">Neumáticos</option></select></div>
+                        <div class="min-w-[150px] flex-[2]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Diagnóstico / Causa</label><input type="text" name="causa_raiz" class="form-input border-red-200" placeholder="Breve" required></div>
+                        <div class="min-w-[100px] flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Folio</label><input type="text" name="folio" class="form-input border-red-200 font-mono" placeholder="Auto"></div>
+                        <button type="submit" class="btn-danger mb-1 w-full md:w-auto">Reportar Avería</button>
                     </form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
@@ -406,8 +390,6 @@
                             <td><span class="px-2 py-1 bg-red-100 text-red-800 rounded text-[9px] font-bold uppercase tracking-widest">{{ m.estado }}</span></td>
                             <td class="text-right whitespace-nowrap">
                                 <a href="/imprimir_ot/{{ m.id }}" target="_blank" class="btn-action text-slate-600 hover:text-slate-900">Ver</a>
-                                <button onclick="abrirEditModal('ot', '{{m.id}}', 'OT {{m.ot_generada}}', [{db: 'folio', label: 'Folio', val: '{{m.ot_generada.replace('OT-CR-','')}}'},{db: 'mecanico', label: 'Mecánico', val: '{{m.mecanico}}'}])" class="btn-action text-blue-600">Editar</button>
-                                <button onclick="abrirChatter('ot', '{{m.id}}', 'OT {{m.ot_generada}}')" class="btn-action text-indigo-600">Notas</button>
                                 <button onclick="borrarRegistro('ot', '{{m.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Borrar</button>
                             </td>
                         </tr>{% endfor %}</tbody>
@@ -416,24 +398,6 @@
             </div>
 
             <div id="bodega" class="seccion">
-                <div class="card-custom mb-6 bg-slate-50">
-                    <div class="flex justify-between items-center mb-4 border-b border-slate-200 pb-2"><span class="font-black text-slate-800 uppercase tracking-widest text-xs">Inventario General</span></div>
-                    <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
-                        <input type="hidden" name="tabla" value="bodega"><input type="hidden" name="referer" value="/?tab=bodega">
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Código SKU</label><input type="text" name="codigo_item" class="form-input uppercase font-mono"></div>
-                        <div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Descripción Técnica</label><input type="text" name="nombre" class="form-input font-bold" required></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Categoría</label>
-                            <select name="categoria" class="form-input font-semibold">
-                                <option value="Filtro">Filtro</option><option value="Lubricante">Lubricante</option>
-                                <option value="Kit de Mantención">Kit de Mantención</option><option value="Repuesto">Repuesto</option>
-                                <option value="Herramienta">Herramienta</option>
-                            </select>
-                        </div>
-                        <div class="flex-1 min-w-[100px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Stock Físico</label><input type="number" name="cantidad" class="form-input font-mono font-bold" value="1" required></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Ubicación</label><input type="text" name="ubicacion" class="form-input" placeholder="Ej: Estante A"></div>
-                        <button type="submit" class="btn-primary mb-1">Registrar Ingreso</button>
-                    </form>
-                </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
                     <table class="table-custom table-searchable">
                         <thead><tr><th>Código SKU</th><th>Descripción de Artículo</th><th>Categoría</th><th>Stock Actual</th><th>Ubicación</th><th class="text-right">Acciones</th></tr></thead>
@@ -441,7 +405,7 @@
                             <td class="font-mono text-slate-500 text-xs font-bold">{{ b.codigo_item or '-' }}</td><td class="font-bold text-slate-800">{{ b.nombre }}</td><td class="text-xs font-semibold uppercase tracking-wider text-slate-500">{{ b.categoria }}</td><td class="font-mono font-black text-blue-700 text-lg">{{ b.cantidad }}</td><td class="text-xs">{{ b.ubicacion }}</td>
                             <td class="text-right whitespace-nowrap">
                                 <button onclick="abrirEditModal('bodega', '{{b.id}}', 'Insumo', [{db: 'nombre', label: 'Nombre', val: '{{b.nombre}}'},{db: 'cantidad', label: 'Stock', val: '{{b.cantidad}}'}])" class="btn-action text-blue-600">Editar</button>
-                                <button onclick="borrarRegistro('bodega', '{{b.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Eliminar</button>
+                                <button onclick="borrarRegistro('bodega', '{{b.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Borrar</button>
                             </td>
                         </tr>{% endfor %}</tbody>
                     </table>
@@ -449,21 +413,10 @@
             </div>
 
             <div id="compras" class="seccion">
-                <div class="card-custom mb-6 bg-slate-50">
-                    <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
-                        <input type="hidden" name="tabla" value="compra"><input type="hidden" name="referer" value="/?tab=compras">
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Equipo Destino</label><input type="text" name="codigo" class="form-input uppercase font-bold" required></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Orden Compra</label><input type="text" name="oc" class="form-input font-mono" placeholder="Auto-Generada"></div>
-                        <div class="flex-[2] min-w-[200px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Descripción de Compra</label><input type="text" name="descripcion" class="form-input"></div>
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Costo Total CLP</label><input type="number" name="costo" class="form-input font-mono font-bold"></div>
-                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Registrar Compra</button>
-                    </form>
-                </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
                     <table class="table-custom table-searchable"><thead><tr><th>Fecha Emisión</th><th>N° OC</th><th>Equipo Asignado</th><th>Detalle de Compra</th><th>Inversión</th><th class="text-right">Acción</th></tr></thead>
                     <tbody>{% for c in compras %}<tr><td class="font-bold text-slate-700 text-xs">{{ c.fecha }}</td><td class="font-mono text-slate-500 font-bold text-xs">{{ c.oc }}</td><td class="font-black text-blue-800 uppercase tracking-widest">{{ c.codigo }}</td><td class="text-slate-800 font-semibold">{{ c.descripcion }}</td><td class="font-mono font-black text-slate-800">{{ c.costo_str }}</td>
                     <td class="text-right whitespace-nowrap">
-                        <button onclick="abrirEditModal('compra', '{{c.id}}', 'Compra {{c.oc}}', [{db: 'descripcion', label: 'Descripción', val: '{{c.descripcion}}'},{db: 'costo_pm_clp', label: 'Costo CLP', val: '{{c.costo_str.replace('.', '').replace('$', '')}}'}])" class="btn-action text-blue-600">Editar</button>
                         <button onclick="borrarRegistro('compra', '{{c.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Anular</button>
                     </td></tr>{% endfor %}</tbody>
                     </table>
@@ -474,9 +427,9 @@
                 <div class="card-custom mb-6 bg-slate-50">
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
                         <input type="hidden" name="tabla" value="lectura"><input type="hidden" name="referer" value="/?tab=lec">
-                        <div class="flex-1 min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Equipo</label><input type="text" name="codigo" class="form-input uppercase font-bold text-slate-800" placeholder="Ej: EX-01" required></div>
-                        <div class="flex-[2] min-w-[120px]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase tracking-widest">Valor Numérico (Auto-detecta HR/KM)</label><input type="number" name="valor" class="form-input font-mono font-bold text-lg" required></div>
-                        <button type="submit" class="btn-primary mb-1 whitespace-nowrap">Guardar Lectura</button>
+                        <div class="min-w-[120px] flex-1"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Equipo</label><input type="text" name="codigo" class="form-input uppercase font-bold text-slate-800" placeholder="Ej: EX-01" required></div>
+                        <div class="min-w-[150px] flex-[2]"><label class="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Valor Numérico (Auto HR/KM)</label><input type="number" name="valor" class="form-input font-mono font-bold text-lg" required></div>
+                        <button type="submit" class="btn-primary mb-1 w-full md:w-auto">Guardar Lectura</button>
                     </form>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
@@ -485,7 +438,6 @@
                         <tbody>{% for l in lecturas %}<tr>
                             <td class="font-bold text-slate-700 text-xs">{{ l.fecha }}</td><td class="font-black text-blue-800 uppercase tracking-widest">{{ l.codigo }}</td><td class="text-xs uppercase font-semibold text-slate-500">{{ l.tipo_equipo }}</td><td class="font-mono font-black text-slate-800 text-lg">{{ l.valor_str }} <span class="text-[9px] text-slate-400 font-sans tracking-widest">{{ l.tipo }}</span></td>
                             <td class="text-right whitespace-nowrap">
-                                <button onclick="abrirEditModal('lectura', '{{l.id}}', 'Lectura {{l.codigo}}', [{db: '{{ 'horometro' if l.tipo == 'HR' else 'kilometraje' }}', label: 'Valor Nuevo', val: '{{l.valor_str.replace('.', '')}}'}])" class="btn-action text-blue-600">Corregir</button>
                                 <button onclick="borrarRegistro('lectura', '{{l.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Eliminar</button>
                             </td>
                         </tr>{% endfor %}</tbody>
@@ -493,25 +445,15 @@
                 </div>
             </div>
 
-            <div id="cond" class="seccion space-y-6">
+            <div id="cond" class="seccion">
                 <div class="card-custom-nopad bg-white flex flex-col">
-                    <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-wrap justify-between items-center gap-4">
-                        <h3 class="font-black text-slate-800 text-xs uppercase tracking-widest">Nómina de Operadores</h3>
-                        <form action="/api/add_record" method="POST" class="m-0 flex gap-3 items-end">
-                            <input type="hidden" name="tabla" value="personal"><input type="hidden" name="referer" value="/?tab=cond">
-                            <div><label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Nombre Completo</label><input type="text" name="nombre" class="form-input w-48 font-bold" required></div>
-                            <div><label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Asignación</label><input type="text" name="equipo" class="form-input w-32 uppercase font-bold" required></div>
-                            <button type="submit" class="btn-primary whitespace-nowrap mb-[1px]">Registrar Personal</button>
-                        </form>
-                    </div>
-                    <div class="table-wrapper max-h-[40vh] overflow-y-auto">
+                    <div class="table-wrapper max-h-[60vh] overflow-y-auto">
                         <table class="table-custom table-searchable">
                             <thead><tr><th>Identidad Operador</th><th>Máquina/Equipo Asignado</th><th>Cargo Registrado</th><th>Status</th><th class="text-right">Acción Administrativa</th></tr></thead>
                             <tbody>{% for op in operadores %}<tr>
                                 <td class="font-black text-slate-800">{{ op.nombre }}</td><td class="font-black text-blue-700 uppercase tracking-widest">{{ op.equipo_asignado }}</td><td class="text-xs uppercase font-semibold text-slate-500">{{ op.cargo }}</td>
                                 <td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-bold uppercase tracking-widest text-slate-600 border border-slate-200">{{ op.estado }}</span></td>
                                 <td class="text-right whitespace-nowrap">
-                                    <button onclick="abrirEditModal('personal', '{{op.id}}', 'Operador {{op.nombre}}', [{db: 'equipo_asignado', label: 'Equipo', val: '{{op.equipo_asignado}}'},{db: 'estado', label: 'Estado', val: '{{op.estado}}'}])" class="btn-action text-blue-600">Modificar</button>
                                     <button onclick="borrarRegistro('personal', '{{op.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Desvincular</button>
                                 </td>
                             </tr>{% endfor %}</tbody>
@@ -521,75 +463,14 @@
             </div>
             
             <div id="mecanicos" class="seccion">
-                <div class="card-custom mb-6 bg-slate-50 flex flex-wrap justify-between items-center gap-4">
-                    <span class="font-black text-slate-800 uppercase tracking-widest text-xs">Equipo Técnico y Mecánicos</span>
-                    <form action="/api/add_record" method="POST" class="m-0 flex flex-wrap gap-3 items-end">
-                        <input type="hidden" name="tabla" value="mecanico"><input type="hidden" name="referer" value="/?tab=mecanicos">
-                        <div><label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">RUT Identificador</label><input type="text" name="rut" class="form-input w-32 font-mono"></div>
-                        <div><label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Nombre Completo</label><input type="text" name="nombre" class="form-input w-64 font-bold" required></div>
-                        <div><label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Área Especialidad</label><input type="text" name="especialidad" class="form-input w-48 font-semibold"></div>
-                        <button type="submit" class="btn-primary mb-[1px]">Registrar Técnico</button>
-                    </form>
-                </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
-                    <table class="table-custom table-searchable"><thead><tr><th>RUT Oficial</th><th>Nombre Técnico</th><th>Especialidad Operativa</th><th>Status</th><th class="text-right">Acciones Administrativas</th></tr></thead><tbody>{% for m in mecanicos %}<tr><td class="font-mono text-slate-500 text-xs font-bold">{{ m.rut or 'SIN REGISTRO' }}</td><td class="font-black text-slate-800">{{ m.nombre }}</td><td class="text-xs uppercase font-semibold text-slate-600 tracking-wider">{{ m.especialidad }}</td><td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-bold uppercase tracking-widest text-slate-600 border border-slate-200">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="abrirEditModal('mecanico', '{{m.id}}', 'Mecánico {{m.nombre}}', [{db: 'especialidad', label: 'Especialidad', val: '{{m.especialidad}}'},{db: 'estado', label: 'Estado', val: '{{m.estado}}'}])" class="btn-action text-blue-600">Modificar</button><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Desvincular</button></td></tr>{% endfor %}</tbody></table>
+                    <table class="table-custom table-searchable"><thead><tr><th>RUT Oficial</th><th>Nombre Técnico</th><th>Especialidad Operativa</th><th>Status</th><th class="text-right">Acciones Administrativas</th></tr></thead><tbody>{% for m in mecanicos %}<tr><td class="font-mono text-slate-500 text-xs font-bold">{{ m.rut or 'SIN REGISTRO' }}</td><td class="font-black text-slate-800">{{ m.nombre }}</td><td class="text-xs uppercase font-semibold text-slate-600 tracking-wider">{{ m.especialidad }}</td><td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-bold uppercase tracking-widest text-slate-600 border border-slate-200">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Desvincular</button></td></tr>{% endfor %}</tbody></table>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- MODALES Y SCRIPTS -->
-    <div id="modal-password" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden border border-slate-300">
-            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                <h3 class="font-black text-slate-800 uppercase tracking-widest text-xs">Actualización de Credenciales</h3>
-                <button onclick="document.getElementById('modal-password').classList.add('hidden')" class="text-slate-400 hover:text-red-600 font-black text-lg transition">&times;</button>
-            </div>
-            <div class="p-6 flex flex-col gap-5">
-                <div>
-                    <label class="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-widest">Contraseña Actual</label>
-                    <input type="password" id="pass_actual" class="form-input bg-slate-50 border-slate-300 focus:bg-white focus:border-blue-500 font-mono tracking-widest">
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-widest">Nueva Contraseña (Segura)</label>
-                    <input type="password" id="pass_nueva" class="form-input bg-slate-50 border-slate-300 focus:bg-white focus:border-blue-500 font-mono tracking-widest">
-                </div>
-                <p id="pass_msg" class="text-[10px] font-bold text-red-600 hidden uppercase tracking-wider bg-red-50 p-2 rounded border border-red-100"></p>
-            </div>
-            <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
-                <button onclick="document.getElementById('modal-password').classList.add('hidden')" class="px-4 py-2 text-slate-500 font-bold text-[10px] uppercase tracking-widest hover:text-slate-800 transition">Cancelar</button>
-                <button onclick="cambiarPassword()" class="bg-blue-700 text-white px-6 py-2 rounded text-[10px] uppercase tracking-widest font-black hover:bg-blue-800 shadow transition">Ejecutar Actualización</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="chatter-modal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-2xl rounded shadow-2xl flex flex-col max-h-[90vh] border border-slate-300">
-            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 shrink-0">
-                <h3 class="font-black text-slate-800 uppercase tracking-widest text-xs flex items-center gap-3">
-                    Bitácora Operativa <span id="chatter-title" class="text-[9px] bg-slate-800 text-white px-2 py-0.5 rounded tracking-widest"></span>
-                </h3>
-                <button onclick="cerrarChatter()" class="text-slate-400 hover:text-red-600 font-black text-lg transition">&times;</button>
-            </div>
-            <div id="chatter-feed" class="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50/50 relative border-l-2 border-slate-300 ml-8 mr-6 mt-4 mb-4"></div>
-            <div class="p-5 border-t border-slate-200 bg-slate-50 shrink-0">
-                <div class="flex gap-4 items-end">
-                    <div class="flex-1">
-                        <label class="text-[9px] font-bold text-slate-500 block mb-1.5 uppercase tracking-widest">Ingresar Anotación Técnica</label>
-                        <textarea id="chatter-msg" class="w-full border border-slate-300 rounded p-3 text-xs focus:border-blue-500 outline-none resize-none font-semibold text-slate-800 shadow-inner" rows="2" placeholder="Describa el procedimiento, repuesto o novedad..."></textarea>
-                    </div>
-                    <div class="flex flex-col gap-2 w-32 shrink-0">
-                        <label class="cursor-pointer bg-white text-slate-700 px-3 py-2 rounded text-[10px] font-bold hover:bg-slate-100 text-center border border-slate-300 transition shadow-sm uppercase tracking-widest">
-                            Adjuntar Evidencia
-                            <input type="file" id="chatter-file" class="hidden">
-                        </label>
-                        <button onclick="enviarChatter()" class="bg-blue-700 text-white px-3 py-2 rounded text-[10px] uppercase tracking-widest font-black hover:bg-blue-800 shadow transition border border-blue-900">Registrar</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- MODAL EDICIÓN GENÉRICA -->
     <div id="edit-modal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden border border-slate-300">
             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
@@ -604,31 +485,55 @@
         </div>
     </div>
 
+    <!-- MODALES EXTRAS (Chatter, Clave) -->
+    <div id="modal-password" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden border border-slate-300">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="font-black text-slate-800 uppercase tracking-widest text-xs">Actualización de Credenciales</h3>
+                <button onclick="document.getElementById('modal-password').classList.add('hidden')" class="text-slate-400 hover:text-red-600 font-black text-lg transition">&times;</button>
+            </div>
+            <div class="p-6 flex flex-col gap-5">
+                <div><label class="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-widest">Contraseña Actual</label><input type="password" id="pass_actual" class="form-input bg-slate-50 border-slate-300 font-mono tracking-widest"></div>
+                <div><label class="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-widest">Nueva Contraseña</label><input type="password" id="pass_nueva" class="form-input bg-slate-50 border-slate-300 font-mono tracking-widest"></div>
+                <p id="pass_msg" class="text-[10px] font-bold text-red-600 hidden uppercase tracking-wider bg-red-50 p-2 rounded border border-red-100"></p>
+            </div>
+            <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+                <button onclick="cambiarPassword()" class="bg-blue-700 text-white px-6 py-2 rounded text-[10px] uppercase tracking-widest font-black hover:bg-blue-800 shadow transition w-full">Ejecutar Actualización</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        function cambiarPassword() {
-            const actual = document.getElementById('pass_actual').value;
-            const nueva = document.getElementById('pass_nueva').value;
-            const msg = document.getElementById('pass_msg');
-            if(!actual || !nueva) { msg.innerText = "ES REQUISITO COMPLETAR AMBAS CREDENCIALES."; msg.classList.remove('hidden'); return; }
-            fetch('/api/cambiar_password', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({actual: actual, nueva: nueva}) })
-            .then(r => r.json()).then(data => {
-                if(data.status === 'success') {
-                    alert("ACTUALIZACIÓN DE SEGURIDAD EXITOSA.");
-                    document.getElementById('modal-password').classList.add('hidden');
-                    msg.classList.add('hidden');
-                } else { msg.innerText = data.message; msg.classList.remove('hidden'); }
-            });
+        // --- LOGICA DE MENÚ RESPONSIVO ---
+        function toggleMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                backdrop.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                backdrop.classList.add('hidden');
+            }
         }
 
         function switchTab(t, el) {
             document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            document.getElementById(t).classList.add('active'); el.classList.add('active');
-            document.getElementById('title').innerText = el.innerText.trim();
+            document.getElementById(t).classList.add('active'); 
+            if(el) el.classList.add('active');
+            document.getElementById('title').innerText = el ? el.innerText.trim() : 'DEMOTRON';
+            
             const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + t;
             window.history.replaceState({path:newUrl}, '', newUrl);
             
-            if(t==='cal' && window.calendar) { setTimeout(() => window.calendar.render(), 100); }
+            // Ocultar menú en móviles al seleccionar una opción
+            if(window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+                document.getElementById('sidebar-backdrop').classList.add('hidden');
+            }
+            
+            if(t==='cal' && window.calendar) { setTimeout(() => window.calendar.render(), 200); }
             if(t==='mapa') { setTimeout(() => initMap(), 300); }
         }
 
@@ -640,17 +545,15 @@
         }
 
         function borrarRegistro(tabla, id) {
-            if(confirm('ALERTA DE SEGURIDAD: ¿Confirma la eliminación permanente de este registro en la base de datos?')) {
+            if(confirm('ALERTA DE SEGURIDAD: ¿Confirma la eliminación de este registro?')) {
                 fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' }).then(() => location.reload());
             }
         }
 
-        // --- SISTEMA NATIVO DE MAPAS (GPS + GEOCODIFICACIÓN) ---
+        // --- SISTEMA NATIVO DE MAPAS (LEAFLET) ---
         let mapInstance = null;
         let markersLayer = null;
         const equiposData = {{ eqs|tojson }};
-        
-        // Coordenada Fija de la Empresa
         const DEMOTRON_COORDS = [-35.3855, -71.6385];
         const coordCache = { "taller": DEMOTRON_COORDS, "panguilemu": DEMOTRON_COORDS, "demotron": DEMOTRON_COORDS };
 
@@ -674,10 +577,9 @@
 
         async function initMap() {
             if (!mapInstance) {
-                mapInstance = L.map('map-container').setView([-35.4264, -71.6554], 7);
+                mapInstance = L.map('map-container').setView([-35.4264, -71.6554], 6);
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; OpenStreetMap',
-                    maxZoom: 19
+                    attribution: '&copy; OpenStreetMap', maxZoom: 19
                 }).addTo(mapInstance);
                 markersLayer = L.layerGroup().addTo(mapInstance);
             } else {
@@ -689,7 +591,6 @@
         async function renderMapPins() {
             markersLayer.clearLayers();
             let grouped = {};
-            
             equiposData.forEach(eq => {
                 let loc = getNormalizedLocation(eq);
                 if (loc) {
@@ -702,82 +603,55 @@
                 let coords = coordCache[loc.toLowerCase()];
                 let esGPS = esCoordenada(loc);
 
-                if (esGPS) {
-                    coords = esGPS;
-                } else if (!coords) {
+                if (esGPS) { coords = esGPS; } 
+                else if (!coords) {
                     try {
-                        // Busca en OpenStreetMap
                         let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(loc + ', Chile')}`);
                         let data = await res.json();
                         if (data && data.length > 0) {
                             coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-                            coordCache[loc.toLowerCase()] = coords; // Guardar en caché para no saturar la API
+                            coordCache[loc.toLowerCase()] = coords;
                         }
                     } catch(e) { console.error("Error geocodificando: ", loc); }
                 }
 
                 if (coords) {
-                    let displayName = esGPS ? "UBICACIÓN GPS" : loc;
-                    let popupHtml = `<div class="p-1 min-w-[220px]">
-                        <h4 class="font-black text-slate-800 uppercase tracking-widest text-[11px] mb-2 border-b border-slate-200 pb-1">📍 ${displayName}</h4>
-                        <ul class="space-y-1.5 max-h-48 overflow-y-auto hide-scrollbar">`;
-                    
+                    let popupHtml = `<div class="p-1 min-w-[200px]"><h4 class="font-black text-slate-800 uppercase tracking-widest text-[11px] mb-2 border-b border-slate-200 pb-1">📍 ${esGPS ? "UBICACIÓN GPS" : loc}</h4><ul class="space-y-1.5 max-h-48 overflow-y-auto hide-scrollbar">`;
                     grouped[loc].forEach(eq => {
                         let badge = eq.estado === 'Operativo' ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-100 text-orange-800';
                         if(eq.estado === 'Taller') badge = 'bg-red-100 text-red-800';
-                        
-                        popupHtml += `<li><a href="/equipo/${eq.codigo}" target="_blank" title="Abrir Historial" class="block bg-slate-50 p-2 rounded border border-slate-200 hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer" style="text-decoration:none;">
-                            <span class="font-black text-blue-700 text-xs uppercase tracking-wider">${eq.codigo}</span> 
-                            <span class="float-right text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${badge}">${eq.estado}</span>
-                        </a></li>`;
+                        popupHtml += `<li><a href="/equipo/${eq.codigo}" target="_blank" class="block bg-slate-50 p-2 rounded border border-slate-200 hover:border-blue-500 transition" style="text-decoration:none;"><span class="font-black text-blue-700 text-xs uppercase tracking-wider">${eq.codigo}</span><span class="float-right text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${badge}">${eq.estado}</span></a></li>`;
                     });
-                    
                     popupHtml += `</ul></div>`;
-                    let marker = L.marker(coords).bindPopup(popupHtml);
-                    markersLayer.addLayer(marker);
+                    L.marker(coords).bindPopup(popupHtml).addTo(markersLayer);
                 }
             }
         }
 
         function guardarUbicacionesMasa() {
             const btn = document.getElementById('btn-save-map');
-            btn.innerText = 'GUARDANDO...';
-            btn.classList.replace('bg-blue-700', 'bg-orange-500');
-            
+            btn.innerText = 'GUARDANDO...'; btn.classList.replace('bg-blue-700', 'bg-orange-500');
             let cambios = [];
             document.querySelectorAll('.ubicacion-editable').forEach(input => {
                 let defaultVal = input.getAttribute('value') || '';
                 let currentVal = input.value;
-                if(currentVal !== defaultVal) {
-                    cambios.push({ codigo: input.dataset.codigo, ubicacion: currentVal });
-                }
+                if(currentVal !== defaultVal) cambios.push({ codigo: input.dataset.codigo, ubicacion: currentVal });
             });
+            if(cambios.length === 0) { btn.innerText = 'GUARDAR'; btn.classList.replace('bg-orange-500', 'bg-blue-700'); return; }
 
-            if(cambios.length === 0) {
-                btn.innerText = 'GUARDAR';
-                btn.classList.replace('bg-orange-500', 'bg-blue-700');
-                return;
-            }
-
-            fetch('/api/actualizar_ubicaciones', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cambios: cambios })
-            }).then(r => r.json()).then(data => {
+            fetch('/api/actualizar_ubicaciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cambios: cambios }) })
+            .then(r => r.json()).then(data => {
                 if(data.status === 'success') {
-                    cambios.forEach(c => {
-                        let eq = equiposData.find(e => e.codigo === c.codigo);
-                        if(eq) eq.ubicacion = c.ubicacion;
-                    });
+                    cambios.forEach(c => { let eq = equiposData.find(e => e.codigo === c.codigo); if(eq) eq.ubicacion = c.ubicacion; });
                     document.querySelectorAll('.ubicacion-editable').forEach(input => { input.setAttribute('value', input.value); });
-                    btn.innerText = '¡LISTO!';
-                    btn.classList.replace('bg-orange-500', 'bg-emerald-600');
+                    btn.innerText = '¡LISTO!'; btn.classList.replace('bg-orange-500', 'bg-emerald-600');
                     renderMapPins(); 
                     setTimeout(() => { btn.innerText = 'GUARDAR'; btn.classList.replace('bg-emerald-600', 'bg-blue-700'); }, 2000);
                 }
             });
         }
 
+        // --- SISTEMA EDICIÓN INLINE ---
         let editData = {};
         function abrirEditModal(tabla, id, titulo, campos) {
             editData = { tabla, id, campos: [] };
@@ -785,86 +659,20 @@
             let html = '';
             campos.forEach(c => {
                 editData.campos.push(c.db);
-                html += `<div>
-                            <label class="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-widest">${c.label}</label>
-                            <input type="text" id="edit_${c.db}" value="${c.val}" class="form-input font-bold text-slate-800">
-                         </div>`;
+                html += `<div><label class="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-widest">${c.label}</label><input type="text" id="edit_${c.db}" value="${c.val}" class="form-input font-bold text-slate-800"></div>`;
             });
             document.getElementById('edit-fields').innerHTML = html;
             document.getElementById('edit-modal').classList.remove('hidden');
         }
-
         function cerrarEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
-
         function guardarEdicion() {
             let promises = editData.campos.map(campo => {
-                let val = document.getElementById('edit_' + campo).value;
-                return fetch('/update_inline', { 
-                    method: 'POST', headers: {'Content-Type': 'application/json'}, 
-                    body: JSON.stringify({codigo: editData.id, campo: campo, valor: val, tabla: editData.tabla}) 
-                });
+                return fetch('/update_inline', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: editData.id, campo: campo, valor: document.getElementById('edit_' + campo).value, tabla: editData.tabla}) });
             });
             Promise.all(promises).then(() => location.reload());
         }
 
-        let currentChatterModel = ''; let currentChatterId = '';
-        function abrirChatter(modelo, id, titulo) {
-            currentChatterModel = modelo; currentChatterId = id;
-            document.getElementById('chatter-title').innerText = titulo;
-            document.getElementById('chatter-modal').classList.remove('hidden');
-            cargarChatter();
-        }
-        function cerrarChatter() { document.getElementById('chatter-modal').classList.add('hidden'); }
-        function cargarChatter() {
-            const feed = document.getElementById('chatter-feed');
-            feed.innerHTML = '<p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center py-8">Sincronizando Bitácora...</p>';
-            fetch(`/api/chatter/${currentChatterModel}/${currentChatterId}`).then(r => r.json()).then(logs => {
-                feed.innerHTML = '';
-                if(logs.length === 0) return feed.innerHTML = '<p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center py-8">Bitácora Técnica Vacía.</p>';
-                logs.forEach(log => {
-                    let dotColor = 'bg-blue-500';
-                    if(log.accion === 'cambio_estado') { dotColor = 'bg-orange-500'; }
-                    if(log.accion === 'adjunto') { dotColor = 'bg-emerald-500'; }
-                    let content = log.accion === 'cambio_estado' 
-                        ? `<p class="text-xs font-semibold text-slate-600 mt-1 uppercase tracking-wider">MODIFICACIÓN DE STATUS: <span class="line-through text-slate-400">${log.valor_anterior}</span> ➔ <span class="font-black text-slate-800">${log.valor_nuevo}</span></p>`
-                        : `<div class="text-xs text-slate-800 bg-white p-4 rounded border border-slate-200 shadow-sm mt-2 font-medium leading-relaxed">${log.mensaje}</div>`;
-                    let fileHtml = log.archivo_url ? `<a href="${log.archivo_url}" target="_blank" class="mt-3 inline-block bg-slate-800 text-white font-bold text-[9px] uppercase tracking-widest px-3 py-1.5 rounded hover:bg-slate-700 transition">Ver Documento Adjunto</a>` : '';
-                    feed.innerHTML += `<div class="relative pl-6 mb-8"><span class="absolute -left-[22px] top-1 w-3 h-3 rounded-full ${dotColor} border-2 border-slate-100 shadow-sm"></span><div class="flex items-end gap-3 mb-1"><span class="font-black text-slate-800 text-[11px] uppercase tracking-widest">${log.autor}</span><span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">${log.fecha}</span></div>${content}${fileHtml}</div>`;
-                });
-            });
-        }
-        function enviarChatter() {
-            let msg = document.getElementById('chatter-msg').value;
-            let fileInput = document.getElementById('chatter-file');
-            if (!msg && fileInput.files.length === 0) return;
-            let formData = new FormData();
-            formData.append('modelo_ref', currentChatterModel);
-            formData.append('registro_id', currentChatterId);
-            formData.append('mensaje', msg);
-            if (fileInput.files.length > 0) formData.append('archivo', fileInput.files[0]);
-            fetch('/api/chatter/add', { method: 'POST', body: formData }).then(r => r.json()).then(data => {
-                if(data.status === 'success') { document.getElementById('chatter-msg').value = ''; fileInput.value = ''; cargarChatter(); }
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.kanban-mecanico-sel').forEach(sel => {
-                sel.addEventListener('change', function() {
-                    let id = this.dataset.id; let mecanico = this.value;
-                    fetch('/update_inline', {
-                        method: 'POST', headers: {'Content-Type': 'application/json'}, 
-                        body: JSON.stringify({codigo: id, campo: 'mecanico', valor: mecanico, tabla: 'ot'})
-                    }).then(r => r.json()).then(d => { 
-                        if(d.status === 'success') {
-                            let fData = new FormData(); fData.append('modelo_ref', 'ot'); fData.append('registro_id', id);
-                            fData.append('mensaje', `ASIGNACIÓN TÉCNICA: Se delegó la ejecución de la Orden a ${mecanico}`);
-                            fetch('/api/chatter/add', { method: 'POST', body: fData }).then(() => location.reload());
-                        }
-                    });
-                });
-            });
-        });
-
+        // --- CALENDARIO FULLCALENDAR ---
         const mDataPrev = {{ mants_prev|tojson }};
         const mDataCorr = {{ mants_corr|tojson }};
         const eventosFuturos = {{ eventos_futuros|tojson }};
@@ -879,102 +687,42 @@
                 if (link) switchTab(tabActiva, link);
             }
 
-            try {
-                if (typeof Sortable !== 'undefined') {
-                    ['kb-pendiente', 'kb-progreso', 'kb-revision', 'kb-completado'].forEach(col => {
-                        const el = document.getElementById(col);
-                        if(el) new Sortable(el, { group: 'kanban', animation: 150, onEnd: function (evt) {
-                            fetch('/api/cambiar_estado_ot/' + evt.item.getAttribute('data-id'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: evt.to.getAttribute('data-status') }) }).then(() => location.reload());
-                        }});
-                    });
-                }
-            } catch(e) {}
+            if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
+                let evts = []; let eventMap = {};
+                
+                // CORRECCIÓN DE DUPLICADOS EN CALENDARIO: Filtro Absoluto por Fecha + Equipo
+                mDataPrev.filter(m => m.fecha_iso && m.estado === 'Finalizada').forEach(m => { 
+                    let key = m.fecha_iso + '_' + m.codigo;
+                    if(!eventMap[key]){ evts.push({ title: m.codigo + ' (PM)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#047857' }); eventMap[key] = true; }
+                });
+                mDataCorr.filter(m => m.fecha_iso && m.estado === 'Finalizada').forEach(m => { 
+                    let key = m.fecha_iso + '_' + m.codigo;
+                    if(!eventMap[key]){ evts.push({ title: m.codigo + ' (Avería)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#B91C1C' }); eventMap[key] = true; }
+                });
+                eventosFuturos.forEach(ef => {
+                    let cod = ef.title.split(' ')[0];
+                    let key = ef.start + '_' + cod;
+                    if(!eventMap[key]){ evts.push({ title: ef.title, start: ef.start, color: ef.color }); eventMap[key] = true; }
+                });
 
-            try {
-                if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
-                    let evts = []; let eventMap = {};
-                    
-                    mDataPrev.filter(m => m.fecha_iso && m.estado === 'Finalizada').forEach(m => { 
-                        let key = m.fecha_iso + '_' + m.codigo + '_PM';
-                        if(!eventMap[key]){ evts.push({ title: m.codigo + ' (PM)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#047857' }); eventMap[key] = true; }
-                    });
-                    mDataCorr.filter(m => m.fecha_iso && m.estado === 'Finalizada').forEach(m => { 
-                        let key = m.fecha_iso + '_' + m.codigo + '_Corr';
-                        if(!eventMap[key]){ evts.push({ title: m.codigo + ' (Avería)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#B91C1C' }); eventMap[key] = true; }
-                    });
-                    
-                    eventosFuturos.forEach(ef => {
-                        evts.push({ title: ef.title, start: ef.start, color: ef.color });
-                    });
+                // VISTA OPTIMIZADA PARA MÓVILES (Lista en lugar de Cuadrícula)
+                let vistaInicial = window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth';
 
-                    window.calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
-                        initialView: 'dayGridMonth', locale: 'es', height: '100%', expandRows: true,
-                        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' },
-                        buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', list: 'Lista' },
-                        events: evts, eventClick: function(info) { 
-                            if(info.event.url) {
-                                info.jsEvent.preventDefault(); 
-                                window.open(info.event.url, "_blank"); 
-                            }
-                        }
-                    });
-                }
-            } catch(e) {}
+                window.calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+                    initialView: vistaInicial, locale: 'es', height: '100%', expandRows: true,
+                    headerToolbar: { left: 'prev,next', center: 'title', right: 'dayGridMonth,listWeek' },
+                    buttonText: { month: 'Mes', list: 'Lista' },
+                    events: evts, eventClick: function(info) { if(info.event.url) { info.jsEvent.preventDefault(); window.open(info.event.url, "_blank"); } }
+                });
+            }
 
-            try {
-                if (typeof Chart !== 'undefined') {
-                    Chart.defaults.font.family = "'Inter', sans-serif";
-                    Chart.defaults.color = '#1E293B';
-                    Chart.defaults.font.weight = 'bold';
-                    
-                    new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '75%', data: { labels: ['Operativos', 'Fuera de Servicio', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'], borderWidth:0 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } } }});
-                    
-                    new Chart(document.getElementById('chartCostosMensuales'), { 
-                        type: 'line', 
-                        data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión (CLP)', data: cData.costos_mensuales.data, borderColor: '#1E293B', backgroundColor: 'rgba(30, 41, 59, 0.1)', fill: true, tension: 0.3 }] }, 
-                        options: { 
-                            maintainAspectRatio:false, 
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                y: {
-                                    ticks: {
-                                        callback: function(value) {
-                                            return (value / 1000000) + 'mm';
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
-
-                    new Chart(document.getElementById('chartFallas'), { type: 'bar', data: { labels: fData.labels, datasets: [{ label: 'N° Averías', data: fData.data, backgroundColor: '#DC2626', borderRadius: 4 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } } }});
-                    
-                    new Chart(document.getElementById('chartTop7Prev'), { 
-                        type: 'bar', 
-                        data: { 
-                            labels: cData.costos_top7.prev_labels, 
-                            datasets: [{ label: 'Costo Acumulado (CLP)', data: cData.costos_top7.prev_data, backgroundColor: '#1D4ED8', borderRadius: 2 }] 
-                        }, 
-                        options: { 
-                            indexAxis: 'y', 
-                            maintainAspectRatio: false, 
-                            plugins: { legend: { display: false } }, 
-                            scales: { 
-                                x: { 
-                                    beginAtZero: true, 
-                                    grid: { color: '#F1F5F9' },
-                                    ticks: {
-                                        callback: function(value) {
-                                            return (value / 1000000) + 'mm';
-                                        }
-                                    }
-                                }, 
-                                y: { grid: { display: false }, ticks: { font: { weight: 'bold' } } } 
-                            } 
-                        }
-                    });
-                }
-            } catch(e) {}
+            if (typeof Chart !== 'undefined') {
+                Chart.defaults.font.family = "'Inter', sans-serif"; Chart.defaults.color = '#1E293B'; Chart.defaults.font.weight = 'bold';
+                new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '75%', data: { labels: ['Operativos', 'Fuera de Servicio', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'], borderWidth:0 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } } }});
+                new Chart(document.getElementById('chartCostosMensuales'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión (CLP)', data: cData.costos_mensuales.data, borderColor: '#1E293B', backgroundColor: 'rgba(30, 41, 59, 0.1)', fill: true, tension: 0.3 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: function(value) { return (value / 1000000) + 'mm'; } } } } } });
+                new Chart(document.getElementById('chartFallas'), { type: 'bar', data: { labels: fData.labels, datasets: [{ label: 'N° Averías', data: fData.data, backgroundColor: '#DC2626', borderRadius: 4 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } } }});
+                new Chart(document.getElementById('chartTop7Prev'), { type: 'bar', data: { labels: cData.costos_top7.prev_labels, datasets: [{ label: 'Costo (CLP)', data: cData.costos_top7.prev_data, backgroundColor: '#1D4ED8', borderRadius: 2 }] }, options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#F1F5F9' }, ticks: { callback: function(value) { return (value / 1000000) + 'mm'; } } }, y: { grid: { display: false } } } } });
+            }
         };
     </script>
 </body>
