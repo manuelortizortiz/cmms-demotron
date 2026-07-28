@@ -25,7 +25,9 @@ def dashboard():
         mecanicos_db = Mecanico.query.all()
         bodega_db = InventarioBodega.query.order_by(InventarioBodega.nombre).all()
         
-        equipos_dict, taller, criticos, proximos, predictivo_list = [], [], [], [], []
+        equipos_dict, taller, criticos, proximos, predictivo_list, finanzas_flota = [], [], [], [], [], []
+        cercanos_seguro = []
+        eventos_futuros = []
         conteo_estado = {'Operativo': 0, 'Fuera de Servicio': 0, 'Taller': 0}
         
         for e in eqs_db:
@@ -44,7 +46,7 @@ def dashboard():
             if e.margen < 0 and e.estado_base != 'Fuera de Servicio': criticos.append(eq_data)
             if 0 <= e.margen <= 150 and e.estado_base != 'Fuera de Servicio': proximos.append(eq_data)
 
-            # --- MÓDULO PREDICTIVO Y CALENDARIO ---
+            # --- MÓDULOS PREDICTIVO, CERCANOS Y EVENTOS FUTUROS ---
             try:
                 m_val = float(e.margen)
                 if e.estado_base != 'Fuera de Servicio' and m_val >= 0:
@@ -53,20 +55,60 @@ def dashboard():
                     fecha_est = (datetime.now() + timedelta(days=dias_est)).strftime('%d/%m/%Y')
                     fecha_iso = (datetime.now() + timedelta(days=dias_est)).strftime('%Y-%m-%d')
                     
+                    # 1. Agregado al Módulo Predictivo Inteligente
                     predictivo_list.append({
                         'codigo': e.codigo, 'tipo': e.tipo_equipo, 'estado': e.estado_base,
                         'lectura': format_num(e.lectura_actual), 'limite': format_num(e.proxima_pm),
                         'margen': m_val, 'margen_str': format_num(m_val), 
                         'fecha_est': fecha_est, 'dias_restantes': dias_est, 'fecha_iso': fecha_iso, 'ctrl': e.control_base
                     })
+
+                    # 2. Agregado a la Lista de "Cercanos" del Dashboard y Cálculo de Porcentaje
+                    pct = 0.0
+                    freq = float(e.frecuencia_base) if e.frecuencia_base else 250.0
+                    if freq > 0:
+                        consumido = freq - m_val
+                        pct = (consumido / freq) * 100
+                        pct = max(0.0, min(100.0, pct))
+                    
+                    cercanos_seguro.append({
+                        'codigo': e.codigo, 'margen': m_val, 'margen_str': format_num(m_val), 'pct': round(pct, 1)
+                    })
+
+                    # 3. Agregado al Calendario (Si faltan menos de 150 días/horas/km)
+                    if m_val <= 150:
+                        eventos_futuros.append({
+                            'title': f"{e.codigo} (PM Proyectada)",
+                            'start': fecha_iso,
+                            'color': '#F59E0B'
+                        })
             except: pass
 
-        # ORDENAR EQUIPOS: Los 'Fuera de Servicio' se van al fondo automáticamente
+            # --- NUEVO: MÓDULO FINANZAS Y FLOTA (CPK / CPH) ---
+            # Sumar todos los costos asociados a este equipo
+            c_mants = sum([float(o.costo_mantencion_clp or 0) for o in ots_db if o.codigo_equipo == e.codigo])
+            c_compras = sum([float(c.costo_pm_clp or 0) for c in compras_db if c.codigo_equipo == e.codigo])
+            c_total = c_mants + c_compras
+            
+            # Calcular Costo Por Hora / Costo Por Kilómetro
+            lectura_actual = float(e.lectura_actual) if e.lectura_actual else 0.0
+            cpk_cph = (c_total / lectura_actual) if lectura_actual > 0 else 0.0
+
+            finanzas_flota.append({
+                'codigo': e.codigo, 'tipo': e.tipo_equipo, 'estado': e.estado_base,
+                'costo_mants': format_clp(c_mants), 'costo_compras': format_clp(c_compras), 'costo_total': c_total,
+                'costo_str': format_clp(c_total), 'lectura': e.lectura_actual, 'ctrl': e.control_base,
+                'cpk_cph': round(cpk_cph, 2), 'cpk_cph_str': f"${round(cpk_cph, 2)}/{e.control_base[:2]}"
+            })
+
+        # ORDENAMIENTOS
         equipos_dict = sorted(equipos_dict, key=lambda x: (1 if x['estado'] == 'Fuera de Servicio' else 0, x['codigo']))
         proximos = sorted(proximos, key=lambda x: x['margen'])
         predictivo_list = sorted(predictivo_list, key=lambda x: x['dias_restantes'])
+        finanzas_flota = sorted(finanzas_flota, key=lambda x: x['costo_total'], reverse=True)
+        top_7_cercanos = sorted(cercanos_seguro, key=lambda x: x['margen'])[:7]
 
-        # ELIMINAR 'ESTRUCTURA' DEL PARETO DE FALLAS
+        # PARETO DE FALLAS (Sin Estructura)
         fallas_query = db.session.query(OrdenTrabajo.sistema_falla, func.count(OrdenTrabajo.id))\
                          .filter(OrdenTrabajo.tipo_ot == 'Correctiva', OrdenTrabajo.sistema_falla != 'Estructura')\
                          .group_by(OrdenTrabajo.sistema_falla).all()
@@ -88,16 +130,25 @@ def dashboard():
         # COSTOS 2026
         costos = {2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0, 10:0, 11:0, 12:0}
         costos_prev_eq = {}
+        costo_total_ytd = 0.0
         
         for o in ots_db:
             costo_ot = float(o.costo_mantencion_clp or 0.0)
-            if o.fecha and o.fecha.year == 2026 and o.fecha.month in costos: costos[o.fecha.month] += costo_ot
-            if o.tipo_ot == 'Preventiva' and o.fecha and o.fecha.year >= 2026: costos_prev_eq[o.codigo_equipo] = costos_prev_eq.get(o.codigo_equipo, 0.0) + costo_ot
+            if o.fecha and o.fecha.year == 2026:
+                costo_total_ytd += costo_ot
+                if o.fecha.month in costos: costos[o.fecha.month] += costo_ot
+                if o.tipo_ot == 'Preventiva': costos_prev_eq[o.codigo_equipo] = costos_prev_eq.get(o.codigo_equipo, 0.0) + costo_ot
 
         for c in compras_db:
             costo_compra = float(c.costo_pm_clp or 0.0)
-            if c.fecha and c.fecha.year == 2026 and c.fecha.month in costos: costos[c.fecha.month] += costo_compra
-            if c.fecha and c.fecha.year >= 2026: costos_prev_eq[c.codigo_equipo] = costos_prev_eq.get(c.codigo_equipo, 0.0) + costo_compra
+            if c.fecha and c.fecha.year == 2026:
+                costo_total_ytd += costo_compra
+                if c.fecha.month in costos: costos[c.fecha.month] += costo_compra
+                costos_prev_eq[c.codigo_equipo] = costos_prev_eq.get(c.codigo_equipo, 0.0) + costo_compra
+
+        # PRONÓSTICO (Promedio de los últimos 3 meses)
+        meses_activos = [costos[m] for m in range(2, mes_actual + 1) if costos[m] > 0]
+        pronostico_mes = sum(meses_activos[-3:]) / len(meses_activos[-3:]) if len(meses_activos[-3:]) > 0 else 0.0
 
         top_7_prev_list = sorted(costos_prev_eq.items(), key=lambda x: x[1], reverse=True)[:7]
         top_7_preventivas = [{'codigo': x[0], 'costo': x[1], 'costo_str': format_clp(x[1])} for x in top_7_prev_list]
@@ -143,7 +194,9 @@ def dashboard():
             'ot_abiertas': len([o for o in ots_db if o.estado != 'Finalizada']),
             'costo_mes_str': format_clp(costos.get(mes_actual, 0)), 'mttr': mttr_str,
             'disponibilidad_pct': disponibilidad_pct, 'cumpl_pm_pct': cumpl_pm_pct,
-            'correctivas_mes': correctivas_mes
+            'correctivas_mes': correctivas_mes,
+            'costo_total_ytd': format_clp(costo_total_ytd),
+            'pronostico_mes': format_clp(pronostico_mes)
         }
 
         meses_nombres = {1:'Ene', 2:'Feb', 3:'Mar', 4:'Abr', 5:'May', 6:'Jun', 7:'Jul', 8:'Ago', 9:'Sep', 10:'Oct', 11:'Nov', 12:'Dic'}
@@ -161,7 +214,8 @@ def dashboard():
                                mants_corr=todas_mants_corr, compras=todas_compras, lecturas=todas_lecturas, 
                                kanban=kanban_tareas, operadores=[{'id': p.id, 'nombre': p.nombre, 'cargo': p.cargo, 'estado': p.estado, 'equipo_asignado': p.equipo_asignado} for p in operadores_db], 
                                mecanicos=mecanicos_list, bodega=bodega_list,
-                               top_7_preventivas=top_7_preventivas, top_7_cercanos=top_7_cercanos[:7],
-                               predictivo_list=predictivo_list)
+                               top_7_preventivas=top_7_preventivas, top_7_cercanos=top_7_cercanos,
+                               predictivo_list=predictivo_list, finanzas_flota=finanzas_flota,
+                               eventos_futuros=eventos_futuros)
     except Exception as e:
         return f"Error en Dashboard: {str(e)}"
