@@ -47,10 +47,8 @@
     <datalist id="lista_mecanicos">{% for m in mecanicos %}<option value="{{ m.nombre }}"></option>{% endfor %}</datalist>
     <datalist id="lista_pautas"><option value="PM1"></option><option value="PM2"></option><option value="PM3"></option><option value="PM4"></option><option value="PM5"></option></datalist>
 
-    <!-- FONDO OSCURO PARA MENÚ EN MÓVILES -->
     <div id="sidebar-backdrop" onclick="toggleMenu()" class="fixed inset-0 bg-slate-900/50 z-30 hidden md:hidden backdrop-blur-sm"></div>
 
-    <!-- MENÚ LATERAL RESPONSIVO -->
     <aside id="sidebar" class="w-64 sidebar-bg flex flex-col z-40 shadow-xl shrink-0 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out">
         <div class="h-16 md:h-20 flex items-center justify-between px-6 border-b border-slate-100">
             <span class='text-2xl font-black text-blue-900 tracking-tighter'>DEMOTRON</span>
@@ -59,8 +57,7 @@
         <nav class="flex-1 py-6 overflow-y-auto hide-scrollbar">
             <p class="px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Principal</p>
             <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard</a>
-            <a onclick="switchTab('eq', this)" class="nav-link">Equipos</a>
-            <a onclick="switchTab('datos', this)" class="nav-link">Datos Técnicos</a>
+            <a onclick="switchTab('eq', this)" class="nav-link">Equipos y Datos Técnicos</a>
             
             <p class="px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 mt-6">Gestión de Flota</p>
             <a onclick="switchTab('mapa', this)" class="nav-link">Ubicación de Flota</a>
@@ -94,7 +91,6 @@
     </aside>
 
     <main class="flex-1 flex flex-col bg-[#F8FAFC] min-w-0 w-full">
-        <!-- CABECERA RESPONSIVA -->
         <header class="h-16 md:h-20 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0">
             <div class="flex items-center gap-3">
                 <button onclick="toggleMenu()" class="md:hidden text-slate-800 p-1 text-2xl font-black leading-none focus:outline-none">☰</button>
@@ -199,11 +195,39 @@
                 </div>
             </div>
 
-            <!-- MÓDULO GOOGLE MAPS NATIVO (RESPONSIVO MÓVIL Y PC) -->
+            <!-- VISTA UNIFICADA DE EQUIPOS Y DATOS TÉCNICOS -->
+            <div id="eq" class="seccion">
+                <div class="card-custom-nopad bg-white table-wrapper">
+                    <table class="table-custom table-searchable">
+                        <thead><tr><th>Código</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Patente</th><th>Lectura</th><th>Margen</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead>
+                        <tbody>
+                            {% for e in eqs %}
+                            {% if e.estado != 'Fuera de Servicio' %}
+                            <tr>
+                                <td class="font-black text-blue-700 cursor-pointer hover:underline uppercase tracking-wide" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
+                                <td>{{ e.tipo }}</td>
+                                <td class="font-bold text-slate-700">{{ e.marca }}</td>
+                                <td class="font-bold text-slate-700">{{ e.modelo }}</td>
+                                <td><span class="font-mono font-bold bg-slate-100 px-2 py-1 rounded inline-block mt-1">{{ e.patente }}</span></td>
+                                <td class="font-mono">{{ e.lectura }}</td>
+                                <td class="font-mono font-bold {% if e.margen < 0 %}text-red-600{% elif e.margen <= 150 %}text-orange-500{% else %}text-emerald-600{% endif %}">{{ e.margen_str }}</td>
+                                <td><span class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider {% if e.estado == 'Operativo' %}bg-emerald-100 text-emerald-800{% elif e.estado == 'Taller' %}bg-orange-100 text-orange-800{% else %}bg-slate-200 text-slate-700{% endif %}">{{ e.estado }}</span></td>
+                                <td class="text-right whitespace-nowrap">
+                                    <a href="/api/imprimir_registro/{{e.codigo}}" target="_blank" class="btn-action text-slate-600 hover:text-slate-900">Ficha</a>
+                                    <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Equipo {{e.codigo}}', [{db: 'marca', label: 'Marca', val: '{{e.marca}}'},{db: 'modelo', label: 'Modelo', val: '{{e.modelo}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'},{db: 'estado_base', label: 'Estado', val: '{{e.estado}}'}])" class="btn-action text-blue-600">Editar</button>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- MÓDULO GOOGLE MAPS NATIVO (LEAFLET + COORDENADAS ACELERADAS) -->
             <div id="mapa" class="seccion h-full">
                 <div class="flex flex-col md:flex-row h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
                     
-                    <!-- Panel Excel Editable (Arriba en celular, Izquierda en PC) -->
                     <div class="w-full md:w-1/3 h-[40%] md:h-full border-b md:border-b-0 md:border-r border-slate-200 bg-slate-50 flex flex-col z-10 relative">
                         <div class="p-3 md:p-4 border-b border-slate-200 bg-white shadow-sm flex justify-between items-center shrink-0">
                             <div>
@@ -235,7 +259,6 @@
                         </div>
                     </div>
 
-                    <!-- Visor de Mapa (Abajo en celular, Derecha en PC) -->
                     <div class="w-full md:w-2/3 h-[60%] md:h-full bg-slate-200 relative flex flex-col z-0">
                         <div id="map-container" class="w-full h-full"></div>
                         <div class="absolute bottom-4 left-4 md:bottom-6 md:left-6 z-[400] bg-white/90 backdrop-blur px-3 py-2 md:px-5 md:py-3 rounded shadow-lg border border-slate-200 pointer-events-none hidden md:block">
@@ -243,39 +266,6 @@
                             <p class="text-[10px] font-bold text-slate-800 mt-2 uppercase tracking-wide">📍 REGLA TALLER = PANGUILEMU</p>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <div id="eq" class="seccion">
-                <div class="card-custom-nopad bg-white table-wrapper">
-                    <table class="table-custom table-searchable">
-                        <thead><tr><th>Código</th><th>Tipo</th><th>Ubicación</th><th>Operador</th><th>Lectura</th><th>Margen</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead>
-                        <tbody>{% for e in eqs %}<tr>
-                            <td class="font-black text-blue-700 cursor-pointer hover:underline uppercase tracking-wide" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
-                            <td>{{ e.tipo }}</td><td class="font-bold text-slate-600">{{ e.ubicacion }}</td><td class="font-semibold">{{ e.responsable }}</td><td class="font-mono">{{ e.lectura }}</td>
-                            <td class="font-mono font-bold {% if e.margen < 0 %}text-red-600{% elif e.margen <= 150 %}text-orange-500{% else %}text-emerald-600{% endif %}">{{ e.margen_str }}</td>
-                            <td><span class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider {% if e.estado == 'Operativo' %}bg-emerald-100 text-emerald-800{% elif e.estado == 'Taller' %}bg-orange-100 text-orange-800{% else %}bg-slate-200 text-slate-700{% endif %}">{{ e.estado }}</span></td>
-                            <td class="text-right whitespace-nowrap">
-                                <a href="/api/imprimir_registro/{{e.codigo}}" target="_blank" class="btn-action text-slate-600 hover:text-slate-900">Ficha</a>
-                                <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Equipo {{e.codigo}}', [{db: 'responsable', label: 'Operador', val: '{{e.responsable}}'},{db: 'estado_base', label: 'Estado', val: '{{e.estado}}'}])" class="btn-action text-blue-600">Editar</button>
-                            </td>
-                        </tr>{% endfor %}</tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <div id="datos" class="seccion">
-                <div class="card-custom-nopad bg-white table-wrapper">
-                    <table class="table-custom table-searchable">
-                        <thead><tr><th>Equipo</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>N° Chasis (VIN)</th><th>N° Motor</th><th>Patente</th><th class="text-right">Acciones</th></tr></thead>
-                        <tbody>{% for e in eqs %}<tr>
-                            <td class="font-black text-blue-700 cursor-pointer hover:underline uppercase tracking-wide" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
-                            <td>{{ e.tipo }}</td><td class="font-bold text-slate-700">{{ e.marca }}</td><td class="font-bold text-slate-700">{{ e.modelo }}</td><td class="text-slate-500 font-mono text-[11px]">{{ e.vin }}</td><td class="text-slate-500 font-mono text-[11px]">{{ e.motor }}</td><td class="font-mono font-bold bg-slate-100 px-2 py-1 rounded inline-block mt-1">{{ e.patente }}</td>
-                            <td class="text-right whitespace-nowrap">
-                                <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Datos {{e.codigo}}', [{db: 'vin', label: 'VIN', val: '{{e.vin}}'},{db: 'n_motor', label: 'Motor', val: '{{e.motor}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'}])" class="btn-action text-blue-600">Editar</button>
-                            </td>
-                        </tr>{% endfor %}</tbody>
-                    </table>
                 </div>
             </div>
 
@@ -341,7 +331,6 @@
                 </div>
             </div>
 
-            <!-- LAS TABLAS ESTÁNDAR SE MANTIENEN FLUIDAS POR EL WRAPPER -->
             <div id="ot" class="seccion">
                 <div class="card-custom mb-6 bg-slate-50">
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
@@ -545,17 +534,30 @@
         }
 
         function borrarRegistro(tabla, id) {
-            if(confirm('ALERTA DE SEGURIDAD: ¿Confirma la eliminación de este registro?')) {
+            if(confirm('ALERTA DE SEGURIDAD: ¿Confirma la eliminación permanente de este registro en la base de datos?')) {
                 fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' }).then(() => location.reload());
             }
         }
 
-        // --- SISTEMA NATIVO DE MAPAS (LEAFLET) ---
+        // --- SISTEMA NATIVO DE MAPAS VELOCIDAD EXTREMA (ACELERADO) ---
         let mapInstance = null;
         let markersLayer = null;
         const equiposData = {{ eqs|tojson }};
+        
         const DEMOTRON_COORDS = [-35.3855, -71.6385];
-        const coordCache = { "taller": DEMOTRON_COORDS, "panguilemu": DEMOTRON_COORDS, "demotron": DEMOTRON_COORDS };
+        // Caché pre-llenado con O'Higgins hasta Biobío para evitar consultas web y cargar en 0 segundos
+        const coordCache = { 
+            "taller": DEMOTRON_COORDS, "panguilemu": DEMOTRON_COORDS, "demotron": DEMOTRON_COORDS,
+            "rancagua": [-34.1708, -70.7444], "san fernando": [-34.5839, -70.9881],
+            "curico": [-34.9828, -71.2394], "curicó": [-34.9828, -71.2394],
+            "talca": [-35.4264, -71.6554], "linares": [-35.8454, -71.5976],
+            "cauquenes": [-35.9671, -72.3165], "parral": [-36.1432, -71.8260],
+            "san javier": [-35.5961, -71.7317], "san rafael": [-35.3150, -71.5333],
+            "chillan": [-36.6066, -72.1034], "chillán": [-36.6066, -72.1034],
+            "concepcion": [-36.8201, -73.0444], "concepción": [-36.8201, -73.0444],
+            "los angeles": [-37.4697, -72.3537], "los ángeles": [-37.4697, -72.3537],
+            "bulnes": [-36.7423, -72.2985], "san carlos": [-36.4244, -71.9587]
+        };
 
         function getNormalizedLocation(eq) {
             if (eq.estado.toLowerCase() === 'taller') return "TALLER DEMOTRON";
@@ -577,7 +579,8 @@
 
         async function initMap() {
             if (!mapInstance) {
-                mapInstance = L.map('map-container').setView([-35.4264, -71.6554], 6);
+                // Centrado dinámico: Entre Ñuble y Maule para enmarcar O'Higgins y Biobío
+                mapInstance = L.map('map-container').setView([-35.8, -71.8], window.innerWidth < 768 ? 6 : 7);
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                     attribution: '&copy; OpenStreetMap', maxZoom: 19
                 }).addTo(mapInstance);
@@ -588,9 +591,11 @@
             renderMapPins();
         }
 
-        async function renderMapPins() {
+        // Carga de pines sin "Await" bloqueante, la interfaz será instantánea
+        function renderMapPins() {
             markersLayer.clearLayers();
             let grouped = {};
+            
             equiposData.forEach(eq => {
                 let loc = getNormalizedLocation(eq);
                 if (loc) {
@@ -603,29 +608,36 @@
                 let coords = coordCache[loc.toLowerCase()];
                 let esGPS = esCoordenada(loc);
 
-                if (esGPS) { coords = esGPS; } 
-                else if (!coords) {
-                    try {
-                        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(loc + ', Chile')}`);
-                        let data = await res.json();
-                        if (data && data.length > 0) {
-                            coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-                            coordCache[loc.toLowerCase()] = coords;
-                        }
-                    } catch(e) { console.error("Error geocodificando: ", loc); }
-                }
-
-                if (coords) {
-                    let popupHtml = `<div class="p-1 min-w-[200px]"><h4 class="font-black text-slate-800 uppercase tracking-widest text-[11px] mb-2 border-b border-slate-200 pb-1">📍 ${esGPS ? "UBICACIÓN GPS" : loc}</h4><ul class="space-y-1.5 max-h-48 overflow-y-auto hide-scrollbar">`;
-                    grouped[loc].forEach(eq => {
-                        let badge = eq.estado === 'Operativo' ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-100 text-orange-800';
-                        if(eq.estado === 'Taller') badge = 'bg-red-100 text-red-800';
-                        popupHtml += `<li><a href="/equipo/${eq.codigo}" target="_blank" class="block bg-slate-50 p-2 rounded border border-slate-200 hover:border-blue-500 transition" style="text-decoration:none;"><span class="font-black text-blue-700 text-xs uppercase tracking-wider">${eq.codigo}</span><span class="float-right text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${badge}">${eq.estado}</span></a></li>`;
-                    });
-                    popupHtml += `</ul></div>`;
-                    L.marker(coords).bindPopup(popupHtml).addTo(markersLayer);
+                if (esGPS) { 
+                    agregarPin(esGPS, "UBICACIÓN GPS", grouped[loc]);
+                } 
+                else if (coords) {
+                    agregarPin(coords, loc, grouped[loc]);
+                } 
+                else {
+                    // Carga Asíncrona (Cero Lag)
+                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(loc + ', Chile')}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && data.length > 0) {
+                                let newCoords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                                coordCache[loc.toLowerCase()] = newCoords;
+                                agregarPin(newCoords, loc, grouped[loc]);
+                            }
+                        }).catch(e => console.log("Buscando en segundo plano..."));
                 }
             }
+        }
+
+        function agregarPin(coords, nombreUbicacion, equiposEnZona) {
+            let popupHtml = `<div class="p-1 min-w-[200px]"><h4 class="font-black text-slate-800 uppercase tracking-widest text-[11px] mb-2 border-b border-slate-200 pb-1">📍 ${nombreUbicacion}</h4><ul class="space-y-1.5 max-h-48 overflow-y-auto hide-scrollbar">`;
+            equiposEnZona.forEach(eq => {
+                let badge = eq.estado === 'Operativo' ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-100 text-orange-800';
+                if(eq.estado === 'Taller') badge = 'bg-red-100 text-red-800';
+                popupHtml += `<li><a href="/equipo/${eq.codigo}" target="_blank" class="block bg-slate-50 p-2 rounded border border-slate-200 hover:border-blue-500 transition" style="text-decoration:none;"><span class="font-black text-blue-700 text-xs uppercase tracking-wider">${eq.codigo}</span><span class="float-right text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${badge}">${eq.estado}</span></a></li>`;
+            });
+            popupHtml += `</ul></div>`;
+            L.marker(coords).bindPopup(popupHtml).addTo(markersLayer);
         }
 
         function guardarUbicacionesMasa() {
@@ -672,6 +684,21 @@
             Promise.all(promises).then(() => location.reload());
         }
 
+        function cambiarPassword() {
+            const actual = document.getElementById('pass_actual').value;
+            const nueva = document.getElementById('pass_nueva').value;
+            const msg = document.getElementById('pass_msg');
+            if(!actual || !nueva) { msg.innerText = "ES REQUISITO COMPLETAR AMBAS CREDENCIALES."; msg.classList.remove('hidden'); return; }
+            fetch('/api/cambiar_password', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({actual: actual, nueva: nueva}) })
+            .then(r => r.json()).then(data => {
+                if(data.status === 'success') {
+                    alert("ACTUALIZACIÓN DE SEGURIDAD EXITOSA.");
+                    document.getElementById('modal-password').classList.add('hidden');
+                    msg.classList.add('hidden');
+                } else { msg.innerText = data.message; msg.classList.remove('hidden'); }
+            });
+        }
+
         // --- CALENDARIO FULLCALENDAR ---
         const mDataPrev = {{ mants_prev|tojson }};
         const mDataCorr = {{ mants_corr|tojson }};
@@ -690,7 +717,7 @@
             if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
                 let evts = []; let eventMap = {};
                 
-                // CORRECCIÓN DE DUPLICADOS EN CALENDARIO: Filtro Absoluto por Fecha + Equipo
+                // CORRECCIÓN DE DUPLICADOS EN CALENDARIO
                 mDataPrev.filter(m => m.fecha_iso && m.estado === 'Finalizada').forEach(m => { 
                     let key = m.fecha_iso + '_' + m.codigo;
                     if(!eventMap[key]){ evts.push({ title: m.codigo + ' (PM)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#047857' }); eventMap[key] = true; }
@@ -705,7 +732,6 @@
                     if(!eventMap[key]){ evts.push({ title: ef.title, start: ef.start, color: ef.color }); eventMap[key] = true; }
                 });
 
-                // VISTA OPTIMIZADA PARA MÓVILES (Lista en lugar de Cuadrícula)
                 let vistaInicial = window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth';
 
                 window.calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
