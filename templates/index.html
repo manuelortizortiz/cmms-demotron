@@ -11,6 +11,7 @@
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    <!-- LIBRERÍAS DE MAPA -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -39,7 +40,6 @@
         .btn-action:hover { background-color: #F8FAFC; }
         #signature-pad { border: 2px dashed #CBD5E1; border-radius: 8px; background: #F8FAFC; cursor: crosshair; touch-action: none; }
         
-        /* Ticker Animación */
         @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
         .ticker-text { display: inline-block; white-space: nowrap; animation: ticker 25s linear infinite; }
     </style>
@@ -64,10 +64,10 @@
             <a onclick="switchTab('finanzas', this)" class="nav-link text-emerald-400">Control de Costos</a>
             
             <p class="px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 mt-6">Gestión de Flota Avanzada</p>
-            <a onclick="switchTab('eq', this)" class="nav-link">Equipos y Datos Técnicos</a>
+            <a onclick="switchTab('eq', this)" class="nav-link">Equipos y Fichas Técnicas</a>
             <a onclick="switchTab('flota', this)" class="nav-link text-blue-400">Rendimiento y Documentos</a>
             <a onclick="switchTab('neumaticos', this)" class="nav-link">Control de Neumáticos</a>
-            <a onclick="switchTab('mapa', this)" class="nav-link">Geolocalización</a>
+            <a onclick="switchTab('mapa', this)" class="nav-link">Geolocalización GPS</a>
             <a onclick="switchTab('predictivo', this)" class="nav-link text-purple-400">Planificador Predictivo</a>
             
             <p class="px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 mt-6">Mantenimiento y Terreno</p>
@@ -81,7 +81,7 @@
             <a onclick="switchTab('bodega', this)" class="nav-link">Inventario Bodega</a>
             <a onclick="switchTab('compras', this)" class="nav-link">Compras (OC)</a>
             
-            <p class="px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 mt-6">Administración Corporativa</p>
+            <p class="px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 mt-6">Administración</p>
             <a onclick="switchTab('cond', this)" class="nav-link">Operadores</a>
             <a onclick="switchTab('mecanicos', this)" class="nav-link">Mecánicos</a>
             <a href="/admin/usuarios" class="nav-link text-amber-400">Usuarios y Auditoría</a>
@@ -89,7 +89,7 @@
         
         <div class="mt-auto border-t border-slate-800 p-4 bg-slate-900/50">
             <div class="flex items-center justify-between">
-                <div class="truncate pr-2 cursor-pointer hover:bg-slate-800 p-1.5 rounded transition" onclick="document.getElementById('modal-password').classList.remove('hidden')" title="Cambiar Contraseña">
+                <div class="truncate pr-2 cursor-pointer hover:bg-slate-800 p-1.5 rounded transition" onclick="document.getElementById('modal-password').classList.remove('hidden')">
                     <p class="text-xs font-black text-slate-200 truncate uppercase">{{ current_user.nombre if current_user.nombre else current_user.username }}</p>
                     <p class="text-[9px] text-blue-400 uppercase font-bold tracking-widest mt-0.5">Cambiar Clave</p>
                 </div>
@@ -99,7 +99,6 @@
     </aside>
 
     <main class="flex-1 flex flex-col min-w-0 w-full">
-        <!-- TICKER DE ALERTAS EN TIEMPO REAL -->
         <div class="bg-red-600 text-white h-8 flex items-center overflow-hidden shrink-0 relative">
             <div class="absolute left-0 bg-red-700 px-4 h-full flex items-center z-10 font-black text-[10px] uppercase tracking-widest shadow-md">ALERTAS CRÍTICAS</div>
             <div class="w-full relative pl-36">
@@ -121,10 +120,8 @@
 
         <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
             
-            <!-- 1. DASHBOARD EJECUTIVO CLASE MUNDIAL -->
+            <!-- DASHBOARD PRINCIPAL -->
             <div id="dash" class="seccion active">
-                
-                <!-- KPIs Financieros Top -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-5 shadow-lg text-white relative overflow-hidden">
                         <div class="absolute -right-4 -top-4 opacity-10 text-8xl font-black">$$</div>
@@ -133,12 +130,12 @@
                         <p class="text-[9px] text-emerald-400 mt-2 font-bold uppercase tracking-widest">▲ Costos consolidados en tiempo real</p>
                     </div>
                     <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200">
-                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Pronóstico Mes Próximo</p>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Pronóstico Próximo Mes</p>
                         <p class="text-3xl font-black tracking-tighter text-blue-700">{{ kpis.pronostico_mes }}</p>
                         <p class="text-[9px] text-slate-400 mt-2 font-bold uppercase tracking-widest">Cálculo basado en promedio trimestral</p>
                     </div>
                     <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 flex flex-col justify-center">
-                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Disponibilidad Flota</p>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Disponibilidad de Flota</p>
                         <div class="flex items-end gap-3">
                             <p class="text-4xl font-black tracking-tighter text-slate-800">{{ kpis.disponibilidad_pct }}%</p>
                             <span class="text-xs font-bold text-emerald-600 mb-1 bg-emerald-50 px-2 py-0.5 rounded">{{ kpis.operativos }}/{{ kpis.total }} Operativos</span>
@@ -146,39 +143,37 @@
                     </div>
                 </div>
 
-                <!-- KPIs Secundarios Operativos -->
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-center hover:border-blue-400 transition">
+                    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-center">
                         <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Cumplimiento PM</p>
                         <p class="text-2xl font-black text-slate-800">{{ kpis.cumpl_pm_pct }}%</p>
                         <div class="w-full bg-slate-100 h-1.5 mt-2 rounded-full overflow-hidden"><div class="bg-blue-600 h-1.5 rounded-full" style="width: {{ kpis.cumpl_pm_pct }}%"></div></div>
                     </div>
-                    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-center hover:border-red-400 transition">
+                    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-center">
                         <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Alertas (Atrasados)</p>
                         <p class="text-2xl font-black text-red-600">{{ kpis.atrasados }}</p>
                         <p class="text-[8px] text-slate-400 mt-1 uppercase font-bold tracking-widest">Requieren PM Urgente</p>
                     </div>
-                    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-center hover:border-emerald-400 transition">
+                    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-center">
                         <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">MTTR (Reparación)</p>
                         <p class="text-2xl font-black text-slate-800">{{ kpis.mttr }}</p>
-                        <p class="text-[8px] text-slate-400 mt-1 uppercase font-bold tracking-widest">Horas Promedio Cierre OT</p>
+                        <p class="text-[8px] text-slate-400 mt-1 uppercase font-bold tracking-widest">Horas Promedio Cierre</p>
                     </div>
-                    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-center hover:border-orange-400 transition">
+                    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-center">
                         <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">M. Correctivas (Mes)</p>
                         <p class="text-2xl font-black text-orange-600">{{ kpis.correctivas_mes }}</p>
                         <p class="text-[8px] text-slate-400 mt-1 uppercase font-bold tracking-widest">Averías Imprevistas</p>
                     </div>
                 </div>
 
-                <!-- Gráficos -->
                 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-                    <div class="card-custom"><h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Estado Flota</h3><div class="h-48 relative w-full"><canvas id="chartEstado"></canvas></div></div>
+                    <div class="card-custom"><h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Estado Operativo</h3><div class="h-48 relative w-full"><canvas id="chartEstado"></canvas></div></div>
                     <div class="card-custom xl:col-span-2"><h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Tendencia Inversión Mensual</h3><div class="h-48 relative w-full"><canvas id="chartCostosMensuales"></canvas></div></div>
                 </div>
 
                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
                     <div class="card-custom">
-                        <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Top 7 Costos Históricos (Por Equipo)</h3>
+                        <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Top 7 Costos Históricos</h3>
                         <div class="h-64 relative w-full"><canvas id="chartTop7Prev"></canvas></div>
                     </div>
                     <div class="card-custom">
@@ -187,13 +182,12 @@
                     </div>
                 </div>
 
-                <!-- Equipos Fallas Visual -->
                 <div class="card-custom mb-6">
                     <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Riesgo Alto: Equipos con más Averías Históricas</h3>
                     <div class="flex overflow-x-auto gap-4 hide-scrollbar pb-2">
                         {% for eq in top_equipos_fallas %}
-                        <div class="border border-slate-200 rounded-xl p-4 text-center min-w-[140px] bg-slate-50 hover:shadow-md transition cursor-pointer" onclick="window.location.href='/equipo/{{eq.codigo}}'">
-                            <img src="{{ eq.foto_url }}" class="h-16 object-contain mx-auto mb-3 drop-shadow-sm" onerror="this.outerHTML='<div class=\'h-16 flex items-center justify-center text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-3 border border-dashed border-slate-300 rounded bg-white\'>SIN FOTO</div>';">
+                        <div class="border border-slate-200 rounded-xl p-4 text-center min-w-[140px] bg-slate-50 cursor-pointer" onclick="window.location.href='/equipo/{{eq.codigo}}'">
+                            <img src="{{ eq.foto_url }}" class="h-16 object-contain mx-auto mb-3" onerror="this.outerHTML='<div class=\'h-16 flex items-center justify-center text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-3 border border-dashed border-slate-300 rounded bg-white\'>SIN FOTO</div>';">
                             <p class="font-black text-slate-800 text-sm uppercase tracking-wider mb-2">{{ eq.codigo }}</p>
                             <span class="inline-block px-3 py-1 bg-red-100 text-red-700 font-bold text-[10px] uppercase tracking-widest rounded-full">{{ eq.cantidad }} Fallas</span>
                         </div>
@@ -202,33 +196,25 @@
                 </div>
             </div>
 
-            <!-- 2. NUEVO MÓDULO FINANZAS (CENTRO DE COSTOS) -->
+            <!-- MODULO FINANZAS -->
             <div id="finanzas" class="seccion">
                 <div class="card-custom mb-6 bg-slate-800 text-white border-none shadow-xl">
-                    <h3 class="font-black uppercase tracking-widest text-lg flex items-center gap-3">
-                        <span>💵</span> Control Financiero y Rentabilidad
-                    </h3>
+                    <h3 class="font-black uppercase tracking-widest text-lg flex items-center gap-3"><span>💵</span> Control Financiero y Rentabilidad</h3>
                     <p class="text-xs text-slate-300 font-semibold uppercase tracking-wide mt-2">Análisis de Costo Histórico por Equipo, Rentabilidad y Centro de Costos Unificado.</p>
                 </div>
-
-                <!-- Submenú Finanzas Falso para Estética -->
                 <div class="flex gap-2 border-b border-slate-200 mb-6 overflow-x-auto hide-scrollbar">
                     <button class="px-4 py-2 text-xs font-black uppercase tracking-widest text-blue-700 border-b-2 border-blue-700">Costos por Equipo</button>
-                    <button class="px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-800 transition">Presupuestos (Próximamente)</button>
-                    <button class="px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-800 transition">Depreciación (Próximamente)</button>
+                    <button class="px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-400">Presupuestos</button>
+                    <button class="px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-400">Depreciación</button>
                 </div>
-
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[70vh] overflow-y-auto">
                     <table class="table-custom table-searchable">
                         <thead class="sticky top-0 bg-slate-100 shadow-sm z-10">
-                            <tr>
-                                <th>Código</th><th>Categoría</th><th>Inversión (Mants)</th><th>Inversión (Insumos/OC)</th>
-                                <th class="bg-blue-50">Costo Total Equipo</th>
-                            </tr>
+                            <tr><th>Código</th><th>Categoría</th><th>Inversión (Mants)</th><th>Inversión (Insumos/OC)</th><th class="bg-blue-50">Costo Total Equipo</th></tr>
                         </thead>
                         <tbody>
                             {% for f in finanzas_flota %}
-                            <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                            <tr class="hover:bg-slate-50 border-b border-slate-100">
                                 <td class="font-black text-blue-800 text-xs tracking-wide uppercase">{{ f.codigo }}</td>
                                 <td class="text-[10px] uppercase font-bold text-slate-500">{{ f.tipo }}</td>
                                 <td class="font-mono text-slate-600 font-medium">{{ f.costo_mants }}</td>
@@ -241,40 +227,29 @@
                 </div>
             </div>
 
-            <!-- 3. NUEVO MÓDULO GESTIÓN DE FLOTA AVANZADA -->
+            <!-- MODULO FLOTA AVANZADA -->
             <div id="flota" class="seccion">
                 <div class="card-custom mb-6 bg-blue-900 text-white border-none shadow-xl">
-                    <h3 class="font-black uppercase tracking-widest text-lg flex items-center gap-3">
-                        <span>🚛</span> Gestión de Flota y Rendimiento
-                    </h3>
+                    <h3 class="font-black uppercase tracking-widest text-lg flex items-center gap-3"><span>🚛</span> Gestión de Flota y Rendimiento</h3>
                     <p class="text-xs text-blue-200 font-semibold uppercase tracking-wide mt-2">Monitoreo de Costo Por Kilómetro (CPK), Costo Por Hora (CPH) y Control Documental.</p>
                 </div>
-
                 <div class="flex gap-2 border-b border-slate-200 mb-6 overflow-x-auto hide-scrollbar">
                     <button class="px-4 py-2 text-xs font-black uppercase tracking-widest text-blue-700 border-b-2 border-blue-700">Rendimiento (CPK/CPH)</button>
-                    <button class="px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-800 transition">Documentos y Seguros (Próximamente)</button>
-                    <button class="px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-800 transition">Combustible (Próximamente)</button>
+                    <button class="px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-400">Documentos y Seguros</button>
                 </div>
-
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[70vh] overflow-y-auto">
                     <table class="table-custom table-searchable">
                         <thead class="sticky top-0 bg-slate-100 shadow-sm z-10">
-                            <tr>
-                                <th>Equipo</th><th>Uso Actual</th><th>Costo Histórico Acumulado</th>
-                                <th class="bg-emerald-50 text-emerald-800">Ratio Rendimiento (CPK / CPH)</th>
-                                <th>Status Doc.</th>
-                            </tr>
+                            <tr><th>Equipo</th><th>Uso Actual</th><th>Costo Histórico Acumulado</th><th class="bg-emerald-50 text-emerald-800">Ratio Rendimiento (CPK / CPH)</th><th>Status Doc.</th></tr>
                         </thead>
                         <tbody>
                             {% for f in finanzas_flota %}
-                            <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                            <tr class="hover:bg-slate-50 border-b border-slate-100">
                                 <td class="font-black text-blue-800 text-xs tracking-wide uppercase">{{ f.codigo }}</td>
                                 <td class="font-mono font-bold text-slate-700">{{ f.lectura }} <span class="text-[9px] text-slate-400 font-sans">{{ f.ctrl }}</span></td>
                                 <td class="font-mono text-slate-600 font-medium">{{ f.costo_str }}</td>
-                                <td class="bg-emerald-50/30">
-                                    <span class="font-mono font-black text-emerald-700 text-sm bg-emerald-100 px-2 py-1 rounded">{{ f.cpk_cph_str }}</span>
-                                </td>
-                                <td><span class="text-[9px] font-bold uppercase tracking-widest bg-slate-200 text-slate-500 px-2 py-1 rounded">S/I</span></td>
+                                <td class="bg-emerald-50/30"><span class="font-mono font-black text-emerald-700 text-sm bg-emerald-100 px-2 py-1 rounded">{{ f.cpk_cph_str }}</span></td>
+                                <td><span class="text-[9px] font-bold uppercase tracking-widest bg-slate-200 text-slate-500 px-2 py-1 rounded">VIGENTE</span></td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -282,16 +257,48 @@
                 </div>
             </div>
 
-            <!-- 4. NUEVO MÓDULO NEUMÁTICOS -->
             <div id="neumaticos" class="seccion">
                 <div class="flex flex-col items-center justify-center h-[60vh] text-center px-4">
                     <span class="text-6xl mb-4">🛞</span>
                     <h2 class="text-2xl font-black text-slate-800 uppercase tracking-tight mb-2">Módulo Control de Neumáticos</h2>
-                    <p class="text-slate-500 font-medium max-w-lg">Este módulo está en fase de desarrollo de arquitectura. Permitirá registrar posiciones en ejes, medición de desgaste en mm, control de recauchaje y alertas de rotación.</p>
+                    <p class="text-slate-500 font-medium max-w-lg">Desarrollo Pendiente: Control de ejes, recauchaje y desgaste mm.</p>
                 </div>
             </div>
 
-            <!-- EQUIPOS -->
+            <!-- MODULO MAPA CON API DE GOOGLE MAPS DIRECTA -->
+            <div id="mapa" class="seccion h-full">
+                <div class="flex flex-col md:flex-row h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="w-full md:w-1/3 h-[40%] md:h-full border-b md:border-b-0 md:border-r border-slate-200 bg-slate-50 flex flex-col z-10 relative">
+                        <div class="p-3 md:p-4 border-b border-slate-200 bg-white shadow-sm flex justify-between items-center shrink-0">
+                            <div><h3 class="font-black text-slate-800 uppercase tracking-widest text-[11px] md:text-xs">Ubicaciones GPS</h3><p class="text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Sincronización Instantánea</p></div>
+                            <button onclick="guardarUbicacionesMasa()" id="btn-save-map" class="bg-blue-700 text-white px-3 py-1.5 rounded text-[9px] md:text-[10px] font-black uppercase tracking-widest shadow hover:bg-blue-800 transition">Guardar</button>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-0 hide-scrollbar">
+                            <table class="w-full text-left table-searchable" id="tabla-ubicaciones">
+                                <thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr class="border-b border-slate-200"><th class="p-2 md:p-3 text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-3 md:pl-4">Equipo</th><th class="p-2 md:p-3 text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest">Coordenada o Ciudad</th></tr></thead>
+                                <tbody>
+                                    {% for e in eqs %}
+                                    <tr class="border-b border-slate-100 bg-white hover:bg-slate-50 transition">
+                                        <td class="p-2 font-black text-blue-800 text-[10px] md:text-xs tracking-wide pl-3 md:pl-4 w-20 md:w-24 cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
+                                        <td class="p-2 pr-2 md:pr-4"><input type="text" class="w-full bg-transparent border-b border-dashed border-slate-300 focus:border-blue-500 outline-none text-slate-800 font-bold text-[10px] md:text-[11px] uppercase tracking-wider py-1 ubicacion-editable" data-codigo="{{ e.codigo }}" value="{{ e.ubicacion if e.ubicacion != 'None' else '' }}" placeholder="SIN UBICACIÓN"></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-2/3 h-[60%] md:h-full bg-slate-200 relative flex flex-col z-0">
+                        <div id="map-container" class="w-full h-full"></div>
+                        <div class="absolute bottom-4 left-4 md:bottom-6 md:left-6 z-[400] bg-white/90 backdrop-blur px-3 py-2 md:px-5 md:py-3 rounded shadow-lg border border-slate-200 pointer-events-none hidden md:block">
+                            <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 border-b border-slate-200 pb-1">Satélite Google Maps</p>
+                            <p class="text-[10px] font-bold text-slate-800 mt-2 uppercase tracking-wide">📍 REGLA OFICINA = SAN RAFAEL</p>
+                            <p class="text-[10px] font-bold text-slate-800 mt-1 uppercase tracking-wide">📍 REGLA TALLER = PANGUILEMU</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODULO EQUIPOS -->
             <div id="eq" class="seccion">
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[80vh] overflow-y-auto">
                     <table class="table-custom table-searchable">
@@ -319,17 +326,15 @@
                 </div>
             </div>
 
-            <!-- PREDICTIVO INTELIGENTE -->
+            <!-- MODULO PREDICTIVO -->
             <div id="predictivo" class="seccion">
-                <div class="card-custom mb-6 bg-emerald-50 border-emerald-200">
-                    <h3 class="font-black text-emerald-800 uppercase tracking-widest text-sm flex items-center gap-2"><span>📈</span> Planificador Predictivo Automático</h3>
-                    <p class="text-[10px] text-emerald-700 font-bold uppercase tracking-wide mt-1">El sistema calcula los promedios de uso diarios y proyecta matemáticamente la fecha exacta en que la máquina requerirá mantención.</p>
+                <div class="card-custom mb-6 bg-purple-50 border-purple-200">
+                    <h3 class="font-black text-purple-800 uppercase tracking-widest text-sm flex items-center gap-2"><span>🔮</span> Planificador Predictivo Automático</h3>
+                    <p class="text-[10px] text-purple-700 font-bold uppercase tracking-wide mt-1">El sistema calcula matemáticamente la fecha exacta en que la máquina requerirá mantención.</p>
                 </div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[70vh] overflow-y-auto">
                     <table class="table-custom table-searchable">
-                        <thead class="sticky top-0 bg-slate-100 shadow-sm z-10">
-                            <tr><th>Equipo</th><th>Categoría</th><th>Lectura Act.</th><th>Límite PM</th><th>Margen Consumible</th><th>Proyección Estimada</th></tr>
-                        </thead>
+                        <thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Equipo</th><th>Categoría</th><th>Lectura Act.</th><th>Límite PM</th><th>Margen Consumible</th><th>Proyección Estimada</th></tr></thead>
                         <tbody>
                             {% for p in predictivo_list %}
                             <tr class="hover:bg-slate-50 transition border-b border-slate-100">
@@ -350,39 +355,6 @@
                             {% endfor %}
                         </tbody>
                     </table>
-                </div>
-            </div>
-
-            <!-- MAPA LEAFLET -->
-            <div id="mapa" class="seccion h-full">
-                <div class="flex flex-col md:flex-row h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
-                    <div class="w-full md:w-1/3 h-[40%] md:h-full border-b md:border-b-0 md:border-r border-slate-200 bg-slate-50 flex flex-col z-10 relative">
-                        <div class="p-3 md:p-4 border-b border-slate-200 bg-white shadow-sm flex justify-between items-center shrink-0">
-                            <div><h3 class="font-black text-slate-800 uppercase tracking-widest text-[11px] md:text-xs">Ubicaciones</h3><p class="text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Edición Instantánea</p></div>
-                            <button onclick="guardarUbicacionesMasa()" id="btn-save-map" class="bg-blue-600 text-white px-3 py-1.5 rounded text-[9px] md:text-[10px] font-black uppercase tracking-widest shadow hover:bg-blue-700 transition">Guardar</button>
-                        </div>
-                        <div class="flex-1 overflow-y-auto p-0 hide-scrollbar">
-                            <table class="w-full text-left table-searchable" id="tabla-ubicaciones">
-                                <thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr class="border-b border-slate-200"><th class="p-2 md:p-3 text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-3 md:pl-4">Equipo</th><th class="p-2 md:p-3 text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest">Ciudad u Obra</th></tr></thead>
-                                <tbody>
-                                    {% for e in eqs %}
-                                    <tr class="border-b border-slate-100 bg-white hover:bg-slate-50 transition">
-                                        <td class="p-2 font-black text-blue-800 text-[10px] md:text-xs tracking-wide pl-3 md:pl-4 w-20 md:w-24 cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
-                                        <td class="p-2 pr-2 md:pr-4"><input type="text" class="w-full bg-transparent border-b border-dashed border-slate-300 focus:border-blue-500 outline-none text-slate-800 font-bold text-[10px] md:text-[11px] uppercase tracking-wider py-1 ubicacion-editable" data-codigo="{{ e.codigo }}" value="{{ e.ubicacion if e.ubicacion != 'None' else '' }}" placeholder="SIN UBICACIÓN"></td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="w-full md:w-2/3 h-[60%] md:h-full bg-slate-200 relative flex flex-col z-0">
-                        <div id="map-container" class="w-full h-full"></div>
-                        <div class="absolute bottom-4 left-4 md:bottom-6 md:left-6 z-[400] bg-white/90 backdrop-blur px-3 py-2 md:px-5 md:py-3 rounded shadow-lg border border-slate-200 pointer-events-none hidden md:block">
-                            <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 border-b border-slate-200 pb-1">Simbología GPS</p>
-                            <p class="text-[10px] font-bold text-slate-800 mt-2 uppercase tracking-wide">📍 REGLA TALLER = PANGUILEMU</p>
-                            <p class="text-[10px] font-bold text-slate-800 mt-1 uppercase tracking-wide">⚡ CERO LATENCIA ACTIVADA</p>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -605,7 +577,7 @@
         </div>
     </div>
 
-    <!-- MODALES EXTRAS (Chatter, Clave) -->
+    <!-- MODAL CLAVES -->
     <div id="modal-password" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden border border-slate-300">
             <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
@@ -665,21 +637,23 @@
             }
         }
 
-        // --- SISTEMA NATIVO DE MAPAS (LEAFLET) EXTREMADAMENTE RÁPIDO ---
+        // --- SISTEMA NATIVO DE MAPAS GOOGLE MAPS (ACELERADO POR LEAFLET) ---
         let mapInstance = null; let markersLayer = null;
         const equiposData = {{ eqs|tojson }};
         const DEMOTRON_COORDS = [-35.3855, -71.6385];
         
+        // Memoria estática de coordenadas (Cero Latencia)
         const coordCache = { 
             "taller": DEMOTRON_COORDS, "panguilemu": DEMOTRON_COORDS, "demotron": DEMOTRON_COORDS, "taller central": DEMOTRON_COORDS,
+            "oficina": [-35.3150, -71.5333], "san rafael": [-35.3150, -71.5333],
+            "villaseca": [-36.5683, -72.0831], // Coordenadas en Ñuble añadidas
             "rancagua": [-34.1708, -70.7444], "san fernando": [-34.5839, -70.9881], "rengo": [-34.4167, -70.8667],
             "curico": [-34.9828, -71.2394], "curicó": [-34.9828, -71.2394], "molina": [-35.1167, -71.2833],
             "talca": [-35.4264, -71.6554], "linares": [-35.8454, -71.5976], "san javier": [-35.5961, -71.7317],
-            "parral": [-36.1432, -71.8260], "cauquenes": [-35.9671, -72.3165], "san rafael": [-35.3150, -71.5333],
+            "parral": [-36.1432, -71.8260], "cauquenes": [-35.9671, -72.3165],
             "chillan": [-36.6066, -72.1034], "chillán": [-36.6066, -72.1034], "san carlos": [-36.4244, -71.9587],
             "bulnes": [-36.7423, -72.2985], "concepcion": [-36.8201, -73.0444], "concepción": [-36.8201, -73.0444],
-            "los angeles": [-37.4697, -72.3537], "los ángeles": [-37.4697, -72.3537], "talcahuano": [-36.7167, -73.1167],
-            "coronel": [-37.0167, -73.1333], "lota": [-37.0833, -73.15]
+            "los angeles": [-37.4697, -72.3537], "los ángeles": [-37.4697, -72.3537], "talcahuano": [-36.7167, -73.1167]
         };
 
         function getNormalizedLocation(eq) {
@@ -687,6 +661,7 @@
             let ubi = eq.ubicacion ? eq.ubicacion.trim() : "";
             if (!ubi || ubi.toLowerCase() === 'none' || ubi.toLowerCase() === 'sin asignacion') return null;
             if (ubi.toLowerCase().includes('taller') || ubi.toLowerCase().includes('panguilemu')) return "TALLER DEMOTRON";
+            if (ubi.toLowerCase().includes('oficina')) return "OFICINA DEMOTRON (SAN RAFAEL)";
             return ubi;
         }
 
@@ -701,8 +676,12 @@
 
         async function initMap() {
             if (!mapInstance) {
+                // Centrado dinámico: Entre Ñuble y Maule para enmarcar O'Higgins y Biobío
                 mapInstance = L.map('map-container').setView([-35.5, -71.8], window.innerWidth < 768 ? 6 : 7);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(mapInstance);
+                // Conexión DIRECTA a Google Maps estándar (Super Rápido, calles y carreteras de Google reales)
+                L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+                    attribution: '&copy; Google Maps', maxZoom: 20
+                }).addTo(mapInstance);
                 markersLayer = L.layerGroup().addTo(mapInstance);
             } else { mapInstance.invalidateSize(); }
             renderMapPins();
@@ -719,6 +698,9 @@
             for (let loc of Object.keys(grouped)) {
                 let coords = coordCache[loc.toLowerCase()];
                 let esGPS = esCoordenada(loc);
+
+                // Si es "Oficina" usamos San Rafael
+                if (loc.toLowerCase().includes('oficina')) coords = coordCache['san rafael'];
 
                 if (esGPS) { agregarPin(esGPS, "UBICACIÓN GPS", grouped[loc]); } 
                 else if (coords) { agregarPin(coords, loc, grouped[loc]); } 
@@ -819,7 +801,22 @@
             Promise.all(promises).then(() => location.reload());
         }
 
-        // --- CALENDARIO FULLCALENDAR Y GRAFICOS ---
+        function cambiarPassword() {
+            const actual = document.getElementById('pass_actual').value;
+            const nueva = document.getElementById('pass_nueva').value;
+            const msg = document.getElementById('pass_msg');
+            if(!actual || !nueva) { msg.innerText = "ES REQUISITO COMPLETAR AMBAS CREDENCIALES."; msg.classList.remove('hidden'); return; }
+            fetch('/api/cambiar_password', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({actual: actual, nueva: nueva}) })
+            .then(r => r.json()).then(data => {
+                if(data.status === 'success') {
+                    alert("ACTUALIZACIÓN DE SEGURIDAD EXITOSA.");
+                    document.getElementById('modal-password').classList.add('hidden');
+                    msg.classList.add('hidden');
+                } else { msg.innerText = data.message; msg.classList.remove('hidden'); }
+            });
+        }
+
+        // --- CALENDARIO FULLCALENDAR ---
         const mDataPrev = {{ mants_prev|tojson }};
         const mDataCorr = {{ mants_corr|tojson }};
         const eventosFuturos = {{ eventos_futuros|tojson }};
@@ -837,6 +834,7 @@
             if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
                 let evts = []; let eventMap = {};
                 
+                // SISTEMA ANTI-DUPLICADOS PARA CALENDARIO
                 mDataPrev.filter(m => m.fecha_iso && m.estado === 'Finalizada').forEach(m => { 
                     let key = m.fecha_iso + '_' + m.codigo;
                     if(!eventMap[key]){ evts.push({ title: m.codigo + ' (PM)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#047857' }); eventMap[key] = true; }
@@ -846,7 +844,7 @@
                     if(!eventMap[key]){ evts.push({ title: m.codigo + ' (Avería)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#B91C1C' }); eventMap[key] = true; }
                 });
                 
-                // PREVENIR DUPLICADOS EN PROYECCIÓN (Filtro Inteligente)
+                // FILTRO DE PRONÓSTICOS FUTUROS
                 let futureMap = {};
                 eventosFuturos.forEach(ef => {
                     let cod = ef.title.split(' ')[0];
