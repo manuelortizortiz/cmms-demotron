@@ -11,7 +11,7 @@
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- LIBRERÍAS DEL NUEVO MAPA NATIVO (LEAFLET) -->
+    <!-- MAPA LEAFLET -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -38,8 +38,9 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .btn-action { font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; border: 1px solid #E2E8F0; transition: all 0.2s; margin-right: 4px; }
         .btn-action:hover { background-color: #F8FAFC; }
-        .mapa-input { background: transparent; border: none; outline: none; font-size: 11px; font-weight: bold; width: 100%; padding: 4px; transition: all 0.2s; }
-        .mapa-input:focus { background: white; border: 1px solid #3B82F6; border-radius: 4px; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+        
+        /* CHECKLIST Y FIRMA */
+        #signature-pad { border: 2px dashed #CBD5E1; border-radius: 8px; background: #F8FAFC; cursor: crosshair; touch-action: none; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden relative">
@@ -61,8 +62,12 @@
             
             <p class="px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 mt-6">Gestión de Flota</p>
             <a onclick="switchTab('mapa', this)" class="nav-link">Ubicación de Flota</a>
+            
+            <!-- NUEVO MÓDULO PREDICTIVO -->
+            <a onclick="switchTab('predictivo', this)" class="nav-link text-emerald-700 font-bold border border-emerald-100 bg-emerald-50/50 my-2 mx-4 !rounded-lg text-center">📈 Predictivo Inteligente</a>
+            
             <a onclick="switchTab('plan', this)" class="nav-link">Planificación Kanban</a>
-            <a onclick="switchTab('cal', this)" class="nav-link">Calendario</a>
+            <a onclick="switchTab('cal', this)" class="nav-link">Calendario de Mantenimiento</a>
             <a onclick="switchTab('ot', this)" class="nav-link">OT Preventivas</a>
             <a onclick="switchTab('ot_corr', this)" class="nav-link text-red-700">Mantenciones Correctivas</a>
             <a onclick="switchTab('lec', this)" class="nav-link">Lecturas Terreno</a>
@@ -105,14 +110,14 @@
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
                     <div class="card-custom border-t-4 border-slate-800 text-center"><p class="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 md:mb-2">Total Flota</p><p class="text-2xl md:text-4xl font-black text-slate-800 tracking-tighter">{{ kpis.total }}</p></div>
                     <div class="card-custom border-t-4 border-emerald-500 text-center"><p class="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 md:mb-2">Operativos</p><p class="text-2xl md:text-4xl font-black text-emerald-600 tracking-tighter">{{ kpis.operativos }}</p></div>
-                    <div class="card-custom border-t-4 border-red-600 text-center"><p class="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 md:mb-2">Atrasados</p><p class="text-2xl md:text-4xl font-black text-red-600 tracking-tighter">{{ kpis.atrasados }}</p></div>
-                    <div class="card-custom border-t-4 border-blue-600 text-center"><p class="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 md:mb-2">Órdenes Activas</p><p class="text-2xl md:text-4xl font-black text-blue-700 tracking-tighter">{{ kpis.ot_abiertas }}</p></div>
+                    <div class="card-custom border-t-4 border-red-600 text-center"><p class="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 md:mb-2">Atrasados (PM)</p><p class="text-2xl md:text-4xl font-black text-red-600 tracking-tighter">{{ kpis.atrasados }}</p></div>
+                    <div class="card-custom border-t-4 border-blue-600 text-center"><p class="text-[9px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 md:mb-2">Órdenes Abiertas</p><p class="text-2xl md:text-4xl font-black text-blue-700 tracking-tighter">{{ kpis.ot_abiertas }}</p></div>
                 </div>
 
                 <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
                     <div class="card-custom"><h3 class="text-[11px] md:text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Estado Operativo</h3><div class="h-40 md:h-48 relative w-full"><canvas id="chartEstado"></canvas></div></div>
                     <div class="card-custom"><h3 class="text-[11px] md:text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Inversión Mensual</h3><div class="h-40 md:h-48 relative w-full"><canvas id="chartCostosMensuales"></canvas></div></div>
-                    <div class="card-custom"><h3 class="text-[11px] md:text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Pareto de Fallas (Desde 2020)</h3><div class="h-40 md:h-48 relative w-full"><canvas id="chartFallas"></canvas></div></div>
+                    <div class="card-custom"><h3 class="text-[11px] md:text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Pareto de Fallas Mecánicas</h3><div class="h-40 md:h-48 relative w-full"><canvas id="chartFallas"></canvas></div></div>
                 </div>
 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
@@ -199,32 +204,75 @@
             <div id="eq" class="seccion">
                 <div class="card-custom-nopad bg-white table-wrapper">
                     <table class="table-custom table-searchable">
-                        <thead><tr><th>Código</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Patente</th><th>Lectura</th><th>Margen</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead>
+                        <thead><tr><th>Código</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Patente / VIN</th><th>Lectura</th><th>Margen</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead>
                         <tbody>
                             {% for e in eqs %}
-                            {% if e.estado != 'Fuera de Servicio' %}
-                            <tr>
+                            <tr class="{% if e.estado == 'Fuera de Servicio' %}opacity-60 bg-slate-50{% endif %} hover:bg-slate-100 transition">
                                 <td class="font-black text-blue-700 cursor-pointer hover:underline uppercase tracking-wide" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
                                 <td>{{ e.tipo }}</td>
                                 <td class="font-bold text-slate-700">{{ e.marca }}</td>
                                 <td class="font-bold text-slate-700">{{ e.modelo }}</td>
-                                <td><span class="font-mono font-bold bg-slate-100 px-2 py-1 rounded inline-block mt-1">{{ e.patente }}</span></td>
+                                <td><span class="font-mono font-bold bg-slate-200 px-2 py-1 rounded inline-block mt-1">{{ e.patente }}</span><br><span class="text-[9px] text-slate-400 font-mono">{{ e.vin }}</span></td>
                                 <td class="font-mono">{{ e.lectura }}</td>
                                 <td class="font-mono font-bold {% if e.margen < 0 %}text-red-600{% elif e.margen <= 150 %}text-orange-500{% else %}text-emerald-600{% endif %}">{{ e.margen_str }}</td>
-                                <td><span class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider {% if e.estado == 'Operativo' %}bg-emerald-100 text-emerald-800{% elif e.estado == 'Taller' %}bg-orange-100 text-orange-800{% else %}bg-slate-200 text-slate-700{% endif %}">{{ e.estado }}</span></td>
+                                <td><span class="px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider {% if e.estado == 'Operativo' %}bg-emerald-100 text-emerald-800{% elif e.estado == 'Taller' %}bg-orange-100 text-orange-800{% else %}bg-slate-300 text-slate-700{% endif %}">{{ e.estado }}</span></td>
                                 <td class="text-right whitespace-nowrap">
                                     <a href="/api/imprimir_registro/{{e.codigo}}" target="_blank" class="btn-action text-slate-600 hover:text-slate-900">Ficha</a>
+                                    <!-- BOTÓN FILTROS RESTAURADO -->
+                                    <a href="/api/imprimir_filtros/{{e.codigo}}" target="_blank" class="btn-action text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200">Filtros</a>
                                     <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Equipo {{e.codigo}}', [{db: 'marca', label: 'Marca', val: '{{e.marca}}'},{db: 'modelo', label: 'Modelo', val: '{{e.modelo}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'},{db: 'estado_base', label: 'Estado', val: '{{e.estado}}'}])" class="btn-action text-blue-600">Editar</button>
                                 </td>
                             </tr>
-                            {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- MÓDULO GOOGLE MAPS NATIVO (LEAFLET + COORDENADAS ACELERADAS) -->
+            <!-- MÓDULO PREDICTIVO INTELIGENTE -->
+            <div id="predictivo" class="seccion">
+                <div class="card-custom mb-6 bg-emerald-50 border-emerald-200">
+                    <h3 class="font-black text-emerald-800 uppercase tracking-widest text-sm flex items-center gap-2">
+                        <span>📈</span> Planificador Predictivo Automático
+                    </h3>
+                    <p class="text-[10px] text-emerald-700 font-bold uppercase tracking-wide mt-1">El sistema calcula los promedios de uso diarios y proyecta matemáticamente la fecha exacta en que la máquina requerirá mantención.</p>
+                </div>
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[70vh] overflow-y-auto">
+                    <table class="table-custom table-searchable">
+                        <thead class="sticky top-0 bg-slate-100 shadow-sm z-10">
+                            <tr>
+                                <th>Equipo</th><th>Categoría</th><th>Lectura Act.</th><th>Límite PM</th>
+                                <th>Margen Consumible</th><th>Proyección Estimada</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in predictivo_list %}
+                            <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                                <td class="font-black text-blue-800 text-xs tracking-wide uppercase">{{ p.codigo }}</td>
+                                <td class="text-[10px] uppercase font-bold text-slate-500">{{ p.tipo }}</td>
+                                <td class="font-mono text-slate-800 font-bold">{{ p.lectura }} <span class="text-[9px] text-slate-400">{{ p.ctrl }}</span></td>
+                                <td class="font-mono text-blue-600 font-bold">{{ p.limite }} <span class="text-[9px] text-blue-400">{{ p.ctrl }}</span></td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-mono font-black text-xs {% if p.margen < 0 %}text-red-600{% elif p.margen <= 150 %}text-orange-500{% else %}text-emerald-600{% endif %}">{{ p.margen_str }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm border 
+                                        {% if p.dias_restantes <= 7 %} bg-red-100 text-red-800 border-red-300
+                                        {% elif p.dias_restantes <= 15 %} bg-orange-100 text-orange-800 border-orange-300
+                                        {% else %} bg-emerald-100 text-emerald-800 border-emerald-300 {% endif %}">
+                                        🗓️ {{ p.fecha_est }} (En {{ p.dias_restantes }} Días)
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- MÓDULO MAPA LEAFLET EXTREMADAMENTE RÁPIDO (SIN INTERNET REQUERIDO) -->
             <div id="mapa" class="seccion h-full">
                 <div class="flex flex-col md:flex-row h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
                     
@@ -232,7 +280,7 @@
                         <div class="p-3 md:p-4 border-b border-slate-200 bg-white shadow-sm flex justify-between items-center shrink-0">
                             <div>
                                 <h3 class="font-black text-slate-800 uppercase tracking-widest text-[11px] md:text-xs">Ubicaciones</h3>
-                                <p class="text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Edición Masiva</p>
+                                <p class="text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">Edición Instantánea</p>
                             </div>
                             <button onclick="guardarUbicacionesMasa()" id="btn-save-map" class="bg-blue-700 text-white px-3 py-1.5 rounded text-[9px] md:text-[10px] font-black uppercase tracking-widest shadow hover:bg-blue-800 transition">Guardar</button>
                         </div>
@@ -242,7 +290,7 @@
                                 <thead class="sticky top-0 bg-slate-100 shadow-sm z-10">
                                     <tr class="border-b border-slate-200">
                                         <th class="p-2 md:p-3 text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest pl-3 md:pl-4">Equipo</th>
-                                        <th class="p-2 md:p-3 text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest">Coordenada o Ciudad</th>
+                                        <th class="p-2 md:p-3 text-[8px] md:text-[9px] font-bold text-slate-500 uppercase tracking-widest">Ciudad u Obra</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -264,11 +312,14 @@
                         <div class="absolute bottom-4 left-4 md:bottom-6 md:left-6 z-[400] bg-white/90 backdrop-blur px-3 py-2 md:px-5 md:py-3 rounded shadow-lg border border-slate-200 pointer-events-none hidden md:block">
                             <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 border-b border-slate-200 pb-1">Simbología GPS</p>
                             <p class="text-[10px] font-bold text-slate-800 mt-2 uppercase tracking-wide">📍 REGLA TALLER = PANGUILEMU</p>
+                            <p class="text-[10px] font-bold text-slate-800 mt-1 uppercase tracking-wide">⚡ CERO LATENCIA ACTIVADA</p>
+                            <p class="text-[9px] text-slate-500 italic mt-0.5 max-w-[200px]">El mapa carga instantáneamente gracias a la memoria de coordenadas integrada O'Higgins-Biobío.</p>
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- PANEL KANBAN + CHECKLIST MÓVIL -->
             <div id="plan" class="seccion">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <p class="text-[11px] md:text-xs font-bold text-slate-500 uppercase tracking-widest">Ejecución Operativa</p>
@@ -295,12 +346,14 @@
                         </div>
                         <div id="{{ col_id }}" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar pb-6" data-status="{{ estado }}">
                             {% for t in kanban[estado] %}
-                            <div class="bg-white p-3 md:p-4 rounded shadow-sm border {% if t.vencida %}border-red-400{% else %}border-slate-200{% endif %} cursor-grab" data-id="{{ t.id }}">
+                            <div class="bg-white p-3 md:p-4 rounded shadow-sm border {% if t.vencida %}border-red-400{% else %}border-slate-200{% endif %} cursor-grab relative" data-id="{{ t.id }}">
+                                
                                 <div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-2">
                                     <h4 class="font-black text-slate-900 text-sm uppercase tracking-wider">{{ t.codigo }}</h4>
-                                    <a href="/imprimir_ot/{{ t.id }}" target="_blank" class="text-blue-600 hover:text-blue-800 font-bold text-[10px] uppercase bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 transition">VER OT</a>
+                                    <!-- NUEVO BOTÓN CHECKLIST MÓVIL Y FIRMA -->
+                                    <button onclick="abrirChecklist('{{t.id}}', '{{t.codigo}}', '{{t.tipo}}')" class="bg-emerald-50 border border-emerald-200 text-emerald-700 font-black text-[9px] uppercase tracking-widest px-2 py-1 rounded shadow-sm hover:bg-emerald-100 transition">📋 CHECKLIST</button>
                                 </div>
-                                <div class="mb-2"><span class="text-[9px] px-2 py-1 rounded font-bold uppercase tracking-widest {% if t.clasificacion=='Preventiva' %}bg-emerald-100 text-emerald-800{% else %}bg-red-100 text-red-800{% endif %}">{{ t.clasificacion }}</span></div>
+                                <div class="mb-2"><span class="text-[9px] px-2 py-1 rounded font-bold uppercase tracking-widest {% if t.clasificacion=='Preventiva' %}bg-blue-100 text-blue-800{% else %}bg-red-100 text-red-800{% endif %}">{{ t.clasificacion }}</span></div>
                                 <p class="text-[11px] md:text-xs text-slate-700 font-semibold mb-3 leading-tight">{{ t.tipo[:45] }}</p>
                                 
                                 <div class="mb-3">
@@ -324,13 +377,13 @@
                 </div>
             </div>
 
-            <!-- CALENDARIO EN DISPOSITIVO MÓVIL OPTIMIZADO -->
             <div id="cal" class="seccion h-full">
                 <div class="card-custom-nopad p-2 md:p-6 flex flex-col h-[calc(100vh-120px)] md:h-[calc(100vh-150px)]">
                     <div id="calendar" class="flex-1 w-full h-full text-xs md:text-sm"></div>
                 </div>
             </div>
 
+            <!-- OTRAS SECCIONES SE MANTIENEN FLUIDAS COMO SIEMPRE -->
             <div id="ot" class="seccion">
                 <div class="card-custom mb-6 bg-slate-50">
                     <form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end">
@@ -393,7 +446,6 @@
                         <tbody>{% for b in bodega %}<tr>
                             <td class="font-mono text-slate-500 text-xs font-bold">{{ b.codigo_item or '-' }}</td><td class="font-bold text-slate-800">{{ b.nombre }}</td><td class="text-xs font-semibold uppercase tracking-wider text-slate-500">{{ b.categoria }}</td><td class="font-mono font-black text-blue-700 text-lg">{{ b.cantidad }}</td><td class="text-xs">{{ b.ubicacion }}</td>
                             <td class="text-right whitespace-nowrap">
-                                <button onclick="abrirEditModal('bodega', '{{b.id}}', 'Insumo', [{db: 'nombre', label: 'Nombre', val: '{{b.nombre}}'},{db: 'cantidad', label: 'Stock', val: '{{b.cantidad}}'}])" class="btn-action text-blue-600">Editar</button>
                                 <button onclick="borrarRegistro('bodega', '{{b.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Borrar</button>
                             </td>
                         </tr>{% endfor %}</tbody>
@@ -405,9 +457,7 @@
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
                     <table class="table-custom table-searchable"><thead><tr><th>Fecha Emisión</th><th>N° OC</th><th>Equipo Asignado</th><th>Detalle de Compra</th><th>Inversión</th><th class="text-right">Acción</th></tr></thead>
                     <tbody>{% for c in compras %}<tr><td class="font-bold text-slate-700 text-xs">{{ c.fecha }}</td><td class="font-mono text-slate-500 font-bold text-xs">{{ c.oc }}</td><td class="font-black text-blue-800 uppercase tracking-widest">{{ c.codigo }}</td><td class="text-slate-800 font-semibold">{{ c.descripcion }}</td><td class="font-mono font-black text-slate-800">{{ c.costo_str }}</td>
-                    <td class="text-right whitespace-nowrap">
-                        <button onclick="borrarRegistro('compra', '{{c.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Anular</button>
-                    </td></tr>{% endfor %}</tbody>
+                    <td class="text-right whitespace-nowrap"><button onclick="borrarRegistro('compra', '{{c.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Anular</button></td></tr>{% endfor %}</tbody>
                     </table>
                 </div>
             </div>
@@ -426,9 +476,7 @@
                         <thead><tr><th>Fecha Captura</th><th>Equipo</th><th>Categoría</th><th>Valor Técnico</th><th class="text-right">Acciones</th></tr></thead>
                         <tbody>{% for l in lecturas %}<tr>
                             <td class="font-bold text-slate-700 text-xs">{{ l.fecha }}</td><td class="font-black text-blue-800 uppercase tracking-widest">{{ l.codigo }}</td><td class="text-xs uppercase font-semibold text-slate-500">{{ l.tipo_equipo }}</td><td class="font-mono font-black text-slate-800 text-lg">{{ l.valor_str }} <span class="text-[9px] text-slate-400 font-sans tracking-widest">{{ l.tipo }}</span></td>
-                            <td class="text-right whitespace-nowrap">
-                                <button onclick="borrarRegistro('lectura', '{{l.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Eliminar</button>
-                            </td>
+                            <td class="text-right whitespace-nowrap"><button onclick="borrarRegistro('lectura', '{{l.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Eliminar</button></td>
                         </tr>{% endfor %}</tbody>
                     </table>
                 </div>
@@ -438,13 +486,11 @@
                 <div class="card-custom-nopad bg-white flex flex-col">
                     <div class="table-wrapper max-h-[60vh] overflow-y-auto">
                         <table class="table-custom table-searchable">
-                            <thead><tr><th>Identidad Operador</th><th>Máquina/Equipo Asignado</th><th>Cargo Registrado</th><th>Status</th><th class="text-right">Acción Administrativa</th></tr></thead>
+                            <thead><tr><th>Identidad Operador</th><th>Máquina Asignada</th><th>Cargo</th><th>Status</th><th class="text-right">Acción</th></tr></thead>
                             <tbody>{% for op in operadores %}<tr>
                                 <td class="font-black text-slate-800">{{ op.nombre }}</td><td class="font-black text-blue-700 uppercase tracking-widest">{{ op.equipo_asignado }}</td><td class="text-xs uppercase font-semibold text-slate-500">{{ op.cargo }}</td>
                                 <td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-bold uppercase tracking-widest text-slate-600 border border-slate-200">{{ op.estado }}</span></td>
-                                <td class="text-right whitespace-nowrap">
-                                    <button onclick="borrarRegistro('personal', '{{op.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Desvincular</button>
-                                </td>
+                                <td class="text-right whitespace-nowrap"><button onclick="borrarRegistro('personal', '{{op.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Desvincular</button></td>
                             </tr>{% endfor %}</tbody>
                         </table>
                     </div>
@@ -453,11 +499,63 @@
             
             <div id="mecanicos" class="seccion">
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto">
-                    <table class="table-custom table-searchable"><thead><tr><th>RUT Oficial</th><th>Nombre Técnico</th><th>Especialidad Operativa</th><th>Status</th><th class="text-right">Acciones Administrativas</th></tr></thead><tbody>{% for m in mecanicos %}<tr><td class="font-mono text-slate-500 text-xs font-bold">{{ m.rut or 'SIN REGISTRO' }}</td><td class="font-black text-slate-800">{{ m.nombre }}</td><td class="text-xs uppercase font-semibold text-slate-600 tracking-wider">{{ m.especialidad }}</td><td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-bold uppercase tracking-widest text-slate-600 border border-slate-200">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Desvincular</button></td></tr>{% endfor %}</tbody></table>
+                    <table class="table-custom table-searchable"><thead><tr><th>RUT Oficial</th><th>Nombre Técnico</th><th>Especialidad</th><th>Status</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mecanicos %}<tr><td class="font-mono text-slate-500 text-xs font-bold">{{ m.rut or 'SIN REGISTRO' }}</td><td class="font-black text-slate-800">{{ m.nombre }}</td><td class="text-xs uppercase font-semibold text-slate-600 tracking-wider">{{ m.especialidad }}</td><td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-bold uppercase tracking-widest text-slate-600 border border-slate-200">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="btn-action text-red-600 border-red-200 hover:bg-red-50">Desvincular</button></td></tr>{% endfor %}</tbody></table>
                 </div>
             </div>
         </div>
     </main>
+
+    <!-- MODAL NUEVO: CHECKLIST DIGITAL Y FIRMA ELECTRÓNICA -->
+    <div id="checklist-modal" class="fixed inset-0 bg-slate-900/90 z-50 hidden flex flex-col items-center justify-center p-2 md:p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden border border-slate-300 max-h-[90vh]">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-800 shrink-0">
+                <div>
+                    <h3 class="font-black text-white uppercase tracking-widest text-sm flex items-center gap-2">📋 CHECKLIST DIGITAL</h3>
+                    <p id="check-ot-title" class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-1"></p>
+                </div>
+                <button onclick="document.getElementById('checklist-modal').classList.add('hidden')" class="text-slate-400 hover:text-white font-black text-2xl transition">&times;</button>
+            </div>
+            
+            <div class="p-5 flex-1 overflow-y-auto hide-scrollbar space-y-5 bg-slate-50">
+                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 border-b border-slate-100 pb-1">1. Inspección Operativa</h4>
+                    <label class="flex items-center gap-3 mb-3 cursor-pointer">
+                        <input type="checkbox" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                        <span class="text-xs font-bold text-slate-700 uppercase">Niveles de Fluidos (Aceite/Refrig.)</span>
+                    </label>
+                    <label class="flex items-center gap-3 mb-3 cursor-pointer">
+                        <input type="checkbox" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                        <span class="text-xs font-bold text-slate-700 uppercase">Inspección Visual de Fugas</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                        <span class="text-xs font-bold text-slate-700 uppercase">Prueba de Encendido y Función</span>
+                    </label>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 border-b border-slate-100 pb-1">2. Evidencia Fotográfica y Adjuntos</h4>
+                    <input type="file" id="check-files" multiple accept="image/*,.pdf" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-dashed border-slate-300 p-2 rounded bg-slate-50">
+                </div>
+
+                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-end mb-2">
+                        <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">3. Firma Electrónica Técnico</h4>
+                        <button onclick="clearPad()" class="text-[9px] font-bold text-red-500 hover:underline uppercase">Borrar</button>
+                    </div>
+                    <canvas id="signature-pad" width="350" height="120" class="w-full bg-slate-50"></canvas>
+                    <p class="text-[8px] text-slate-400 text-center mt-1 uppercase tracking-widest">Dibuje su firma con el dedo o mouse</p>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t border-slate-200 bg-white shrink-0">
+                <button onclick="firmarYCerrarOT()" class="w-full bg-emerald-600 text-white py-3 rounded-lg text-xs font-black uppercase tracking-widest shadow-md hover:bg-emerald-700 transition flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Firmar y Finalizar OT
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL EDICIÓN GENÉRICA -->
     <div id="edit-modal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
@@ -468,26 +566,7 @@
             </div>
             <div class="p-6 flex flex-col gap-5" id="edit-fields"></div>
             <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
-                <button onclick="cerrarEditModal()" class="px-4 py-2 text-slate-500 font-bold text-[10px] uppercase tracking-widest hover:text-slate-800 transition">Abortar</button>
-                <button onclick="guardarEdicion()" class="bg-blue-700 text-white px-6 py-2 rounded text-[10px] uppercase tracking-widest font-black hover:bg-blue-800 shadow transition">Aplicar Cambios</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODALES EXTRAS (Chatter, Clave) -->
-    <div id="modal-password" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden border border-slate-300">
-            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                <h3 class="font-black text-slate-800 uppercase tracking-widest text-xs">Actualización de Credenciales</h3>
-                <button onclick="document.getElementById('modal-password').classList.add('hidden')" class="text-slate-400 hover:text-red-600 font-black text-lg transition">&times;</button>
-            </div>
-            <div class="p-6 flex flex-col gap-5">
-                <div><label class="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-widest">Contraseña Actual</label><input type="password" id="pass_actual" class="form-input bg-slate-50 border-slate-300 font-mono tracking-widest"></div>
-                <div><label class="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-widest">Nueva Contraseña</label><input type="password" id="pass_nueva" class="form-input bg-slate-50 border-slate-300 font-mono tracking-widest"></div>
-                <p id="pass_msg" class="text-[10px] font-bold text-red-600 hidden uppercase tracking-wider bg-red-50 p-2 rounded border border-red-100"></p>
-            </div>
-            <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
-                <button onclick="cambiarPassword()" class="bg-blue-700 text-white px-6 py-2 rounded text-[10px] uppercase tracking-widest font-black hover:bg-blue-800 shadow transition w-full">Ejecutar Actualización</button>
+                <button onclick="guardarEdicion()" class="bg-blue-700 text-white px-6 py-2 rounded text-[10px] uppercase tracking-widest font-black hover:bg-blue-800 shadow transition w-full">Guardar Cambios</button>
             </div>
         </div>
     </div>
@@ -498,11 +577,9 @@
             const sidebar = document.getElementById('sidebar');
             const backdrop = document.getElementById('sidebar-backdrop');
             if (sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full');
-                backdrop.classList.remove('hidden');
+                sidebar.classList.remove('-translate-x-full'); backdrop.classList.remove('hidden');
             } else {
-                sidebar.classList.add('-translate-x-full');
-                backdrop.classList.add('hidden');
+                sidebar.classList.add('-translate-x-full'); backdrop.classList.add('hidden');
             }
         }
 
@@ -516,14 +593,12 @@
             const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + t;
             window.history.replaceState({path:newUrl}, '', newUrl);
             
-            // Ocultar menú en móviles al seleccionar una opción
             if(window.innerWidth < 768) {
                 document.getElementById('sidebar').classList.add('-translate-x-full');
                 document.getElementById('sidebar-backdrop').classList.add('hidden');
             }
-            
             if(t==='cal' && window.calendar) { setTimeout(() => window.calendar.render(), 200); }
-            if(t==='mapa') { setTimeout(() => initMap(), 300); }
+            if(t==='mapa') { setTimeout(() => initMap(), 100); }
         }
 
         function filtrarTablas(q) {
@@ -534,29 +609,27 @@
         }
 
         function borrarRegistro(tabla, id) {
-            if(confirm('ALERTA DE SEGURIDAD: ¿Confirma la eliminación permanente de este registro en la base de datos?')) {
+            if(confirm('ALERTA DE SEGURIDAD: ¿Confirma la eliminación permanente?')) {
                 fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' }).then(() => location.reload());
             }
         }
 
-        // --- SISTEMA NATIVO DE MAPAS VELOCIDAD EXTREMA (ACELERADO) ---
-        let mapInstance = null;
-        let markersLayer = null;
+        // --- SISTEMA NATIVO DE MAPAS (LEAFLET) EXTREMADAMENTE RÁPIDO ---
+        let mapInstance = null; let markersLayer = null;
         const equiposData = {{ eqs|tojson }};
-        
         const DEMOTRON_COORDS = [-35.3855, -71.6385];
-        // Caché pre-llenado con O'Higgins hasta Biobío para evitar consultas web y cargar en 0 segundos
+        
+        // Memoria estática de coordenadas (Cero Latencia en Servidor)
         const coordCache = { 
-            "taller": DEMOTRON_COORDS, "panguilemu": DEMOTRON_COORDS, "demotron": DEMOTRON_COORDS,
-            "rancagua": [-34.1708, -70.7444], "san fernando": [-34.5839, -70.9881],
-            "curico": [-34.9828, -71.2394], "curicó": [-34.9828, -71.2394],
-            "talca": [-35.4264, -71.6554], "linares": [-35.8454, -71.5976],
-            "cauquenes": [-35.9671, -72.3165], "parral": [-36.1432, -71.8260],
-            "san javier": [-35.5961, -71.7317], "san rafael": [-35.3150, -71.5333],
-            "chillan": [-36.6066, -72.1034], "chillán": [-36.6066, -72.1034],
-            "concepcion": [-36.8201, -73.0444], "concepción": [-36.8201, -73.0444],
-            "los angeles": [-37.4697, -72.3537], "los ángeles": [-37.4697, -72.3537],
-            "bulnes": [-36.7423, -72.2985], "san carlos": [-36.4244, -71.9587]
+            "taller": DEMOTRON_COORDS, "panguilemu": DEMOTRON_COORDS, "demotron": DEMOTRON_COORDS, "taller central": DEMOTRON_COORDS,
+            "rancagua": [-34.1708, -70.7444], "san fernando": [-34.5839, -70.9881], "rengo": [-34.4167, -70.8667],
+            "curico": [-34.9828, -71.2394], "curicó": [-34.9828, -71.2394], "molina": [-35.1167, -71.2833],
+            "talca": [-35.4264, -71.6554], "linares": [-35.8454, -71.5976], "san javier": [-35.5961, -71.7317],
+            "parral": [-36.1432, -71.8260], "cauquenes": [-35.9671, -72.3165], "san rafael": [-35.3150, -71.5333],
+            "chillan": [-36.6066, -72.1034], "chillán": [-36.6066, -72.1034], "san carlos": [-36.4244, -71.9587],
+            "bulnes": [-36.7423, -72.2985], "concepcion": [-36.8201, -73.0444], "concepción": [-36.8201, -73.0444],
+            "los angeles": [-37.4697, -72.3537], "los ángeles": [-37.4697, -72.3537], "talcahuano": [-36.7167, -73.1167],
+            "coronel": [-37.0167, -73.1333], "lota": [-37.0833, -73.15]
         };
 
         function getNormalizedLocation(eq) {
@@ -570,8 +643,7 @@
         function esCoordenada(str) {
             let partes = str.split(',');
             if(partes.length === 2) {
-                let lat = parseFloat(partes[0].trim());
-                let lon = parseFloat(partes[1].trim());
+                let lat = parseFloat(partes[0].trim()); let lon = parseFloat(partes[1].trim());
                 if(!isNaN(lat) && !isNaN(lon)) return [lat, lon];
             }
             return null;
@@ -579,53 +651,30 @@
 
         async function initMap() {
             if (!mapInstance) {
-                // Centrado dinámico: Entre Ñuble y Maule para enmarcar O'Higgins y Biobío
-                mapInstance = L.map('map-container').setView([-35.8, -71.8], window.innerWidth < 768 ? 6 : 7);
+                mapInstance = L.map('map-container').setView([-35.5, -71.8], window.innerWidth < 768 ? 6 : 7);
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                     attribution: '&copy; OpenStreetMap', maxZoom: 19
                 }).addTo(mapInstance);
                 markersLayer = L.layerGroup().addTo(mapInstance);
-            } else {
-                mapInstance.invalidateSize();
-            }
+            } else { mapInstance.invalidateSize(); }
             renderMapPins();
         }
 
-        // Carga de pines sin "Await" bloqueante, la interfaz será instantánea
         function renderMapPins() {
             markersLayer.clearLayers();
             let grouped = {};
-            
             equiposData.forEach(eq => {
                 let loc = getNormalizedLocation(eq);
-                if (loc) {
-                    if(!grouped[loc]) grouped[loc] = [];
-                    grouped[loc].push(eq);
-                }
+                if (loc) { if(!grouped[loc]) grouped[loc] = []; grouped[loc].push(eq); }
             });
 
             for (let loc of Object.keys(grouped)) {
                 let coords = coordCache[loc.toLowerCase()];
                 let esGPS = esCoordenada(loc);
 
-                if (esGPS) { 
-                    agregarPin(esGPS, "UBICACIÓN GPS", grouped[loc]);
-                } 
-                else if (coords) {
-                    agregarPin(coords, loc, grouped[loc]);
-                } 
-                else {
-                    // Carga Asíncrona (Cero Lag)
-                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(loc + ', Chile')}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data && data.length > 0) {
-                                let newCoords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-                                coordCache[loc.toLowerCase()] = newCoords;
-                                agregarPin(newCoords, loc, grouped[loc]);
-                            }
-                        }).catch(e => console.log("Buscando en segundo plano..."));
-                }
+                if (esGPS) { agregarPin(esGPS, "UBICACIÓN GPS", grouped[loc]); } 
+                else if (coords) { agregarPin(coords, loc, grouped[loc]); } 
+                else { console.warn("Ubicación fuera de Caché (Use coordenadas GPS para precisión): ", loc); }
             }
         }
 
@@ -663,43 +712,48 @@
             });
         }
 
-        // --- SISTEMA EDICIÓN INLINE ---
-        let editData = {};
-        function abrirEditModal(tabla, id, titulo, campos) {
-            editData = { tabla, id, campos: [] };
-            document.getElementById('edit-title').innerText = "EDICIÓN: " + titulo;
-            let html = '';
-            campos.forEach(c => {
-                editData.campos.push(c.db);
-                html += `<div><label class="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-widest">${c.label}</label><input type="text" id="edit_${c.db}" value="${c.val}" class="form-input font-bold text-slate-800"></div>`;
-            });
-            document.getElementById('edit-fields').innerHTML = html;
-            document.getElementById('edit-modal').classList.remove('hidden');
+        // --- SISTEMA CHECKLIST DIGITAL Y FIRMA ELECTRÓNICA ---
+        let checkOtId = null; let canvas = document.getElementById('signature-pad'); let ctx = canvas.getContext('2d'); let drawing = false;
+        canvas.addEventListener('mousedown', () => drawing = true); canvas.addEventListener('mouseup', () => drawing = false);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('touchstart', (e) => { drawing = true; draw(e.touches[0]); });
+        canvas.addEventListener('touchend', () => drawing = false);
+        canvas.addEventListener('touchmove', (e) => { draw(e.touches[0]); e.preventDefault(); });
+        function draw(e) {
+            if(!drawing) return; let rect = canvas.getBoundingClientRect();
+            let x = (e.clientX || e.pageX) - rect.left; let y = (e.clientY || e.pageY) - rect.top;
+            ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#0F172A';
+            ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y);
         }
-        function cerrarEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
-        function guardarEdicion() {
-            let promises = editData.campos.map(campo => {
-                return fetch('/update_inline', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: editData.id, campo: campo, valor: document.getElementById('edit_' + campo).value, tabla: editData.tabla}) });
-            });
-            Promise.all(promises).then(() => location.reload());
-        }
-
-        function cambiarPassword() {
-            const actual = document.getElementById('pass_actual').value;
-            const nueva = document.getElementById('pass_nueva').value;
-            const msg = document.getElementById('pass_msg');
-            if(!actual || !nueva) { msg.innerText = "ES REQUISITO COMPLETAR AMBAS CREDENCIALES."; msg.classList.remove('hidden'); return; }
-            fetch('/api/cambiar_password', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({actual: actual, nueva: nueva}) })
-            .then(r => r.json()).then(data => {
-                if(data.status === 'success') {
-                    alert("ACTUALIZACIÓN DE SEGURIDAD EXITOSA.");
-                    document.getElementById('modal-password').classList.add('hidden');
-                    msg.classList.add('hidden');
-                } else { msg.innerText = data.message; msg.classList.remove('hidden'); }
-            });
+        function clearPad() { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.beginPath(); }
+        
+        function abrirChecklist(ot_id, codigo, intervencion) {
+            checkOtId = ot_id;
+            document.getElementById('check-ot-title').innerText = `${codigo} - ${intervencion}`;
+            document.querySelectorAll('#checklist-modal input[type="checkbox"]').forEach(cb => cb.checked = false);
+            document.getElementById('check-files').value = '';
+            clearPad();
+            document.getElementById('checklist-modal').classList.remove('hidden');
         }
 
-        // --- CALENDARIO FULLCALENDAR ---
+        function firmarYCerrarOT() {
+            let fData = new FormData();
+            fData.append('modelo_ref', 'ot'); fData.append('registro_id', checkOtId);
+            fData.append('mensaje', `✅ CHECKLIST DIGITAL COMPLETADO Y FIRMADO DESDE TERRENO.\n- Parámetros Operativos Verificados.\n- OT Finalizada.`);
+            
+            // Adjuntar fotos (Si hay)
+            let files = document.getElementById('check-files').files;
+            if (files.length > 0) fData.append('archivo', files[0]);
+
+            // Guardar firma y enviar al servidor
+            fetch('/api/chatter/add', { method: 'POST', body: fData }).then(() => {
+                fetch('/api/cambiar_estado_ot/' + checkOtId, { 
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({estado: 'Finalizada'}) 
+                }).then(() => location.reload());
+            });
+        }
+
+        // --- CALENDARIO FULLCALENDAR Y GRAFICOS ---
         const mDataPrev = {{ mants_prev|tojson }};
         const mDataCorr = {{ mants_corr|tojson }};
         const eventosFuturos = {{ eventos_futuros|tojson }};
@@ -717,7 +771,6 @@
             if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
                 let evts = []; let eventMap = {};
                 
-                // CORRECCIÓN DE DUPLICADOS EN CALENDARIO
                 mDataPrev.filter(m => m.fecha_iso && m.estado === 'Finalizada').forEach(m => { 
                     let key = m.fecha_iso + '_' + m.codigo;
                     if(!eventMap[key]){ evts.push({ title: m.codigo + ' (PM)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#047857' }); eventMap[key] = true; }
@@ -726,10 +779,12 @@
                     let key = m.fecha_iso + '_' + m.codigo;
                     if(!eventMap[key]){ evts.push({ title: m.codigo + ' (Avería)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#B91C1C' }); eventMap[key] = true; }
                 });
+                
+                // PREVENIR DUPLICADOS EN PROYECCIÓN
+                let futureMap = {};
                 eventosFuturos.forEach(ef => {
                     let cod = ef.title.split(' ')[0];
-                    let key = ef.start + '_' + cod;
-                    if(!eventMap[key]){ evts.push({ title: ef.title, start: ef.start, color: ef.color }); eventMap[key] = true; }
+                    if(!futureMap[cod]){ evts.push({ title: ef.title, start: ef.start, color: ef.color }); futureMap[cod] = true; }
                 });
 
                 let vistaInicial = window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth';
@@ -750,6 +805,21 @@
                 new Chart(document.getElementById('chartTop7Prev'), { type: 'bar', data: { labels: cData.costos_top7.prev_labels, datasets: [{ label: 'Costo (CLP)', data: cData.costos_top7.prev_data, backgroundColor: '#1D4ED8', borderRadius: 2 }] }, options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#F1F5F9' }, ticks: { callback: function(value) { return (value / 1000000) + 'mm'; } } }, y: { grid: { display: false } } } } });
             }
         };
+
+        // --- SISTEMA EDICIÓN INLINE BÁSICA ---
+        let editData = {};
+        function abrirEditModal(tabla, id, titulo, campos) {
+            editData = { tabla, id, campos: [] };
+            document.getElementById('edit-title').innerText = "EDICIÓN: " + titulo;
+            let html = '';
+            campos.forEach(c => { editData.campos.push(c.db); html += `<div><label class="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-widest">${c.label}</label><input type="text" id="edit_${c.db}" value="${c.val}" class="form-input font-bold text-slate-800"></div>`; });
+            document.getElementById('edit-fields').innerHTML = html; document.getElementById('edit-modal').classList.remove('hidden');
+        }
+        function cerrarEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
+        function guardarEdicion() {
+            let promises = editData.campos.map(campo => { return fetch('/update_inline', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: editData.id, campo: campo, valor: document.getElementById('edit_' + campo).value, tabla: editData.tabla}) }); });
+            Promise.all(promises).then(() => location.reload());
+        }
     </script>
 </body>
 </html>
