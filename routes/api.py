@@ -1,5 +1,7 @@
-from flask import Blueprint, request, jsonify, redirect, render_template_string
+from flask import Blueprint, request, jsonify, redirect, render_template_string, send_file
 import os
+import io
+import pandas as pd
 from werkzeug.utils import secure_filename
 from datetime import datetime
 from flask_login import login_required, current_user
@@ -12,7 +14,7 @@ from models.historial import HistorialLectura, CompraRepuesto
 from models.personal import Personal, Mecanico, RegistroUsoEquipo
 from models.chatter import RegistroChatter
 from models.bodega import InventarioBodega
-from utils.formatters import clean_int, clean_float
+from utils.formatters import clean_int, clean_float, format_clp
 
 api_bp = Blueprint('api', __name__)
 
@@ -190,22 +192,19 @@ def update_inline():
         return jsonify({"status": "success"})
     return jsonify({"status": "error"}), 404
 
-# --- NUEVA FUNCIÓN MASA: GUARDAR UBICACIONES DE EQUIPOS TIPO EXCEL ---
 @api_bp.route('/api/actualizar_ubicaciones', methods=['POST'])
 @login_required
 def actualizar_ubicaciones():
     try:
         data = request.json
         cambios = data.get('cambios', [])
-        
         if not cambios: return jsonify({"status": "success", "message": "No hay cambios para guardar."})
         
         for item in cambios:
             codigo = item.get('codigo')
             nueva_ubicacion = item.get('ubicacion')
             eq = Equipo.query.filter_by(codigo=codigo).first()
-            if eq:
-                eq.ubicacion = nueva_ubicacion
+            if eq: eq.ubicacion = nueva_ubicacion
                 
         registrar_auditoria("ACTUALIZACIÓN MASIVA DE UBICACIONES Y COORDENADAS (MAPA).")
         db.session.commit()
@@ -268,8 +267,7 @@ def add_chatter():
     if not mensaje and not archivo_url: return jsonify({"status": "error"}), 400
 
     UserClass = current_user.__class__
-    columnas = list(UserClass.__table__.columns.keys())
-    col_nombre = 'username' if 'username' in columnas else 'nombre'
+    col_nombre = 'username' if 'username' in UserClass.__table__.columns.keys() else 'nombre'
     autor_name = getattr(current_user, col_nombre, getattr(current_user, 'nombre', 'Sistema'))
 
     log = RegistroChatter(modelo_ref=modelo, registro_id=registro_id, autor=autor_name, accion=accion, mensaje=mensaje, archivo_url=archivo_url)
@@ -316,3 +314,86 @@ def imprimir_filtros(codigo):
     else: html += "<span class='text-slate-400 text-[11px] italic font-semibold'>Este equipo tiene una pauta única en la flota.</span>"
     html += f"""</div></div></div><h3 class="text-xs font-bold text-slate-800 uppercase mb-2 border-b border-slate-200 pb-1">Tabla de Repuestos y Filtros</h3><table class="w-full text-left text-[11px] mb-4 border border-slate-300"><thead><tr class="bg-slate-800 text-white print:bg-slate-100 print:text-slate-800"><th class="p-1.5 border border-slate-300 uppercase text-[9px] tracking-wider">Sistema</th><th class="p-1.5 border border-slate-300 text-center uppercase text-[9px] tracking-wider">Cant</th><th class="p-1.5 border border-slate-300 uppercase text-[9px] tracking-wider">Fleetguard</th><th class="p-1.5 border border-slate-300 uppercase text-[9px] tracking-wider">Baldwin</th><th class="p-1.5 border border-slate-300 uppercase text-[9px] tracking-wider">Originales</th><th class="p-1.5 border border-slate-300 uppercase text-[9px] tracking-wider">Donaldson</th><th class="p-1.5 border border-slate-300 uppercase text-[9px] tracking-wider">Alternativo</th></tr></thead><tbody>{"".join([f"<tr class='odd:bg-white even:bg-slate-50'><td class='p-1.5 border border-slate-300 font-bold text-slate-800'>{f.sistema}</td><td class='p-1.5 border border-slate-300 text-center font-bold text-sm'>{f.cant}</td><td class='p-1.5 border border-slate-300 font-mono text-[11px] font-semibold text-slate-700'>{f.fleetguard}</td><td class='p-1.5 border border-slate-300 font-mono text-[11px] font-semibold text-slate-700'>{f.baldwind}</td><td class='p-1.5 border border-slate-300 font-mono text-[11px] font-semibold text-slate-700'>{f.originales}</td><td class='p-1.5 border border-slate-300 font-mono text-[11px] font-semibold text-slate-700'>{f.donaldson}</td><td class='p-1.5 border border-slate-300 font-mono text-[11px] font-semibold text-slate-700'>{f.otra}</td></tr>" for f in filtros])}<tr class='bg-white'><td class='p-1.5 border border-slate-300 h-6'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td></tr><tr class='bg-white'><td class='p-1.5 border border-slate-300 h-6'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td><td class='p-1.5 border border-slate-300'></td></tr></tbody></table><div class="mt-4 border border-slate-300 p-3 rounded bg-slate-50"><p class="text-[9px] font-bold text-slate-700 uppercase mb-1 tracking-wider">Nota Técnica - Homologación y Sustitución de Componentes</p><p class="text-[9px] text-slate-600 text-justify">Por motivos de disponibilidad de inventario o equivalencias de ingeniería, los elementos filtrantes detallados pueden ser sustituidos por alternativas OEM certificadas de igual o mayor estándar. Es mandato registrar en las líneas dispuestas superiormente cualquier divergencia técnica, actualización de código o faltante de repuesto detectado durante el proceso de intervención.</p></div><div class="text-center mt-6 pt-4 border-t border-slate-200 print:hidden flex justify-center gap-3"><button onclick="window.print()" class="bg-slate-800 text-white px-5 py-1.5 rounded text-xs font-bold shadow hover:bg-slate-700 transition uppercase tracking-wider">Imprimir</button><button onclick="window.close()" class="bg-slate-200 text-slate-700 px-5 py-1.5 rounded text-xs font-bold shadow hover:bg-slate-300 transition uppercase tracking-wider">Cerrar</button></div></div></body></html>"""
     return render_template_string(html)
+
+# =====================================================================
+# NUEVO: SÚPER MÓDULO DE REPORTES Y ANALÍTICA (EXCEL, PDF, POWER BI)
+# =====================================================================
+
+@api_bp.route('/api/exportar/excel_maestro')
+@login_required
+def exportar_excel_maestro():
+    try:
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # Pestaña 1: Equipos y Flota
+            eqs = Equipo.query.all()
+            df_eq = pd.DataFrame([{
+                'Código': e.codigo, 'Tipo': e.tipo_equipo, 'Marca': e.marca, 'Modelo': e.modelo, 
+                'Patente': e.patente, 'VIN': e.vin, 'N_Motor': e.n_motor, 'Estado': e.estado_base, 
+                'Ubicación': e.ubicacion, 'Lectura_Actual': e.lectura_actual, 'Margen_Restante': e.margen
+            } for e in eqs])
+            df_eq.to_excel(writer, sheet_name='Flota Activa', index=False)
+            
+            # Pestaña 2: Historial Mantenciones
+            ots = OrdenTrabajo.query.all()
+            df_ot = pd.DataFrame([{
+                'Fecha': o.fecha.strftime('%Y-%m-%d') if o.fecha else '', 'Folio': o.folio, 
+                'Equipo': o.codigo_equipo, 'Clasificación': o.tipo_ot, 'Sistema_Falla': o.sistema_falla, 
+                'Detalle_Intervención': o.tipo_mantencion, 'Lectura': o.lectura, 
+                'Costo_CLP': float(o.costo_mantencion_clp or 0), 'Mecánico': o.mecanico, 'Estado': o.estado
+            } for o in ots])
+            df_ot.to_excel(writer, sheet_name='Mantenciones Históricas', index=False)
+            
+            # Pestaña 3: Compras e Inversión Insumos
+            compras = CompraRepuesto.query.all()
+            df_comp = pd.DataFrame([{
+                'Fecha': c.fecha.strftime('%Y-%m-%d') if c.fecha else '', 'OC': c.oc, 
+                'Equipo_Destino': c.codigo_equipo, 'Descripción': c.descripcion, 
+                'Costo_CLP': float(c.costo_pm_clp or 0)
+            } for c in compras])
+            df_comp.to_excel(writer, sheet_name='Compras Insumos', index=False)
+
+        output.seek(0)
+        registrar_auditoria("DESCARGÓ LA MATRIZ EXCEL MAESTRA (RESPALDO DE BASE DE DATOS).")
+        return send_file(output, download_name=f"DEMOTRON_DB_Maestra_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx", as_attachment=True)
+    except Exception as e:
+        return f"Error generando Excel: {str(e)}"
+
+@api_bp.route('/api/powerbi/dataset')
+def powerbi_dataset():
+    """ Enlace directo para conectar Power BI en vivo sin login humano (Usa token) """
+    token = request.args.get('token')
+    if token != 'demotron_pbi_2026': 
+        return jsonify({"error": "No autorizado. Token inválido."}), 403
+    
+    ots = OrdenTrabajo.query.all()
+    compras = CompraRepuesto.query.all()
+    
+    dataset = []
+    for o in ots:
+        dataset.append({
+            "fecha_iso": o.fecha.strftime('%Y-%m-%d') if o.fecha else None,
+            "equipo": o.codigo_equipo,
+            "tipo_registro": "MANTENCION_" + str(o.tipo_ot).upper(),
+            "categoria": o.sistema_falla or "General",
+            "costo_clp": float(o.costo_mantencion_clp or 0)
+        })
+    for c in compras:
+        dataset.append({
+            "fecha_iso": c.fecha.strftime('%Y-%m-%d') if c.fecha else None,
+            "equipo": c.codigo_equipo,
+            "tipo_registro": "COMPRA_INSUMOS",
+            "categoria": "Repuestos y Filtros",
+            "costo_clp": float(c.costo_pm_clp or 0)
+        })
+        
+    return jsonify(dataset)
+
+@api_bp.route('/api/guardar_programacion', methods=['POST'])
+@login_required
+def guardar_programacion():
+    # Este módulo simula el guardado de la configuración Cron de reportes.
+    correos = request.form.get('correos')
+    frecuencia = request.form.get('frecuencia')
+    registrar_auditoria(f"CONFIGURÓ ENVÍO AUTOMÁTICO {frecuencia.upper()} AL CORREO: {correos}.")
+    return redirect('/?tab=automatizacion')
