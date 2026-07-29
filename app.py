@@ -2,6 +2,7 @@ import os
 from datetime import timedelta
 from flask import Flask
 from flask_login import LoginManager
+from flask_migrate import Migrate
 from extensions import db
 from models.usuario import Usuario  
 
@@ -26,7 +27,7 @@ def create_app():
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)
 
     # ==========================================
-    # 2. BASE DE DATOS (CORRECCIÓN POSTGRESQL)
+    # 2. BASE DE DATOS Y MIGRACIONES (ALEMBIC)
     # ==========================================
     db_url = os.environ.get('DATABASE_URL', 'sqlite:///cmms_demotron.db')
     
@@ -36,7 +37,11 @@ def create_app():
         
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    
     db.init_app(app)
+    
+    # INICIALIZADOR DE MIGRACIONES
+    migrate = Migrate(app, db)
 
     # ==========================================
     # 3. AUTENTICACIÓN (FLASK-LOGIN)
