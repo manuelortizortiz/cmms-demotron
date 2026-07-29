@@ -1,44 +1,36 @@
-# routes/auth.py
-from flask import Blueprint, render_template, redirect, url_for, request, flash
-from flask_login import login_user, logout_user, login_required, current_user
-from extensions import db
-from models.user import User
+import os
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask_login import login_user, logout_user, current_user
+from werkzeug.security import check_password_hash
+from models.usuario import Usuario
 
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    # Crear usuario admin maestro automáticamente si la tabla está vacía
-    if User.query.count() == 0:
-        admin = User(username='admin', email='admin@demotron.cl', role='admin', nombre='Administrador Maestro')
-        admin.set_password('admin123')
-        db.session.add(admin)
-        db.session.commit()
-
-    # Si ya está logueado, lo mandamos al dashboard
     if current_user.is_authenticated:
         return redirect(url_for('dashboard.dashboard'))
 
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        user = User.query.filter_by(username=username).first()
-
-        # Verificar credenciales
-        if user and user.check_password(password):
-            if not user.activo:
-                flash('Usuario inactivo. Contacte a gerencia.', 'danger')
-                return redirect(url_for('auth.login'))
-            
+        
+        # Búsqueda de usuario
+        user = Usuario.query.filter_by(username=username).first()
+        
+        # Validación de contraseña en base de datos
+        if user and user.activo and check_password_hash(user.password_hash, password):
+            session.permanent = True
             login_user(user)
-            return redirect(url_for('dashboard.dashboard'))
-        else:
-            flash('Usuario o contraseña incorrectos.', 'danger')
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('dashboard.dashboard'))
+            
+        flash('Credenciales incorrectas o usuario inactivo.', 'error')
 
     return render_template('login.html')
 
 @auth_bp.route('/logout')
-@login_required
 def logout():
     logout_user()
+    session.clear()
     return redirect(url_for('auth.login'))
