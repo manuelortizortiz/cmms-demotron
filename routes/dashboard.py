@@ -21,13 +21,13 @@ def dashboard():
         
         # =========================================================================
         # 1. MOTOR ANALÍTICO OPTIMIZADO (SQLAlchemy Aggregations)
-        # Esto previene el N+1 y hace que el Dashboard cargue en milisegundos
         # =========================================================================
+        # CORRECCIÓN: Se reemplazó Equipo.margen por la resta directa en SQL
         kpis_flota = db.session.query(
             func.count(Equipo.id).label('total'),
             func.sum(case((Equipo.estado_base == 'Operativo', 1), else_=0)).label('operativos'),
             func.sum(case((Equipo.estado_base == 'Taller', 1), else_=0)).label('en_taller'),
-            func.sum(case((Equipo.margen < 0, 1), else_=0)).label('atrasados')
+            func.sum(case(((func.coalesce(Equipo.proxima_pm, 0) - func.coalesce(Equipo.lectura_actual, 0)) < 0, 1), else_=0)).label('atrasados')
         ).first()
 
         total_eq = int(kpis_flota.total or 0)
@@ -56,7 +56,7 @@ def dashboard():
             .group_by(OrdenTrabajo.sistema_falla).all()
         fallas_data = {'labels': [f[0] or "Otros" for f in fallas_query], 'data': [f[1] for f in fallas_query]}
 
-        # Top 5 Equipos Más Costosos (Histórico Total)
+        # Top 5 Equipos Más Costosos
         top_costosos = db.session.query(
             OrdenTrabajo.codigo_equipo,
             func.sum(OrdenTrabajo.costo_mantencion_clp).label('costo_acumulado')
@@ -84,7 +84,6 @@ def dashboard():
         equipos_dict, taller, criticos, proximos, predictivo_list, finanzas_flota = [], [], [], [], [], []
         cercanos_seguro, eventos_futuros = [], []
         
-        # Pre-cálculo rápido de costos para CPK/CPH (Evita N+1 en Python)
         costos_mants_por_equipo = {}
         for ot in ots_db:
             costos_mants_por_equipo[ot.codigo_equipo] = costos_mants_por_equipo.get(ot.codigo_equipo, 0) + float(ot.costo_mantencion_clp or 0)
@@ -93,7 +92,6 @@ def dashboard():
         for c in compras_db:
             costos_compras_por_equipo[c.codigo_equipo] = costos_compras_por_equipo.get(c.codigo_equipo, 0) + float(c.costo_pm_clp or 0)
 
-        # Mapeo de Flota
         for e in eqs_db:
             eq_data = {
                 'codigo': e.codigo, 'tipo': e.tipo_equipo or 'S/E', 'marca': e.marca or 'S/E', 'modelo': e.modelo or 'S/E',
@@ -108,7 +106,6 @@ def dashboard():
             if e.margen < 0 and e.estado_base != 'Fuera de Servicio': criticos.append(eq_data)
             if 0 <= e.margen <= 150 and e.estado_base != 'Fuera de Servicio': proximos.append(eq_data)
 
-            # Módulo Predictivo Automático
             try:
                 m_val = float(e.margen)
                 if e.estado_base != 'Fuera de Servicio' and m_val >= 0:
@@ -136,7 +133,6 @@ def dashboard():
                         eventos_futuros.append({'title': f"{e.codigo} (PM)", 'start': fecha_iso, 'color': '#F59E0B'})
             except: pass
 
-            # Finanzas y Flota (CPK / CPH)
             c_mants = costos_mants_por_equipo.get(e.codigo, 0)
             c_compras = costos_compras_por_equipo.get(e.codigo, 0)
             c_total = c_mants + c_compras
@@ -150,17 +146,14 @@ def dashboard():
                 'cpk_cph': round(cpk_cph, 2), 'cpk_cph_str': f"${round(cpk_cph, 2)}/{e.control_base[:2] if e.control_base else ''}"
             })
 
-        # Ordenamientos de Listas
         equipos_dict = sorted(equipos_dict, key=lambda x: (1 if x['estado'] == 'Fuera de Servicio' else 0, x['codigo']))
         proximos = sorted(proximos, key=lambda x: x['margen'])
         predictivo_list = sorted(predictivo_list, key=lambda x: x['dias_restantes'])
         finanzas_flota = sorted(finanzas_flota, key=lambda x: x['costo_total'], reverse=True)
         top_7_cercanos = sorted(cercanos_seguro, key=lambda x: x['margen'])[:7]
 
-        # Top Averías Históricas
         eq_fallas_counter = Counter(o.codigo_equipo for o in ots_db if o.tipo_ot=='Correctiva')
         top_equipos_fallas = [{'codigo': k, 'cantidad': v, 'foto_url': buscar_foto_por_tipo(next((e.tipo_equipo for e in eqs_db if e.codigo==k), ''), '')} for k, v in eq_fallas_counter.most_common(5)]
-
         correctivas_mes = len([o for o in ots_db if o.tipo_ot=='Correctiva' and o.fecha and o.fecha.month==hoy.month and o.fecha.year==hoy.year])
 
         # =========================================================================
@@ -190,7 +183,6 @@ def dashboard():
         top_7_prev_list = sorted(costos_prev_eq.items(), key=lambda x: x[1], reverse=True)[:7]
         top_7_preventivas = [{'codigo': x[0], 'costo': x[1], 'costo_str': format_clp(x[1])} for x in top_7_prev_list]
 
-        # Estructuras para Tablas
         todas_mants_prev = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else '', 'fecha_iso': m.fecha.strftime('%Y-%m-%d') if m.fecha else '', 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Preventiva']
         todas_mants_corr = [{'id': m.id, 'fecha': m.fecha.strftime('%d/%m/%Y') if m.fecha else '', 'fecha_iso': m.fecha.strftime('%Y-%m-%d') if m.fecha else '', 'codigo': m.codigo_equipo, 'ot_generada': m.folio, 'tipo_mantencion': m.tipo_mantencion, 'costo_str': format_clp(m.costo_mantencion_clp), 'estado': m.estado, 'sistema_falla': m.sistema_falla, 'causa_raiz': m.causa_raiz, 'lectura_str': format_num(m.lectura), 'mecanico': m.mecanico} for m in ots_db if m.tipo_ot == 'Correctiva']
         todas_compras = [{'id': c.id, 'fecha': c.fecha.strftime('%d/%m/%Y') if c.fecha else '', 'oc': c.oc, 'codigo': c.codigo_equipo, 'descripcion': c.descripcion, 'costo_str': format_clp(c.costo_pm_clp)} for c in compras_db]
@@ -229,7 +221,6 @@ def dashboard():
             mttr_str = f"{mttr} hrs"
         else: mttr_str = "0 hrs"
 
-        # Empaquetado Final de Data
         kpis = {
             'total': total_eq, 'operativos': operativos_count, 'atrasados': atrasados_count, 
             'ot_abiertas': ot_abiertas, 'costo_mes_str': format_clp(costo_actual), 
