@@ -36,24 +36,21 @@
     <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full">
 
         <!-- ========================================== -->
-        <!-- 1. NUEVOS KPIS SUPERIORES (Fase Inteligencia) -->
+        <!-- 1. KPIS SUPERIORES (Inteligencia de Negocio)-->
         <!-- ========================================== -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <!-- Tarjeta 1: Disponibilidad Operativa -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500">
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Disponibilidad Flota</p>
                 <h3 class="text-3xl font-black text-slate-800 mt-1">{{ kpis.disponibilidad_pct }}%</h3>
                 <p class="text-xs text-slate-500 font-bold mt-2"><span class="text-blue-600">{{ kpis.operativos }}</span> de {{ kpis.total }} equipos al día</p>
             </div>
 
-            <!-- Tarjeta 2: Backlog Crítico (Atrasados) -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 {% if kpis.atrasados > 0 %}border-l-red-500{% else %}border-l-emerald-500{% endif %}">
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Backlog Crítico (Vencidos)</p>
                 <h3 class="text-3xl font-black mt-1 {% if kpis.atrasados > 0 %}text-red-600{% else %}text-emerald-500{% endif %}">{{ kpis.atrasados }}</h3>
                 <p class="text-xs text-slate-500 font-bold mt-2">Equipos con mantención superada</p>
             </div>
 
-            <!-- Tarjeta 3: Costos y Variación Mensual (MoM) -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-amber-500">
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Costo Mes Actual</p>
                 <h3 class="text-xl font-black text-slate-800 mt-1">{{ kpis.costo_mes_str }}</h3>
@@ -63,7 +60,6 @@
                 </div>
             </div>
 
-            <!-- Tarjeta 4: Volumen de Trabajo (OTs) -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-purple-500">
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Órdenes Abiertas</p>
                 <h3 class="text-3xl font-black text-slate-800 mt-1">{{ kpis.ot_abiertas }}</h3>
@@ -72,10 +68,9 @@
         </div>
 
         <!-- ========================================== -->
-        <!-- 2. RANKINGS Y DISTRIBUCIÓN (BI)           -->
+        <!-- 2. RANKINGS Y DISTRIBUCIÓN                 -->
         <!-- ========================================== -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <!-- Ranking: Top 5 Más Costosos -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="bg-slate-800 px-4 py-3">
                     <h3 class="text-xs font-black text-white uppercase tracking-widest">Top 5: Equipos Más Costosos (Histórico)</h3>
@@ -83,7 +78,7 @@
                 <div class="p-4">
                     <ul class="space-y-3">
                         {% for equipo in top_costosos %}
-                        <li class="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100 hover:bg-slate-100 transition">
+                        <li class="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
                             <span class="font-black text-slate-800 text-sm">{{ equipo.codigo_equipo }}</span>
                             <span class="text-red-600 font-black text-sm">${{ "{:,.0f}".format(equipo.costo_acumulado).replace(',','.') }}</span>
                         </li>
@@ -94,7 +89,6 @@
                 </div>
             </div>
 
-            <!-- Distribución y Salud por Marca -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="bg-slate-800 px-4 py-3">
                     <h3 class="text-xs font-black text-white uppercase tracking-widest">Distribución de Flota por Marca</h3>
@@ -102,7 +96,7 @@
                 <div class="p-4">
                     <ul class="space-y-3">
                         {% for marca in distribucion_marcas %}
-                        <li class="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100 hover:bg-slate-100 transition">
+                        <li class="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
                             <span class="font-black text-slate-800 text-sm">{{ marca.marca }}</span>
                             <div class="text-right">
                                 <span class="block text-xs font-black text-slate-700">{{ marca.cantidad }} Unidades Totales</span>
@@ -118,16 +112,21 @@
         </div>
 
         <!-- ========================================== -->
-        <!-- 3. PESTAÑAS DE NAVEGACIÓN (TABS)          -->
+        <!-- 3. MENÚ DE PESTAÑAS (RESTAURADO)           -->
         <!-- ========================================== -->
         <div class="flex border-b border-slate-300 mb-6 gap-2 overflow-x-auto">
-            <button onclick="switchTab('flota')" id="btn-flota" class="tab-btn px-5 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-blue-600 text-blue-600 transition">Flota y Estado</button>
-            <button onclick="switchTab('kanban')" id="btn-kanban" class="tab-btn px-5 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition">Kanban OTs</button>
-            <button onclick="switchTab('predictivo')" id="btn-predictivo" class="tab-btn px-5 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition">Predictivo PM</button>
-            <button onclick="switchTab('finanzas')" id="btn-finanzas" class="tab-btn px-5 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition">Costos CPK/CPH</button>
+            <button onclick="switchTab('flota')" id="btn-flota" class="tab-btn px-4 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-blue-600 text-blue-600 transition whitespace-nowrap">Flota y Estado</button>
+            <button onclick="switchTab('kanban')" id="btn-kanban" class="tab-btn px-4 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition whitespace-nowrap">Kanban OTs</button>
+            <button onclick="switchTab('preventivas')" id="btn-preventivas" class="tab-btn px-4 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition whitespace-nowrap">Preventivas</button>
+            <button onclick="switchTab('correctivas')" id="btn-correctivas" class="tab-btn px-4 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition whitespace-nowrap">Correctivas</button>
+            <button onclick="switchTab('compras')" id="btn-compras" class="tab-btn px-4 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition whitespace-nowrap">Compras</button>
+            <button onclick="switchTab('bodega')" id="btn-bodega" class="tab-btn px-4 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition whitespace-nowrap">Bodega</button>
+            <button onclick="switchTab('personal')" id="btn-personal" class="tab-btn px-4 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition whitespace-nowrap">Personal</button>
+            <button onclick="switchTab('predictivo')" id="btn-predictivo" class="tab-btn px-4 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition whitespace-nowrap">Predictivo PM</button>
+            <button onclick="switchTab('finanzas')" id="btn-finanzas" class="tab-btn px-4 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition whitespace-nowrap">Costos CPK/CPH</button>
         </div>
 
-        <!-- TAB 1: FLOTA -->
+        <!-- TAB 1: FLOTA (Patente limpia) -->
         <div id="tab-flota" class="tab-content active">
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
@@ -141,6 +140,7 @@
                                 <th class="p-3">Código</th>
                                 <th class="p-3">Tipo</th>
                                 <th class="p-3">Marca / Modelo</th>
+                                <th class="p-3">Patente</th>
                                 <th class="p-3">Ubicación</th>
                                 <th class="p-3">Lectura Actual</th>
                                 <th class="p-3">Margen PM</th>
@@ -154,6 +154,7 @@
                                 <td class="p-3 font-black text-slate-900">{{ e.codigo }}</td>
                                 <td class="p-3 font-semibold text-slate-600">{{ e.tipo }}</td>
                                 <td class="p-3 text-slate-600">{{ e.marca }} {{ e.modelo }}</td>
+                                <td class="p-3 font-mono font-bold text-slate-800">{{ e.patente or 'S/I' }}</td>
                                 <td class="p-3 text-slate-600">{{ e.ubicacion }}</td>
                                 <td class="p-3 font-mono font-bold">{{ e.lectura }}</td>
                                 <td class="p-3 font-mono font-bold {% if e.margen < 0 %}text-red-600{% elif e.margen <= 150 %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ e.margen_str }}</td>
@@ -193,18 +194,16 @@
                             <p class="text-xs text-slate-600 mb-2">{{ t.tipo }}</p>
                             <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-[10px]">
                                 <span class="font-bold text-slate-500">{{ t.mecanico }}</span>
-                                <form action="/api/cambiar_estado_ot/{{ t.id }}" method="POST" class="inline">
-                                    <select onchange="cambiarEstadoOT({{ t.id }}, this.value)" class="bg-slate-50 border border-slate-300 rounded text-[10px] font-bold p-1">
-                                        <option value="Pendiente" {% if estado_nombre == 'Pendiente' %}selected{% endif %}>Pendiente</option>
-                                        <option value="En Progreso" {% if estado_nombre == 'En Progreso' %}selected{% endif %}>En Progreso</option>
-                                        <option value="En Revisión" {% if estado_nombre == 'En Revisión' %}selected{% endif %}>En Revisión</option>
-                                        <option value="Finalizada" {% if estado_nombre == 'Finalizada' %}selected{% endif %}>Finalizada</option>
-                                    </select>
-                                </form>
+                                <select onchange="cambiarEstadoOT({{ t.id }}, this.value)" class="bg-slate-50 border border-slate-300 rounded text-[10px] font-bold p-1">
+                                    <option value="Pendiente" {% if estado_nombre == 'Pendiente' %}selected{% endif %}>Pendiente</option>
+                                    <option value="En Progreso" {% if estado_nombre == 'En Progreso' %}selected{% endif %}>En Progreso</option>
+                                    <option value="En Revisión" {% if estado_nombre == 'En Revisión' %}selected{% endif %}>En Revisión</option>
+                                    <option value="Finalizada" {% if estado_nombre == 'Finalizada' %}selected{% endif %}>Finalizada</option>
+                                </select>
                             </div>
                         </div>
                         {% else %}
-                        <p class="text-xs text-slate-400 italic text-center py-6">Sin tareas en esta fase.</p>
+                        <p class="text-xs text-slate-400 italic text-center py-6">Sin tareas.</p>
                         {% endfor %}
                     </div>
                 </div>
@@ -212,7 +211,154 @@
             </div>
         </div>
 
-        <!-- TAB 3: PREDICTIVO -->
+        <!-- TAB 3: PREVENTIVAS -->
+        <div id="tab-preventivas" class="tab-content">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4">
+                <h3 class="font-black text-xs text-slate-700 uppercase tracking-widest mb-4">Historial de Mantenciones Preventivas</h3>
+                <table class="w-full text-left text-xs">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-600 uppercase text-[10px]">
+                            <th class="p-3">Fecha</th>
+                            <th class="p-3">Equipo</th>
+                            <th class="p-3">Folio OT</th>
+                            <th class="p-3">Tipo</th>
+                            <th class="p-3">Costo</th>
+                            <th class="p-3">Mecánico</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in mants_prev %}
+                        <tr class="border-b border-slate-100">
+                            <td class="p-3">{{ m.fecha }}</td>
+                            <td class="p-3 font-black">{{ m.codigo }}</td>
+                            <td class="p-3 font-mono">{{ m.ot_generada }}</td>
+                            <td class="p-3">{{ m.tipo_mantencion }}</td>
+                            <td class="p-3 font-mono">{{ m.costo_str }}</td>
+                            <td class="p-3">{{ m.mecanico }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 4: CORRECTIVAS -->
+        <div id="tab-correctivas" class="tab-content">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4">
+                <h3 class="font-black text-xs text-slate-700 uppercase tracking-widest mb-4">Historial de Mantenciones Correctivas (Averías)</h3>
+                <table class="w-full text-left text-xs">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-600 uppercase text-[10px]">
+                            <th class="p-3">Fecha</th>
+                            <th class="p-3">Equipo</th>
+                            <th class="p-3">Sistema Falla</th>
+                            <th class="p-3">Causa Raíz</th>
+                            <th class="p-3">Costo</th>
+                            <th class="p-3">Mecánico</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in mants_corr %}
+                        <tr class="border-b border-slate-100">
+                            <td class="p-3">{{ m.fecha }}</td>
+                            <td class="p-3 font-black">{{ m.codigo }}</td>
+                            <td class="p-3 font-bold text-red-600">{{ m.sistema_falla }}</td>
+                            <td class="p-3">{{ m.causa_raiz }}</td>
+                            <td class="p-3 font-mono">{{ m.costo_str }}</td>
+                            <td class="p-3">{{ m.mecanico }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 5: COMPRAS -->
+        <div id="tab-compras" class="tab-content">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4">
+                <h3 class="font-black text-xs text-slate-700 uppercase tracking-widest mb-4">Registro de Compras e Insumos</h3>
+                <table class="w-full text-left text-xs">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-600 uppercase text-[10px]">
+                            <th class="p-3">Fecha</th>
+                            <th class="p-3">OC</th>
+                            <th class="p-3">Equipo</th>
+                            <th class="p-3">Descripción</th>
+                            <th class="p-3">Costo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in compras %}
+                        <tr class="border-b border-slate-100">
+                            <td class="p-3">{{ c.fecha }}</td>
+                            <td class="p-3 font-mono font-bold">{{ c.oc }}</td>
+                            <td class="p-3 font-black">{{ c.codigo }}</td>
+                            <td class="p-3">{{ c.descripcion }}</td>
+                            <td class="p-3 font-mono">{{ c.costo_str }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 6: BODEGA -->
+        <div id="tab-bodega" class="tab-content">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4">
+                <h3 class="font-black text-xs text-slate-700 uppercase tracking-widest mb-4">Inventario de Bodega</h3>
+                <table class="w-full text-left text-xs">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-600 uppercase text-[10px]">
+                            <th class="p-3">Código Item</th>
+                            <th class="p-3">Nombre</th>
+                            <th class="p-3">Categoría</th>
+                            <th class="p-3">Cantidad</th>
+                            <th class="p-3">Ubicación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in bodega %}
+                        <tr class="border-b border-slate-100">
+                            <td class="p-3 font-mono font-bold">{{ b.codigo_item }}</td>
+                            <td class="p-3 font-semibold">{{ b.nombre }}</td>
+                            <td class="p-3">{{ b.categoria }}</td>
+                            <td class="p-3 font-mono font-black text-blue-600">{{ b.cantidad }}</td>
+                            <td class="p-3">{{ b.ubicacion }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 7: PERSONAL -->
+        <div id="tab-personal" class="tab-content">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4">
+                <h3 class="font-black text-xs text-slate-700 uppercase tracking-widest mb-4">Operadores y Personal Asignado</h3>
+                <table class="w-full text-left text-xs">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-600 uppercase text-[10px]">
+                            <th class="p-3">Nombre</th>
+                            <th class="p-3">Cargo</th>
+                            <th class="p-3">Equipo Asignado</th>
+                            <th class="p-3">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for op in operadores %}
+                        <tr class="border-b border-slate-100">
+                            <td class="p-3 font-black">{{ op.nombre }}</td>
+                            <td class="p-3">{{ op.cargo }}</td>
+                            <td class="p-3 font-mono font-bold text-blue-600">{{ op.equipo_asignado }}</td>
+                            <td class="p-3">{{ op.estado }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 8: PREDICTIVO -->
         <div id="tab-predictivo" class="tab-content">
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="p-4 bg-slate-50 border-b border-slate-200">
@@ -247,7 +393,7 @@
             </div>
         </div>
 
-        <!-- TAB 4: FINANZAS / CPK CPH -->
+        <!-- TAB 9: FINANZAS / CPK CPH -->
         <div id="tab-finanzas" class="tab-content">
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="p-4 bg-slate-50 border-b border-slate-200">
