@@ -56,7 +56,6 @@ def create_app():
     # ==========================================
     db_url = os.environ.get('DATABASE_URL', 'sqlite:///cmms_demotron.db')
     
-    # Parche crítico para Coolify: SQLAlchemy 1.4+ exige "postgresql://"
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
         
@@ -110,17 +109,16 @@ def create_app():
     def job_notificaciones():
         with app.app_context():
             from models.equipo import Equipo
-            equipos_alerta = Equipo.query.filter(Equipo.margen <= 150).all()
+            # CORRECCIÓN: Filtrar por resta directa en SQL
+            equipos_alerta = Equipo.query.filter((Equipo.proxima_pm - Equipo.lectura_actual) <= 150).all()
             if equipos_alerta:
                 print(f"SISTEMA: {len(equipos_alerta)} equipos próximos a vencer. Hook de WhatsApp / Email preparado.")
-                # Lógica futura para API de WhatsApp/Twilio
 
     # ==========================================
     # 8. INICIALIZACIÓN DE TABLAS Y ADMIN
     # ==========================================
     with app.app_context():
         db.create_all()
-        # Crea el usuario administrador si la DB está vacía
         if not Usuario.query.first():
             from werkzeug.security import generate_password_hash
             admin_pass = os.environ.get('APP_PASSWORD', 'admin123')
