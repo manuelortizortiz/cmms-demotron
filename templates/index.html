@@ -11,7 +11,6 @@
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- LIBRERÍAS DE MAPA -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -60,15 +59,21 @@
             <p class="px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Panel Maestro</p>
             <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard Ejecutivo</a>
             
+            <!-- NUEVO MÓDULO REPORTES -->
+            <p class="px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 mt-6">Data y Reportes</p>
+            <a onclick="switchTab('reportes', this)" class="nav-link text-emerald-400">Exportación (Excel/PDF)</a>
+            <a onclick="switchTab('powerbi', this)" class="nav-link text-yellow-500">Conexión Power BI</a>
+            <a onclick="switchTab('automatizacion', this)" class="nav-link text-purple-400">Envíos Automáticos</a>
+
             <p class="px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 mt-6">Finanzas y Rentabilidad</p>
-            <a onclick="switchTab('finanzas', this)" class="nav-link text-emerald-400">Control de Costos</a>
+            <a onclick="switchTab('finanzas', this)" class="nav-link">Control de Costos</a>
             
             <p class="px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 mt-6">Gestión de Flota Avanzada</p>
             <a onclick="switchTab('eq', this)" class="nav-link">Equipos y Fichas Técnicas</a>
             <a onclick="switchTab('flota', this)" class="nav-link text-blue-400">Rendimiento y Documentos</a>
             <a onclick="switchTab('neumaticos', this)" class="nav-link">Control de Neumáticos</a>
             <a onclick="switchTab('mapa', this)" class="nav-link">Geolocalización GPS</a>
-            <a onclick="switchTab('predictivo', this)" class="nav-link text-purple-400">Planificador Predictivo</a>
+            <a onclick="switchTab('predictivo', this)" class="nav-link">Planificador Predictivo</a>
             
             <p class="px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 mt-6">Mantenimiento y Terreno</p>
             <a onclick="switchTab('plan', this)" class="nav-link">Panel Kanban / Checklist</a>
@@ -196,6 +201,86 @@
                 </div>
             </div>
 
+            <!-- 1. NUEVO MÓDULO EXPORTACIÓN (EXCEL / PDF) -->
+            <div id="reportes" class="seccion">
+                <div class="card-custom mb-6 bg-emerald-900 text-white border-none shadow-xl">
+                    <h3 class="font-black uppercase tracking-widest text-lg flex items-center gap-3"><span>📊</span> Central de Reportes y Exportación</h3>
+                    <p class="text-xs text-emerald-200 font-semibold uppercase tracking-wide mt-2">Descarga la matriz de datos completa en formatos universales para análisis externo.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center text-center">
+                        <span class="text-6xl mb-4">📗</span>
+                        <h4 class="font-black text-slate-800 uppercase tracking-widest mb-2">Base de Datos Maestra (Excel)</h4>
+                        <p class="text-xs text-slate-500 mb-6">Descarga toda la flota, órdenes de trabajo históricas y compras de insumos en un solo archivo multipestaña compatible con macros.</p>
+                        <a href="/api/exportar/excel_maestro" class="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest py-3 px-6 rounded-lg shadow-md transition w-full">Descargar Excel (.xlsx)</a>
+                    </div>
+                    
+                    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center text-center">
+                        <span class="text-6xl mb-4">📕</span>
+                        <h4 class="font-black text-slate-800 uppercase tracking-widest mb-2">Reporte Gerencial (PDF)</h4>
+                        <p class="text-xs text-slate-500 mb-6">Genera un documento PDF formateado y listo para imprimir con el resumen ejecutivo financiero, costos y KPIs del Dashboard.</p>
+                        <button onclick="window.print()" class="bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-widest py-3 px-6 rounded-lg shadow-md transition w-full">Imprimir / Guardar PDF</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. NUEVO MÓDULO POWER BI -->
+            <div id="powerbi" class="seccion">
+                <div class="card-custom mb-6 bg-slate-900 text-white border-none shadow-xl">
+                    <h3 class="font-black uppercase tracking-widest text-lg flex items-center gap-3"><span class="text-yellow-400">⚡</span> Conector Power BI (Live API)</h3>
+                    <p class="text-xs text-slate-300 font-semibold uppercase tracking-wide mt-2">Sincroniza tus dashboards de Microsoft Power BI Desktop en tiempo real con la base de datos del CMMS.</p>
+                </div>
+                
+                <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-4xl mx-auto">
+                    <h4 class="font-black text-slate-800 uppercase tracking-widest mb-4">Instrucciones de Conexión</h4>
+                    <ol class="list-decimal list-inside space-y-4 text-sm text-slate-700 font-medium mb-8 bg-slate-50 p-6 rounded-lg border border-slate-200">
+                        <li>Abre tu aplicación de <b>Microsoft Power BI Desktop</b>.</li>
+                        <li>Haz clic en el botón <b>"Obtener Datos"</b> (Get Data) en la cinta superior y selecciona <b>"Web"</b>.</li>
+                        <li>Copia el enlace seguro que aparece en la caja de abajo y pégalo en la ventana de URL de Power BI.</li>
+                        <li>Haz clic en <b>"Aceptar"</b>. Power BI detectará automáticamente la tabla de costos y fechas lista para graficar.</li>
+                    </ol>
+
+                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Endpoint API (Solo Lectura - JSON)</p>
+                    <div class="flex items-center gap-2">
+                        <input type="text" readonly value="https://demotron.cl/api/powerbi/dataset?token=demotron_pbi_2026" class="form-input bg-slate-100 font-mono text-xs text-blue-700 w-full p-4" id="pbi-url">
+                        <button onclick="navigator.clipboard.writeText(document.getElementById('pbi-url').value); alert('URL copiada al portapapeles');" class="bg-slate-800 text-white px-6 py-4 rounded-lg font-black uppercase text-[10px] tracking-widest hover:bg-slate-700 transition">Copiar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. NUEVO MÓDULO AUTOMATIZACIÓN DE ENVÍOS -->
+            <div id="automatizacion" class="seccion">
+                <div class="card-custom mb-6 bg-purple-900 text-white border-none shadow-xl">
+                    <h3 class="font-black uppercase tracking-widest text-lg flex items-center gap-3"><span>🤖</span> Automatización de Reportes</h3>
+                    <p class="text-xs text-purple-200 font-semibold uppercase tracking-wide mt-2">Configura el envío automático del resumen de gestión a los correos de la jefatura.</p>
+                </div>
+
+                <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-2xl mx-auto">
+                    <form action="/api/guardar_programacion" method="POST" class="space-y-6">
+                        <div>
+                            <label class="text-xs font-black text-slate-700 uppercase tracking-widest mb-2 block">Destinatarios (Separados por coma)</label>
+                            <input type="text" name="correos" placeholder="ejemplo: gerencia@demotron.cl, operaciones@demotron.cl" class="w-full border border-slate-300 rounded-lg p-3 text-sm focus:border-purple-500 outline-none" required>
+                        </div>
+                        
+                        <div>
+                            <label class="text-xs font-black text-slate-700 uppercase tracking-widest mb-2 block">Frecuencia de Envío</label>
+                            <select name="frecuencia" class="w-full border border-slate-300 rounded-lg p-3 text-sm font-bold text-slate-700 focus:border-purple-500 outline-none">
+                                <option value="diario">Diario (Resumen de Fin de Turno - 18:00 hrs)</option>
+                                <option value="semanal" selected>Semanal (Todos los Lunes - 08:00 AM)</option>
+                                <option value="mensual">Mensual (Primer día del mes)</option>
+                            </select>
+                        </div>
+
+                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-[10px] text-slate-500 uppercase tracking-wide font-bold">
+                            El sistema compilará el Dashboard Ejecutivo en PDF y el Excel Maestro, enviándolo como archivo adjunto en la frecuencia seleccionada.
+                        </div>
+                        
+                        <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-widest py-4 rounded-lg shadow-md transition">Guardar Programación</button>
+                    </form>
+                </div>
+            </div>
+
             <!-- MODULO FINANZAS -->
             <div id="finanzas" class="seccion">
                 <div class="card-custom mb-6 bg-slate-800 text-white border-none shadow-xl">
@@ -261,7 +346,7 @@
                 <div class="flex flex-col items-center justify-center h-[60vh] text-center px-4">
                     <span class="text-6xl mb-4">🛞</span>
                     <h2 class="text-2xl font-black text-slate-800 uppercase tracking-tight mb-2">Módulo Control de Neumáticos</h2>
-                    <p class="text-slate-500 font-medium max-w-lg">Desarrollo Pendiente: Control de ejes, recauchaje y desgaste mm.</p>
+                    <p class="text-slate-500 font-medium max-w-lg">Este módulo está en fase de desarrollo de arquitectura. Permitirá registrar posiciones en ejes, medición de desgaste en mm, control de recauchaje y alertas de rotación.</p>
                 </div>
             </div>
 
@@ -646,7 +731,7 @@
         const coordCache = { 
             "taller": DEMOTRON_COORDS, "panguilemu": DEMOTRON_COORDS, "demotron": DEMOTRON_COORDS, "taller central": DEMOTRON_COORDS,
             "oficina": [-35.3150, -71.5333], "san rafael": [-35.3150, -71.5333],
-            "villaseca": [-36.5683, -72.0831], // Coordenadas en Ñuble añadidas
+            "villaseca": [-36.5683, -72.0831], 
             "rancagua": [-34.1708, -70.7444], "san fernando": [-34.5839, -70.9881], "rengo": [-34.4167, -70.8667],
             "curico": [-34.9828, -71.2394], "curicó": [-34.9828, -71.2394], "molina": [-35.1167, -71.2833],
             "talca": [-35.4264, -71.6554], "linares": [-35.8454, -71.5976], "san javier": [-35.5961, -71.7317],
@@ -676,9 +761,7 @@
 
         async function initMap() {
             if (!mapInstance) {
-                // Centrado dinámico: Entre Ñuble y Maule para enmarcar O'Higgins y Biobío
                 mapInstance = L.map('map-container').setView([-35.5, -71.8], window.innerWidth < 768 ? 6 : 7);
-                // Conexión DIRECTA a Google Maps estándar (Super Rápido, calles y carreteras de Google reales)
                 L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
                     attribution: '&copy; Google Maps', maxZoom: 20
                 }).addTo(mapInstance);
@@ -699,7 +782,6 @@
                 let coords = coordCache[loc.toLowerCase()];
                 let esGPS = esCoordenada(loc);
 
-                // Si es "Oficina" usamos San Rafael
                 if (loc.toLowerCase().includes('oficina')) coords = coordCache['san rafael'];
 
                 if (esGPS) { agregarPin(esGPS, "UBICACIÓN GPS", grouped[loc]); } 
