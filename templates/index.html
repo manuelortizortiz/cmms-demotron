@@ -42,7 +42,6 @@
         @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
         .ticker-text { display: inline-block; white-space: nowrap; animation: ticker 25s linear infinite; }
 
-        /* FIX PARA MARCADORES LEAFLET DE TEXTO */
         .leaflet-div-icon { background: transparent !important; border: none !important; }
     </style>
 </head>
@@ -127,7 +126,6 @@
 
         <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
             
-            <!-- DASHBOARD PRINCIPAL -->
             <div id="dash" class="seccion active">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-5 shadow-lg text-white relative overflow-hidden">
@@ -186,6 +184,19 @@
                     <div class="card-custom">
                         <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Pareto de Fallas Mecánicas</h3>
                         <div class="h-64 relative w-full"><canvas id="chartFallas"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="card-custom mb-6">
+                    <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Riesgo Alto: Equipos con más Averías Históricas</h3>
+                    <div class="flex overflow-x-auto gap-4 hide-scrollbar pb-2">
+                        {% for eq in top_equipos_fallas %}
+                        <div class="border border-slate-200 rounded-xl p-4 text-center min-w-[140px] bg-slate-50 cursor-pointer" onclick="window.location.href='/equipo/{{eq.codigo}}'">
+                            <img src="{{ eq.foto_url }}" class="h-16 object-contain mx-auto mb-3" onerror="this.outerHTML='<div class=\'h-16 flex items-center justify-center text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-3 border border-dashed border-slate-300 rounded bg-white\'>SIN FOTO</div>';">
+                            <p class="font-black text-slate-800 text-sm uppercase tracking-wider mb-2">{{ eq.codigo }}</p>
+                            <span class="inline-block px-3 py-1 bg-red-100 text-red-700 font-bold text-[10px] uppercase tracking-widest rounded-full">{{ eq.cantidad }} Fallas</span>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -288,7 +299,7 @@
                 </div>
             </div>
 
-            <!-- MODULO FLOTA -->
+            <!-- MODULO FLOTA AVANZADA -->
             <div id="flota" class="seccion">
                 <div class="card-custom mb-6 bg-blue-900 text-white border-none shadow-xl">
                     <h3 class="font-black uppercase tracking-widest text-lg flex items-center gap-3"><span>🚛</span> Gestión de Flota y Rendimiento</h3>
@@ -314,7 +325,6 @@
                 </div>
             </div>
 
-            <!-- MÓDULO NEUMÁTICOS -->
             <div id="neumaticos" class="seccion">
                 <div class="flex flex-col items-center justify-center h-[60vh] text-center px-4">
                     <span class="text-6xl mb-4">🛞</span>
@@ -324,24 +334,23 @@
             </div>
 
             <!-- ========================================== -->
-            <!-- NUEVO MÓDULO MAPAS: GRID LOGÍSTICO ESTILO FOTO -->
+            <!-- MÓDULO MAPAS MULTIPANTALLA ESTILO LOGÍSTICO -->
             <!-- ========================================== -->
             <div id="mapa" class="seccion h-full">
                 <div class="flex justify-between items-end mb-6 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                     <div>
-                        <h2 class="text-lg font-black text-slate-800 uppercase tracking-widest flex items-center gap-2"><span>🗺️</span> Geolocalización Logística</h2>
-                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Vista satelital segmentada por frentes de trabajo / Obras.</p>
+                        <h2 class="text-lg font-black text-slate-800 uppercase tracking-widest flex items-center gap-2"><span>🗺️</span> Geolocalización de Obras</h2>
+                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Vista satelital segmentada por frentes de trabajo.</p>
                     </div>
                     <button onclick="document.getElementById('modal-ubicaciones').classList.remove('hidden')" class="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest shadow transition flex items-center gap-2">
                         ✏️ Editar Ubicaciones
                     </button>
                 </div>
 
-                <!-- EL GRID DONDE SE INYECTARÁN LAS TARJETAS DE MAPAS -->
                 <div id="mapas-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10"></div>
             </div>
 
-            <!-- MODULO EQUIPOS Y FICHAS TÉCNICAS UNIFICADO -->
+            <!-- MODULO EQUIPOS -->
             <div id="eq" class="seccion">
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[80vh] overflow-y-auto">
                     <table class="table-custom table-searchable">
@@ -425,6 +434,7 @@
                             <div class="bg-white p-3 md:p-4 rounded shadow-sm border {% if t.vencida %}border-red-400{% else %}border-slate-200{% endif %} cursor-grab relative" data-id="{{ t.id }}">
                                 <div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-2">
                                     <h4 class="font-black text-slate-900 text-sm uppercase tracking-wider">{{ t.codigo }}</h4>
+                                    <!-- BOTÓN CHECKLIST MÓVIL Y FIRMA -->
                                     <button onclick="abrirChecklist('{{t.id}}', '{{t.codigo}}', '{{t.tipo}}')" class="bg-emerald-50 border border-emerald-200 text-emerald-700 font-black text-[9px] uppercase tracking-widest px-2 py-1 rounded shadow-sm hover:bg-emerald-100 transition">📋 CHECKLIST</button>
                                 </div>
                                 <div class="mb-2"><span class="text-[9px] px-2 py-1 rounded font-bold uppercase tracking-widest {% if t.clasificacion=='Preventiva' %}bg-blue-100 text-blue-800{% else %}bg-red-100 text-red-800{% endif %}">{{ t.clasificacion }}</span></div>
@@ -606,83 +616,35 @@
         </div>
     </div>
 
-    <!-- MODAL CHECKLIST DIGITAL -->
-    <div id="checklist-modal" class="fixed inset-0 bg-slate-900/90 z-50 hidden flex flex-col items-center justify-center p-2 md:p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden border border-slate-300 max-h-[90vh]">
-            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-800 shrink-0">
-                <div><h3 class="font-black text-white uppercase tracking-widest text-sm flex items-center gap-2">📋 CHECKLIST DIGITAL</h3><p id="check-ot-title" class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-1"></p></div>
-                <button onclick="document.getElementById('checklist-modal').classList.add('hidden')" class="text-slate-400 hover:text-white font-black text-2xl transition">&times;</button>
+    <!-- MODAL "VER EQUIPOS POR OBRA" -->
+    <div id="modal-obra" class="fixed inset-0 bg-slate-900/90 z-[600] hidden flex flex-col items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col overflow-hidden border border-slate-300 max-h-[90vh]">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-100 shrink-0">
+                <div>
+                    <h3 class="font-black text-slate-800 uppercase tracking-widest text-sm flex items-center gap-2">📍 EQUIPOS EN: <span id="modal-obra-titulo" class="text-blue-700"></span></h3>
+                </div>
+                <button onclick="document.getElementById('modal-obra').classList.add('hidden')" class="text-slate-400 hover:text-slate-800 font-black text-2xl transition">&times;</button>
             </div>
-            <div class="p-5 flex-1 overflow-y-auto hide-scrollbar space-y-5 bg-slate-50">
-                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 border-b border-slate-100 pb-1">1. Inspección Operativa</h4>
-                    <label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded"><span class="text-xs font-bold text-slate-700 uppercase">Niveles de Fluidos OK</span></label>
-                    <label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded"><span class="text-xs font-bold text-slate-700 uppercase">Inspección Cero Fugas</span></label>
-                    <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded"><span class="text-xs font-bold text-slate-700 uppercase">Prueba de Encendido / Test</span></label>
-                </div>
-                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 border-b border-slate-100 pb-1">2. Evidencia Fotográfica</h4>
-                    <input type="file" id="check-files" multiple accept="image/*,.pdf" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-blue-50 file:text-blue-700 cursor-pointer border border-dashed border-slate-300 p-2 bg-slate-50">
-                </div>
-                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                    <div class="flex justify-between items-end mb-2"><h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">3. Firma Técnico</h4><button onclick="clearPad()" class="text-[9px] font-bold text-red-500 hover:underline uppercase">Borrar</button></div>
-                    <canvas id="signature-pad" width="350" height="120" class="w-full bg-slate-50"></canvas>
-                </div>
-            </div>
-            <div class="p-4 border-t border-slate-200 bg-white shrink-0">
-                <button onclick="firmarYCerrarOT()" class="w-full bg-emerald-600 text-white py-3 rounded-lg text-xs font-black uppercase tracking-widest shadow-md hover:bg-emerald-700 transition">Firmar y Finalizar OT</button>
+            <div class="p-0 flex-1 overflow-y-auto hide-scrollbar bg-slate-50">
+                <table class="w-full text-left table-custom">
+                    <thead class="sticky top-0 bg-white shadow-sm z-10 border-b border-slate-200">
+                        <tr>
+                            <th class="p-3 text-[10px] font-black text-slate-500 uppercase tracking-widest pl-6">Código</th>
+                            <th class="p-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Tipo</th>
+                            <th class="p-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado</th>
+                            <th class="p-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right pr-6">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-obra-body">
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- OTROS MODALES DE SISTEMA -->
-    <div id="edit-modal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden border border-slate-300"><div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50"><h3 class="font-black text-slate-800 uppercase tracking-widest text-xs" id="edit-title">Modificar Registro</h3><button onclick="cerrarEditModal()" class="text-slate-400 hover:text-red-600 font-black text-lg transition">&times;</button></div><div class="p-6 flex flex-col gap-5" id="edit-fields"></div><div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3"><button onclick="guardarEdicion()" class="bg-blue-700 text-white px-6 py-2 rounded text-[10px] uppercase tracking-widest font-black hover:bg-blue-800 shadow transition w-full">Guardar Cambios</button></div></div></div>
-    <div id="modal-password" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden border border-slate-300"><div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50"><h3 class="font-black text-slate-800 uppercase tracking-widest text-xs">Actualización Clave</h3><button onclick="document.getElementById('modal-password').classList.add('hidden')" class="text-slate-400 hover:text-red-600 font-black text-lg transition">&times;</button></div><div class="p-6 flex flex-col gap-5"><div><label class="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-widest">Contraseña Actual</label><input type="password" id="pass_actual" class="form-input"></div><div><label class="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-widest">Nueva Contraseña</label><input type="password" id="pass_nueva" class="form-input"></div><p id="pass_msg" class="text-[10px] font-bold text-red-600 hidden"></p></div><div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end"><button onclick="cambiarPassword()" class="bg-blue-700 text-white px-6 py-2 rounded text-[10px] uppercase tracking-widest font-black w-full">Actualizar</button></div></div></div>
-
     <script>
-        function toggleMenu() {
-            const sidebar = document.getElementById('sidebar');
-            const backdrop = document.getElementById('sidebar-backdrop');
-            if (sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full'); backdrop.classList.remove('hidden');
-            } else {
-                sidebar.classList.add('-translate-x-full'); backdrop.classList.add('hidden');
-            }
-        }
-
-        function switchTab(t, el) {
-            document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            document.getElementById(t).classList.add('active'); 
-            if(el) el.classList.add('active');
-            document.getElementById('title').innerText = el ? el.innerText.trim() : 'DEMOTRON';
-            
-            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + t;
-            window.history.replaceState({path:newUrl}, '', newUrl);
-            
-            if(window.innerWidth < 768) {
-                document.getElementById('sidebar').classList.add('-translate-x-full');
-                document.getElementById('sidebar-backdrop').classList.add('hidden');
-            }
-            if(t==='cal' && window.calendar) { setTimeout(() => window.calendar.render(), 200); }
-            if(t==='mapa') { setTimeout(() => initMapGrid(), 100); }
-        }
-
-        function filtrarTablas(q) {
-            q = q.toLowerCase();
-            document.querySelector('.seccion.active').querySelectorAll('.table-searchable tbody tr').forEach(r => {
-                r.style.display = r.innerText.toLowerCase().includes(q) ? '' : 'none';
-            });
-        }
-
-        function borrarRegistro(tabla, id) {
-            if(confirm('ALERTA DE SEGURIDAD: ¿Confirma la eliminación permanente?')) {
-                fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' }).then(() => location.reload());
-            }
-        }
-
         // =========================================================================
-        // MOTOR DE MAPAS MÚLTIPLES (ESTILO TARJETAS LOGÍSTICAS DE REFERENCIA)
+        // MOTOR DE MAPAS MÚLTIPLES (LOGÍSTICA AVANZADA)
         // =========================================================================
         let mapasInstances = [];
         const equiposData = {{ eqs|tojson }};
@@ -690,8 +652,8 @@
         
         // Memoria Caché Cero Latencia
         const coordCache = { 
-            "taller": DEMOTRON_COORDS, "panguilemu": DEMOTRON_COORDS, "demotron": DEMOTRON_COORDS, "taller central": DEMOTRON_COORDS,
-            "oficina": [-35.3150, -71.5333], "san rafael": [-35.3150, -71.5333],
+            "taller": DEMOTRON_COORDS, "panguilemu": DEMOTRON_COORDS, "demotron": DEMOTRON_COORDS, "taller demotron": DEMOTRON_COORDS,
+            "oficina": [-35.3150, -71.5333], "san rafael": [-35.3150, -71.5333], "oficina (san rafael)": [-35.3150, -71.5333],
             "villaseca": [-36.5683, -72.0831], "rancagua": [-34.1708, -70.7444], 
             "san fernando": [-34.5839, -70.9881], "rengo": [-34.4167, -70.8667],
             "curico": [-34.9828, -71.2394], "curicó": [-34.9828, -71.2394], "molina": [-35.1167, -71.2833],
@@ -699,16 +661,20 @@
             "parral": [-36.1432, -71.8260], "cauquenes": [-35.9671, -72.3165],
             "chillan": [-36.6066, -72.1034], "chillán": [-36.6066, -72.1034], "san carlos": [-36.4244, -71.9587],
             "bulnes": [-36.7423, -72.2985], "concepcion": [-36.8201, -73.0444], "concepción": [-36.8201, -73.0444],
-            "los angeles": [-37.4697, -72.3537], "los ángeles": [-37.4697, -72.3537], "talcahuano": [-36.7167, -73.1167]
+            "los angeles": [-37.4697, -72.3537], "los ángeles": [-37.4697, -72.3537], "talcahuano": [-36.7167, -73.1167],
+            "san nicolas": [-36.5042, -72.2128], "san nicolás": [-36.5042, -72.2128]
         };
 
         function getNormalizedLocation(eq) {
             if (eq.estado.toLowerCase() === 'taller') return "TALLER DEMOTRON";
+            // Regla Automática: Equipos de Asfalto siempre a San Nicolás
+            if (eq.tipo && eq.tipo.toLowerCase().includes('asfalto')) return "SAN NICOLÁS";
+            
             let ubi = eq.ubicacion ? eq.ubicacion.trim() : "";
             if (!ubi || ubi.toLowerCase() === 'none' || ubi.toLowerCase() === 'sin asignacion') return null;
             if (ubi.toLowerCase().includes('taller') || ubi.toLowerCase().includes('panguilemu')) return "TALLER DEMOTRON";
             if (ubi.toLowerCase().includes('oficina')) return "OFICINA (SAN RAFAEL)";
-            return ubi;
+            return ubi.toUpperCase();
         }
 
         function esCoordenada(str) {
@@ -724,7 +690,6 @@
             const grid = document.getElementById('mapas-grid');
             grid.innerHTML = '';
             
-            // Destruir instancias previas para no saturar la memoria
             mapasInstances.forEach(m => m.remove());
             mapasInstances = [];
 
@@ -742,8 +707,6 @@
                 let coords = coordCache[loc.toLowerCase()];
                 let esGPS = esCoordenada(loc);
                 
-                if (loc.toLowerCase().includes('oficina')) coords = coordCache['san rafael'];
-
                 if (esGPS) { coords = esGPS; } 
                 else if (!coords) {
                     try {
@@ -759,13 +722,17 @@
                 let mapId = "map_box_" + mapIndex;
                 mapIndex++;
                 let displayName = esGPS ? "COORDENADAS GPS" : loc;
+                let safeLoc = loc.replace(/'/g, "\\'");
 
-                // Crear Tarjeta Visual (Estilo Referencia)
+                // Tarjeta Visual Clara y Moderna
                 let cardHtml = `
-                <div class="flex flex-col h-72 rounded-xl shadow-lg border border-slate-300 overflow-hidden bg-white">
-                    <div class="bg-slate-800 text-white p-3 flex justify-between items-center shrink-0 border-b-4 border-blue-600">
-                        <h3 class="font-black uppercase tracking-widest text-xs truncate max-w-[70%]">${displayName}</h3>
-                        <span class="text-[10px] font-bold bg-slate-700/50 px-2 py-1 rounded shadow-inner">📍 ${grouped[loc].length} Uds.</span>
+                <div class="flex flex-col h-80 rounded-xl shadow-lg border border-slate-200 overflow-hidden bg-white">
+                    <div class="bg-slate-50 text-slate-800 p-3 flex justify-between items-center shrink-0 border-b-4 border-blue-500">
+                        <h3 class="font-black uppercase tracking-widest text-xs truncate max-w-[50%]">${displayName}</h3>
+                        <div class="flex gap-2">
+                            <span class="text-[10px] font-bold bg-white px-2 py-1 rounded shadow-sm border border-slate-200 text-slate-600">📍 ${grouped[loc].length}</span>
+                            <button onclick="abrirModalEquiposObra('${safeLoc}')" class="text-[10px] font-black bg-blue-600 text-white hover:bg-blue-700 px-3 py-1 rounded shadow transition">Ver Equipos</button>
+                        </div>
                     </div>
                     <div id="${mapId}" class="flex-1 w-full bg-slate-200 z-0"></div>
                 </div>`;
@@ -774,25 +741,18 @@
                 tempDiv.innerHTML = cardHtml;
                 grid.appendChild(tempDiv.firstElementChild);
 
-                // Inicializar Google Maps Satelital en ese recuadro
                 let map = L.map(mapId, { zoomControl: false }).setView(coords, 15);
                 L.control.zoom({ position: 'bottomleft' }).addTo(map);
-                
-                L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-                    attribution: '&copy; Google Maps', maxZoom: 20
-                }).addTo(map);
-
+                L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { attribution: '&copy; Google Maps', maxZoom: 20 }).addTo(map);
                 mapasInstances.push(map);
 
-                // Dibujar Equipos como Etiquetas Blancas sobre el mapa
+                // Expandimos el radio de la espiral para que no se choquen los equipos
                 grouped[loc].forEach((eq, idx) => {
-                    // Cálculo Matemático (Espiral de Fermat) para evitar que los pines colisionen y se tapen
-                    let radius = 0.00015 * Math.sqrt(idx);
+                    let radius = 0.00045 * Math.sqrt(idx);
                     let angle = idx * 2.4; 
                     let dLat = radius * Math.cos(angle);
                     let dLng = radius * Math.sin(angle);
 
-                    // Colores según estado del CMMS
                     let borderColor = eq.estado === 'Operativo' ? '#059669' : (eq.estado === 'Taller' ? '#DC2626' : '#D97706');
                     let dotColor = eq.estado === 'Operativo' ? 'bg-emerald-500' : (eq.estado === 'Taller' ? 'bg-red-500' : 'bg-orange-500');
 
@@ -804,15 +764,34 @@
                     `;
 
                     let icon = L.divIcon({ html: iconHtml, className: 'leaflet-div-icon', iconSize: null, iconAnchor: [30, 15] });
-
                     let marker = L.marker([coords[0] + dLat, coords[1] + dLng], {icon: icon});
                     marker.bindPopup(`<div class="text-center"><p class="font-black text-xs uppercase">${eq.codigo}</p><p class="text-[9px] uppercase">${eq.tipo}</p><a href="/equipo/${eq.codigo}" target="_blank" class="text-blue-600 text-[10px] hover:underline font-bold">Ver Ficha</a></div>`);
                     marker.addTo(map);
                 });
 
-                // Auto-ajustar encuadre
                 setTimeout(() => { map.invalidateSize(); }, 200);
             }
+        }
+
+        // --- FUNCION MODAL "VER EQUIPOS POR OBRA" ---
+        function abrirModalEquiposObra(loc) {
+            document.getElementById('modal-obra-titulo').innerText = loc;
+            const tbody = document.getElementById('modal-obra-body');
+            tbody.innerHTML = '';
+            
+            let equiposLoc = equiposData.filter(eq => getNormalizedLocation(eq) === loc);
+            equiposLoc.forEach(eq => {
+                let badge = eq.estado === 'Operativo' ? 'bg-emerald-100 text-emerald-800' : (eq.estado === 'Taller' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800');
+                tbody.innerHTML += `
+                    <tr class="border-b border-slate-100 bg-white hover:bg-slate-50">
+                        <td class="p-3 font-black text-blue-800 text-xs pl-6 uppercase">${eq.codigo}</td>
+                        <td class="p-3 text-[10px] font-bold text-slate-600 uppercase">${eq.tipo}</td>
+                        <td class="p-3"><span class="px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider ${badge}">${eq.estado}</span></td>
+                        <td class="p-3 text-right pr-6"><a href="/equipo/${eq.codigo}" target="_blank" class="text-blue-600 font-bold text-[10px] hover:underline uppercase bg-blue-50 px-2 py-1 rounded">Ver Ficha</a></td>
+                    </tr>
+                `;
+            });
+            document.getElementById('modal-obra').classList.remove('hidden');
         }
 
         function guardarUbicacionesMasa() {
@@ -833,114 +812,11 @@
                     document.querySelectorAll('.ubicacion-editable').forEach(input => { input.setAttribute('value', input.value); });
                     btn.innerText = '¡LISTO!'; btn.classList.replace('bg-orange-500', 'bg-emerald-600');
                     document.getElementById('modal-ubicaciones').classList.add('hidden');
-                    initMapGrid(); // Recargar todos los mapas con las nuevas ubicaciones
+                    initMapGrid(); 
                     setTimeout(() => { btn.innerText = 'Guardar Cambios'; btn.classList.replace('bg-emerald-600', 'bg-blue-700'); }, 2000);
                 }
             });
         }
-
-        // --- SISTEMA CHECKLIST DIGITAL ---
-        let checkOtId = null; let canvas = document.getElementById('signature-pad'); let ctx = canvas.getContext('2d'); let drawing = false;
-        canvas.addEventListener('mousedown', () => drawing = true); canvas.addEventListener('mouseup', () => drawing = false);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('touchstart', (e) => { drawing = true; draw(e.touches[0]); });
-        canvas.addEventListener('touchend', () => drawing = false);
-        canvas.addEventListener('touchmove', (e) => { draw(e.touches[0]); e.preventDefault(); });
-        function draw(e) {
-            if(!drawing) return; let rect = canvas.getBoundingClientRect();
-            let x = (e.clientX || e.pageX) - rect.left; let y = (e.clientY || e.pageY) - rect.top;
-            ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#0F172A';
-            ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y);
-        }
-        function clearPad() { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.beginPath(); }
-        
-        function abrirChecklist(ot_id, codigo, intervencion) {
-            checkOtId = ot_id;
-            document.getElementById('check-ot-title').innerText = `${codigo} - ${intervencion}`;
-            document.querySelectorAll('#checklist-modal input[type="checkbox"]').forEach(cb => cb.checked = false);
-            document.getElementById('check-files').value = ''; clearPad();
-            document.getElementById('checklist-modal').classList.remove('hidden');
-        }
-
-        function firmarYCerrarOT() {
-            let fData = new FormData();
-            fData.append('modelo_ref', 'ot'); fData.append('registro_id', checkOtId);
-            fData.append('mensaje', `✅ CHECKLIST DIGITAL COMPLETADO Y FIRMADO DESDE TERRENO.\n- Parámetros Operativos Verificados.\n- OT Finalizada.`);
-            let files = document.getElementById('check-files').files;
-            if (files.length > 0) fData.append('archivo', files[0]);
-
-            fetch('/api/chatter/add', { method: 'POST', body: fData }).then(() => {
-                fetch('/api/cambiar_estado_ot/' + checkOtId, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({estado: 'Finalizada'}) 
-                }).then(() => location.reload());
-            });
-        }
-
-        let editData = {};
-        function abrirEditModal(tabla, id, titulo, campos) {
-            editData = { tabla, id, campos: [] };
-            document.getElementById('edit-title').innerText = "EDICIÓN: " + titulo;
-            let html = '';
-            campos.forEach(c => { editData.campos.push(c.db); html += `<div><label class="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-widest">${c.label}</label><input type="text" id="edit_${c.db}" value="${c.val}" class="form-input font-bold text-slate-800"></div>`; });
-            document.getElementById('edit-fields').innerHTML = html; document.getElementById('edit-modal').classList.remove('hidden');
-        }
-        function cerrarEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
-        function guardarEdicion() {
-            let promises = editData.campos.map(campo => { return fetch('/update_inline', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: editData.id, campo: campo, valor: document.getElementById('edit_' + campo).value, tabla: editData.tabla}) }); });
-            Promise.all(promises).then(() => location.reload());
-        }
-
-        // --- CALENDARIO FULLCALENDAR ---
-        const mDataPrev = {{ mants_prev|tojson }};
-        const mDataCorr = {{ mants_corr|tojson }};
-        const eventosFuturos = {{ eventos_futuros|tojson }};
-        const cData = {{ charts|tojson }};
-        const fData = {{ fallas_data|tojson }};
-        
-        window.onload = function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const tabActiva = urlParams.get('tab');
-            if (tabActiva) {
-                const link = document.querySelector(`a[onclick*="switchTab('${tabActiva}'"]`);
-                if (link) switchTab(tabActiva, link);
-            }
-
-            if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
-                let evts = []; let eventMap = {};
-                
-                mDataPrev.filter(m => m.fecha_iso && m.estado === 'Finalizada').forEach(m => { 
-                    let key = m.fecha_iso + '_' + m.codigo;
-                    if(!eventMap[key]){ evts.push({ title: m.codigo + ' (PM)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#047857' }); eventMap[key] = true; }
-                });
-                mDataCorr.filter(m => m.fecha_iso && m.estado === 'Finalizada').forEach(m => { 
-                    let key = m.fecha_iso + '_' + m.codigo;
-                    if(!eventMap[key]){ evts.push({ title: m.codigo + ' (Avería)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#B91C1C' }); eventMap[key] = true; }
-                });
-                
-                // PREVENIR DUPLICADOS EN PROYECCIÓN
-                let futureMap = {};
-                eventosFuturos.forEach(ef => {
-                    let cod = ef.title.split(' ')[0];
-                    if(!futureMap[cod]){ evts.push({ title: ef.title, start: ef.start, color: ef.color }); futureMap[cod] = true; }
-                });
-
-                let vistaInicial = window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth';
-
-                window.calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
-                    initialView: vistaInicial, locale: 'es', height: '100%', expandRows: true,
-                    headerToolbar: { left: 'prev,next', center: 'title', right: 'dayGridMonth,listWeek' },
-                    buttonText: { month: 'Mes', list: 'Lista' },
-                    events: evts, eventClick: function(info) { if(info.event.url) { info.jsEvent.preventDefault(); window.open(info.event.url, "_blank"); } }
-                });
-            }
-
-            if (typeof Chart !== 'undefined') {
-                Chart.defaults.font.family = "'Inter', sans-serif"; Chart.defaults.color = '#1E293B'; Chart.defaults.font.weight = 'bold';
-                new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '75%', data: { labels: ['Operativos', 'Fuera de Servicio', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'], borderWidth:0 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } } }});
-                new Chart(document.getElementById('chartCostosMensuales'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión (CLP)', data: cData.costos_mensuales.data, borderColor: '#1E293B', backgroundColor: 'rgba(30, 41, 59, 0.1)', fill: true, tension: 0.3 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: function(value) { return (value / 1000000) + 'mm'; } } } } } });
-                new Chart(document.getElementById('chartFallas'), { type: 'bar', data: { labels: fData.labels, datasets: [{ label: 'N° Averías', data: fData.data, backgroundColor: '#DC2626', borderRadius: 4 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } } }});
-                new Chart(document.getElementById('chartTop7Prev'), { type: 'bar', data: { labels: cData.costos_top7.prev_labels, datasets: [{ label: 'Costo (CLP)', data: cData.costos_top7.prev_data, backgroundColor: '#1D4ED8', borderRadius: 2 }] }, options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#F1F5F9' }, ticks: { callback: function(value) { return (value / 1000000) + 'mm'; } } }, y: { grid: { display: false } } } } });
-            }
-        };
     </script>
 </body>
 </html>
