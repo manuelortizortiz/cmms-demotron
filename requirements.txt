@@ -14,3 +14,4 @@ gunicorn==22.0.0
 SQLAlchemy==2.0.31
 Flask-Mail==0.9.1
 python-dateutil==2.9.0
+sentry-sdk==2.12.0
