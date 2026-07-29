@@ -3,7 +3,7 @@ from datetime import timedelta
 from flask import Flask
 from flask_login import LoginManager
 from extensions import db
-from models.usuario import Usuario  # Tu modelo de base de datos para usuarios
+from models.usuario import Usuario  
 
 # Importar Módulos (Blueprints)
 from routes.auth import auth_bp
@@ -17,10 +17,8 @@ def create_app():
     # ==========================================
     # 1. SEGURIDAD Y VARIABLES DE ENTORNO
     # ==========================================
-    # La Secret Key ahora es dinámica. (Configurar en Coolify)
     app.secret_key = os.environ.get('SECRET_KEY', 'clave-de-desarrollo-segura-12345')
     
-    # Hardening de Cookies (Activa seguridad extra si está en producción con Traefik/HTTPS)
     is_prod = os.environ.get('FLASK_ENV') == 'production'
     app.config['SESSION_COOKIE_SECURE'] = is_prod
     app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -28,9 +26,15 @@ def create_app():
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=12)
 
     # ==========================================
-    # 2. BASE DE DATOS
+    # 2. BASE DE DATOS (CORRECCIÓN POSTGRESQL)
     # ==========================================
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///cmms_demotron.db')
+    db_url = os.environ.get('DATABASE_URL', 'sqlite:///cmms_demotron.db')
+    
+    # Parche crítico para Coolify: SQLAlchemy 1.4+ exige "postgresql://"
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+        
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
 
@@ -60,7 +64,7 @@ def create_app():
     # ==========================================
     with app.app_context():
         db.create_all()
-        # Crea el usuario administrador basándose en la variable de entorno si la DB está vacía
+        # Crea el usuario administrador si la DB está vacía
         if not Usuario.query.first():
             from werkzeug.security import generate_password_hash
             admin_pass = os.environ.get('APP_PASSWORD', 'admin123')
