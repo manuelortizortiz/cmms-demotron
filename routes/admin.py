@@ -1,4 +1,4 @@
-from flask import Blueprint, request, redirect, render_template
+from flask import Blueprint, request, redirect, render_template, abort
 from flask_login import login_required, current_user
 import pandas as pd
 import numpy as np
@@ -108,19 +108,22 @@ def eliminar_usuario(id):
 
 
 # =====================================================================
-# MOTOR DE IMPORTACIÓN MASIVA Y PURGA DE DUPLICADOS
+# MOTOR DE IMPORTACIÓN MASIVA Y PURGA DE DUPLICADOS (PROTEGIDO POR TOKEN)
 # =====================================================================
-@admin_bp.route('/admin/cargar_sql_final', strict_slashes=False)
-@login_required
+@admin_bp.route('/admin/cargar_sql_final', methods=['GET', 'POST'], strict_slashes=False)
 def cargar_sql_final():
-    rol_actual = getattr(current_user, 'role', getattr(current_user, 'rol', 'usuario'))
-    if rol_actual not in ['admin', 'gerencia']: return "ACCESO DENEGADO", 403
+    # 1. BLOQUEO DE SEGURIDAD POR TOKEN ESTRICTO
+    token_esperado = os.environ.get('ADMIN_TOKEN')
+    token_recibido = request.args.get('token') or request.headers.get('X-Admin-Token')
+    
+    if not token_esperado or token_recibido != token_esperado:
+        return "ACCESO DENEGADO (403): Token de administración inválido o ausente.", 403
 
     reporte = {"equipos": 0, "lecturas": 0, "preventivas": 0, "correctivas": 0, "compras": 0, "filtros": 0, "mensajes": []}
     estado_ubicaciones = "NO DETECTADO"
     
     try:
-        # PURGA DE CLONES FANTASMAS (Corrige el error de VD-90 y VD-100 repitiéndose en el calendario)
+        # PURGA DE CLONES FANTASMAS (Corrige el error de VD-90 y VD-100)
         db.session.execute(text("""
             DELETE FROM orden_trabajo 
             WHERE id NOT IN (
@@ -142,11 +145,11 @@ def cargar_sql_final():
         archivos = os.listdir('.')
         excel_principal = next((f for f in archivos if "CMMS" in f.upper() and f.endswith(('.xlsx', '.xls')) and not f.startswith('~$')), None)
         archivo_filtros = next((f for f in archivos if "filtro" in f.lower() and f.endswith(('.xlsx', '.xls', '.csv')) and not f.startswith('~$')), None)
-        archivo_detalles = next((f for f in archivos if "detalles" in f.lower() and f.endswith(('.xlsx', '.csv')) and not f.startswith('~$')), None)
         archivo_ubicaciones = next((f for f in archivos if "ubicacion" in f.lower() and f.endswith(('.xlsx', '.csv', '.xls')) and not f.startswith('~$')), None)
 
         if not excel_principal: return "ERROR: NO SE DETECTA ARCHIVO CMMS (.xlsx)."
 
+        # --- EQUIPOS ---
         df_eq = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Equipos", skiprows=2).replace({np.nan: None})
         operadores_set = set()
         for idx, row in df_eq.iterrows():
@@ -173,6 +176,7 @@ def cargar_sql_final():
             if not Personal.query.filter_by(nombre=op).first(): db.session.add(Personal(nombre=op, cargo="Operador", estado="Activo", equipo_asignado="Varios"))
         db.session.commit()
 
+        # --- LECTURAS ---
         df_lec = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
         for idx, row in df_lec.iterrows():
             if len(row) < 4: continue
@@ -193,6 +197,7 @@ def cargar_sql_final():
                 reporte['lecturas'] += 1
         db.session.commit()
 
+        # --- PREVENTIVAS ---
         df_man = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
         for idx, row in df_man.iterrows():
             cod = clean_string(str(row.get('Codigo', '') or '')).upper()
@@ -214,6 +219,7 @@ def cargar_sql_final():
                 reporte['preventivas'] += 1
         db.session.commit()
 
+        # --- CORRECTIVAS ---
         try:
             df_corr = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Correctivas", skiprows=2).replace({np.nan: None})
             for idx, row in df_corr.iterrows():
@@ -233,6 +239,7 @@ def cargar_sql_final():
             db.session.commit()
         except: pass
 
+        # --- COMPRAS PM ---
         try:
             df_com = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
             ocs = [clean_string(str(r.get('OC', ''))) for _, r in df_com.iterrows() if str(r.get('OC', '')).lower() not in ['none', 'nan', '']]
@@ -249,6 +256,7 @@ def cargar_sql_final():
             db.session.commit()
         except: pass
 
+        # --- FILTROS ---
         if archivo_filtros:
             try:
                 db.session.query(FiltroEquipo).delete()
@@ -276,6 +284,7 @@ def cargar_sql_final():
                 db.session.commit()
             except Exception as e: reporte['mensajes'].append(f"ERROR FILTROS: {str(e)}")
 
+        # --- UBICACIONES ---
         if archivo_ubicaciones:
             try:
                 df_ubi = pd.read_excel(archivo_ubicaciones, engine='openpyxl') if archivo_ubicaciones.endswith('.xlsx') else pd.read_csv(archivo_ubicaciones)
@@ -293,12 +302,18 @@ def cargar_sql_final():
                     estado_ubicaciones = "ACTUALIZADO CON ÉXITO"
             except Exception as e: estado_ubicaciones = f"ERROR: {str(e)}"
 
+        # --- ACTUALIZAR MÁRGENES ---
         for eq in Equipo.query.all():
             u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if u_lec: eq.lectura_actual = u_lec.horometro if eq.control_base == 'HORAS' else u_lec.kilometraje
             u_pm = OrdenTrabajo.query.filter_by(codigo_equipo=eq.codigo, tipo_ot='Preventiva').order_by(OrdenTrabajo.lectura.desc()).first()
             if u_pm: eq.proxima_pm = u_pm.lectura + eq.frecuencia_base
             else: eq.proxima_pm = (eq.lectura_actual or 0) + eq.frecuencia_base
+        db.session.commit()
+
+        # --- LOG AUDITORIA ---
+        log = RegistroChatter(modelo_ref='sistema', registro_id='0', autor='Sistema(Token)', accion='auditoria', mensaje="EJECUTÓ SINCRONIZACIÓN Y PURGA MAESTRA VÍA TOKEN DE SEGURIDAD.")
+        db.session.add(log)
         db.session.commit()
 
         html_report = f"""
