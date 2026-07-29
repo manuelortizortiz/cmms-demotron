@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Checklist Terreno | Demotron</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style> body { font-family: 'Inter', sans-serif; background-color: #0F172A; color: #F8FAFC; } 
+    .radio-btn input:checked + div { background-color: #2563EB; color: white; border-color: #2563EB; }
+    .radio-btn-red input:checked + div { background-color: #DC2626; color: white; border-color: #DC2626; } </style>
+</head>
+<body class="p-4 md:p-8 max-w-lg mx-auto">
+    <div class="mb-6 border-b border-slate-700 pb-4">
+        <h1 class="text-3xl font-black tracking-tighter text-white uppercase">Inspección</h1>
+        <p class="text-[10px] text-blue-400 font-bold uppercase tracking-widest">Modo Terreno - Demotron</p>
+    </div>
+
+    <form action="/mobile/checklist" method="POST" enctype="multipart/form-data" class="space-y-6">
+        
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Máquina a Evaluar</label>
+            <select name="codigo_equipo" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-4 text-lg font-black text-white focus:outline-none focus:border-blue-500">
+                <option value="" disabled selected>SELECCIONAR...</option>
+                {% for e in equipos %}<option value="{{ e.codigo }}">{{ e.codigo }} - {{ e.tipo_equipo }}</option>{% endfor %}
+            </select>
+        </div>
+
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg space-y-4">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-700 pb-2">Verificación Visual</h2>
+            
+            <!-- Pregunta -->
+            <div class="flex items-center justify-between">
+                <span class="font-bold text-sm">Niveles (Aceite/Agua)</span>
+                <div class="flex gap-2">
+                    <label class="radio-btn cursor-pointer"><input type="radio" name="niveles" value="si" class="hidden" checked><div class="px-5 py-2 rounded-lg border border-slate-600 font-black text-sm transition">OK</div></label>
+                    <label class="radio-btn-red cursor-pointer"><input type="radio" name="niveles" value="no" class="hidden"><div class="px-5 py-2 rounded-lg border border-slate-600 font-black text-sm transition">X</div></label>
+                </div>
+            </div>
+            
+            <!-- Pregunta -->
+            <div class="flex items-center justify-between pt-2">
+                <span class="font-bold text-sm">Cero Fugas (Mangueras)</span>
+                <div class="flex gap-2">
+                    <label class="radio-btn cursor-pointer"><input type="radio" name="fugas" value="si" class="hidden" checked><div class="px-5 py-2 rounded-lg border border-slate-600 font-black text-sm transition">OK</div></label>
+                    <label class="radio-btn-red cursor-pointer"><input type="radio" name="fugas" value="no" class="hidden"><div class="px-5 py-2 rounded-lg border border-slate-600 font-black text-sm transition">X</div></label>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Cámara / Evidencia</label>
+            <!-- Esto activa la cámara directamente en celulares -->
+            <input type="file" name="foto" accept="image/*" capture="environment" class="block w-full text-sm text-slate-400 file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-black file:uppercase file:tracking-widest file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer bg-slate-900 border border-slate-700 rounded-lg">
+        </div>
+
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Estado Final de la Máquina</label>
+            <select name="estado_final" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-4 text-lg font-black text-white focus:outline-none focus:border-blue-500">
+                <option value="Operativo">OPERATIVO (LISTA PARA TRABAJAR)</option>
+                <option value="Detenido">DETENIDO (REQUIERE TALLER URGENTE)</option>
+            </select>
+        </div>
+
+        <button type="submit" class="w-full bg-blue-600 active:bg-blue-800 text-white font-black py-5 rounded-xl text-xl uppercase tracking-widest shadow-2xl border-b-4 border-blue-800">
+            Guardar Inspección
+        </button>
+    </form>
+</body>
+</html>
