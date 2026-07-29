@@ -10,7 +10,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -38,7 +37,6 @@
         .btn-action { font-size: 10px; font-weight: 600; text-transform: uppercase; padding: 5px 10px; border-radius: 4px; border: 1px solid #E2E8F0; transition: all 0.2s; margin-right: 4px; display:inline-block;}
         .btn-action:hover { background-color: #F8FAFC; }
         #signature-pad { border: 2px dashed #CBD5E1; border-radius: 8px; background: #F8FAFC; cursor: crosshair; touch-action: none; }
-        
         @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
         .ticker-text { display: inline-block; white-space: nowrap; animation: ticker 25s linear infinite; }
         .leaflet-div-icon { background: transparent !important; border: none !important; }
@@ -51,6 +49,7 @@
 
     <div id="sidebar-backdrop" onclick="toggleMenu()" class="fixed inset-0 bg-slate-900/50 z-30 hidden md:hidden backdrop-blur-sm"></div>
 
+    <!-- MENÚ LATERAL -->
     <aside id="sidebar" class="w-64 sidebar-bg flex flex-col z-40 shadow-2xl shrink-0 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out">
         <div class="h-16 md:h-20 flex items-center justify-between px-6 border-b border-slate-800">
             <span class='text-2xl font-bold text-white tracking-tighter'>DEMOTRON</span>
@@ -125,7 +124,7 @@
 
         <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
             
-            <!-- DASHBOARD -->
+            <!-- 1. DASHBOARD -->
             <div id="dash" class="seccion active">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-5 shadow-lg text-white relative overflow-hidden">
@@ -165,14 +164,9 @@
                     <div class="card-custom"><h3 class="text-xs font-semibold text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Estado Operativo</h3><div class="h-48 relative w-full"><canvas id="chartEstado"></canvas></div></div>
                     <div class="card-custom xl:col-span-2"><h3 class="text-xs font-semibold text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Tendencia Inversión Mensual</h3><div class="h-48 relative w-full"><canvas id="chartCostosMensuales"></canvas></div></div>
                 </div>
-
-                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
-                    <div class="card-custom"><h3 class="text-xs font-semibold text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Top 7 Costos Históricos</h3><div class="h-64 relative w-full"><canvas id="chartTop7Prev"></canvas></div></div>
-                    <div class="card-custom"><h3 class="text-xs font-semibold text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Pareto de Fallas Mecánicas</h3><div class="h-64 relative w-full"><canvas id="chartFallas"></canvas></div></div>
-                </div>
             </div>
 
-            <!-- EQUIPOS -->
+            <!-- 2. EQUIPOS -->
             <div id="eq" class="seccion">
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[80vh] overflow-y-auto">
                     <table class="table-custom table-searchable">
@@ -200,7 +194,7 @@
                 </div>
             </div>
 
-            <!-- FLOTA -->
+            <!-- 3. FLOTA -->
             <div id="flota" class="seccion">
                 <div class="card-custom mb-6 bg-white border border-slate-200 shadow-sm"><h3 class="font-semibold uppercase tracking-widest text-lg flex items-center gap-3 text-slate-800"><span>🚛</span> Rendimiento y Documentos</h3></div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[70vh] overflow-y-auto">
@@ -211,10 +205,10 @@
                 </div>
             </div>
 
-            <!-- NEUMATICOS -->
+            <!-- 4. NEUMÁTICOS -->
             <div id="neumaticos" class="seccion"><div class="flex flex-col items-center justify-center h-[60vh] text-center px-4"><span class="text-6xl mb-4">🛞</span><h2 class="text-xl font-semibold text-slate-700 uppercase tracking-tight mb-2">Control de Neumáticos</h2><p class="text-slate-500 max-w-lg">Módulo en desarrollo para control de ejes y recauchaje.</p></div></div>
 
-            <!-- MAPAS GRID MÚLTIPLE -->
+            <!-- 5. MAPAS GRID MÚLTIPLE -->
             <div id="mapa" class="seccion h-full">
                 <div class="flex justify-between items-end mb-6 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
                     <div><h2 class="text-base font-semibold text-slate-800 uppercase tracking-widest flex items-center gap-2"><span>🗺️</span> Geolocalización Logística</h2></div>
@@ -223,7 +217,7 @@
                 <div id="mapas-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10"></div>
             </div>
 
-            <!-- PREDICTIVO -->
+            <!-- 6. PREDICTIVO -->
             <div id="predictivo" class="seccion">
                 <div class="card-custom mb-6 bg-white border border-slate-200"><h3 class="font-semibold text-slate-800 uppercase tracking-widest text-sm flex items-center gap-2"><span>🔮</span> Planificador Predictivo</h3></div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[70vh] overflow-y-auto">
@@ -234,23 +228,42 @@
                 </div>
             </div>
 
-            <!-- KANBAN -->
+            <!-- 7. KANBAN -->
             <div id="plan" class="seccion">
-                <div class="flex justify-between items-center mb-6 gap-4">
-                    <form action="/api/add_record" method="POST" class="flex gap-3 items-end bg-white p-4 rounded border border-slate-200 shadow-sm"><input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/?tab=plan"><input type="hidden" name="estado" value="Pendiente"><input type="hidden" name="lectura" value="0"><input type="hidden" name="costo" value="0"><div><label class="text-[9px] font-semibold text-slate-500 uppercase tracking-widest mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase font-semibold w-24" required></div><div><label class="text-[9px] font-semibold text-slate-500 uppercase tracking-widest mb-1 block">Pauta</label><input list="lista_pautas" name="tipo" class="form-input w-32" required></div><button type="submit" class="btn-primary">Programar OT</button></form>
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <p class="text-[11px] md:text-xs font-semibold text-slate-500 uppercase tracking-widest">Ejecución Operativa</p>
+                    <form action="/api/add_record" method="POST" class="flex flex-wrap md:flex-nowrap gap-3 items-end bg-white p-4 rounded-xl border border-slate-200 shadow-sm w-full md:w-auto">
+                        <input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/?tab=plan"><input type="hidden" name="estado" value="Pendiente"><input type="hidden" name="lectura" value="0"><input type="hidden" name="costo" value="0">
+                        <div class="w-full md:w-32"><label class="text-[9px] font-semibold text-slate-500 uppercase tracking-widest mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase font-semibold w-full" required></div>
+                        <div class="w-full md:w-48"><label class="text-[9px] font-semibold text-slate-500 uppercase tracking-widest mb-1 block">Pauta / Fallo</label><input list="lista_pautas" name="tipo" class="form-input w-full" required></div>
+                        <button type="submit" class="btn-primary w-full md:w-auto whitespace-nowrap mt-2 md:mt-0">Generar OT</button>
+                    </form>
                 </div>
+                
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
                     {% for estado, col_id in [('Pendiente','kb-pendiente'), ('En Progreso','kb-progreso'), ('En Revisión','kb-revision'), ('Finalizada','kb-completado')] %}
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col h-[70vh]">
-                        <div class="flex justify-between items-center mb-3 px-2 border-b border-slate-200 pb-2 shrink-0"><h3 class="font-semibold text-slate-700 text-[11px] uppercase tracking-widest">{{ estado }}</h3><span class="bg-white border border-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded font-bold">{{ kanban[estado]|length }}</span></div>
+                        <div class="flex justify-between items-center mb-3 px-2 border-b border-slate-200 pb-2 shrink-0">
+                            <h3 class="font-semibold text-slate-700 text-[11px] uppercase tracking-widest">{{ estado }}</h3>
+                            <span class="bg-white border border-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded font-bold">{{ kanban[estado]|length }}</span>
+                        </div>
                         <div id="{{ col_id }}" class="space-y-3 overflow-y-auto flex-1 hide-scrollbar pb-6" data-status="{{ estado }}">
                             {% for t in kanban[estado] %}
                             <div class="bg-white p-3 rounded shadow-sm border border-slate-200 cursor-grab" data-id="{{ t.id }}">
-                                <div class="flex justify-between items-start mb-2"><h4 class="font-bold text-slate-800 text-sm uppercase">{{ t.codigo }}</h4><button onclick="abrirChecklist('{{t.id}}', '{{t.codigo}}', '{{t.tipo}}')" class="bg-white border border-slate-200 text-slate-600 font-semibold text-[9px] uppercase px-2 py-1 rounded hover:bg-slate-50 transition">📋 CHECKLIST</button></div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <h4 class="font-bold text-slate-800 text-sm uppercase">{{ t.codigo }}</h4>
+                                    <button onclick="abrirChecklist('{{t.id}}', '{{t.codigo}}', '{{t.tipo}}')" class="bg-white border border-slate-200 text-slate-600 font-semibold text-[9px] uppercase px-2 py-1 rounded hover:bg-slate-50 transition">📋 CHECKLIST</button>
+                                </div>
                                 <div class="mb-2"><span class="text-[9px] px-2 py-0.5 rounded font-semibold uppercase border {% if t.clasificacion=='Preventiva' %}bg-blue-50 text-blue-700 border-blue-200{% else %}bg-red-50 text-red-700 border-red-200{% endif %}">{{ t.clasificacion }}</span></div>
                                 <p class="text-[11px] text-slate-600 font-medium mb-3">{{ t.tipo[:45] }}</p>
-                                <select class="kanban-mecanico-sel w-full text-[10px] border border-slate-200 rounded p-1 mb-2 font-medium" data-id="{{ t.id }}"><option value="Sin Asignar">Mecánico Sin Asignar</option>{% for m in mecanicos %}<option value="{{ m.nombre }}" {% if t.mecanico == m.nombre %}selected{% endif %}>{{ m.nombre }}</option>{% endfor %}</select>
-                                <div class="flex justify-between items-center"><span class="text-[9px] font-mono text-slate-400">{{ t.fecha }}</span><button onclick="borrarRegistro('ot', '{{t.id}}')" class="text-[9px] text-red-500 hover:text-red-700 font-semibold uppercase">Borrar</button></div>
+                                <select class="kanban-mecanico-sel w-full text-[10px] border border-slate-200 rounded p-1 mb-2 font-medium" data-id="{{ t.id }}">
+                                    <option value="Sin Asignar">Mecánico Sin Asignar</option>
+                                    {% for m in mecanicos %}<option value="{{ m.nombre }}" {% if t.mecanico == m.nombre %}selected{% endif %}>{{ m.nombre }}</option>{% endfor %}
+                                </select>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[9px] font-mono text-slate-400">{{ t.fecha }}</span>
+                                    <button onclick="borrarRegistro('ot', '{{t.id}}')" class="text-[9px] text-red-500 hover:text-red-700 font-semibold uppercase">Borrar</button>
+                                </div>
                             </div>
                             {% endfor %}
                         </div>
@@ -259,52 +272,68 @@
                 </div>
             </div>
 
+            <!-- 8. CALENDARIO -->
             <div id="cal" class="seccion h-full"><div class="card-custom-nopad p-2 md:p-6 flex flex-col h-[calc(100vh-120px)]"><div id="calendar" class="flex-1 w-full h-full text-xs"></div></div></div>
 
-            <!-- OTRAS TABLAS ESTANDAR -->
+            <!-- 9. PREVENTIVAS -->
             <div id="ot" class="seccion">
                 <div class="card-custom mb-6 bg-white border border-slate-200 shadow-sm"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/?tab=ot"><div class="min-w-[120px] flex-1"><label class="text-[10px] font-semibold text-slate-500 uppercase mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase font-semibold" required></div><div class="min-w-[120px] flex-1"><label class="text-[10px] font-semibold text-slate-500 uppercase mb-1 block">Folio</label><input type="text" name="folio" class="form-input font-mono"></div><div class="min-w-[120px] flex-[2]"><label class="text-[10px] font-semibold text-slate-500 uppercase mb-1 block">Pauta</label><input list="lista_pautas" name="tipo" class="form-input" required></div><div class="min-w-[100px] flex-1"><label class="text-[10px] font-semibold text-slate-500 uppercase mb-1 block">Odo/Hor.</label><input type="number" name="lectura" class="form-input font-mono"></div><div class="min-w-[100px] flex-1"><label class="text-[10px] font-semibold text-slate-500 uppercase mb-1 block">Costo CLP</label><input type="number" name="costo" class="form-input font-mono" required></div><button type="submit" class="btn-primary mb-1">Registrar PM</button></form></div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Intervención</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mants_prev %}<tr><td><span class="font-medium">{{ m.fecha }}</span><br><span class="text-[10px] font-mono text-slate-400">{{ m.ot_generada }}</span></td><td class="font-bold text-blue-600 uppercase">{{ m.codigo }}</td><td class="font-medium">{{ m.tipo_mantencion }}</td><td class="text-xs">{{ m.mecanico }}</td><td class="font-mono text-xs font-medium">{{ m.lectura_str }}</td><td class="font-mono text-xs font-medium">{{ m.costo_str }}</td><td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-semibold uppercase border border-slate-200">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="borrarRegistro('ot', '{{m.id}}')" class="btn-action text-red-600 border-red-200 bg-white">Borrar</button></td></tr>{% endfor %}</tbody></table></div>
             </div>
             
+            <!-- 10. CORRECTIVAS -->
             <div id="ot_corr" class="seccion">
                 <div class="card-custom mb-6 bg-white border border-slate-200 shadow-sm"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="referer" value="/?tab=ot_corr"><div class="min-w-[120px] flex-1"><label class="text-[10px] font-semibold text-slate-500 uppercase mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input border-slate-200 uppercase font-semibold text-slate-800" required></div><div class="min-w-[150px] flex-1"><label class="text-[10px] font-semibold text-slate-500 uppercase mb-1 block">Sistema Falla</label><select name="sistema_falla" class="form-input font-medium text-slate-700"><option value="Motor">Motor</option><option value="Hidráulico">Hidráulico</option><option value="Eléctrico">Eléctrico</option><option value="Frenos">Frenos</option><option value="Estructura">Estructura</option><option value="Neumáticos">Neumáticos</option></select></div><div class="min-w-[150px] flex-[2]"><label class="text-[10px] font-semibold text-slate-500 uppercase mb-1 block">Diagnóstico / Causa</label><input type="text" name="causa_raiz" class="form-input" required></div><div class="min-w-[100px] flex-1"><label class="text-[10px] font-semibold text-slate-500 uppercase mb-1 block">Folio</label><input type="text" name="folio" class="form-input font-mono"></div><button type="submit" class="btn-danger mb-1">Reportar Avería</button></form></div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Sistema</th><th>Causa Raíz</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>{% for m in mants_corr %}<tr><td><span class="font-medium text-slate-700">{{ m.fecha }}</span><br><span class="text-[10px] font-mono text-slate-400">{{ m.ot_generada }}</span></td><td class="font-bold text-red-600 uppercase">{{ m.codigo }}</td><td class="font-medium text-xs uppercase text-slate-600">{{ m.sistema_falla }}</td><td class="font-medium">{{ m.causa_raiz }}</td><td class="text-xs">{{ m.mecanico }}</td><td class="font-mono text-xs font-medium">{{ m.lectura_str }}</td><td class="font-mono text-xs font-medium">{{ m.costo_str }}</td><td><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-[9px] font-semibold uppercase border border-slate-200">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="borrarRegistro('ot', '{{m.id}}')" class="btn-action text-red-600 border-red-200 bg-white">Borrar</button></td></tr>{% endfor %}</tbody></table></div>
             </div>
 
-            <div id="bodega" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Código SKU</th><th>Descripción de Artículo</th><th>Categoría</th><th>Stock Actual</th><th>Ubicación</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for b in bodega %}<tr><td class="font-mono text-xs font-medium text-slate-500">{{ b.codigo_item or '-' }}</td><td class="font-medium">{{ b.nombre }}</td><td class="text-xs font-medium uppercase text-slate-500">{{ b.categoria }}</td><td class="font-mono font-bold text-blue-600 text-base">{{ b.cantidad }}</td><td class="text-xs">{{ b.ubicacion }}</td><td class="text-right"><button onclick="borrarRegistro('bodega', '{{b.id}}')" class="btn-action text-red-600 bg-white">Borrar</button></td></tr>{% endfor %}</tbody></table></div></div>
-            <div id="compras" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha</th><th>N° OC</th><th>Equipo</th><th>Detalle</th><th>Inversión</th><th class="text-right">Acción</th></tr></thead><tbody>{% for c in compras %}<tr><td class="font-medium text-xs">{{ c.fecha }}</td><td class="font-mono font-medium text-xs">{{ c.oc }}</td><td class="font-bold text-blue-600 uppercase">{{ c.codigo }}</td><td class="font-medium">{{ c.descripcion }}</td><td class="font-mono font-medium">{{ c.costo_str }}</td><td class="text-right"><button onclick="borrarRegistro('compra', '{{c.id}}')" class="btn-action text-red-600 bg-white">Anular</button></td></tr>{% endfor %}</tbody></table></div></div>
-            
+            <!-- 11. LECTURAS -->
             <div id="lec" class="seccion">
                 <div class="card-custom mb-6 bg-white border border-slate-200 shadow-sm"><form action="/api/add_record" method="POST" class="flex gap-4 items-end"><input type="hidden" name="tabla" value="lectura"><input type="hidden" name="referer" value="/?tab=lec"><div class="flex-1"><label class="text-[10px] font-semibold text-slate-500 uppercase mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase font-semibold" required></div><div class="flex-[2]"><label class="text-[10px] font-semibold text-slate-500 uppercase mb-1 block">Valor (Auto HR/KM)</label><input type="number" name="valor" class="form-input font-mono font-bold text-base" required></div><button type="submit" class="btn-primary mb-1">Guardar</button></form></div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha Captura</th><th>Equipo</th><th>Categoría</th><th>Valor Técnico</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for l in lecturas %}<tr><td class="font-medium text-xs">{{ l.fecha }}</td><td class="font-bold text-blue-600 uppercase">{{ l.codigo }}</td><td class="text-xs uppercase font-medium text-slate-500">{{ l.tipo_equipo }}</td><td class="font-mono font-bold text-base">{{ l.valor_str }} <span class="text-[9px] font-sans font-normal text-slate-400">{{ l.tipo }}</span></td><td class="text-right"><button onclick="borrarRegistro('lectura', '{{l.id}}')" class="btn-action text-red-600 bg-white">Eliminar</button></td></tr>{% endfor %}</tbody></table></div>
             </div>
 
-            <div id="finanzas" class="seccion"><div class="card-custom mb-6 bg-white border border-slate-200 shadow-sm"><h3 class="font-semibold uppercase tracking-widest text-lg flex items-center gap-3 text-slate-800"><span>💵</span> Control Financiero y Rentabilidad</h3></div><div class="card-custom-nopad bg-white table-wrapper max-h-[70vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Código</th><th>Categoría</th><th>Inversión (Mants)</th><th>Inversión (Insumos/OC)</th><th class="bg-slate-50 border-l border-slate-200">Costo Total Equipo</th></tr></thead><tbody>{% for f in finanzas_flota %}<tr class="hover:bg-slate-50 border-b border-slate-100"><td class="font-bold text-blue-600 text-xs uppercase">{{ f.codigo }}</td><td class="text-[10px] uppercase font-medium text-slate-500">{{ f.tipo }}</td><td class="font-mono text-slate-600">{{ f.costo_mants }}</td><td class="font-mono text-slate-600">{{ f.costo_compras }}</td><td class="font-mono text-slate-800 font-bold bg-slate-50/50 border-l border-slate-100">{{ f.costo_str }}</td></tr>{% endfor %}</tbody></table></div></div>
+            <!-- 12. BODEGA -->
+            <div id="bodega" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Código SKU</th><th>Descripción de Artículo</th><th>Categoría</th><th>Stock Actual</th><th>Ubicación</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for b in bodega %}<tr><td class="font-mono text-xs font-medium text-slate-500">{{ b.codigo_item or '-' }}</td><td class="font-medium">{{ b.nombre }}</td><td class="text-xs font-medium uppercase text-slate-500">{{ b.categoria }}</td><td class="font-mono font-bold text-blue-600 text-base">{{ b.cantidad }}</td><td class="text-xs">{{ b.ubicacion }}</td><td class="text-right"><button onclick="borrarRegistro('bodega', '{{b.id}}')" class="btn-action text-red-600 bg-white">Borrar</button></td></tr>{% endfor %}</tbody></table></div></div>
             
+            <!-- 13. COMPRAS -->
+            <div id="compras" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha</th><th>N° OC</th><th>Equipo</th><th>Detalle</th><th>Inversión</th><th class="text-right">Acción</th></tr></thead><tbody>{% for c in compras %}<tr><td class="font-medium text-xs">{{ c.fecha }}</td><td class="font-mono font-medium text-xs">{{ c.oc }}</td><td class="font-bold text-blue-600 uppercase">{{ c.codigo }}</td><td class="font-medium">{{ c.descripcion }}</td><td class="font-mono font-medium">{{ c.costo_str }}</td><td class="text-right"><button onclick="borrarRegistro('compra', '{{c.id}}')" class="btn-action text-red-600 bg-white">Anular</button></td></tr>{% endfor %}</tbody></table></div></div>
+            
+            <!-- 14. FINANZAS -->
+            <div id="finanzas" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[70vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Código</th><th>Categoría</th><th>Inversión (Mants)</th><th>Inversión (Insumos/OC)</th><th class="bg-slate-50 border-l border-slate-200">Costo Total Equipo</th></tr></thead><tbody>{% for f in finanzas_flota %}<tr class="hover:bg-slate-50 border-b border-slate-100"><td class="font-bold text-blue-600 text-xs uppercase">{{ f.codigo }}</td><td class="text-[10px] uppercase font-medium text-slate-500">{{ f.tipo }}</td><td class="font-mono text-slate-600">{{ f.costo_mants }}</td><td class="font-mono text-slate-600">{{ f.costo_compras }}</td><td class="font-mono text-slate-800 font-bold bg-slate-50/50 border-l border-slate-100">{{ f.costo_str }}</td></tr>{% endfor %}</tbody></table></div></div>
+            
+            <!-- 15. REPORTES -->
             <div id="reportes" class="seccion">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center text-center"><span class="text-5xl mb-4">📗</span><h4 class="font-semibold text-slate-800 uppercase tracking-widest mb-2">Base de Datos (Excel)</h4><a href="/api/exportar/excel_maestro" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs uppercase tracking-widest py-3 px-6 rounded-lg transition w-full">Descargar Excel (.xlsx)</a></div><div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center text-center"><span class="text-5xl mb-4">📕</span><h4 class="font-semibold text-slate-800 uppercase tracking-widest mb-2">Reporte Gerencial (PDF)</h4><button onclick="window.print()" class="bg-slate-700 hover:bg-slate-800 text-white font-semibold text-xs uppercase tracking-widest py-3 px-6 rounded-lg transition w-full">Imprimir / Guardar PDF</button></div></div>
             </div>
             
+            <!-- 16. POWER BI -->
             <div id="powerbi" class="seccion">
                 <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-4xl mx-auto"><h4 class="font-semibold text-slate-800 uppercase tracking-widest mb-4">Conexión Power BI (API)</h4><input type="text" readonly value="https://demotron.cl/api/powerbi/dataset?token=demotron_pbi_2026" class="form-input bg-slate-50 font-mono text-xs text-blue-600 w-full p-3 mb-4" id="pbi-url"><button onclick="navigator.clipboard.writeText(document.getElementById('pbi-url').value); alert('Copiado');" class="bg-white border border-slate-300 text-slate-700 px-6 py-2 rounded font-semibold uppercase text-[10px] tracking-widest hover:bg-slate-50 transition">Copiar URL API</button></div>
             </div>
 
+            <!-- 17. AUTOMATIZACION -->
             <div id="automatizacion" class="seccion">
                 <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-2xl mx-auto"><form action="/api/guardar_programacion" method="POST" class="space-y-6"><div><label class="text-xs font-semibold text-slate-700 uppercase tracking-widest mb-2 block">Destinatarios</label><input type="text" name="correos" placeholder="ej: gerencia@demotron.cl" class="form-input" required></div><div><label class="text-xs font-semibold text-slate-700 uppercase tracking-widest mb-2 block">Frecuencia</label><select name="frecuencia" class="form-input"><option value="diario">Diario</option><option value="semanal" selected>Semanal</option></select></div><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs uppercase tracking-widest py-3 rounded-lg transition">Guardar Programación</button></form></div>
             </div>
 
+            <!-- 18. OPERADORES -->
             <div id="cond" class="seccion"><div class="card-custom-nopad bg-white flex flex-col"><div class="table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Operador</th><th>Máquina Asignada</th><th>Cargo</th><th>Status</th><th class="text-right">Acción</th></tr></thead><tbody>{% for op in operadores %}<tr><td class="font-bold text-slate-700">{{ op.nombre }}</td><td class="font-bold text-blue-600 uppercase">{{ op.equipo_asignado }}</td><td class="text-xs uppercase font-medium text-slate-500">{{ op.cargo }}</td><td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-semibold uppercase border border-slate-200">{{ op.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('personal', '{{op.id}}')" class="btn-action text-red-600 bg-white">Desvincular</button></td></tr>{% endfor %}</tbody></table></div></div></div>
             
+            <!-- 19. MECÁNICOS -->
             <div id="mecanicos" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>RUT Oficial</th><th>Nombre Técnico</th><th>Especialidad</th><th>Status</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mecanicos %}<tr><td class="font-mono text-xs font-medium text-slate-500">{{ m.rut or 'S/I' }}</td><td class="font-bold text-slate-700">{{ m.nombre }}</td><td class="text-xs uppercase font-medium text-slate-600">{{ m.especialidad }}</td><td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-semibold uppercase border border-slate-200">{{ m.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="btn-action text-red-600 bg-white">Desvincular</button></td></tr>{% endfor %}</tbody></table></div></div>
         </div>
     </main>
 
-    <!-- MODALES -->
+    <!-- MODALES EXTRAS (UBICACIONES, CHECKLIST, EDIT, PASS) -->
     <div id="modal-ubicaciones" class="fixed inset-0 bg-slate-900/90 z-[500] hidden flex flex-col items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"><div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-100 shrink-0"><div><h3 class="font-semibold text-slate-800 uppercase text-sm">🗺️ EDICIÓN DE UBICACIONES</h3></div><button onclick="document.getElementById('modal-ubicaciones').classList.add('hidden')" class="text-slate-400 hover:text-slate-800 font-bold text-2xl">&times;</button></div><div class="p-0 flex-1 overflow-y-auto bg-slate-50"><table class="w-full text-left table-searchable"><thead class="sticky top-0 bg-white shadow-sm z-10"><tr><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase pl-6">Código de Equipo</th><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase">Coordenada GPS o Ciudad</th></tr></thead><tbody>{% for e in eqs %}<tr class="border-b border-slate-100 bg-white"><td class="p-3 font-bold text-blue-600 text-xs pl-6 w-32 border-r border-slate-50">{{ e.codigo }}</td><td class="p-3 pr-6"><input type="text" class="w-full bg-transparent border-b border-slate-300 focus:border-blue-500 outline-none text-slate-700 font-semibold text-xs uppercase py-1 ubicacion-editable" data-codigo="{{ e.codigo }}" value="{{ e.ubicacion if e.ubicacion != 'None' else '' }}"></td></tr>{% endfor %}</tbody></table></div><div class="p-4 border-t border-slate-200 bg-white shrink-0 flex justify-end"><button onclick="guardarUbicacionesMasa()" id="btn-save-map" class="bg-blue-600 text-white px-6 py-2 rounded text-xs font-semibold uppercase shadow-sm">Guardar Cambios</button></div></div></div>
+    
     <div id="modal-obra" class="fixed inset-0 bg-slate-900/90 z-[600] hidden flex flex-col items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"><div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-100 shrink-0"><h3 class="font-semibold text-slate-800 uppercase text-sm">📍 EQUIPOS EN: <span id="modal-obra-titulo" class="text-blue-600"></span></h3><button onclick="document.getElementById('modal-obra').classList.add('hidden')" class="text-slate-400 font-bold text-2xl">&times;</button></div><div class="p-0 flex-1 overflow-y-auto bg-slate-50"><table class="w-full text-left table-custom"><thead class="sticky top-0 bg-white shadow-sm z-10 border-b border-slate-200"><tr><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase pl-6">Código</th><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase">Tipo</th><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase">Estado</th><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase text-right pr-6">Acción</th></tr></thead><tbody id="modal-obra-body"></tbody></table></div></div></div>
+
     <div id="checklist-modal" class="fixed inset-0 bg-slate-900/90 z-50 hidden flex flex-col items-center justify-center p-2 md:p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"><div class="p-4 bg-slate-800 flex justify-between items-center shrink-0"><div><h3 class="font-bold text-white uppercase text-sm">📋 CHECKLIST DIGITAL</h3><p id="check-ot-title" class="text-[10px] text-blue-300 font-medium uppercase mt-1"></p></div><button onclick="document.getElementById('checklist-modal').classList.add('hidden')" class="text-slate-400 text-2xl">&times;</button></div><div class="p-5 flex-1 overflow-y-auto space-y-5 bg-slate-50"><div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm"><label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded"><span class="text-xs font-semibold uppercase">Niveles Fluidos OK</span></label><label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded"><span class="text-xs font-semibold uppercase">Cero Fugas</span></label><label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded"><span class="text-xs font-semibold uppercase">Prueba Test</span></label></div><div class="bg-white p-4 rounded-lg border shadow-sm"><input type="file" id="check-files" multiple accept="image/*,.pdf" class="block w-full text-xs text-slate-500 file:bg-blue-50 file:text-blue-700 cursor-pointer border border-dashed p-2"></div><div class="bg-white p-4 rounded-lg border shadow-sm"><div class="flex justify-between items-end mb-2"><h4 class="text-[10px] font-semibold text-slate-500 uppercase">3. Firma Técnico</h4><button onclick="clearPad()" class="text-[9px] font-semibold text-red-500 uppercase">Borrar</button></div><canvas id="signature-pad" width="350" height="120" class="w-full bg-slate-50"></canvas></div></div><div class="p-4 bg-white shrink-0 border-t border-slate-200"><button onclick="firmarYCerrarOT()" class="w-full bg-blue-600 text-white py-3 rounded-lg text-xs font-semibold uppercase">Firmar y Finalizar</button></div></div></div>
+
     <div id="edit-modal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden"><div class="p-4 bg-slate-50 flex justify-between items-center border-b border-slate-200"><h3 class="font-semibold text-slate-800 uppercase text-xs" id="edit-title">Modificar</h3><button onclick="cerrarEditModal()" class="text-slate-400 text-lg">&times;</button></div><div class="p-6 flex flex-col gap-4" id="edit-fields"></div><div class="p-4 bg-slate-50 flex justify-end border-t border-slate-200"><button onclick="guardarEdicion()" class="bg-blue-600 text-white px-6 py-2 rounded text-[10px] uppercase font-semibold w-full">Guardar</button></div></div></div>
+
     <div id="modal-password" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden"><div class="p-4 bg-slate-50 flex justify-between items-center border-b border-slate-200"><h3 class="font-semibold text-slate-800 uppercase text-xs">Clave</h3><button onclick="document.getElementById('modal-password').classList.add('hidden')" class="text-slate-400 text-lg">&times;</button></div><div class="p-6 flex flex-col gap-4"><div><label class="text-[10px] font-semibold uppercase text-slate-500 mb-1 block">Actual</label><input type="password" id="pass_actual" class="form-input"></div><div><label class="text-[10px] font-semibold uppercase text-slate-500 mb-1 block">Nueva</label><input type="password" id="pass_nueva" class="form-input"></div><p id="pass_msg" class="text-[10px] font-semibold text-red-600 hidden"></p></div><div class="p-4 bg-slate-50 flex justify-end border-t border-slate-200"><button onclick="cambiarPassword()" class="bg-blue-600 text-white px-6 py-2 rounded text-[10px] uppercase font-semibold w-full">Actualizar</button></div></div></div>
 
     <script>
@@ -329,34 +358,28 @@
         // --- MAPAS LOGÍSTICOS MULTIPANTALLA ---
         let mapasInstances = [];
         const equiposData = {{ eqs|tojson }};
-        const CASA_MATRIZ_COORDS = [-35.343472, -71.570222]; // Coordenadas exactas 35°20'36.5"S 71°34'12.8"W
+        const CASA_MATRIZ_COORDS = [-35.343472, -71.570222];
         const OFICINA_COORDS = [-35.3150, -71.5333];
         
         const coordCache = { 
             "casa matriz": CASA_MATRIZ_COORDS, "taller demotron": CASA_MATRIZ_COORDS, "panguilemu": CASA_MATRIZ_COORDS, "taller": CASA_MATRIZ_COORDS,
             "oficina": OFICINA_COORDS, "san rafael": OFICINA_COORDS, "oficina (san rafael)": OFICINA_COORDS,
-            "villaseca": [-36.5683, -72.0831], "rancagua": [-34.1708, -70.7444], 
-            "san fernando": [-34.5839, -70.9881], "rengo": [-34.4167, -70.8667],
-            "curico": [-34.9828, -71.2394], "molina": [-35.1167, -71.2833],
-            "talca": [-35.4264, -71.6554], "linares": [-35.8454, -71.5976], "san javier": [-35.5961, -71.7317],
-            "parral": [-36.1432, -71.8260], "cauquenes": [-35.9671, -72.3165],
-            "chillan": [-36.6066, -72.1034], "san carlos": [-36.4244, -71.9587],
-            "bulnes": [-36.7423, -72.2985], "concepcion": [-36.8201, -73.0444],
-            "los angeles": [-37.4697, -72.3537], "talcahuano": [-36.7167, -73.1167],
-            "san nicolas": [-36.5042, -72.2128]
+            "villaseca": [-36.5683, -72.0831], "rancagua": [-34.1708, -70.7444], "san fernando": [-34.5839, -70.9881], "rengo": [-34.4167, -70.8667],
+            "curico": [-34.9828, -71.2394], "molina": [-35.1167, -71.2833], "talca": [-35.4264, -71.6554], "linares": [-35.8454, -71.5976], 
+            "san javier": [-35.5961, -71.7317], "parral": [-36.1432, -71.8260], "cauquenes": [-35.9671, -72.3165],
+            "chillan": [-36.6066, -72.1034], "san carlos": [-36.4244, -71.9587], "bulnes": [-36.7423, -72.2985], 
+            "concepcion": [-36.8201, -73.0444], "los angeles": [-37.4697, -72.3537], "talcahuano": [-36.7167, -73.1167],
+            "san nicolas": [-36.5042, -72.2128], "san nicolás": [-36.5042, -72.2128]
         };
 
         function getNormalizedLocation(eq) {
             if (eq.estado.toLowerCase() === 'taller') return "CASA MATRIZ";
             if (eq.tipo && eq.tipo.toLowerCase().includes('asfalto')) return "SAN NICOLÁS"; 
-            
             let ubi = eq.ubicacion ? eq.ubicacion.trim() : "";
             if (!ubi || ubi.toLowerCase() === 'none' || ubi.toLowerCase() === 'sin asignacion') return "CASA MATRIZ";
-            
             let l_ubi = ubi.toLowerCase();
             if (l_ubi.includes('taller') || l_ubi.includes('panguilemu') || l_ubi.includes('casa matriz')) return "CASA MATRIZ";
             if (l_ubi.includes('oficina') || l_ubi.includes('san rafael')) return "OFICINA (SAN RAFAEL)";
-            
             return ubi.toUpperCase();
         }
 
@@ -366,29 +389,18 @@
             const grid = document.getElementById('mapas-grid'); grid.innerHTML = '';
             mapasInstances.forEach(m => m.remove()); mapasInstances = [];
 
-            let grouped = {};
-            let seenCodes = new Set(); // Filtro de duplicados
-
+            let grouped = {}; let seenCodes = new Set();
             equiposData.forEach(eq => {
-                // Eliminar Fuera de servicio del mapa
                 if (eq.estado && eq.estado.toLowerCase() === 'fuera de servicio') return;
-                
-                // Evitar equipos repetidos en el mapa
                 if (seenCodes.has(eq.codigo)) return;
                 seenCodes.add(eq.codigo);
-
                 let loc = getNormalizedLocation(eq);
-                if (loc) {
-                    if(!grouped[loc]) grouped[loc] = [];
-                    grouped[loc].push(eq);
-                }
+                if (loc) { if(!grouped[loc]) grouped[loc] = []; grouped[loc].push(eq); }
             });
 
             let mapIndex = 0;
             for (let loc of Object.keys(grouped)) {
-                let coords = coordCache[loc.toLowerCase()]; 
-                let esGPS = esCoordenada(loc);
-                
+                let coords = coordCache[loc.toLowerCase()]; let esGPS = esCoordenada(loc);
                 if (esGPS) { coords = esGPS; } 
                 else if (!coords) {
                     try { let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(loc + ', Chile')}`); let data = await res.json();
@@ -400,14 +412,7 @@
                 let mapId = "map_box_" + mapIndex; mapIndex++;
                 let displayName = esGPS ? "COORDENADAS GPS" : loc; let safeLoc = loc.replace(/'/g, "\'");
 
-                let cardHtml = `
-                <div class="flex flex-col h-[22rem] rounded-xl shadow-sm border border-slate-200 overflow-hidden bg-white">
-                    <div class="bg-slate-50 text-slate-800 p-3 flex justify-between items-center shrink-0 border-b-2 border-blue-600">
-                        <h3 class="font-bold uppercase tracking-widest text-xs truncate max-w-[50%]">${displayName}</h3>
-                        <div class="flex gap-2"><span class="text-[10px] font-semibold bg-white px-2 py-1 rounded border border-slate-200 text-slate-600">📍 ${grouped[loc].length}</span><button onclick="abrirModalEquiposObra('${safeLoc}')" class="text-[10px] font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 px-3 py-1 rounded transition">Ver Equipos</button></div>
-                    </div><div id="${mapId}" class="flex-1 w-full bg-slate-200 z-0"></div>
-                </div>`;
-                
+                let cardHtml = `<div class="flex flex-col h-[22rem] rounded-xl shadow-sm border border-slate-200 overflow-hidden bg-white"><div class="bg-slate-50 text-slate-800 p-3 flex justify-between items-center shrink-0 border-b-2 border-blue-600"><h3 class="font-bold uppercase tracking-widest text-xs truncate max-w-[50%]">${displayName}</h3><div class="flex gap-2"><span class="text-[10px] font-semibold bg-white px-2 py-1 rounded border border-slate-200 text-slate-600">📍 ${grouped[loc].length}</span><button onclick="abrirModalEquiposObra('${safeLoc}')" class="text-[10px] font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 px-3 py-1 rounded transition">Ver Equipos</button></div></div><div id="${mapId}" class="flex-1 w-full bg-slate-200 z-0"></div></div>`;
                 let tempDiv = document.createElement('div'); tempDiv.innerHTML = cardHtml; grid.appendChild(tempDiv.firstElementChild);
 
                 let map = L.map(mapId, { zoomControl: false }).setView(coords, 16); L.control.zoom({ position: 'bottomleft' }).addTo(map);
@@ -478,7 +483,7 @@
             fetch('/api/chatter/add', { method: 'POST', body: fData }).then(() => { fetch('/api/cambiar_estado_ot/' + checkOtId, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({estado: 'Finalizada'}) }).then(() => location.reload()); });
         }
 
-        // --- EDICIÓN INLINE ---
+        // --- EDICIÓN INLINE Y CLAVES ---
         let editData = {};
         function abrirEditModal(tabla, id, titulo, campos) {
             editData = { tabla, id, campos: [] }; document.getElementById('edit-title').innerText = "EDICIÓN: " + titulo; let html = '';
@@ -499,7 +504,7 @@
             });
         }
 
-        // --- INICIALIZACIÓN MUNDIAL DE GRÁFICOS Y CALENDARIOS ---
+        // --- INICIALIZACIÓN MUNDIAL KANBAN, CALENDARIO Y GRÁFICOS ---
         const mDataPrev = {{ mants_prev|tojson }};
         const mDataCorr = {{ mants_corr|tojson }};
         const eventosFuturos = {{ eventos_futuros|tojson }};
@@ -511,6 +516,25 @@
             const tabActiva = urlParams.get('tab');
             if (tabActiva) { const link = document.querySelector(`a[onclick*="switchTab('${tabActiva}'"]`); if (link) switchTab(tabActiva, link); }
 
+            // INICIALIZADOR DEL KANBAN (DRAG AND DROP)
+            if (typeof Sortable !== 'undefined') {
+                ['kb-pendiente', 'kb-progreso', 'kb-revision', 'kb-completado'].forEach(col => {
+                    const el = document.getElementById(col);
+                    if(el) {
+                        new Sortable(el, { 
+                            group: 'kanban', animation: 150, 
+                            onEnd: function (evt) {
+                                fetch('/api/cambiar_estado_ot/' + evt.item.getAttribute('data-id'), { 
+                                    method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+                                    body: JSON.stringify({ estado: evt.to.getAttribute('data-status') }) 
+                                }).then(() => location.reload());
+                            }
+                        });
+                    }
+                });
+            }
+
+            // INICIALIZADOR DE CALENDARIO
             if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
                 let evts = []; let eventMap = {};
                 mDataPrev.filter(m => m.fecha_iso && m.estado === 'Finalizada').forEach(m => { let key = m.fecha_iso + '_' + m.codigo; if(!eventMap[key]){ evts.push({ title: m.codigo + ' (PM)', start: m.fecha_iso, url: '/imprimir_ot/' + m.id, color: '#047857' }); eventMap[key] = true; } });
@@ -526,15 +550,17 @@
                 });
             }
 
+            // INICIALIZADOR DE GRÁFICOS
             if (typeof Chart !== 'undefined') {
                 Chart.defaults.font.family = "'Inter', sans-serif"; Chart.defaults.color = '#334155'; Chart.defaults.font.weight = '600';
-                new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '75%', data: { labels: ['Operativos', 'Fuera de Servicio', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'], borderWidth:0 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } } }});
-                new Chart(document.getElementById('chartCostosMensuales'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión (CLP)', data: cData.costos_mensuales.data, borderColor: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: function(value) { return (value / 1000000) + 'mm'; } } } } } });
-                new Chart(document.getElementById('chartFallas'), { type: 'bar', data: { labels: fData.labels, datasets: [{ label: 'N° Averías', data: fData.data, backgroundColor: '#EF4444', borderRadius: 4 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } } }});
-                new Chart(document.getElementById('chartTop7Prev'), { type: 'bar', data: { labels: cData.costos_top7.prev_labels, datasets: [{ label: 'Costo (CLP)', data: cData.costos_top7.prev_data, backgroundColor: '#3B82F6', borderRadius: 2 }] }, options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#F1F5F9' }, ticks: { callback: function(value) { return (value / 1000000) + 'mm'; } } }, y: { grid: { display: false } } } } });
+                if(document.getElementById('chartEstado')) {
+                    new Chart(document.getElementById('chartEstado'), { type: 'doughnut', cutout: '75%', data: { labels: ['Operativos', 'Fuera de Servicio', 'Taller'], datasets: [{ data: [cData.estado.Operativo||0, cData.estado['Fuera de Servicio']||0, cData.estado.Taller||0], backgroundColor: ['#10B981','#64748B','#EF4444'], borderWidth:0 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } } }});
+                    new Chart(document.getElementById('chartCostosMensuales'), { type: 'line', data: { labels: cData.costos_mensuales.labels, datasets: [{ label: 'Inversión (CLP)', data: cData.costos_mensuales.data, borderColor: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: function(value) { return (value / 1000000) + 'mm'; } } } } } });
+                    new Chart(document.getElementById('chartFallas'), { type: 'bar', data: { labels: fData.labels, datasets: [{ label: 'N° Averías', data: fData.data, backgroundColor: '#EF4444', borderRadius: 4 }] }, options: { maintainAspectRatio:false, plugins: { legend: { display: false } } }});
+                    new Chart(document.getElementById('chartTop7Prev'), { type: 'bar', data: { labels: cData.costos_top7.prev_labels, datasets: [{ label: 'Costo (CLP)', data: cData.costos_top7.prev_data, backgroundColor: '#3B82F6', borderRadius: 2 }] }, options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#F1F5F9' }, ticks: { callback: function(value) { return (value / 1000000) + 'mm'; } } }, y: { grid: { display: false } } } } });
+                }
             }
         };
     </script>
 </body>
 </html>
-[/source]
