@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>DEMOTRON ERP CMMS</title>
-    <!-- Favicon neutralizado -->
-    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <!-- FAVICON RESTAURADO Y FUNCIONAL -->
+    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -113,7 +113,7 @@
     </aside>
 
     <main class="flex-1 flex flex-col min-w-0 w-full">
-        <!-- HEADER (Cinta roja eliminada como pediste) -->
+        <!-- HEADER (Sin cinta roja) -->
         <header class="h-14 md:h-16 bg-white border-b-2 border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0 shadow-sm z-10">
             <div class="flex items-center gap-3">
                 <button onclick="toggleMenu()" class="md:hidden text-black p-1 text-2xl font-black leading-none focus:outline-none">☰</button>
@@ -129,14 +129,16 @@
                 
                 <h3 class="text-xs font-black text-black uppercase tracking-widest mb-4 border-b-2 border-slate-300 pb-2">1. Disponibilidad y Cumplimiento</h3>
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-                    <!-- Gauge -->
+                    <!-- Gauge 3 Estados -->
                     <div class="bg-white p-5 rounded-xl shadow-md border-2 border-slate-200 col-span-2 flex flex-col relative">
-                        <span class="text-[11px] font-black text-black uppercase tracking-widest absolute top-4 left-4">Disponibilidad Flota</span>
+                        <span class="text-[11px] font-black text-black uppercase tracking-widest absolute top-4 left-4">Estado Operativo</span>
                         <div class="w-full h-32 mt-6 relative flex justify-center">
                             <canvas id="chartGaugeDisp"></canvas>
-                            <div class="absolute bottom-0 text-center w-full">
-                                <span class="text-4xl font-black text-black">{{ kpis.disponibilidad_pct|default('0') }}%</span>
-                            </div>
+                        </div>
+                        <div class="flex justify-around text-[10px] font-black uppercase tracking-widest mt-2">
+                            <span class="text-blue-600">{{ kpis.operativos }} OP</span>
+                            <span class="text-red-600">{{ kpis.en_taller }} TALLER</span>
+                            <span class="text-slate-500">{{ kpis.fuera_servicio }} FUERA</span>
                         </div>
                     </div>
                     <!-- Stats -->
@@ -151,9 +153,9 @@
                         <span class="text-[10px] font-black text-black mt-1 uppercase">Equipos Vencidos</span>
                     </div>
                     <div class="bg-white p-5 rounded-xl shadow-md border-2 border-slate-200 flex flex-col justify-center col-span-2 md:col-span-1">
-                        <span class="text-[11px] font-black text-black uppercase tracking-widest mb-1">Equipos Sin Mantenimiento</span>
+                        <span class="text-[11px] font-black text-black uppercase tracking-widest mb-1">Equipos Sin Mant.</span>
                         <h3 class="text-4xl font-black text-amber-500">{{ kpis.equipos_sin_mantencion|default('0') }}</h3>
-                        <span class="text-[10px] font-black text-black mt-1 uppercase">Sin PM Registrado</span>
+                        <span class="text-[10px] font-black text-black mt-1 uppercase">Sin Historial PM</span>
                     </div>
                 </div>
 
@@ -161,21 +163,21 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                     <!-- Ratio Correctivo/Preventivo -->
                     <div class="bg-white p-5 rounded-xl shadow-md border-2 border-slate-200 flex flex-col justify-center col-span-2">
-                        <h4 class="text-[11px] font-black text-black uppercase tracking-widest mb-4">Ratio OTs (Correctivo vs Preventivo)</h4>
+                        <h4 class="text-[11px] font-black text-black uppercase tracking-widest mb-4">Volumen OTs (Correctivo vs Preventivo)</h4>
                         <div class="flex h-8 rounded overflow-hidden mb-3">
                             <div class="bg-red-600 h-full flex items-center justify-center text-white text-[12px] font-black" style="width: {{ kpis.ratio_corr|default(50) }}%;">{{ kpis.ratio_corr|default(0) }}% Falla</div>
                             <div class="bg-blue-600 h-full flex items-center justify-center text-white text-[12px] font-black" style="width: {{ kpis.ratio_prev|default(50) }}%;">{{ kpis.ratio_prev|default(0) }}% PM</div>
                         </div>
                         <div class="flex justify-between font-black text-black text-[10px] uppercase">
-                            <span>Fallas: {{ kpis.correctivas_count }}</span>
-                            <span>Preventivas: {{ kpis.preventivas_count }}</span>
+                            <span>Cantidad Fallas: {{ kpis.correctivas_count }}</span>
+                            <span>Cantidad PM: {{ kpis.preventivas_count }}</span>
                         </div>
                     </div>
                     
                     <div class="bg-white p-5 rounded-xl shadow-md border-2 border-slate-200 flex flex-col justify-center">
-                        <h4 class="text-[11px] font-black text-black uppercase tracking-widest mb-2">Inversión YTD</h4>
+                        <h4 class="text-[11px] font-black text-black uppercase tracking-widest mb-2">Inversión YTD (2026)</h4>
                         <h3 class="text-3xl font-black text-black">{{ kpis.costo_total_ytd|default('$0') }}</h3>
-                        <span class="text-[10px] font-black text-black mt-1 uppercase">Año en curso</span>
+                        <span class="text-[10px] font-black text-black mt-1 uppercase">OTs + Compras de Repuestos</span>
                     </div>
 
                     <!-- MTTB y MTTR Combinados -->
@@ -191,11 +193,11 @@
                     </div>
                 </div>
 
-                <h3 class="text-xs font-black text-black uppercase tracking-widest mb-4 border-b-2 border-slate-300 pb-2">3. Inteligencia de Negocio y Riesgo por Marca</h3>
+                <h3 class="text-xs font-black text-black uppercase tracking-widest mb-4 border-b-2 border-slate-300 pb-2">3. Inteligencia de Negocio y Costos por Marca</h3>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     <!-- Gráfico de Barras Costo por Marca -->
                     <div class="bg-white p-5 rounded-xl shadow-md border-2 border-slate-200">
-                        <h4 class="text-[11px] font-black text-black uppercase tracking-widest mb-4">Costo Histórico por Marca</h4>
+                        <h4 class="text-[11px] font-black text-black uppercase tracking-widest mb-4">Costo Histórico por Marca (Mants + Compras)</h4>
                         <div class="h-64 relative w-full"><canvas id="chartCostoMarcas"></canvas></div>
                     </div>
                     
@@ -231,7 +233,7 @@
                             {% if eq.foto_url %}
                             <img src="{{ eq.foto_url }}" class="h-full object-contain" alt="Foto">
                             {% else %}
-                            <div class="h-full w-16 bg-slate-100 rounded border border-slate-300 flex items-center justify-center text-xl">🚛</div>
+                            <div class="h-full w-16 bg-slate-100 rounded border border-slate-300 flex items-center justify-center font-black text-xs text-slate-400">S/F</div>
                             {% endif %}
                         </div>
                         <h4 class="font-black text-black text-sm uppercase">{{ eq.codigo }}</h4>
@@ -595,6 +597,7 @@
         const mDataCorr = {{ mants_corr|tojson }};
         
         // Datos Resilientes para Gráficos
+        const kpisData = {{ kpis|default({'operativos':0, 'en_taller':0, 'fuera_servicio':0})|tojson }};
         const disp_pct = {{ kpis.disp_pct|default(0) }};
         const chartCostoMarcas = {{ chart_costo_marcas|default({'labels':[], 'data':[]})|tojson }};
         const eventos_calendario = {{ eventos_calendario|default([])|tojson }};
@@ -640,19 +643,19 @@
                 Chart.defaults.color = '#000000'; 
                 Chart.defaults.font.weight = '900';
                 
-                // 1. Gauge Disponibilidad
+                // 1. Gauge Disponibilidad (Dona 3 Estados)
                 if(document.getElementById('chartGaugeDisp')) {
                     new Chart(document.getElementById('chartGaugeDisp').getContext('2d'), {
                         type: 'doughnut',
                         data: {
-                            labels: ['Operativo', 'Taller/Fuera'],
+                            labels: ['Operativo', 'Taller', 'Fuera de Servicio'],
                             datasets: [{
-                                data: [disp_pct, 100 - disp_pct],
-                                backgroundColor: ['#2563EB', '#E2E8F0'],
-                                borderWidth: 0, circumference: 180, rotation: 270
+                                data: [kpisData.operativos, kpisData.en_taller, kpisData.fuera_servicio],
+                                backgroundColor: ['#2563EB', '#DC2626', '#64748B'],
+                                borderWidth: 2, borderColor: '#FFFFFF', circumference: 180, rotation: 270
                             }]
                         },
-                        options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+                        options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } }
                     });
                 }
 
@@ -672,8 +675,8 @@
                         options: {
                             responsive: true, maintainAspectRatio: false,
                             scales: {
-                                y: { beginAtZero: true, grid: { color: '#E2E8F0' }, ticks: { font: { weight: 'bold' } } },
-                                x: { grid: { display: false }, ticks: { font: { weight: 'bold', size: 10 } } }
+                                y: { beginAtZero: true, grid: { color: '#E2E8F0' }, ticks: { font: { weight: '900' } } },
+                                x: { grid: { display: false }, ticks: { font: { weight: '900', size: 10 } } }
                             },
                             plugins: { legend: { display: false } }
                         }
