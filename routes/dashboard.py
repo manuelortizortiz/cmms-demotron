@@ -20,30 +20,34 @@ def dashboard():
         hoy = datetime.now()
         inicio_ano = datetime(hoy.year, 1, 1)
         
-        # 1. ESTADO DE FLOTA Y DISPONIBILIDAD
+        # 1. BASE DE DATOS
         eqs_db = Equipo.query.all()
+        ots_db = OrdenTrabajo.query.all()
+        compras_db = CompraRepuesto.query.all()
+
+        # 2. ESTADO DE FLOTA Y DISPONIBILIDAD (Desglose exacto)
         total_eq = len(eqs_db)
         operativos = [e for e in eqs_db if e.estado_base == 'Operativo']
         en_taller = [e for e in eqs_db if e.estado_base == 'Taller']
+        fuera_servicio = [e for e in eqs_db if e.estado_base == 'Fuera de Servicio']
         atrasados = [e for e in eqs_db if (e.proxima_pm or 0) - (e.lectura_actual or 0) < 0 and e.estado_base != 'Fuera de Servicio']
         
         disponibilidad_pct = round((len(operativos) / total_eq * 100), 1) if total_eq > 0 else 0
         cumpl_pm_pct = round(((total_eq - len(atrasados)) / total_eq * 100), 1) if total_eq > 0 else 100.0
 
-        # 2. ANÁLISIS DE OTs Y COSTOS
-        ots_db = OrdenTrabajo.query.all()
+        # 3. ANÁLISIS DE OTs Y COSTOS CORREGIDOS (Inyección de Compras)
         correctivas = [o for o in ots_db if o.tipo_ot == 'Correctiva']
         preventivas = [o for o in ots_db if o.tipo_ot == 'Preventiva']
         
-        costo_corr = sum(float(o.costo_mantencion_clp or 0) for o in correctivas)
-        costo_prev = sum(float(o.costo_mantencion_clp or 0) for o in preventivas)
-        costo_total = costo_corr + costo_prev
-        
-        # Inversión YTD (Desde el 1 de enero del año actual)
-        costo_ytd = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.fecha and o.fecha >= inicio_ano)
-        
-        ratio_corr = round((costo_corr / costo_total * 100), 1) if costo_total > 0 else 0
-        ratio_prev = round((costo_prev / costo_total * 100), 1) if costo_total > 0 else 0
+        # RATIO REAL: Basado en cantidad de órdenes, no en costos parciales
+        total_ots = len(correctivas) + len(preventivas)
+        ratio_corr = int(round((len(correctivas) / total_ots * 100), 0)) if total_ots > 0 else 0
+        ratio_prev = 100 - ratio_corr if total_ots > 0 else 0
+
+        # INVERSIÓN YTD REAL: OTs + Compras de Repuestos
+        costo_ytd_ots = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.fecha and o.fecha >= inicio_ano)
+        costo_ytd_compras = sum(float(c.costo_pm_clp or 0) for c in compras_db if c.fecha and c.fecha >= inicio_ano)
+        costo_ytd_total = costo_ytd_ots + costo_ytd_compras
 
         # MTTR y MTTB
         mttr_horas = 0
@@ -53,13 +57,13 @@ def dashboard():
             mttr_horas = round(horas_tot / len(cerradas_corr), 1)
 
         dias_operacion_total = total_eq * 30 
-        mttb_dias = round(dias_operacion_total / len(correctivas), 1) if len(correctivas) > 0 else dias_operacion_total
+        mttb_dias = round(dias_operacion_total / max(1, len(correctivas)), 1)
 
         # Equipos sin ninguna mantención preventiva
         eqs_con_pm = set(o.codigo_equipo for o in preventivas)
         equipos_sin_pm = len([e for e in eqs_db if e.codigo not in eqs_con_pm and e.estado_base != 'Fuera de Servicio'])
 
-        # Top Equipos con más fallas (y sus fotos)
+        # Top Equipos con más fallas
         eq_fallas_counter = Counter(o.codigo_equipo for o in correctivas)
         top_equipos_fallas = []
         for cod, qty in eq_fallas_counter.most_common(5):
@@ -68,7 +72,7 @@ def dashboard():
                 foto = buscar_foto_por_tipo(eq_obj.tipo_equipo, eq_obj.marca)
                 top_equipos_fallas.append({'codigo': cod, 'cantidad': qty, 'foto_url': foto})
 
-        # 3. PREPARACIÓN DE DATASETS PARA EL FRONTEND
+        # 4. PREPARACIÓN DE DATASETS PARA EL FRONTEND (Costos Históricos por Marca)
         marcas_stats = {}
         equipos_dict = []
         eventos_calendario = []
@@ -79,9 +83,13 @@ def dashboard():
             marcas_stats[m]['total'] += 1
             if e.estado_base == 'Operativo': marcas_stats[m]['operativos'] += 1
             
-            c_eq = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.codigo_equipo == e.codigo)
+            # AHORA SÍ SUMA OTs + COMPRAS PARA CADA MARCA
+            c_ots = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.codigo_equipo == e.codigo)
+            c_compras = sum(float(c.costo_pm_clp or 0) for c in compras_db if c.codigo_equipo == e.codigo)
+            c_eq_total = c_ots + c_compras
+            
             f_eq = len([o for o in correctivas if o.codigo_equipo == e.codigo])
-            marcas_stats[m]['costo'] += c_eq
+            marcas_stats[m]['costo'] += c_eq_total
             marcas_stats[m]['fallas'] += f_eq
 
             margen = (e.proxima_pm or 0) - (e.lectura_actual or 0)
@@ -103,7 +111,6 @@ def dashboard():
                 'margen': margen, 'margen_str': format_num(margen), 'estado': e.estado_base, 'ctrl': e.control_base
             })
 
-        compras_db = CompraRepuesto.query.order_by(CompraRepuesto.fecha.desc()).all()
         bodega_db = InventarioBodega.query.order_by(InventarioBodega.nombre).all()
         personal_db = Personal.query.all()
         
@@ -117,19 +124,16 @@ def dashboard():
             kanban[k].append({'id': ot.id, 'codigo': ot.codigo_equipo, 'folio': ot.folio, 'tipo': ot.tipo_mantencion, 'clasificacion': ot.tipo_ot, 'mecanico': ot.mecanico})
 
         kpis = {
-            'total': total_eq, 'operativos': len(operativos), 'atrasados': len(atrasados), 'en_taller': len(en_taller),
+            'total': total_eq, 'operativos': len(operativos), 'en_taller': len(en_taller), 'fuera_servicio': len(fuera_servicio), 'atrasados': len(atrasados),
             'disponibilidad_pct': disponibilidad_pct, 'cumpl_pm_pct': cumpl_pm_pct,
             'mttr': mttr_horas, 'mttb': mttb_dias, 'equipos_sin_mantencion': equipos_sin_pm,
-            'costo_total_ytd': format_clp(costo_ytd), 'ratio_corr': ratio_corr, 'ratio_prev': ratio_prev,
+            'costo_total_ytd': format_clp(costo_ytd_total), 'ratio_corr': ratio_corr, 'ratio_prev': ratio_prev,
             'correctivas_count': len(correctivas), 'preventivas_count': len(preventivas),
-            'ot_abiertas': sum(len(kanban[estado]) for estado in ['Pendiente', 'En Progreso', 'En Revisión']),
-            'pronostico_mes': format_clp(costo_total / max(1, hoy.month))
         }
 
         dist_marcas = [{'marca': k, 'total': v['total'], 'operativos': v['operativos'], 'costo': v['costo']} for k, v in marcas_stats.items()]
         dist_marcas = sorted(dist_marcas, key=lambda x: x['total'], reverse=True)
 
-        # Datos para el nuevo gráfico de barras
         chart_costo_marcas = {
             'labels': [m['marca'] for m in dist_marcas[:7]],
             'data': [m['costo'] for m in dist_marcas[:7]]
