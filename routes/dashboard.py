@@ -1,13 +1,15 @@
 from flask import Blueprint, render_template
 from datetime import datetime, timedelta
+from collections import Counter
 from flask_login import login_required
+from sqlalchemy import func, case, text
 from extensions import db
 from models.equipo import Equipo
 from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
 from models.personal import Personal, Mecanico
 from models.bodega import InventarioBodega
-from utils.formatters import format_num, format_clp
+from utils.formatters import format_num, format_clp, buscar_foto_por_tipo
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -16,6 +18,7 @@ dashboard_bp = Blueprint('dashboard', __name__)
 def dashboard():
     try:
         hoy = datetime.now()
+        inicio_ano = datetime(hoy.year, 1, 1)
         
         # 1. ESTADO DE FLOTA Y DISPONIBILIDAD
         eqs_db = Equipo.query.all()
@@ -25,7 +28,7 @@ def dashboard():
         atrasados = [e for e in eqs_db if (e.proxima_pm or 0) - (e.lectura_actual or 0) < 0 and e.estado_base != 'Fuera de Servicio']
         
         disponibilidad_pct = round((len(operativos) / total_eq * 100), 1) if total_eq > 0 else 0
-        cumplimiento_pct = round(((total_eq - len(atrasados)) / total_eq * 100), 1) if total_eq > 0 else 100.0
+        cumpl_pm_pct = round(((total_eq - len(atrasados)) / total_eq * 100), 1) if total_eq > 0 else 100.0
 
         # 2. ANÁLISIS DE OTs Y COSTOS
         ots_db = OrdenTrabajo.query.all()
@@ -36,10 +39,13 @@ def dashboard():
         costo_prev = sum(float(o.costo_mantencion_clp or 0) for o in preventivas)
         costo_total = costo_corr + costo_prev
         
+        # Inversión YTD (Desde el 1 de enero del año actual)
+        costo_ytd = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.fecha and o.fecha >= inicio_ano)
+        
         ratio_corr = round((costo_corr / costo_total * 100), 1) if costo_total > 0 else 0
         ratio_prev = round((costo_prev / costo_total * 100), 1) if costo_total > 0 else 0
 
-        # MTTR y MTBF
+        # MTTR y MTTB
         mttr_horas = 0
         cerradas_corr = [o for o in correctivas if o.estado == 'Finalizada' and o.fecha_cierre and o.fecha]
         if cerradas_corr:
@@ -47,13 +53,25 @@ def dashboard():
             mttr_horas = round(horas_tot / len(cerradas_corr), 1)
 
         dias_operacion_total = total_eq * 30 
-        mtbf_dias = round(dias_operacion_total / len(correctivas), 1) if len(correctivas) > 0 else dias_operacion_total
+        mttb_dias = round(dias_operacion_total / len(correctivas), 1) if len(correctivas) > 0 else dias_operacion_total
+
+        # Equipos sin ninguna mantención preventiva
+        eqs_con_pm = set(o.codigo_equipo for o in preventivas)
+        equipos_sin_pm = len([e for e in eqs_db if e.codigo not in eqs_con_pm and e.estado_base != 'Fuera de Servicio'])
+
+        # Top Equipos con más fallas (y sus fotos)
+        eq_fallas_counter = Counter(o.codigo_equipo for o in correctivas)
+        top_equipos_fallas = []
+        for cod, qty in eq_fallas_counter.most_common(5):
+            eq_obj = next((e for e in eqs_db if e.codigo == cod), None)
+            if eq_obj:
+                foto = buscar_foto_por_tipo(eq_obj.tipo_equipo, eq_obj.marca)
+                top_equipos_fallas.append({'codigo': cod, 'cantidad': qty, 'foto_url': foto})
 
         # 3. PREPARACIÓN DE DATASETS PARA EL FRONTEND
         marcas_stats = {}
         equipos_dict = []
         eventos_calendario = []
-        scatter_riesgo = []
         
         for e in eqs_db:
             m = e.marca or 'S/I'
@@ -65,10 +83,6 @@ def dashboard():
             f_eq = len([o for o in correctivas if o.codigo_equipo == e.codigo])
             marcas_stats[m]['costo'] += c_eq
             marcas_stats[m]['fallas'] += f_eq
-
-            disp_eq = 100 if e.estado_base == 'Operativo' else (50 if e.estado_base == 'Taller' else 0)
-            if c_eq > 0 or f_eq > 0:
-                scatter_riesgo.append({'x': c_eq, 'y': disp_eq, 'r': max(5, f_eq * 3), 'codigo': e.codigo})
 
             margen = (e.proxima_pm or 0) - (e.lectura_actual or 0)
             if margen >= 0 and e.estado_base != 'Fuera de Servicio':
@@ -89,7 +103,6 @@ def dashboard():
                 'margen': margen, 'margen_str': format_num(margen), 'estado': e.estado_base, 'ctrl': e.control_base
             })
 
-        # RECUPERACIÓN DE TABLAS DE HISTORIALES (AQUÍ ESTABA EL ERROR)
         compras_db = CompraRepuesto.query.order_by(CompraRepuesto.fecha.desc()).all()
         bodega_db = InventarioBodega.query.order_by(InventarioBodega.nombre).all()
         personal_db = Personal.query.all()
@@ -105,19 +118,26 @@ def dashboard():
 
         kpis = {
             'total': total_eq, 'operativos': len(operativos), 'atrasados': len(atrasados), 'en_taller': len(en_taller),
-            'disp_pct': disponibilidad_pct, 'cumpl_pct': cumplimiento_pct,
-            'mttr': mttr_horas, 'mtbf': mtbf_dias,
-            'costo_total': format_clp(costo_total), 'ratio_corr': ratio_corr, 'ratio_prev': ratio_prev,
+            'disponibilidad_pct': disponibilidad_pct, 'cumpl_pm_pct': cumpl_pm_pct,
+            'mttr': mttr_horas, 'mttb': mttb_dias, 'equipos_sin_mantencion': equipos_sin_pm,
+            'costo_total_ytd': format_clp(costo_ytd), 'ratio_corr': ratio_corr, 'ratio_prev': ratio_prev,
             'correctivas_count': len(correctivas), 'preventivas_count': len(preventivas),
-            'ot_abiertas': sum(len(kanban[estado]) for estado in ['Pendiente', 'En Progreso', 'En Revisión'])
+            'ot_abiertas': sum(len(kanban[estado]) for estado in ['Pendiente', 'En Progreso', 'En Revisión']),
+            'pronostico_mes': format_clp(costo_total / max(1, hoy.month))
         }
 
         dist_marcas = [{'marca': k, 'total': v['total'], 'operativos': v['operativos'], 'costo': v['costo']} for k, v in marcas_stats.items()]
         dist_marcas = sorted(dist_marcas, key=lambda x: x['total'], reverse=True)
 
+        # Datos para el nuevo gráfico de barras
+        chart_costo_marcas = {
+            'labels': [m['marca'] for m in dist_marcas[:7]],
+            'data': [m['costo'] for m in dist_marcas[:7]]
+        }
+
         return render_template('index.html', kpis=kpis, eqs=equipos_dict, mants_prev=mants_prev, 
                                mants_corr=mants_corr, compras=compras_formateadas, bodega=bodega_db, 
                                personal=personal_db, kanban=kanban, eventos_calendario=eventos_calendario,
-                               dist_marcas=dist_marcas, scatter_riesgo=scatter_riesgo)
+                               dist_marcas=dist_marcas, top_equipos_fallas=top_equipos_fallas, chart_costo_marcas=chart_costo_marcas)
     except Exception as e:
         return f"Error en Dashboard: {str(e)}"
