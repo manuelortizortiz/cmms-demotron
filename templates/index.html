@@ -36,75 +36,96 @@
     <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full">
 
         <!-- ========================================== -->
-        <!-- 1. KPIS SUPERIORES (Inteligencia de Negocio)-->
+        <!-- 1. KPIS SUPERIORES AMPLIADOS (BI)          -->
         <!-- ========================================== -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            <!-- Disponibilidad -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Disponibilidad Flota</p>
-                <h3 class="text-3xl font-black text-slate-800 mt-1">{{ kpis.disponibilidad_pct }}%</h3>
-                <p class="text-xs text-slate-500 font-bold mt-2"><span class="text-blue-600">{{ kpis.operativos }}</span> de {{ kpis.total }} equipos al día</p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Disponibilidad</p>
+                <h3 class="text-2xl font-black text-slate-800 mt-1">{{ kpis.disponibilidad_pct }}%</h3>
+                <p class="text-[11px] text-slate-500 font-bold mt-1"><span class="text-blue-600">{{ kpis.operativos }}</span> de {{ kpis.total }} equipos al día</p>
             </div>
 
+            <!-- Backlog Crítico -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 {% if kpis.atrasados > 0 %}border-l-red-500{% else %}border-l-emerald-500{% endif %}">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Backlog Crítico (Vencidos)</p>
-                <h3 class="text-3xl font-black mt-1 {% if kpis.atrasados > 0 %}text-red-600{% else %}text-emerald-500{% endif %}">{{ kpis.atrasados }}</h3>
-                <p class="text-xs text-slate-500 font-bold mt-2">Equipos con mantención superada</p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Backlog Vencido</p>
+                <h3 class="text-2xl font-black mt-1 {% if kpis.atrasados > 0 %}text-red-600{% else %}text-emerald-500{% endif %}">{{ kpis.atrasados }}</h3>
+                <p class="text-[11px] text-slate-500 font-bold mt-1">Equipos fuera de pauta</p>
             </div>
 
+            <!-- Costo Mes Actual & MoM -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-amber-500">
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Costo Mes Actual</p>
-                <h3 class="text-xl font-black text-slate-800 mt-1">{{ kpis.costo_mes_str }}</h3>
-                <div class="mt-2 text-xs font-bold flex items-center gap-1 {% if kpis.variacion_costo > 0 %}text-red-500{% else %}text-emerald-500{% endif %}">
+                <h3 class="text-lg font-black text-slate-800 mt-1">{{ kpis.costo_mes_str }}</h3>
+                <div class="mt-1 text-[11px] font-bold flex items-center gap-1 {% if kpis.variacion_costo > 0 %}text-red-500{% else %}text-emerald-500{% endif %}">
                     <span>{% if kpis.variacion_costo > 0 %}▲{% else %}▼{% endif %}</span>
-                    <span>{{ kpis.variacion_costo }}% vs Mes Anterior</span>
+                    <span>{{ kpis.variacion_costo }}% vs mes ant.</span>
                 </div>
             </div>
 
+            <!-- OTs Abiertas -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-purple-500">
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Órdenes Abiertas</p>
-                <h3 class="text-3xl font-black text-slate-800 mt-1">{{ kpis.ot_abiertas }}</h3>
-                <p class="text-xs text-slate-500 font-bold mt-2"><span class="text-purple-600">{{ kpis.correctivas_mes }}</span> Correctivas este mes</p>
+                <h3 class="text-2xl font-black text-slate-800 mt-1">{{ kpis.ot_abiertas }}</h3>
+                <p class="text-[11px] text-slate-500 font-bold mt-1"><span class="text-purple-600">{{ kpis.correctivas_mes }}</span> Correctivas mes</p>
+            </div>
+
+            <!-- Acumulado YTD y MTTR -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-slate-700">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Acumulado YTD</p>
+                <h3 class="text-lg font-black text-slate-800 mt-1">{{ kpis.costo_total_ytd }}</h3>
+                <p class="text-[11px] text-slate-500 font-bold mt-1">MTTR: <span class="text-slate-800 font-mono">{{ kpis.mttr }}</span></p>
             </div>
         </div>
 
         <!-- ========================================== -->
-        <!-- 2. RANKINGS Y DISTRIBUCIÓN                 -->
+        <!-- 2. GRÁFICOS ANALÍTICOS Y RANKINGS BI        -->
         <!-- ========================================== -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="bg-slate-800 px-4 py-3">
-                    <h3 class="text-xs font-black text-white uppercase tracking-widest">Top 5: Equipos Más Costosos (Histórico)</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Gráfico Estado Flota -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center justify-center">
+                <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest w-full mb-3">Estado Operativo de Flota</h3>
+                <div class="w-48 h-48">
+                    <canvas id="chartEstado"></canvas>
                 </div>
-                <div class="p-4">
-                    <ul class="space-y-3">
+            </div>
+
+            <!-- Top Equipos Más Costosos -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                <div class="bg-slate-800 px-4 py-3">
+                    <h3 class="text-xs font-black text-white uppercase tracking-widest">Top 5: Equipos Más Costosos</h3>
+                </div>
+                <div class="p-4 flex-1">
+                    <ul class="space-y-2.5">
                         {% for equipo in top_costosos %}
-                        <li class="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
-                            <span class="font-black text-slate-800 text-sm">{{ equipo.codigo_equipo }}</span>
-                            <span class="text-red-600 font-black text-sm">${{ "{:,.0f}".format(equipo.costo_acumulado).replace(',','.') }}</span>
+                        <li class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                            <span class="font-black text-slate-800 text-xs">{{ equipo.codigo_equipo }}</span>
+                            <span class="text-red-600 font-black text-xs">${{ "{:,.0f}".format(equipo.costo_acumulado).replace(',','.') }}</span>
                         </li>
                         {% else %}
-                        <li class="text-xs text-slate-400 italic text-center py-4">No hay historial de costos registrado aún.</li>
+                        <li class="text-xs text-slate-400 italic text-center py-4">Sin registros de costos.</li>
                         {% endfor %}
                     </ul>
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <!-- Distribución por Marcas -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
                 <div class="bg-slate-800 px-4 py-3">
-                    <h3 class="text-xs font-black text-white uppercase tracking-widest">Distribución de Flota por Marca</h3>
+                    <h3 class="text-xs font-black text-white uppercase tracking-widest">Distribución por Marca</h3>
                 </div>
-                <div class="p-4">
-                    <ul class="space-y-3">
+                <div class="p-4 flex-1 overflow-y-auto max-h-48">
+                    <ul class="space-y-2.5">
                         {% for marca in distribucion_marcas %}
-                        <li class="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
-                            <span class="font-black text-slate-800 text-sm">{{ marca.marca }}</span>
+                        <li class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            <span class="font-black text-slate-800 text-xs">{{ marca.marca }}</span>
                             <div class="text-right">
-                                <span class="block text-xs font-black text-slate-700">{{ marca.cantidad }} Unidades Totales</span>
-                                <span class="block text-[10px] text-emerald-600 font-black tracking-wider">{{ marca.operativos }} OPERATIVOS</span>
+                                <span class="block text-[11px] font-black text-slate-700">{{ marca.cantidad }} Unidades</span>
+                                <span class="block text-[9px] text-emerald-600 font-bold uppercase">{{ marca.operativos }} Operativos</span>
                             </div>
                         </li>
                         {% else %}
-                        <li class="text-xs text-slate-400 italic text-center py-4">No hay marcas registradas en el inventario.</li>
+                        <li class="text-xs text-slate-400 italic text-center py-4">Sin marcas registradas.</li>
                         {% endfor %}
                     </ul>
                 </div>
@@ -112,7 +133,7 @@
         </div>
 
         <!-- ========================================== -->
-        <!-- 3. MENÚ DE PESTAÑAS (RESTAURADO)           -->
+        <!-- 3. MENÚ DE PESTAÑAS (TABS COMPLETAS)        -->
         <!-- ========================================== -->
         <div class="flex border-b border-slate-300 mb-6 gap-2 overflow-x-auto">
             <button onclick="switchTab('flota')" id="btn-flota" class="tab-btn px-4 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-blue-600 text-blue-600 transition whitespace-nowrap">Flota y Estado</button>
@@ -126,7 +147,7 @@
             <button onclick="switchTab('finanzas')" id="btn-finanzas" class="tab-btn px-4 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition whitespace-nowrap">Costos CPK/CPH</button>
         </div>
 
-        <!-- TAB 1: FLOTA (Patente limpia) -->
+        <!-- TAB 1: FLOTA (Matriz limpia con Patente) -->
         <div id="tab-flota" class="tab-content active">
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
@@ -464,6 +485,34 @@
             })
             .catch(err => alert('Error de conexión con el servidor.'));
         }
+
+        // Renderizado del Gráfico de Estado (Chart.js)
+        const ctxEstado = document.getElementById('chartEstado').getContext('2d');
+        new Chart(ctxEstado, {
+            type: 'doughnut',
+            data: {
+                labels: ['Operativo', 'Taller', 'Fuera de Servicio'],
+                datasets: [{
+                    data: [
+                        {{ charts.estado.Operativo }},
+                        {{ charts.estado.Taller }},
+                        {{ charts.estado['Fuera de Servicio'] }}
+                    ],
+                    backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 12, font: { size: 10, weight: 'bold' } }
+                    }
+                }
+            }
+        });
     </script>
 </body>
 </html>
