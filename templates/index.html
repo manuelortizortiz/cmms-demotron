@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CMMS Demotron | Dashboard</title>
-    <!-- Favicon de tuerca (Sin archivo físico) -->
+    <title>CMMS Demotron | Dashboard Gerencial</title>
+    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙️</text></svg>">
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -19,7 +19,7 @@
         .sidebar-item { border-left: 4px solid transparent; }
         .sidebar-item.active { background-color: #1E293B; border-left-color: #3B82F6; font-weight: 900; }
         
-        /* ESTILO CALENDARIO MIRRO (Soft & Clean) */
+        /* ESTILO CALENDARIO MIRRO */
         .fc { font-family: 'Inter', sans-serif; }
         .fc-theme-standard td, .fc-theme-standard th { border-color: #F1F5F9; }
         .fc-col-header-cell-cushion { padding: 12px !important; font-weight: 700; text-transform: uppercase; font-size: 11px; color: #64748B; }
@@ -57,18 +57,18 @@
 
     <!-- AREA PRINCIPAL -->
     <main class="flex-1 overflow-y-auto flex flex-col h-full bg-slate-50 relative">
-        <header class="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-10">
+        <header class="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
             <div>
                 <h2 class="text-lg font-black text-slate-800 tracking-tighter" id="page-title">DASHBOARD GENERAL</h2>
             </div>
             <div>
-                <a href="/api/exportar/excel_maestro" class="bg-slate-900 text-white font-bold text-xs uppercase tracking-widest px-4 py-2 rounded-lg hover:bg-blue-600 transition">Exportar Excel</a>
+                <a href="/api/exportar/excel_maestro" class="bg-emerald-600 text-white font-bold text-xs uppercase tracking-widest px-4 py-2. rounded-lg hover:bg-emerald-700 transition">Exportar Excel</a>
             </div>
         </header>
 
         <div class="p-8 max-w-screen-2xl mx-auto w-full">
             
-            <!-- TAB 0: DASHBOARD & KPIS (NUEVO) -->
+            <!-- TAB 0: DASHBOARD & KPIS -->
             <div id="tab-dashboard" class="tab-content active">
                 
                 <!-- GRUPO 1: Disponibilidad y Cumplimiento -->
@@ -169,30 +169,47 @@
                 </div>
             </div>
 
-            <!-- TAB 1: FLOTA (Matriz limpia) -->
+            <!-- TAB 1: FLOTA (RESTAURADA CON BOTONES DE FICHAS Y FILTROS) -->
             <div id="tab-flota" class="tab-content">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                        <h3 class="font-black text-xs text-slate-700 uppercase tracking-widest">Matriz General de Equipos</h3>
+                        <span class="text-xs font-bold text-slate-500">{{ eqs|length }} Unidades Registradas</span>
+                    </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-xs">
                             <thead>
-                                <tr class="bg-slate-100 text-slate-500 uppercase text-[10px] tracking-widest">
-                                    <th class="p-4 font-black">Código</th>
-                                    <th class="p-4 font-black">Tipo</th>
-                                    <th class="p-4 font-black">Patente</th>
-                                    <th class="p-4 font-black">Lectura Actual</th>
-                                    <th class="p-4 font-black">Margen PM</th>
-                                    <th class="p-4 font-black">Estado Base</th>
+                                <tr class="bg-slate-100 text-slate-600 uppercase text-[10px]">
+                                    <th class="p-3">Código</th>
+                                    <th class="p-3">Tipo</th>
+                                    <th class="p-3">Marca / Modelo</th>
+                                    <th class="p-3">Patente</th>
+                                    <th class="p-3">Ubicación</th>
+                                    <th class="p-3">Lectura Actual</th>
+                                    <th class="p-3">Margen PM</th>
+                                    <th class="p-3">Estado Base</th>
+                                    <th class="p-3 text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for e in eqs %}
                                 <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
-                                    <td class="p-4 font-black text-slate-900">{{ e.codigo }}</td>
-                                    <td class="p-4 font-semibold text-slate-600">{{ e.tipo }}</td>
-                                    <td class="p-4 font-mono font-bold text-slate-800">{{ e.patente }}</td>
-                                    <td class="p-4 font-mono font-bold">{{ e.lectura }}</td>
-                                    <td class="p-4 font-mono font-bold {% if e.margen < 0 %}text-red-600{% elif e.margen <= 150 %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ e.margen_str }}</td>
-                                    <td class="p-4 font-black text-[10px] uppercase">{{ e.estado }}</td>
+                                    <td class="p-3 font-black text-slate-900">{{ e.codigo }}</td>
+                                    <td class="p-3 font-semibold text-slate-600">{{ e.tipo }}</td>
+                                    <td class="p-3 text-slate-600">{{ e.marca }} {{ e.modelo }}</td>
+                                    <td class="p-3 font-mono font-bold text-slate-800">{{ e.patente or 'S/I' }}</td>
+                                    <td class="p-3 text-slate-600">{{ e.ubicacion }}</td>
+                                    <td class="p-3 font-mono font-bold">{{ e.lectura }}</td>
+                                    <td class="p-3 font-mono font-bold {% if e.margen < 0 %}text-red-600{% elif e.margen <= 150 %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ e.margen_str }}</td>
+                                    <td class="p-3">
+                                        <span class="px-2 py-1 rounded text-[10px] font-black {% if e.estado == 'Operativo' %}bg-emerald-100 text-emerald-800{% elif e.estado == 'Taller' %}bg-amber-100 text-amber-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                            {{ e.estado }}
+                                        </span>
+                                    </td>
+                                    <td class="p-3 text-center flex justify-center gap-2">
+                                        <a href="/api/imprimir_registro/{{ e.codigo }}" target="_blank" class="bg-slate-800 text-white px-2.5 py-1 rounded text-[10px] font-bold hover:bg-slate-700">Ficha</a>
+                                        <a href="/api/imprimir_filtros/{{ e.codigo }}" target="_blank" class="bg-blue-600 text-white px-2.5 py-1 rounded text-[10px] font-bold hover:bg-blue-700">Filtros</a>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -224,36 +241,150 @@
                 </div>
             </div>
 
-            <!-- TABS GENÉRICAS (Mismo formato de tabla limpia para las demás secciones) -->
+            <!-- TAB 3: PREVENTIVAS -->
             <div id="tab-preventivas" class="tab-content">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center">
-                    <p class="font-bold text-slate-400 uppercase tracking-widest text-sm">Historial de Mantenciones Preventivas</p>
-                    <p class="text-xs text-slate-500 mt-2">Los datos se reflejan correctamente en la exportación Excel.</p>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4">
+                    <h3 class="font-black text-xs text-slate-700 uppercase tracking-widest mb-4">Historial de Mantenciones Preventivas</h3>
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 uppercase text-[10px]">
+                                <th class="p-3">Fecha</th>
+                                <th class="p-3">Equipo</th>
+                                <th class="p-3">Folio OT</th>
+                                <th class="p-3">Tipo</th>
+                                <th class="p-3">Costo</th>
+                                <th class="p-3">Mecánico</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in mants_prev %}
+                            <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td class="p-3">{{ m.fecha }}</td>
+                                <td class="p-3 font-black">{{ m.codigo }}</td>
+                                <td class="p-3 font-mono">{{ m.ot_generada }}</td>
+                                <td class="p-3">{{ m.tipo_mantencion }}</td>
+                                <td class="p-3 font-mono">{{ m.costo_str }}</td>
+                                <td class="p-3">{{ m.mecanico }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
             
+            <!-- TAB 4: CORRECTIVAS -->
             <div id="tab-correctivas" class="tab-content">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center">
-                    <p class="font-bold text-slate-400 uppercase tracking-widest text-sm">Registro de OTs Correctivas</p>
-                    <p class="text-xs text-slate-500 mt-2">Visualice los detalles técnicos en la matriz exportable.</p>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4">
+                    <h3 class="font-black text-xs text-slate-700 uppercase tracking-widest mb-4">Registro de OTs Correctivas</h3>
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 uppercase text-[10px]">
+                                <th class="p-3">Fecha</th>
+                                <th class="p-3">Equipo</th>
+                                <th class="p-3">Sistema Falla</th>
+                                <th class="p-3">Causa Raíz</th>
+                                <th class="p-3">Costo</th>
+                                <th class="p-3">Mecánico</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in mants_corr %}
+                            <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td class="p-3">{{ m.fecha }}</td>
+                                <td class="p-3 font-black">{{ m.codigo }}</td>
+                                <td class="p-3 font-bold text-red-600">{{ m.sistema_falla }}</td>
+                                <td class="p-3">{{ m.causa_raiz }}</td>
+                                <td class="p-3 font-mono">{{ m.costo_str }}</td>
+                                <td class="p-3">{{ m.mecanico }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
+            <!-- TAB 5: COMPRAS -->
             <div id="tab-compras" class="tab-content">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center">
-                    <p class="font-bold text-slate-400 uppercase tracking-widest text-sm">Módulo de Compras</p>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4">
+                    <h3 class="font-black text-xs text-slate-700 uppercase tracking-widest mb-4">Registro de Compras e Insumos</h3>
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 uppercase text-[10px]">
+                                <th class="p-3">Fecha</th>
+                                <th class="p-3">OC</th>
+                                <th class="p-3">Equipo</th>
+                                <th class="p-3">Descripción</th>
+                                <th class="p-3">Costo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in compras %}
+                            <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td class="p-3">{{ c.fecha }}</td>
+                                <td class="p-3 font-mono font-bold">{{ c.oc }}</td>
+                                <td class="p-3 font-black">{{ c.codigo }}</td>
+                                <td class="p-3">{{ c.descripcion }}</td>
+                                <td class="p-3 font-mono">{{ c.costo_str }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
+            <!-- TAB 6: BODEGA -->
             <div id="tab-bodega" class="tab-content">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center">
-                    <p class="font-bold text-slate-400 uppercase tracking-widest text-sm">Inventario de Bodega</p>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4">
+                    <h3 class="font-black text-xs text-slate-700 uppercase tracking-widest mb-4">Inventario de Bodega</h3>
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 uppercase text-[10px]">
+                                <th class="p-3">Código Item</th>
+                                <th class="p-3">Nombre</th>
+                                <th class="p-3">Categoría</th>
+                                <th class="p-3">Cantidad</th>
+                                <th class="p-3">Ubicación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in bodega %}
+                            <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td class="p-3 font-mono font-bold">{{ b.codigo_item }}</td>
+                                <td class="p-3 font-semibold">{{ b.nombre }}</td>
+                                <td class="p-3">{{ b.categoria }}</td>
+                                <td class="p-3 font-mono font-black text-blue-600">{{ b.cantidad }}</td>
+                                <td class="p-3">{{ b.ubicacion }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
+            <!-- TAB 7: PERSONAL -->
             <div id="tab-personal" class="tab-content">
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center">
-                    <p class="font-bold text-slate-400 uppercase tracking-widest text-sm">Directorio de Personal</p>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4">
+                    <h3 class="font-black text-xs text-slate-700 uppercase tracking-widest mb-4">Personal Asignado</h3>
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 uppercase text-[10px]">
+                                <th class="p-3">Nombre</th>
+                                <th class="p-3">Cargo</th>
+                                <th class="p-3">Equipo Asignado</th>
+                                <th class="p-3">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for op in personal %}
+                            <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td class="p-3 font-black">{{ op.nombre }}</td>
+                                <td class="p-3">{{ op.cargo }}</td>
+                                <td class="p-3 font-mono font-bold text-blue-600">{{ op.equipo_asignado }}</td>
+                                <td class="p-3">{{ op.estado }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
