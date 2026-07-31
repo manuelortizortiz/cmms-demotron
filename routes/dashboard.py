@@ -126,6 +126,33 @@ def dashboard():
         eventos_calendario = []
         ubicaciones_dict = {}
 
+        # ==============================================================
+        # INYECCIÓN DE HISTORIAL AL CALENDARIO
+        # ==============================================================
+        
+        # 1. Preventivas Históricas (Azul Claro)
+        for ot in preventivas:
+            if ot.fecha:
+                eventos_calendario.append({
+                    'title': f"PREV: {ot.codigo_equipo}", 
+                    'start': ot.fecha.strftime('%Y-%m-%d'),
+                    'backgroundColor': '#3B82F6', 
+                    'textColor': '#FFFFFF', 
+                    'borderColor': 'transparent'
+                })
+        
+        # 2. Correctivas Históricas (Rojo)
+        for ot in correctivas:
+            if ot.fecha:
+                eventos_calendario.append({
+                    'title': f"CORR: {ot.codigo_equipo}", 
+                    'start': ot.fecha.strftime('%Y-%m-%d'),
+                    'backgroundColor': '#EF4444', 
+                    'textColor': '#FFFFFF', 
+                    'borderColor': 'transparent'
+                })
+        # ==============================================================
+
         for e in eqs_db:
             op = next((p for p in personal_db if p.equipo_asignado == e.codigo), None)
             nom_op = op.nombre if op else 'Sin Asignar'
@@ -133,10 +160,14 @@ def dashboard():
             m = (e.proxima_pm or 0) - (e.lectura_actual or 0)
             d_est = int(m / (8 if e.control_base == 'HORAS' else 100))
             
+            # 3. Proyecciones Futuras (Azul Oscuro Corporativo)
             if m >= 0 and e.estado_base != 'Fuera de Servicio' and d_est <= 45:
                 eventos_calendario.append({
-                    'title': f"PM: {e.codigo}", 'start': (hoy + timedelta(days=max(1, d_est))).strftime('%Y-%m-%d'),
-                    'backgroundColor': '#1E3A8A', 'textColor': '#FFFFFF', 'borderColor': 'transparent'
+                    'title': f"PROY: {e.codigo}", 
+                    'start': (hoy + timedelta(days=max(1, d_est))).strftime('%Y-%m-%d'),
+                    'backgroundColor': '#1E3A8A', 
+                    'textColor': '#FFFFFF', 
+                    'borderColor': 'transparent'
                 })
 
             equipos_list.append({
@@ -146,31 +177,23 @@ def dashboard():
                 'operador': nom_op
             })
 
-            # ==============================================================
-            # REGLAS DE AGRUPACIÓN (GEOLOCALIZACIÓN KANBAN)
-            # ==============================================================
+            # Reglas de Agrupación Geográfica (Kanban)
             ub_original = e.ubicacion.upper().strip() if e.ubicacion and e.ubicacion != 'None' else 'SIN ASIGNAR'
-            
-            # Palabras clave y coordenadas parciales
             taller_ext_partial = ["KAUFFMAN", "DEL VALLE", "ROSSELOT", "MORAGA", "TALLER EXT"]
             casa_matriz_claves = ["OFICINA", "TALLER DEMOTRON", "TALLER CENTRAL", "CASA MATRIZ", "35°20'31.7", "35°20'32.5", "35°20'34.1", "35°20'35.3"]
             
             ub_final = ub_original
 
-            # 1. Regla Mandatoria: Equipos fuera de servicio o sin asignación
             if e.estado_base == 'Fuera de Servicio' or ub_original == 'SIN ASIGNAR':
                 ub_final = 'FUERA DE SERVICIO'
-            # 2. Talleres Externos
             elif any(k in ub_original for k in taller_ext_partial):
                 ub_final = 'TALLER EXTERNO'
-            # 3. Casa Matriz San Rafael
             elif ub_original == 'TALLER' or any(k in ub_original for k in casa_matriz_claves):
                 ub_final = 'CASA MATRIZ SAN RAFAEL'
 
             if ub_final not in ubicaciones_dict: 
                 ubicaciones_dict[ub_final] = []
             ubicaciones_dict[ub_final].append(e)
-            # ==============================================================
 
             c_mants = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.codigo_equipo == e.codigo)
             c_comp = sum(float(c.costo_pm_clp or 0) for c in compras_db if c.codigo_equipo == e.codigo)
@@ -183,7 +206,6 @@ def dashboard():
                 'costo_str': format_clp(tot_cost), 'cpk_cph_str': format_clp(cpk)
             })
 
-        # ORDENAR KANBAN DE UBICACIONES: Alfabéticamente, pero "FUERA DE SERVICIO" al final siempre
         ubicaciones_dict = dict(sorted(ubicaciones_dict.items(), key=lambda item: (1 if item[0] == 'FUERA DE SERVICIO' else 0, item[0])))
 
         kanban = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Finalizada': []}
