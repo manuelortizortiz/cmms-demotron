@@ -6,7 +6,9 @@ from collections import Counter
 from flask_login import login_required
 from sqlalchemy import func, case, text
 from extensions import db
-from models.equipo import Equipo, DocumentoEquipo
+
+# Importamos todos los modelos necesarios en la cabecera
+from models.equipo import Equipo, DocumentoEquipo, FiltroEquipo
 from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
 from models.personal import Personal, Mecanico
@@ -15,6 +17,9 @@ from utils.formatters import format_num, format_clp, buscar_foto_por_tipo
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
+# =========================================================
+# 1. VISTA PRINCIPAL: DASHBOARD Y GESTIÓN GENERAL
+# =========================================================
 @dashboard_bp.route('/', strict_slashes=False)
 @login_required
 def dashboard():
@@ -113,8 +118,6 @@ def dashboard():
         kanban = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Finalizada': []}
         for ot in ots_db:
             k = ot.estado if ot.estado in kanban else 'Pendiente'
-            
-            # SOLUCIÓN: Recuperar todo el texto descriptivo y detalles (Filtros, Aceite, etc)
             detalle = getattr(ot, 'observacion', '')
             if not detalle:
                 detalle = getattr(ot, 'causa_raiz', '')
@@ -154,6 +157,9 @@ def dashboard():
     except Exception as e:
         return f"Error en Dashboard: {str(e)}"
 
+# =========================================================
+# 2. VISTA INDIVIDUAL DE CADA EQUIPO (FICHA TÉCNICA)
+# =========================================================
 @dashboard_bp.route('/equipo/<codigo>', strict_slashes=False)
 @login_required
 def detalle_equipo(codigo):
@@ -174,6 +180,9 @@ def detalle_equipo(codigo):
     except Exception as e:
         return f"Error al cargar la ficha del equipo: {str(e)}"
 
+# =========================================================
+# 3. SUBIDA DE DOCUMENTOS LEGALES (Revisión Técnica, etc)
+# =========================================================
 @dashboard_bp.route('/equipo/<codigo>/subir_documento', methods=['POST'])
 @login_required
 def subir_documento(codigo):
@@ -199,3 +208,25 @@ def subir_documento(codigo):
         return redirect(url_for('dashboard.detalle_equipo', codigo=codigo))
     except Exception as e:
         return f"Error al subir documento: {str(e)}", 500
+
+# =========================================================
+# 4. GENERACIÓN DE ORDEN DE TRABAJO (VISTA PDF)
+# =========================================================
+@dashboard_bp.route('/imprimir_ot/<int:ot_id>', strict_slashes=False)
+@login_required
+def imprimir_ot(ot_id):
+    try:
+        ot = OrdenTrabajo.query.get(ot_id)
+        if not ot:
+            return "Orden de trabajo no encontrada.", 404
+            
+        equipo = Equipo.query.filter_by(codigo=ot.codigo_equipo).first()
+        
+        filtros = []
+        if equipo:
+            filtros = FiltroEquipo.query.filter_by(codigo_equipo=equipo.codigo).all()
+            
+        return render_template('imprimir_ot.html', ot=ot, equipo=equipo, filtros=filtros, hoy=datetime.now())
+        
+    except Exception as e:
+        return f"Error al generar la Orden de Trabajo: {str(e)}"
