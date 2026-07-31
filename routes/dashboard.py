@@ -7,7 +7,6 @@ from flask_login import login_required
 from sqlalchemy import func, case, text
 from extensions import db
 
-# IMPORTACIÓN ACTUALIZADA CON LA NUEVA TABLA (HistorialUbicacion)
 from models.equipo import Equipo, DocumentoEquipo, FiltroEquipo, HistorialUbicacion
 from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
@@ -125,7 +124,7 @@ def dashboard():
         equipos_list = []
         finanzas_flota = []
         eventos_calendario = []
-        ubicaciones_dict = {} # NUEVO: AGRUPACIÓN AUTOMÁTICA PARA EL KANBAN DE GEOLOCALIZACIÓN
+        ubicaciones_dict = {}
 
         for e in eqs_db:
             op = next((p for p in personal_db if p.equipo_asignado == e.codigo), None)
@@ -147,12 +146,33 @@ def dashboard():
                 'operador': nom_op
             })
 
-            # Data Kanban Geolocalización
-            ub = e.ubicacion.upper().strip() if e.ubicacion and e.ubicacion != 'None' else 'SIN ASIGNAR'
-            if ub not in ubicaciones_dict: ubicaciones_dict[ub] = []
-            ubicaciones_dict[ub].append(e)
+            # ==============================================================
+            # REGLAS DE AGRUPACIÓN (GEOLOCALIZACIÓN KANBAN)
+            # ==============================================================
+            ub_original = e.ubicacion.upper().strip() if e.ubicacion and e.ubicacion != 'None' else 'SIN ASIGNAR'
+            
+            # Palabras clave y coordenadas parciales
+            casa_matriz_exact = ["OFICINA", "TALLER", "TALLER DEMOTRON", "FUERA DE SERVICIO"]
+            casa_matriz_coords = ["35°20'31.7", "35°20'32.5", "35°20'34.1", "35°20'35.3"]
+            taller_ext_partial = ["KAUFFMAN", "DEL VALLE", "ROSSELOT", "MORAGA", "TALLER EXT"]
+            
+            ub_final = ub_original
 
-            # Data CPK (Rendimiento)
+            # 1. Regla Mandatoria: Equipos fuera de servicio o sin asignación
+            if e.estado_base == 'Fuera de Servicio' or ub_original == 'SIN ASIGNAR':
+                ub_final = 'FUERA DE SERVICIO'
+            # 2. Talleres Externos
+            elif any(k in ub_original for k in taller_ext_partial):
+                ub_final = 'TALLER EXTERNO'
+            # 3. Casa Matriz San Rafael (Coordenadas o textos específicos)
+            elif ub_original in casa_matriz_exact or any(k in ub_original for k in casa_matriz_coords):
+                ub_final = 'CASA MATRIZ SAN RAFAEL'
+
+            if ub_final not in ubicaciones_dict: 
+                ubicaciones_dict[ub_final] = []
+            ubicaciones_dict[ub_final].append(e)
+            # ==============================================================
+
             c_mants = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.codigo_equipo == e.codigo)
             c_comp = sum(float(c.costo_pm_clp or 0) for c in compras_db if c.codigo_equipo == e.codigo)
             tot_cost = c_mants + c_comp
@@ -164,10 +184,9 @@ def dashboard():
                 'costo_str': format_clp(tot_cost), 'cpk_cph_str': format_clp(cpk)
             })
 
-        # Ordenar ubicaciones alfabéticamente
-        ubicaciones_dict = dict(sorted(ubicaciones_dict.items()))
+        # ORDENAR KANBAN DE UBICACIONES: Alfabéticamente, pero "FUERA DE SERVICIO" al final siempre (índice 1 vs 0)
+        ubicaciones_dict = dict(sorted(ubicaciones_dict.items(), key=lambda item: (1 if item[0] == 'FUERA DE SERVICIO' else 0, item[0])))
 
-        # Estructura Kanban Taller
         kanban = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Finalizada': []}
         for ot in ots_db:
             k = ot.estado if ot.estado in kanban else 'Pendiente'
@@ -188,7 +207,7 @@ def dashboard():
 
 
 # =========================================================
-# RUTAS DE GEOLOCALIZACIÓN Y TRAZABILIDAD (NUEVAS)
+# RUTAS DE GEOLOCALIZACIÓN Y TRAZABILIDAD
 # =========================================================
 @dashboard_bp.route('/mover_ubicacion_kanban', methods=['POST'])
 @login_required
@@ -202,7 +221,6 @@ def mover_ubicacion_kanban():
         ant = eq.ubicacion or 'SIN ASIGNAR'
         if ant.upper() != nueva_ub:
             eq.ubicacion = nueva_ub
-            # Guarda en el historial de ubicaciones de la ficha
             db.session.add(HistorialUbicacion(codigo_equipo=codigo, ubicacion_anterior=ant, ubicacion_nueva=nueva_ub))
             db.session.commit()
         return {"status": "success"}
