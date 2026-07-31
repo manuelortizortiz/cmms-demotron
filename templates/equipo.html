@@ -37,7 +37,7 @@
             {% if foto_url %}
                 <img src="{{ foto_url }}" alt="Foto Equipo" class="max-h-full object-contain">
             {% else %}
-                <span class="text-4xl font-black text-slate-400 uppercase">Sin Foto</span>
+                <span class="text-xl font-black text-slate-400 uppercase tracking-widest">Sin Foto</span>
             {% endif %}
         </div>
         
@@ -71,7 +71,7 @@
                     <span class="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-widest rounded border-2 border-emerald-300">{{ operador.estado }}</span>
                 </div>
             {% else %}
-                <p class="text-sm font-black text-slate-400 uppercase mt-2">Sin Operador Asignado</p>
+                <p class="text-xs font-black text-slate-400 uppercase mt-2">Sin Operador Asignado</p>
             {% endif %}
         </div>
     </div>
@@ -102,12 +102,53 @@
         </div>
     </div>
 
-    <!-- SECCIÓN 3: TABLAS HISTÓRICAS (Grid 2 Columnas) -->
+    <!-- ============================================================== -->
+    <!-- SECCIÓN NUEVA: DOCUMENTOS LEGALES Y REVISIONES                 -->
+    <!-- ============================================================== -->
+    <div class="card-custom-nopad mb-6">
+        <div class="p-4 bg-slate-100 border-b-2 border-slate-300 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <h3 class="font-black text-black uppercase text-[11px] tracking-widest">Documentación Legal y Revisiones</h3>
+            <button onclick="document.getElementById('modal-doc').classList.remove('hidden')" class="bg-black hover:bg-slate-800 text-white px-4 py-2 rounded text-[10px] font-black uppercase transition shadow-md">Subir Archivo PDF / Imagen</button>
+        </div>
+        <div class="overflow-x-auto max-h-64">
+            <table class="w-full text-left">
+                <thead class="sticky top-0 bg-white shadow-sm">
+                    <tr><th>Tipo de Documento</th><th>Vencimiento</th><th>Estado</th><th>Acciones</th></tr>
+                </thead>
+                <tbody>
+                    {% for doc in documentos %}
+                    <tr class="hover:bg-slate-50 border-b-2 border-slate-100">
+                        <td class="font-black text-black uppercase">{{ doc.tipo_documento }}</td>
+                        <td class="font-mono font-black text-slate-700">{{ doc.fecha_vencimiento.strftime('%d/%m/%Y') if doc.fecha_vencimiento else 'Indefinido' }}</td>
+                        <td>
+                            {% if doc.fecha_vencimiento %}
+                                {% if doc.fecha_vencimiento < hoy.date() %}
+                                    <span class="px-2 py-1 bg-red-100 text-red-800 border-2 border-red-300 rounded text-[10px] font-black uppercase">Vencido</span>
+                                {% else %}
+                                    <span class="px-2 py-1 bg-emerald-100 text-emerald-800 border-2 border-emerald-300 rounded text-[10px] font-black uppercase">Vigente</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="px-2 py-1 bg-slate-200 text-slate-800 border-2 border-slate-300 rounded text-[10px] font-black uppercase">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ doc.archivo_url }}" target="_blank" class="bg-blue-50 text-blue-700 border-2 border-blue-200 px-3 py-1 rounded text-[10px] font-black uppercase hover:bg-blue-100 transition inline-block text-center shadow-sm">Ver Documento</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="text-center font-black py-6 text-slate-400 uppercase">Aún no hay documentos registrados para este equipo.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SECCIÓN HISTÓRICA (Grid 2 Columnas) -->
     <div class="grid grid-cols-1 gap-6 mb-6">
         <!-- Mantenciones Preventivas -->
         <div class="card-custom-nopad">
             <div class="p-4 bg-slate-100 border-b-2 border-slate-300">
-                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">1. Historial de Mantenciones Preventivas (PM)</h3>
+                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">Historial de Mantenciones Preventivas (PM)</h3>
             </div>
             <div class="overflow-x-auto max-h-64">
                 <table class="w-full text-left">
@@ -116,14 +157,14 @@
                     </thead>
                     <tbody>
                         {% for m in mants_prev %}
-                        <tr class="hover:bg-slate-50">
+                        <tr class="hover:bg-slate-50 border-b-2 border-slate-100">
                             <td class="font-black text-black">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '' }}</td>
                             <td class="font-mono font-black text-slate-500">{{ m.folio }}</td>
                             <td class="font-black uppercase">{{ m.tipo_mantencion }}</td>
                             <td class="font-bold text-slate-700">{{ m.mecanico }}</td>
                             <td class="font-mono font-black">{{ "{:,.0f}".format(m.lectura or 0).replace(',', '.') }}</td>
                             <td class="font-mono font-black text-blue-700">${{ "{:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
-                            <td><span class="px-2 py-1 bg-slate-200 border border-slate-300 rounded text-[10px] font-black uppercase">{{ m.estado }}</span></td>
+                            <td><span class="px-2 py-1 bg-slate-200 border-2 border-slate-300 rounded text-[10px] font-black uppercase">{{ m.estado }}</span></td>
                         </tr>
                         {% else %}
                         <tr><td colspan="7" class="text-center font-black py-6 text-slate-400 uppercase">Sin registros preventivos.</td></tr>
@@ -136,7 +177,7 @@
         <!-- Averías y Correctivas -->
         <div class="card-custom-nopad">
             <div class="p-4 bg-slate-100 border-b-2 border-slate-300">
-                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">2. Historial de Averías y Correctivas</h3>
+                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">Historial de Averías y Correctivas</h3>
             </div>
             <div class="overflow-x-auto max-h-64">
                 <table class="w-full text-left">
@@ -145,14 +186,14 @@
                     </thead>
                     <tbody>
                         {% for m in mants_corr %}
-                        <tr class="hover:bg-slate-50">
+                        <tr class="hover:bg-slate-50 border-b-2 border-slate-100">
                             <td class="font-black text-black">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '' }}</td>
                             <td class="font-black uppercase text-red-600">{{ m.sistema_falla }}</td>
                             <td class="font-bold text-black">{{ m.causa_raiz }}</td>
                             <td class="font-bold text-slate-700">{{ m.mecanico }}</td>
                             <td class="font-mono font-black">{{ "{:,.0f}".format(m.lectura or 0).replace(',', '.') }}</td>
                             <td class="font-mono font-black text-blue-700">${{ "{:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
-                            <td><span class="px-2 py-1 bg-slate-200 border border-slate-300 rounded text-[10px] font-black uppercase">{{ m.estado }}</span></td>
+                            <td><span class="px-2 py-1 bg-slate-200 border-2 border-slate-300 rounded text-[10px] font-black uppercase">{{ m.estado }}</span></td>
                         </tr>
                         {% else %}
                         <tr><td colspan="7" class="text-center font-black py-6 text-slate-400 uppercase">Sin registros de averías.</td></tr>
@@ -163,12 +204,12 @@
         </div>
     </div>
 
-    <!-- SECCIÓN 4: COMPRAS Y LECTURAS (Grid Dividido) -->
+    <!-- SECCIÓN COMPRAS Y LECTURAS (Grid Dividido) -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
         <!-- Compras -->
         <div class="card-custom-nopad">
             <div class="p-4 bg-slate-100 border-b-2 border-slate-300">
-                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">3. Repuestos Asociados (OC)</h3>
+                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">Repuestos Asociados (OC)</h3>
             </div>
             <div class="overflow-x-auto max-h-64">
                 <table class="w-full text-left">
@@ -177,7 +218,7 @@
                     </thead>
                     <tbody>
                         {% for c in compras %}
-                        <tr class="hover:bg-slate-50">
+                        <tr class="hover:bg-slate-50 border-b-2 border-slate-100">
                             <td class="font-black text-black">{{ c.fecha.strftime('%d/%m/%Y') if c.fecha else '' }}</td>
                             <td class="font-mono font-black text-slate-500">{{ c.oc }}</td>
                             <td class="font-bold text-black">{{ c.descripcion }}</td>
@@ -194,7 +235,7 @@
         <!-- Lecturas -->
         <div class="card-custom-nopad">
             <div class="p-4 bg-slate-100 border-b-2 border-slate-300">
-                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">4. Bitácora de Lecturas (HR / KM)</h3>
+                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">Bitácora de Lecturas (HR / KM)</h3>
             </div>
             <div class="overflow-x-auto max-h-64">
                 <table class="w-full text-left">
@@ -203,7 +244,7 @@
                     </thead>
                     <tbody>
                         {% for l in lecturas %}
-                        <tr class="hover:bg-slate-50">
+                        <tr class="hover:bg-slate-50 border-b-2 border-slate-100">
                             <td class="font-black text-black">{{ l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else '' }}</td>
                             <td class="font-mono font-black text-lg text-black">{{ "{:,.0f}".format(l.horometro or l.kilometraje or 0).replace(',', '.') }}</td>
                             <td class="font-bold text-slate-600 uppercase">{{ l.responsable or 'Sistema' }}</td>
@@ -214,6 +255,40 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL DE SUBIDA DE DOCUMENTOS                  -->
+    <!-- ============================================== -->
+    <div id="modal-doc" class="fixed inset-0 bg-slate-900/80 z-[700] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden border-2 border-slate-300">
+            <div class="p-4 bg-slate-100 flex justify-between items-center border-b-2 border-slate-300">
+                <h3 class="font-black text-black uppercase text-xs">Subir Documento Legal</h3>
+                <button onclick="document.getElementById('modal-doc').classList.add('hidden')" class="text-black font-black text-lg hover:text-red-600 transition">&times;</button>
+            </div>
+            <form action="/equipo/{{ equipo.codigo }}/subir_documento" method="POST" enctype="multipart/form-data" class="p-6 flex flex-col gap-5">
+                <div>
+                    <label class="text-[11px] font-black uppercase text-black mb-2 block">Tipo de Documento</label>
+                    <select name="tipo_documento" class="w-full border-2 border-slate-300 p-3 rounded font-black text-black outline-none focus:border-blue-600" required>
+                        <option value="Revisión Técnica">Revisión Técnica</option>
+                        <option value="Permiso de Circulación">Permiso de Circulación</option>
+                        <option value="Seguro Obligatorio (SOAP)">Seguro Obligatorio (SOAP)</option>
+                        <option value="Padrón / Registro MOP">Padrón / Registro MOP</option>
+                        <option value="Certificado de Emisiones">Certificado de Emisiones</option>
+                        <option value="Otro / Adicional">Otro / Adicional</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[11px] font-black uppercase text-black mb-2 block">Fecha de Vencimiento (Opcional)</label>
+                    <input type="date" name="fecha_vencimiento" class="w-full border-2 border-slate-300 p-3 rounded font-black text-black outline-none focus:border-blue-600">
+                </div>
+                <div>
+                    <label class="text-[11px] font-black uppercase text-black mb-2 block">Archivo (PDF o Imagen)</label>
+                    <input type="file" name="archivo" accept=".pdf,image/*" class="w-full border-2 border-dashed border-slate-400 p-3 rounded font-bold text-black file:bg-slate-200 file:border-none file:px-4 file:py-2 file:font-black file:rounded cursor-pointer hover:bg-slate-50 transition" required>
+                </div>
+                <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white px-6 py-4 rounded-lg mt-2 text-xs uppercase font-black w-full transition shadow-md">Subir y Archivar</button>
+            </form>
         </div>
     </div>
 
