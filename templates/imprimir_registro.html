@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial - {{ equipo.codigo }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; color: #1E293B; margin: 0; padding: 0; background-color: #F8FAFC; }
+        .a4-container { width: 210mm; min-height: 297mm; margin: 20px auto; padding: 20mm; box-sizing: border-box; background: white; border: 1px solid #CBD5E1; }
+        .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #1E3A8A; padding-bottom: 15px; margin-bottom: 25px; }
+        .logo { font-size: 24px; font-weight: 700; color: #1E3A8A; letter-spacing: 1px; }
+        .doc-title { text-align: right; }
+        .doc-title h1 { margin: 0; font-size: 16px; text-transform: uppercase; color: #0F172A; }
+        .doc-title p { margin: 4px 0 0 0; font-size: 11px; color: #475569; font-weight: 500; }
+        .section-title { font-size: 11px; font-weight: 700; color: #1E3A8A; text-transform: uppercase; border-bottom: 1px solid #E2E8F0; margin-bottom: 12px; padding-bottom: 4px; margin-top: 25px; letter-spacing: 0.5px; }
+        .info-box { border: 1px solid #E2E8F0; padding: 16px; border-radius: 4px; background-color: #F8FAFC; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .info-item { margin-bottom: 8px; font-size: 11px; }
+        .info-label { font-weight: 600; color: #64748B; display: inline-block; width: 110px; text-transform: uppercase; font-size: 9px; letter-spacing: 0.5px; }
+        .info-value { font-weight: 600; color: #0F172A; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10px; }
+        th, td { border: 1px solid #CBD5E1; padding: 8px 10px; text-align: left; }
+        th { background-color: #F1F5F9; color: #475569; font-weight: 600; text-transform: uppercase; font-size: 9px; letter-spacing: 0.5px; }
+        td { font-weight: 500; color: #1E293B; }
+        .btn-print { display: block; width: 250px; margin: 20px auto; text-align: center; background-color: #1E3A8A; color: white; padding: 12px 15px; border-radius: 6px; border: none; font-weight: 600; font-size: 12px; cursor: pointer; text-transform: uppercase; }
+        @media print { body { background: white; } .a4-container { margin: 0; padding: 10mm; width: 100%; border: none; } .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="text-align: center; padding: 15px; background: white; border-bottom: 1px solid #CBD5E1;">
+        <button onclick="window.print()" class="btn-print">IMPRIMIR / GUARDAR PDF</button>
+    </div>
+    
+    <div class="a4-container">
+        <div class="header">
+            <div class="logo">DEMOTRON ERP</div>
+            <div class="doc-title">
+                <h1>HISTORIAL DE MANTENIMIENTO</h1>
+                <p>Fecha de Emisión: <strong>{{ hoy.strftime('%d/%m/%Y') }}</strong></p>
+            </div>
+        </div>
+
+        <div class="section-title">1. Identificación del Activo</div>
+        <div class="info-box">
+            <div>
+                <div class="info-item"><span class="info-label">Código Activo:</span> <span class="info-value" style="color:#1E3A8A; font-size: 14px;">{{ equipo.codigo }}</span></div>
+                <div class="info-item"><span class="info-label">Marca / Modelo:</span> <span class="info-value">{{ equipo.marca }} / {{ equipo.modelo }}</span></div>
+                <div class="info-item"><span class="info-label">Tipo:</span> <span class="info-value">{{ equipo.tipo_equipo }}</span></div>
+            </div>
+            <div>
+                <div class="info-item"><span class="info-label">Patente / VIN:</span> <span class="info-value">{{ equipo.patente }} / {{ equipo.vin }}</span></div>
+                <div class="info-item"><span class="info-label">Lectura Actual:</span> <span class="info-value">{{ "{:,.0f}".format(equipo.lectura_actual or 0).replace(',', '.') }} {{ equipo.control_base }}</span></div>
+                <div class="info-item"><span class="info-label">Estado:</span> <span class="info-value">{{ equipo.estado_base }}</span></div>
+            </div>
+        </div>
+
+        <div class="section-title">2. Historial Preventivo (PM)</div>
+        <table>
+            <thead><tr><th>Fecha</th><th>Folio OT</th><th>Pauta Efectuada</th><th>Técnico</th><th>Odo/Hor.</th><th>Costo ($)</th></tr></thead>
+            <tbody>
+                {% for m in mants_prev %}
+                <tr>
+                    <td>{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</td>
+                    <td style="font-family: monospace;">{{ m.folio or m.id }}</td>
+                    <td><strong>{{ m.tipo_mantencion }}</strong></td>
+                    <td>{{ m.mecanico }}</td>
+                    <td>{{ "{:,.0f}".format(m.lectura or 0).replace(',', '.') }}</td>
+                    <td>{{ "{:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" style="text-align:center; color:#64748B;">Sin registros preventivos.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="section-title">3. Historial de Averías y Correctivas</div>
+        <table>
+            <thead><tr><th>Fecha</th><th>Folio OT</th><th>Sistema Afectado</th><th>Causa / Diagnóstico</th><th>Técnico</th><th>Odo/Hor.</th></tr></thead>
+            <tbody>
+                {% for m in mants_corr %}
+                <tr>
+                    <td>{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</td>
+                    <td style="font-family: monospace;">{{ m.folio or m.id }}</td>
+                    <td style="color:#1E3A8A; font-weight:bold;">{{ m.sistema_falla }}</td>
+                    <td>{{ m.causa_raiz }}</td>
+                    <td>{{ m.mecanico }}</td>
+                    <td>{{ "{:,.0f}".format(m.lectura or 0).replace(',', '.') }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" style="text-align:center; color:#64748B;">Sin registros de averías.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
