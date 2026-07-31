@@ -7,71 +7,71 @@
     <!-- Favicon -->
     <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #F1F5F9; color: #000000; }
-        .card-custom { background: white; border-radius: 8px; border: 2px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; padding: 24px;}
-        .card-custom-nopad { background: white; border-radius: 8px; border: 2px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden;}
+        body { font-family: 'Inter', sans-serif; background-color: #F1F5F9; color: #0F172A; }
+        .card-custom { background: white; border-radius: 8px; border: 1px solid #CBD5E1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden; padding: 24px;}
+        .card-custom-nopad { background: white; border-radius: 8px; border: 1px solid #CBD5E1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden;}
         table { width: 100%; border-collapse: collapse; }
-        th { font-size: 11px; color: #000000; padding: 12px 16px; border-bottom: 2px solid #CBD5E1; text-align: left; font-weight: 900; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; background: #F8FAFC; }
-        td { padding: 12px 16px; border-bottom: 1px solid #E2E8F0; color: #000000; font-size: 12px; font-weight: 600; }
+        th { font-size: 11px; color: #1E293B; padding: 12px 16px; border-bottom: 2px solid #CBD5E1; text-align: left; font-weight: 700; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; background: #F8FAFC; }
+        td { padding: 12px 16px; border-bottom: 1px solid #E2E8F0; color: #0F172A; font-size: 12px; font-weight: 500; }
     </style>
 </head>
-<body class="p-4 md:p-8 max-w-7xl mx-auto">
+<body class="p-4 md:p-8 max-w-7xl mx-auto text-slate-800">
 
     <!-- ENCABEZADO Y BOTÓN DE REGRESO -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
-            <h1 class="text-3xl font-black uppercase tracking-tighter">FICHA TÉCNICA: <span class="text-blue-700">{{ equipo.codigo }}</span></h1>
-            <p class="text-[11px] font-black uppercase tracking-widest text-slate-500 mt-1">Expediente de Mantenimiento y Rendimiento</p>
+            <h1 class="text-3xl font-bold uppercase tracking-tighter text-slate-900">FICHA TÉCNICA: <span class="text-blue-600">{{ equipo.codigo }}</span></h1>
+            <p class="text-[11px] font-semibold uppercase tracking-widest text-slate-500 mt-1">Expediente de Mantenimiento y Rendimiento</p>
         </div>
-        <a href="/" class="bg-black hover:bg-slate-800 text-white px-6 py-3 rounded-lg font-black uppercase text-[11px] tracking-widest transition shadow-md">Volver al Dashboard</a>
+        <a href="/" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-3 rounded-lg font-bold uppercase text-[11px] tracking-widest transition shadow-sm">Volver al Dashboard</a>
     </div>
 
     <!-- SECCIÓN 1: PERFIL DEL EQUIPO Y OPERADOR -->
     <div class="card-custom mb-6 flex flex-col lg:flex-row gap-8 items-center">
         <!-- Foto -->
-        <div class="w-full lg:w-1/4 flex justify-center items-center bg-slate-100 rounded border-2 border-slate-300 p-4 h-48">
+        <div class="w-full lg:w-1/4 flex justify-center items-center bg-slate-50 rounded border border-slate-200 p-4 h-48">
             {% if foto_url %}
                 <img src="{{ foto_url }}" alt="Foto Equipo" class="max-h-full object-contain">
             {% else %}
-                <span class="text-xl font-black text-slate-400 uppercase tracking-widest">Sin Foto</span>
+                <span class="text-xl font-bold text-slate-400 uppercase tracking-widest">Sin Foto</span>
             {% endif %}
         </div>
         
         <!-- Especificaciones -->
         <div class="w-full lg:w-2/4 grid grid-cols-2 gap-6">
             <div>
-                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Marca Oficial</p>
-                <p class="text-xl font-black">{{ equipo.marca or 'S/I' }}</p>
+                <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Marca Oficial</p>
+                <p class="text-xl font-bold text-slate-800">{{ equipo.marca or 'S/I' }}</p>
             </div>
             <div>
-                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Modelo</p>
-                <p class="text-xl font-black">{{ equipo.modelo or 'S/I' }}</p>
+                <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Modelo</p>
+                <p class="text-xl font-bold text-slate-800">{{ equipo.modelo or 'S/I' }}</p>
             </div>
             <div>
-                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Patente</p>
-                <p class="text-xl font-black text-blue-700 bg-blue-50 inline-block px-3 py-1 rounded border-2 border-blue-200 mt-1">{{ equipo.patente or 'S/I' }}</p>
+                <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Patente</p>
+                <p class="text-lg font-bold text-blue-700 bg-blue-50 inline-block px-3 py-1 rounded border border-blue-200 mt-1">{{ equipo.patente or 'S/I' }}</p>
             </div>
             <div>
-                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">VIN / Chasis</p>
-                <p class="text-sm font-black font-mono bg-slate-100 inline-block px-2 py-1 rounded border border-slate-300 mt-1">{{ equipo.vin or 'S/I' }}</p>
+                <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">VIN / Chasis</p>
+                <p class="text-sm font-semibold font-mono text-slate-700 bg-slate-100 inline-block px-2 py-1 rounded border border-slate-200 mt-1">{{ equipo.vin or 'S/I' }}</p>
             </div>
         </div>
         
         <!-- Operador Asignado -->
-        <div class="w-full lg:w-1/4 bg-slate-50 border-2 border-slate-300 rounded-lg p-6 flex flex-col justify-center text-center h-48">
-            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Operador Titular</p>
+        <div class="w-full lg:w-1/4 bg-slate-50 border border-slate-200 rounded-lg p-6 flex flex-col justify-center text-center h-48">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Operador Titular</p>
             {% if operador %}
-                <p class="text-lg font-black text-black leading-tight">{{ operador.nombre }}</p>
-                <p class="text-[11px] font-black text-slate-600 uppercase mt-1">{{ operador.cargo }}</p>
+                <p class="text-lg font-bold text-slate-900 leading-tight">{{ operador.nombre }}</p>
+                <p class="text-[11px] font-semibold text-slate-600 uppercase mt-1">{{ operador.cargo }}</p>
                 <div class="mt-3">
-                    <span class="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-widest rounded border-2 border-emerald-300">{{ operador.estado }}</span>
+                    <span class="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-widest rounded border border-emerald-200">{{ operador.estado }}</span>
                 </div>
             {% else %}
-                <p class="text-xs font-black text-slate-400 uppercase mt-2">Sin Operador Asignado</p>
+                <p class="text-xs font-semibold text-slate-400 uppercase mt-2">Sin Operador Asignado</p>
             {% endif %}
         </div>
     </div>
@@ -85,20 +85,20 @@
     <!-- SECCIÓN 2: KPIs EN TIEMPO REAL -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div class="card-custom text-center">
-            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado Actual</p>
-            <p class="text-3xl font-black mt-2 uppercase {% if equipo.estado_base == 'Operativo' %}text-emerald-600{% elif equipo.estado_base == 'Taller' %}text-red-600{% else %}text-slate-600{% endif %}">{{ equipo.estado_base }}</p>
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Estado Actual</p>
+            <p class="text-2xl font-bold mt-2 uppercase {% if equipo.estado_base == 'Operativo' %}text-emerald-600{% elif equipo.estado_base == 'Taller' %}text-red-600{% else %}text-slate-600{% endif %}">{{ equipo.estado_base }}</p>
         </div>
         <div class="card-custom text-center">
-            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Lectura / Uso</p>
-            <p class="text-3xl font-black mt-2 text-black font-mono">{{ "{:,.0f}".format(equipo.lectura_actual or 0).replace(',', '.') }} <span class="text-sm">{{ equipo.control_base }}</span></p>
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Lectura / Uso</p>
+            <p class="text-2xl font-bold mt-2 text-slate-900 font-mono">{{ "{:,.0f}".format(equipo.lectura_actual or 0).replace(',', '.') }} <span class="text-sm font-medium text-slate-500">{{ equipo.control_base }}</span></p>
         </div>
         <div class="card-custom text-center">
-            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Margen para Mantenimiento</p>
-            <p class="text-3xl font-black mt-2 font-mono {% if equipo.margen < 0 %}text-red-600{% elif equipo.margen <= 150 %}text-amber-500{% else %}text-emerald-600{% endif %}">{{ "{:,.0f}".format(equipo.margen or 0).replace(',', '.') }} <span class="text-sm">{{ equipo.control_base }}</span></p>
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Margen para Mantenimiento</p>
+            <p class="text-2xl font-bold mt-2 font-mono {% if equipo.margen < 0 %}text-red-600{% elif equipo.margen <= 150 %}text-amber-500{% else %}text-emerald-600{% endif %}">{{ "{:,.0f}".format(equipo.margen or 0).replace(',', '.') }} <span class="text-sm font-medium text-slate-500">{{ equipo.control_base }}</span></p>
         </div>
         <div class="card-custom text-center bg-slate-900 border-slate-800">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inversión Acumulada</p>
-            <p class="text-3xl font-black mt-2 font-mono text-white">${{ "{:,.0f}".format(stats.total).replace(',', '.') }}</p>
+            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Inversión Acumulada</p>
+            <p class="text-2xl font-bold mt-2 font-mono text-white">${{ "{:,.0f}".format(stats.total).replace(',', '.') }}</p>
         </div>
     </div>
 
@@ -106,9 +106,9 @@
     <!-- SECCIÓN NUEVA: DOCUMENTOS LEGALES Y REVISIONES                 -->
     <!-- ============================================================== -->
     <div class="card-custom-nopad mb-6">
-        <div class="p-4 bg-slate-100 border-b-2 border-slate-300 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <h3 class="font-black text-black uppercase text-[11px] tracking-widest">Documentación Legal y Revisiones</h3>
-            <button onclick="document.getElementById('modal-doc').classList.remove('hidden')" class="bg-black hover:bg-slate-800 text-white px-4 py-2 rounded text-[10px] font-black uppercase transition shadow-md">Subir Archivo PDF / Imagen</button>
+        <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <h3 class="font-bold text-slate-800 uppercase text-[11px] tracking-widest">Documentación Legal y Revisiones</h3>
+            <button onclick="document.getElementById('modal-doc').classList.remove('hidden')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-[10px] font-bold uppercase transition shadow-sm">Subir Archivo PDF / Imagen</button>
         </div>
         <div class="overflow-x-auto max-h-64">
             <table class="w-full text-left">
@@ -117,26 +117,26 @@
                 </thead>
                 <tbody>
                     {% for doc in documentos %}
-                    <tr class="hover:bg-slate-50 border-b-2 border-slate-100">
-                        <td class="font-black text-black uppercase">{{ doc.tipo_documento }}</td>
-                        <td class="font-mono font-black text-slate-700">{{ doc.fecha_vencimiento.strftime('%d/%m/%Y') if doc.fecha_vencimiento else 'Indefinido' }}</td>
+                    <tr class="hover:bg-slate-50 border-b border-slate-100">
+                        <td class="font-bold text-slate-800 uppercase">{{ doc.tipo_documento }}</td>
+                        <td class="font-mono font-medium text-slate-600">{{ doc.fecha_vencimiento.strftime('%d/%m/%Y') if doc.fecha_vencimiento else 'Indefinido' }}</td>
                         <td>
                             {% if doc.fecha_vencimiento %}
                                 {% if doc.fecha_vencimiento < hoy.date() %}
-                                    <span class="px-2 py-1 bg-red-100 text-red-800 border-2 border-red-300 rounded text-[10px] font-black uppercase">Vencido</span>
+                                    <span class="px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded text-[9px] font-bold uppercase">Vencido</span>
                                 {% else %}
-                                    <span class="px-2 py-1 bg-emerald-100 text-emerald-800 border-2 border-emerald-300 rounded text-[10px] font-black uppercase">Vigente</span>
+                                    <span class="px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[9px] font-bold uppercase">Vigente</span>
                                 {% endif %}
                             {% else %}
-                                <span class="px-2 py-1 bg-slate-200 text-slate-800 border-2 border-slate-300 rounded text-[10px] font-black uppercase">N/A</span>
+                                <span class="px-2 py-1 bg-slate-100 text-slate-600 border border-slate-200 rounded text-[9px] font-bold uppercase">N/A</span>
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{{ doc.archivo_url }}" target="_blank" class="bg-blue-50 text-blue-700 border-2 border-blue-200 px-3 py-1 rounded text-[10px] font-black uppercase hover:bg-blue-100 transition inline-block text-center shadow-sm">Ver Documento</a>
+                            <a href="{{ doc.archivo_url }}" target="_blank" class="bg-white text-blue-600 border border-slate-300 px-3 py-1 rounded text-[10px] font-bold uppercase hover:bg-slate-50 transition inline-block text-center shadow-sm">Ver Documento</a>
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="4" class="text-center font-black py-6 text-slate-400 uppercase">Aún no hay documentos registrados para este equipo.</td></tr>
+                    <tr><td colspan="4" class="text-center font-medium py-6 text-slate-400 uppercase">Aún no hay documentos registrados para este equipo.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -147,8 +147,8 @@
     <div class="grid grid-cols-1 gap-6 mb-6">
         <!-- Mantenciones Preventivas -->
         <div class="card-custom-nopad">
-            <div class="p-4 bg-slate-100 border-b-2 border-slate-300">
-                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">Historial de Mantenciones Preventivas (PM)</h3>
+            <div class="p-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 uppercase text-[11px] tracking-widest">Historial de Mantenciones Preventivas (PM)</h3>
             </div>
             <div class="overflow-x-auto max-h-64">
                 <table class="w-full text-left">
@@ -157,17 +157,17 @@
                     </thead>
                     <tbody>
                         {% for m in mants_prev %}
-                        <tr class="hover:bg-slate-50 border-b-2 border-slate-100">
-                            <td class="font-black text-black">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '' }}</td>
-                            <td class="font-mono font-black text-slate-500">{{ m.folio }}</td>
-                            <td class="font-black uppercase">{{ m.tipo_mantencion }}</td>
-                            <td class="font-bold text-slate-700">{{ m.mecanico }}</td>
-                            <td class="font-mono font-black">{{ "{:,.0f}".format(m.lectura or 0).replace(',', '.') }}</td>
-                            <td class="font-mono font-black text-blue-700">${{ "{:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
-                            <td><span class="px-2 py-1 bg-slate-200 border-2 border-slate-300 rounded text-[10px] font-black uppercase">{{ m.estado }}</span></td>
+                        <tr class="hover:bg-slate-50 border-b border-slate-100">
+                            <td class="font-medium text-slate-800">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '' }}</td>
+                            <td class="font-mono font-medium text-slate-500">{{ m.folio }}</td>
+                            <td class="font-bold text-slate-800 uppercase">{{ m.tipo_mantencion }}</td>
+                            <td class="font-medium text-slate-600">{{ m.mecanico }}</td>
+                            <td class="font-mono font-medium text-slate-800">{{ "{:,.0f}".format(m.lectura or 0).replace(',', '.') }}</td>
+                            <td class="font-mono font-semibold text-slate-900">${{ "{:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
+                            <td><span class="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-[9px] font-bold text-slate-700 uppercase">{{ m.estado }}</span></td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="7" class="text-center font-black py-6 text-slate-400 uppercase">Sin registros preventivos.</td></tr>
+                        <tr><td colspan="7" class="text-center font-medium py-6 text-slate-400 uppercase">Sin registros preventivos.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -176,8 +176,8 @@
 
         <!-- Averías y Correctivas -->
         <div class="card-custom-nopad">
-            <div class="p-4 bg-slate-100 border-b-2 border-slate-300">
-                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">Historial de Averías y Correctivas</h3>
+            <div class="p-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 uppercase text-[11px] tracking-widest">Historial de Averías y Correctivas</h3>
             </div>
             <div class="overflow-x-auto max-h-64">
                 <table class="w-full text-left">
@@ -186,17 +186,17 @@
                     </thead>
                     <tbody>
                         {% for m in mants_corr %}
-                        <tr class="hover:bg-slate-50 border-b-2 border-slate-100">
-                            <td class="font-black text-black">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '' }}</td>
-                            <td class="font-black uppercase text-red-600">{{ m.sistema_falla }}</td>
-                            <td class="font-bold text-black">{{ m.causa_raiz }}</td>
-                            <td class="font-bold text-slate-700">{{ m.mecanico }}</td>
-                            <td class="font-mono font-black">{{ "{:,.0f}".format(m.lectura or 0).replace(',', '.') }}</td>
-                            <td class="font-mono font-black text-blue-700">${{ "{:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
-                            <td><span class="px-2 py-1 bg-slate-200 border-2 border-slate-300 rounded text-[10px] font-black uppercase">{{ m.estado }}</span></td>
+                        <tr class="hover:bg-slate-50 border-b border-slate-100">
+                            <td class="font-medium text-slate-800">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '' }}</td>
+                            <td class="font-bold uppercase text-red-600">{{ m.sistema_falla }}</td>
+                            <td class="font-medium text-slate-800">{{ m.causa_raiz }}</td>
+                            <td class="font-medium text-slate-600">{{ m.mecanico }}</td>
+                            <td class="font-mono font-medium text-slate-800">{{ "{:,.0f}".format(m.lectura or 0).replace(',', '.') }}</td>
+                            <td class="font-mono font-semibold text-slate-900">${{ "{:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
+                            <td><span class="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-[9px] font-bold text-slate-700 uppercase">{{ m.estado }}</span></td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="7" class="text-center font-black py-6 text-slate-400 uppercase">Sin registros de averías.</td></tr>
+                        <tr><td colspan="7" class="text-center font-medium py-6 text-slate-400 uppercase">Sin registros de averías.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -208,8 +208,8 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
         <!-- Compras -->
         <div class="card-custom-nopad">
-            <div class="p-4 bg-slate-100 border-b-2 border-slate-300">
-                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">Repuestos Asociados (OC)</h3>
+            <div class="p-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 uppercase text-[11px] tracking-widest">Repuestos Asociados (OC)</h3>
             </div>
             <div class="overflow-x-auto max-h-64">
                 <table class="w-full text-left">
@@ -218,14 +218,14 @@
                     </thead>
                     <tbody>
                         {% for c in compras %}
-                        <tr class="hover:bg-slate-50 border-b-2 border-slate-100">
-                            <td class="font-black text-black">{{ c.fecha.strftime('%d/%m/%Y') if c.fecha else '' }}</td>
-                            <td class="font-mono font-black text-slate-500">{{ c.oc }}</td>
-                            <td class="font-bold text-black">{{ c.descripcion }}</td>
-                            <td class="font-mono font-black text-blue-700">${{ "{:,.0f}".format(c.costo_pm_clp or 0).replace(',', '.') }}</td>
+                        <tr class="hover:bg-slate-50 border-b border-slate-100">
+                            <td class="font-medium text-slate-800">{{ c.fecha.strftime('%d/%m/%Y') if c.fecha else '' }}</td>
+                            <td class="font-mono font-medium text-slate-500">{{ c.oc }}</td>
+                            <td class="font-medium text-slate-800">{{ c.descripcion }}</td>
+                            <td class="font-mono font-semibold text-slate-900">${{ "{:,.0f}".format(c.costo_pm_clp or 0).replace(',', '.') }}</td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="4" class="text-center font-black py-6 text-slate-400 uppercase">Sin compras registradas.</td></tr>
+                        <tr><td colspan="4" class="text-center font-medium py-6 text-slate-400 uppercase">Sin compras registradas.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -234,8 +234,8 @@
 
         <!-- Lecturas -->
         <div class="card-custom-nopad">
-            <div class="p-4 bg-slate-100 border-b-2 border-slate-300">
-                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">Bitácora de Lecturas (HR / KM)</h3>
+            <div class="p-4 bg-slate-50 border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 uppercase text-[11px] tracking-widest">Bitácora de Lecturas (HR / KM)</h3>
             </div>
             <div class="overflow-x-auto max-h-64">
                 <table class="w-full text-left">
@@ -244,13 +244,13 @@
                     </thead>
                     <tbody>
                         {% for l in lecturas %}
-                        <tr class="hover:bg-slate-50 border-b-2 border-slate-100">
-                            <td class="font-black text-black">{{ l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else '' }}</td>
-                            <td class="font-mono font-black text-lg text-black">{{ "{:,.0f}".format(l.horometro or l.kilometraje or 0).replace(',', '.') }}</td>
-                            <td class="font-bold text-slate-600 uppercase">{{ l.responsable or 'Sistema' }}</td>
+                        <tr class="hover:bg-slate-50 border-b border-slate-100">
+                            <td class="font-medium text-slate-800">{{ l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else '' }}</td>
+                            <td class="font-mono font-semibold text-lg text-slate-900">{{ "{:,.0f}".format(l.horometro or l.kilometraje or 0).replace(',', '.') }}</td>
+                            <td class="font-medium text-slate-600 uppercase">{{ l.responsable or 'Sistema' }}</td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="3" class="text-center font-black py-6 text-slate-400 uppercase">Sin lecturas históricas.</td></tr>
+                        <tr><td colspan="3" class="text-center font-medium py-6 text-slate-400 uppercase">Sin lecturas históricas.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -262,15 +262,15 @@
     <!-- MODAL DE SUBIDA DE DOCUMENTOS                  -->
     <!-- ============================================== -->
     <div id="modal-doc" class="fixed inset-0 bg-slate-900/80 z-[700] hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden border-2 border-slate-300">
-            <div class="p-4 bg-slate-100 flex justify-between items-center border-b-2 border-slate-300">
-                <h3 class="font-black text-black uppercase text-xs">Subir Documento Legal</h3>
-                <button onclick="document.getElementById('modal-doc').classList.add('hidden')" class="text-black font-black text-lg hover:text-red-600 transition">&times;</button>
+        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
+            <div class="p-4 bg-slate-50 flex justify-between items-center border-b border-slate-200">
+                <h3 class="font-bold text-slate-800 uppercase text-xs">Subir Documento Legal</h3>
+                <button onclick="document.getElementById('modal-doc').classList.add('hidden')" class="text-slate-500 font-bold text-xl hover:text-red-500 transition">&times;</button>
             </div>
             <form action="/equipo/{{ equipo.codigo }}/subir_documento" method="POST" enctype="multipart/form-data" class="p-6 flex flex-col gap-5">
                 <div>
-                    <label class="text-[11px] font-black uppercase text-black mb-2 block">Tipo de Documento</label>
-                    <select name="tipo_documento" class="w-full border-2 border-slate-300 p-3 rounded font-black text-black outline-none focus:border-blue-600" required>
+                    <label class="text-[10px] font-bold uppercase text-slate-600 mb-2 block">Tipo de Documento</label>
+                    <select name="tipo_documento" class="w-full border border-slate-300 p-2.5 rounded font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" required>
                         <option value="Revisión Técnica">Revisión Técnica</option>
                         <option value="Permiso de Circulación">Permiso de Circulación</option>
                         <option value="Seguro Obligatorio (SOAP)">Seguro Obligatorio (SOAP)</option>
@@ -280,14 +280,14 @@
                     </select>
                 </div>
                 <div>
-                    <label class="text-[11px] font-black uppercase text-black mb-2 block">Fecha de Vencimiento (Opcional)</label>
-                    <input type="date" name="fecha_vencimiento" class="w-full border-2 border-slate-300 p-3 rounded font-black text-black outline-none focus:border-blue-600">
+                    <label class="text-[10px] font-bold uppercase text-slate-600 mb-2 block">Fecha de Vencimiento (Opcional)</label>
+                    <input type="date" name="fecha_vencimiento" class="w-full border border-slate-300 p-2.5 rounded font-medium text-slate-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
                 </div>
                 <div>
-                    <label class="text-[11px] font-black uppercase text-black mb-2 block">Archivo (PDF o Imagen)</label>
-                    <input type="file" name="archivo" accept=".pdf,image/*" class="w-full border-2 border-dashed border-slate-400 p-3 rounded font-bold text-black file:bg-slate-200 file:border-none file:px-4 file:py-2 file:font-black file:rounded cursor-pointer hover:bg-slate-50 transition" required>
+                    <label class="text-[10px] font-bold uppercase text-slate-600 mb-2 block">Archivo (PDF o Imagen)</label>
+                    <input type="file" name="archivo" accept=".pdf,image/*" class="w-full border border-dashed border-slate-300 p-2.5 rounded font-medium text-slate-700 file:bg-slate-100 file:border-none file:px-3 file:py-1.5 file:font-semibold file:rounded cursor-pointer hover:bg-slate-50 transition" required>
                 </div>
-                <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white px-6 py-4 rounded-lg mt-2 text-xs uppercase font-black w-full transition shadow-md">Subir y Archivar</button>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg mt-2 text-xs uppercase font-bold w-full transition shadow-sm">Subir y Archivar</button>
             </form>
         </div>
     </div>
