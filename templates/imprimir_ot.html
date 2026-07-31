@@ -209,7 +209,7 @@
             <div class="info-item" style="margin-top:12px;"><span class="info-label">Sistema Afectado:</span> <span class="info-value">{{ ot.sistema_falla }}</span></div>
             <div class="info-item" style="margin-top:12px;"><span class="info-label">Causa / Diagnóstico:</span> <span class="info-value">{{ ot.causa_raiz }}</span></div>
             {% else %}
-            <div class="info-item" style="margin-top:12px;"><span class="info-label">Observaciones:</span> <span class="info-value">{{ getattr(ot, 'observacion', '') or 'Mantenimiento preventivo programado según pauta vigente.' }}</span></div>
+            <div class="info-item" style="margin-top:12px;"><span class="info-label">Observaciones:</span> <span class="info-value">{{ ot|attr('observacion') | default('Mantenimiento preventivo programado según pauta vigente.', true) }}</span></div>
             {% endif %}
             <div class="info-item" style="margin-top:12px;"><span class="info-label">Técnico Asignado:</span> <span class="info-value">{{ ot.mecanico or 'Técnico no especificado' }}</span></div>
             <div class="info-item" style="margin-top:12px;"><span class="info-label">Status OT:</span> <span class="info-value">{{ ot.estado }}</span></div>
