@@ -1,34 +1,48 @@
-# models/equipo.py
 from extensions import db
+from datetime import datetime
 
 class Equipo(db.Model):
+    __tablename__ = 'equipo'
+    
+    # Datos Principales
     id = db.Column(db.Integer, primary_key=True)
-    codigo = db.Column(db.String(50), unique=True)
+    codigo = db.Column(db.String(50), unique=True, nullable=False)
     tipo_equipo = db.Column(db.String(100))
-    marca = db.Column(db.String(50))
+    marca = db.Column(db.String(100))
     modelo = db.Column(db.String(100))
-    ubicacion = db.Column(db.String(100))
-    responsable = db.Column(db.String(100))
-    estado_base = db.Column(db.String(50), default="Operativo")
-    control_base = db.Column(db.String(50), default="HORAS")
-    frecuencia_base = db.Column(db.Integer, default=250)
-    lectura_actual = db.Column(db.Integer, default=0)
-    proxima_pm = db.Column(db.Integer, default=0)
-    vin = db.Column(db.String(100), default="")
-    n_motor = db.Column(db.String(100), default="")
-    patente = db.Column(db.String(50), default="")
-    planificacion_mantencion = db.Column(db.Text, default="Registrar estrategia de mantenimiento...")
+    
+    # Identificación Legal
+    patente = db.Column(db.String(50))
+    vin = db.Column(db.String(100))
+    
+    # Operación y Logística
+    ubicacion = db.Column(db.String(100), default="CASA MATRIZ")
+    estado_base = db.Column(db.String(50), default="Operativo") # Operativo, Taller, Fuera de Servicio
+    
+    # Mantenimiento y Rendimiento
+    control_base = db.Column(db.String(20), default="HORAS") # HORAS o KM
+    lectura_actual = db.Column(db.Float, default=0.0)
+    proxima_pm = db.Column(db.Float, default=0.0)
+    
+    # Auditoría
+    fecha_creacion = db.Column(db.DateTime, default=datetime.now)
 
-    @property
-    def margen(self): return (self.proxima_pm or 0) - (self.lectura_actual or 0)
+    def __repr__(self):
+        return f"<Equipo {self.codigo}>"
 
-class FiltroEquipo(db.Model):
+
+# =========================================================
+# NUEVA TABLA: Documentos Legales y Revisiones del Equipo
+# =========================================================
+class DocumentoEquipo(db.Model):
+    __tablename__ = 'documento_equipo'
+    
     id = db.Column(db.Integer, primary_key=True)
-    codigo_equipo = db.Column(db.String(50))
-    sistema = db.Column(db.String(100), default="-")
-    cant = db.Column(db.Integer, default=1)
-    fleetguard = db.Column(db.String(100), default="-")
-    baldwind = db.Column(db.String(100), default="-")
-    originales = db.Column(db.String(100), default="-")
-    donaldson = db.Column(db.String(100), default="-")
-    otra = db.Column(db.String(100), default="-")
+    codigo_equipo = db.Column(db.String(50), nullable=False)
+    tipo_documento = db.Column(db.String(100), nullable=False)
+    fecha_vencimiento = db.Column(db.Date, nullable=True)
+    archivo_url = db.Column(db.String(255), nullable=True)
+    fecha_subida = db.Column(db.DateTime, default=datetime.now)
+
+    def __repr__(self):
+        return f"<Documento {self.tipo_documento} - {self.codigo_equipo}>"
