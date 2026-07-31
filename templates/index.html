@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DEMOTRON ERP CMMS</title>
-    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>ERP CMMS DEMOTRON</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
@@ -15,255 +13,225 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        body { font-family: 'Inter', sans-serif; font-size: 13px; background-color: #F1F5F9; color: #0F172A; margin: 0; }
+        body { font-family: 'Inter', sans-serif; font-size: 13px; background-color: #F8FAFC; color: #1E293B; margin: 0; }
         .seccion { display: none; } .seccion.active { display: block; }
-        .sidebar-bg { background-color: #0F172A; border-right: 1px solid #1E293B; }
-        .nav-link { color: #94A3B8; display: block; padding: 10px 24px; cursor: pointer; transition: all 0.2s; border-radius: 0 24px 24px 0; margin-right: 16px; margin-bottom: 2px; font-weight: 500; font-size: 12px; }
-        .nav-link:hover { background: #1E293B; color: #F8FAFC; }
-        .nav-link.active { background: #2563EB; color: #FFFFFF; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); }
-        .card-custom { background: white; border-radius: 8px; border: 1px solid #CBD5E1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden; padding: 16px;}
-        .card-custom-nopad { background: white; border-radius: 8px; border: 1px solid #CBD5E1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden;}
-        @media (min-width: 768px) { .card-custom { padding: 24px; } }
-        .table-wrapper { width: 100%; overflow-x: auto; }
-        .table-custom { width: 100%; border-collapse: collapse; min-width: 600px; }
-        .table-custom th { font-size: 11px; color: #1E293B; padding: 12px 16px; border-bottom: 2px solid #CBD5E1; text-align: left; font-weight: 700; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; background: #F8FAFC; }
-        .table-custom td { padding: 12px 16px; border-bottom: 1px solid #E2E8F0; color: #0F172A; font-size: 12px; font-weight: 500; }
-        .form-input { border: 1px solid #94A3B8; padding: 8px 12px; border-radius: 6px; font-size: 12px; width: 100%; outline: none; transition: border-color 0.2s; font-weight: 500; color: #0F172A; }
-        .form-input:focus { border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2); }
-        .btn-primary { background-color: #2563EB; color: white; padding: 8px 16px; border-radius: 6px; font-weight: 700; transition: background 0.2s; cursor: pointer; border:none; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
-        .btn-primary:hover { background-color: #1D4ED8; }
-        .btn-danger { background-color: #DC2626; color: white; padding: 8px 16px; border-radius: 6px; font-weight: 700; cursor: pointer; border:none; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
-        .btn-danger:hover { background-color: #B91C1C; }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .btn-action { font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 5px 10px; border-radius: 4px; border: 1px solid #94A3B8; transition: all 0.2s; margin-right: 4px; display:inline-block; color: #1E293B;}
-        .btn-action:hover { background-color: #E2E8F0; }
-        #signature-pad { border: 2px dashed #94A3B8; border-radius: 8px; background: #F8FAFC; cursor: crosshair; touch-action: none; }
-        .leaflet-div-icon { background: transparent !important; border: none !important; }
-
-        /* CALENDARIO ESTILO MIRRO */
-        .fc { font-family: 'Inter', sans-serif; }
-        .fc-theme-standard td, .fc-theme-standard th { border-color: #E2E8F0 !important; border-width: 1px !important; }
-        .fc-col-header-cell-cushion { padding: 16px !important; font-weight: 700; text-transform: uppercase; font-size: 11px; color: #1E293B; }
-        .fc-daygrid-day-number { font-weight: 600; font-size: 13px; color: #0F172A; padding: 12px !important; }
-        .fc-event { border-radius: 6px; border: none !important; padding: 4px 8px; font-size: 11px; font-weight: 600; margin: 2px 4px !important; transition: all 0.2s; }
-        .fc-event:hover { transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .fc .fc-toolbar-title { font-weight: 800; font-size: 20px; color: #0F172A; letter-spacing: -0.02em; }
-        .fc .fc-button-primary { background-color: #0F172A !important; border: none !important; color: #FFFFFF !important; font-weight: 600 !important; border-radius: 8px !important; padding: 8px 16px !important; text-transform: uppercase; font-size: 11px; transition: all 0.2s; }
-        .fc .fc-button-primary:hover { background-color: #334155 !important; }
-        .fc-day-today { background-color: #F8FAFC !important; }
         
-        /* BARRAS DE TERMÓMETRO PARA TABLA PREDICTIVA */
-        .bar-container { width: 100%; background-color: #E2E8F0; border-radius: 9999px; height: 12px; overflow: hidden; display: flex; }
-        .bar-fill-green { height: 100%; background: linear-gradient(90deg, #34D399, #10B981); }
-        .bar-fill-red { height: 100%; background: linear-gradient(90deg, #F87171, #EF4444); }
+        /* Sidebar Corporativo - Tonos Azules Oscuros */
+        .sidebar-bg { background-color: #0F172A; border-right: 1px solid #1E293B; }
+        .nav-link { color: #94A3B8; display: block; padding: 12px 24px; cursor: pointer; transition: all 0.2s; font-weight: 500; font-size: 13px; }
+        .nav-link:hover { color: #FFFFFF; background-color: rgba(255,255,255,0.05); }
+        .nav-link.active { color: #FFFFFF; background-color: #1E3A8A; font-weight: 600; border-left: 4px solid #60A5FA; padding-left: 20px;}
+        
+        /* Tarjetas Minimalistas */
+        .card-custom { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card-custom-nopad { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden; }
+        
+        /* Tablas */
+        .table-custom { width: 100%; border-collapse: collapse; min-width: 600px; }
+        .table-custom th { font-size: 11px; color: #475569; padding: 16px 24px; border-bottom: 1px solid #E2E8F0; text-align: left; font-weight: 600; text-transform: uppercase; background: #FFFFFF; }
+        .table-custom td { padding: 16px 24px; border-bottom: 1px solid #F1F5F9; color: #1E293B; font-size: 13px; font-weight: 400; }
+        .table-custom tr:hover { background-color: #F8FAFC; }
+        
+        /* Formularios y Botones */
+        .form-input { border: 1px solid #CBD5E1; padding: 10px 16px; border-radius: 6px; font-size: 13px; width: 100%; outline: none; transition: border-color 0.2s; color: #1E293B; }
+        .form-input:focus { border-color: #3B82F6; }
+        .btn-primary { background-color: #1E3A8A; color: white; padding: 10px 24px; border-radius: 6px; font-weight: 500; transition: background 0.2s; cursor: pointer; border:none; font-size: 13px; }
+        .btn-primary:hover { background-color: #1D4ED8; }
+        .btn-action { font-size: 11px; font-weight: 500; padding: 6px 12px; border-radius: 4px; border: 1px solid #CBD5E1; transition: all 0.2s; margin-right: 8px; display:inline-block; color: #475569; text-decoration: none; cursor: pointer;}
+        .btn-action:hover { background-color: #F1F5F9; color: #0F172A; }
+        
+        /* Utilidades */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        #signature-pad { border: 1px solid #CBD5E1; border-radius: 6px; background: #FFFFFF; cursor: crosshair; }
+        .leaflet-div-icon { background: transparent !important; border: none !important; }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden relative text-slate-800">
+<body class="flex h-screen overflow-hidden">
     
-    <datalist id="lista_mecanicos">{% for m in mecanicos %}<option value="{{ m.nombre }}"></option>{% endfor %}</datalist>
-    <datalist id="lista_pautas"><option value="PM1"></option><option value="PM2"></option><option value="PM3"></option><option value="PM4"></option><option value="PM5"></option></datalist>
-
     <div id="sidebar-backdrop" onclick="toggleMenu()" class="fixed inset-0 bg-slate-900/50 z-30 hidden md:hidden backdrop-blur-sm"></div>
 
     <!-- MENÚ LATERAL -->
-    <aside id="sidebar" class="w-64 sidebar-bg flex flex-col z-40 shadow-2xl shrink-0 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out">
-        <div class="h-16 md:h-20 flex items-center justify-between px-6 border-b border-slate-800">
-            <span class='text-2xl font-bold text-white tracking-tighter'>DEMOTRON</span>
-            <button onclick="toggleMenu()" class="md:hidden text-slate-400 hover:text-white text-2xl">&times;</button>
+    <aside id="sidebar" class="w-64 sidebar-bg flex flex-col z-40 shrink-0 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300">
+        <div class="h-20 flex items-center px-6 border-b border-slate-800">
+            <span class='text-lg font-semibold text-white tracking-wide'>DEMOTRON ERP</span>
         </div>
-        <nav class="flex-1 py-6 overflow-y-auto hide-scrollbar">
-            <p class="px-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Principal</p>
-            <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard Predictivo</a>
+        <nav class="flex-1 py-6 overflow-y-auto hide-scrollbar space-y-1">
+            <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-4">General</p>
+            <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard</a>
             
-            <p class="px-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 mt-5">Gestión de Flota</p>
-            <a onclick="switchTab('eq', this)" class="nav-link">Equipos y Fichas</a>
-            <a onclick="switchTab('flota', this)" class="nav-link">Rendimiento (CPK)</a>
-            <a onclick="switchTab('neumaticos', this)" class="nav-link">Neumáticos</a>
+            <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Flota</p>
+            <a onclick="switchTab('eq', this)" class="nav-link">Equipos Registrados</a>
+            <a onclick="switchTab('flota', this)" class="nav-link">Rendimiento CPK</a>
             <a onclick="switchTab('mapa', this)" class="nav-link">Geolocalización</a>
             
-            <p class="px-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 mt-5">Terreno y Mantenimiento</p>
-            <a onclick="switchTab('plan', this)" class="nav-link">Kanban y Ejecución</a>
-            <a onclick="switchTab('cal', this)" class="nav-link">Calendario de Pautas</a>
-            <a onclick="switchTab('ot', this)" class="nav-link">Preventivas</a>
-            <a onclick="switchTab('ot_corr', this)" class="nav-link">Correctivas</a>
-            <a onclick="switchTab('lec', this)" class="nav-link">Ingreso de Lecturas</a>
+            <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Mantenimiento</p>
+            <a onclick="switchTab('plan', this)" class="nav-link">Kanban de Taller</a>
+            <a onclick="switchTab('cal', this)" class="nav-link">Calendario Programado</a>
+            <a onclick="switchTab('ot', this)" class="nav-link">Preventivas Realizadas</a>
+            <a onclick="switchTab('ot_corr', this)" class="nav-link">Averías y Correctivas</a>
+            <a onclick="switchTab('lec', this)" class="nav-link">Ingreso Lecturas HR/KM</a>
             
-            <p class="px-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 mt-5">Suministros y Finanzas</p>
+            <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Materiales</p>
             <a onclick="switchTab('bodega', this)" class="nav-link">Inventario Bodega</a>
-            <a onclick="switchTab('compras', this)" class="nav-link">Registro de Compras</a>
+            <a onclick="switchTab('compras', this)" class="nav-link">Órdenes de Compra</a>
             
-            <p class="px-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 mt-5">Data y Sistema</p>
-            <a onclick="switchTab('reportes', this)" class="nav-link">Exportación de Datos</a>
-            <a onclick="switchTab('powerbi', this)" class="nav-link">Conexión Power BI</a>
-            <a onclick="switchTab('automatizacion', this)" class="nav-link">Automatización</a>
-            
-            <p class="px-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 mt-5">Directorio</p>
-            <a onclick="switchTab('cond', this)" class="nav-link">Operadores</a>
-            <a onclick="switchTab('mecanicos', this)" class="nav-link">Mecánicos</a>
-            <a href="/admin/usuarios" class="nav-link">Auditoría / Usuarios</a>
+            <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Reportes</p>
+            <a onclick="switchTab('reportes', this)" class="nav-link">Descargas y PDF</a>
+            <a onclick="switchTab('powerbi', this)" class="nav-link">Enlace Power BI</a>
         </nav>
-        
-        <div class="mt-auto border-t border-slate-800 p-4 bg-slate-900/50">
-            <div class="flex items-center justify-between">
-                <div class="truncate pr-2 cursor-pointer hover:bg-slate-800 p-1.5 rounded transition" onclick="document.getElementById('modal-password').classList.remove('hidden')">
-                    <p class="text-xs font-semibold text-slate-200 truncate uppercase">{{ current_user.nombre if current_user.nombre else current_user.username }}</p>
-                    <p class="text-[9px] text-blue-400 uppercase font-semibold tracking-widest mt-0.5">Cambiar Clave</p>
-                </div>
-                <a href="/logout" class="text-slate-400 hover:text-white hover:bg-red-600 border border-slate-700 p-2 rounded transition-colors font-semibold text-[10px] uppercase tracking-wider">Salir</a>
-            </div>
+        <div class="p-4 bg-slate-900 border-t border-slate-800">
+            <a href="/logout" class="block text-center text-slate-400 hover:text-white text-xs font-medium">Cerrar Sesión</a>
         </div>
     </aside>
 
     <main class="flex-1 flex flex-col min-w-0 w-full">
         <!-- HEADER -->
-        <header class="h-14 md:h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0 shadow-sm z-10">
-            <div class="flex items-center gap-3">
-                <button onclick="toggleMenu()" class="md:hidden text-slate-900 p-1 text-2xl font-bold leading-none focus:outline-none">☰</button>
-                <h1 id="title" class="text-base md:text-lg font-bold text-slate-900 uppercase tracking-wider truncate">Dashboard Predictivo</h1>
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-10">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleMenu()" class="md:hidden text-slate-800 text-2xl focus:outline-none">≡</button>
+                <h1 id="title" class="text-xl font-normal text-slate-800 tracking-wide">Dashboard</h1>
             </div>
-            <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="Buscar en tablas..." class="form-input w-32 md:w-64 bg-slate-50 border-slate-300 rounded-full pl-4 shadow-inner">
+            <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="Buscar registro..." class="form-input w-64 bg-slate-50 border-slate-200 rounded-md shadow-sm">
         </header>
 
-        <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 bg-[#F8FAFC]">
+        <div class="flex-1 overflow-y-auto p-8">
             
-            <!-- 1. DASHBOARD PREDICTIVO (ESTILO RELIABILITY ENGINEERING) -->
-            <div id="dash" class="seccion active space-y-4">
+            <!-- 1. DASHBOARD PRINCIPAL CORPORATIVO -->
+            <div id="dash" class="seccion active">
                 
-                <!-- CABECERA DE FLOTA -->
-                <div class="w-full bg-[#4E79C4] text-white text-center py-3 rounded shadow-sm">
-                    <h2 class="text-2xl font-bold uppercase tracking-widest">FLOTA GLOBAL - INDICADORES DE CONFIABILIDAD</h2>
+                <!-- CINTA 1: KPIs AUTOMÁTICOS -->
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+                    <div class="card-custom text-center">
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Estado Flota Operativa</p>
+                        <p class="text-3xl font-normal text-[#1E3A8A]">{{ kpis.op_pct }}%</p>
+                        <p class="text-xs text-slate-400 mt-2">{{ kpis.op_count }} de {{ kpis.total_eq }} equipos</p>
+                    </div>
+                    <div class="card-custom text-center">
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Cumplimiento PM</p>
+                        <p class="text-3xl font-normal text-[#1E3A8A]">{{ kpis.cumpl_pm_pct }}%</p>
+                        <p class="text-xs text-slate-400 mt-2">Adherencia al plan</p>
+                    </div>
+                    <div class="card-custom text-center">
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Backlog Crítico</p>
+                        <p class="text-3xl font-normal text-[#1E3A8A]">{{ kpis.backlog_count }}</p>
+                        <p class="text-xs text-slate-400 mt-2">Equipos vencidos</p>
+                    </div>
+                    <div class="card-custom text-center">
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">En Taller / Fuera Serv.</p>
+                        <p class="text-3xl font-normal text-[#1E3A8A]">{{ kpis.taller_fuera_count }}</p>
+                        <p class="text-xs text-slate-400 mt-2">Equipos inactivos</p>
+                    </div>
+                    <div class="card-custom text-center">
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Disponibilidad</p>
+                        <p class="text-3xl font-normal text-[#1E3A8A]">{{ kpis.disponibilidad_pct }}%</p>
+                        <p class="text-xs text-slate-400 mt-2">Operacional</p>
+                    </div>
                 </div>
 
-                <!-- BARRAS DE ESTADO Y DISPONIBILIDAD -->
-                <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
-                    <div class="lg:col-span-3 bg-white p-4 rounded shadow-sm border border-slate-200 flex flex-col justify-center">
-                        <div class="flex items-center mb-2">
-                            <span class="w-32 text-xs font-bold text-slate-600 uppercase">Estado Flota</span>
-                            <div class="flex-1 flex h-6 rounded overflow-hidden">
-                                <div class="bg-[#5CB85C] h-full flex items-center justify-center text-white text-[10px] font-bold shadow-inner" style="width: {{ kpis.disponibilidad_pct }}%;">OP {{ kpis.disponibilidad_pct }}%</div>
-                                <div class="bg-[#D9534F] h-full flex items-center justify-center text-white text-[10px] font-bold shadow-inner" style="width: {{ kpis.downtime_pct }}%;">DWN {{ kpis.downtime_pct }}%</div>
+                <!-- CINTA 2: COMPRAS, ESTADO, GASTOS -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="card-custom h-72 flex flex-col">
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Compras Realizadas</p>
+                        <div class="flex-1 relative w-full"><canvas id="chartCompras"></canvas></div>
+                    </div>
+                    <div class="card-custom h-72 flex flex-col">
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Distribución de Flota</p>
+                        <div class="flex-1 relative w-full"><canvas id="chartEstados"></canvas></div>
+                    </div>
+                    <div class="card-custom h-72 flex flex-col justify-center">
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Inversión Acumulada Mantenimiento</p>
+                        <p class="text-4xl font-normal text-[#1E3A8A] mb-8">{{ cinta2.gasto_total }}</p>
+                        <div class="border-t border-slate-100 pt-4 grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Mes Anterior</p>
+                                <p class="text-lg font-normal text-slate-800">{{ cinta2.gasto_anterior }}</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Mes Actual</p>
+                                <p class="text-lg font-normal text-[#2563EB]">{{ cinta2.gasto_actual }}</p>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-white p-4 rounded shadow-sm border border-slate-200 text-center">
-                            <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Disponibilidad</p>
-                            <p class="text-3xl font-bold text-[#D9534F] mt-1">{{ kpis.disponibilidad_pct }}<span class="text-lg">%</span></p>
-                        </div>
-                        <div class="bg-white p-4 rounded shadow-sm border border-slate-200 text-center">
-                            <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Downtime</p>
-                            <p class="text-3xl font-bold text-[#D9534F] mt-1">{{ kpis.downtime_pct }}<span class="text-lg">%</span></p>
-                        </div>
+                </div>
+
+                <!-- CINTA 3: CONFIABILIDAD MTBF Y MTTR -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div class="card-custom h-80 flex flex-col">
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Mean Time Between Failures (Días por Marca)</p>
+                        <div class="flex-1 relative w-full"><canvas id="chartMTBF"></canvas></div>
+                    </div>
+                    <div class="card-custom h-80 flex flex-col">
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Mean Time To Repair (Horas por Marca)</p>
+                        <div class="flex-1 relative w-full"><canvas id="chartMTTR"></canvas></div>
                     </div>
                 </div>
 
-                <!-- BLOQUES MTBF Y MTTR -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- MTBF BOX -->
-                    <div class="bg-[#4E79C4] text-white p-4 rounded shadow-sm flex justify-between items-end">
-                        <div>
-                            <p class="text-[10px] font-semibold uppercase tracking-widest opacity-80 mb-1">Mean Time Between Failures</p>
-                            <h2 class="text-4xl font-bold">MTBF</h2>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-4xl font-bold">{{ kpis.mtbf_global }} <span class="text-lg font-medium opacity-80">días</span></p>
-                        </div>
-                    </div>
-                    <!-- MTTR BOX -->
-                    <div class="bg-[#4E79C4] text-white p-4 rounded shadow-sm flex justify-between items-end">
-                        <div>
-                            <p class="text-[10px] font-semibold uppercase tracking-widest opacity-80 mb-1">Mean Time To Repair</p>
-                            <h2 class="text-4xl font-bold">MTTR</h2>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-4xl font-bold">{{ kpis.mttr_global }} <span class="text-lg font-medium opacity-80">horas</span></p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- GRÁFICOS (MTBF vs MTTR) -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-white p-4 rounded shadow-sm border border-slate-200">
-                        <h4 class="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-4">MTBF por Sistema Afectado (Días)</h4>
-                        <div class="h-48 relative w-full"><canvas id="chartMTBF"></canvas></div>
-                    </div>
-                    <div class="bg-white p-4 rounded shadow-sm border border-slate-200">
-                        <h4 class="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-4">MTTR Histórico por Sistema (Horas)</h4>
-                        <div class="h-48 relative w-full"><canvas id="chartMTTR"></canvas></div>
-                    </div>
-                </div>
-
-                <!-- SUPER TABLA PREDICTIVA DE SISTEMAS -->
-                <div class="bg-white rounded shadow-sm border border-slate-200 overflow-hidden flex flex-col mt-2">
-                    <div class="bg-slate-100 px-4 py-3 border-b border-slate-200">
-                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-widest">RESUMEN GENERAL POR SISTEMA (PREDICTIVO)</h4>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs whitespace-nowrap">
-                            <thead class="bg-white border-b-2 border-slate-200">
-                                <tr>
-                                    <th class="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Avería Sistema</th>
-                                    <th class="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-32">MTBF</th>
-                                    <th class="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Última Avería</th>
-                                    <th class="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Próxima Avería Est.</th>
-                                    <th class="py-3 px-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-32">MTTR</th>
-                                </tr>
-                            </thead>
+                <!-- CINTA 4: TABLAS DE GESTIÓN (TOP 5) -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Atrasados -->
+                    <div class="card-custom-nopad">
+                        <div class="px-6 py-4 border-b border-slate-100"><p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Equipos Atrasados</p></div>
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50"><tr><th class="px-6 py-3 text-slate-400 font-medium">Código</th><th class="px-6 py-3 text-slate-400 font-medium">Tipo</th><th class="px-6 py-3 text-slate-400 font-medium text-right">Días Atraso</th></tr></thead>
                             <tbody>
-                                {% for sys in resumen_sistemas %}
-                                <tr class="border-b border-slate-100 hover:bg-slate-50">
-                                    <td class="py-3 px-4 font-bold text-slate-800">{{ sys.sistema }}</td>
-                                    
-                                    <!-- Visual MTBF -->
-                                    <td class="py-3 px-4">
-                                        <div class="flex items-center gap-2">
-                                            <div class="bar-container flex-1"><div class="bar-fill-green" style="width: {{ sys.mtbf_pct }}%;"></div></div>
-                                            <span class="font-mono text-slate-700 w-12 text-right">{{ sys.mtbf_days }} d</span>
-                                        </div>
-                                    </td>
-                                    
-                                    <td class="py-3 px-4 font-mono text-slate-600">{{ sys.last_date_str }}</td>
-                                    <td class="py-3 px-4 font-mono font-bold text-blue-600">{{ sys.next_date_str }}</td>
-                                    
-                                    <!-- Visual MTTR -->
-                                    <td class="py-3 px-4">
-                                        <div class="flex items-center gap-2">
-                                            <div class="bar-container flex-1"><div class="bar-fill-red" style="width: {{ sys.mttr_pct }}%;"></div></div>
-                                            <span class="font-mono text-slate-700 w-12 text-right">{{ sys.mttr_hours }} h</span>
-                                        </div>
-                                    </td>
-                                </tr>
+                                {% for item in atrasados_top %}
+                                <tr class="border-b border-slate-50"><td class="px-6 py-4 font-medium text-[#1E3A8A]">{{ item.eq.codigo }}</td><td class="px-6 py-4 text-slate-600">{{ item.eq.tipo_equipo }}</td><td class="px-6 py-4 text-right text-slate-800">{{ item.dias|abs }}</td></tr>
                                 {% else %}
-                                <tr><td colspan="5" class="py-6 text-center text-slate-400 font-semibold uppercase">Sin historial suficiente para predicción.</td></tr>
+                                <tr><td colspan="3" class="px-6 py-8 text-center text-slate-400">Sin registros.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Próximos -->
+                    <div class="card-custom-nopad">
+                        <div class="px-6 py-4 border-b border-slate-100"><p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Próximas Mantenciones</p></div>
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50"><tr><th class="px-6 py-3 text-slate-400 font-medium">Código</th><th class="px-6 py-3 text-slate-400 font-medium">Tipo</th><th class="px-6 py-3 text-slate-400 font-medium text-right">Días Restantes</th></tr></thead>
+                            <tbody>
+                                {% for item in proximos_top %}
+                                <tr class="border-b border-slate-50"><td class="px-6 py-4 font-medium text-[#1E3A8A]">{{ item.eq.codigo }}</td><td class="px-6 py-4 text-slate-600">{{ item.eq.tipo_equipo }}</td><td class="px-6 py-4 text-right text-slate-800">{{ item.dias }}</td></tr>
+                                {% else %}
+                                <tr><td colspan="3" class="px-6 py-8 text-center text-slate-400">Sin registros.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Taller -->
+                    <div class="card-custom-nopad">
+                        <div class="px-6 py-4 border-b border-slate-100"><p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Equipos en Taller</p></div>
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50"><tr><th class="px-6 py-3 text-slate-400 font-medium">Código</th><th class="px-6 py-3 text-slate-400 font-medium">Fecha Ingr.</th><th class="px-6 py-3 text-slate-400 font-medium">Estado</th></tr></thead>
+                            <tbody>
+                                {% for item in taller_top %}
+                                <tr class="border-b border-slate-50"><td class="px-6 py-4 font-medium text-[#1E3A8A]">{{ item.codigo }}</td><td class="px-6 py-4 text-slate-600">{{ item.fecha_ingreso }}</td><td class="px-6 py-4 text-slate-800">{{ item.estado }}</td></tr>
+                                {% else %}
+                                <tr><td colspan="3" class="px-6 py-8 text-center text-slate-400">Sin equipos en taller.</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 </div>
-
             </div>
 
-            <!-- 2. EQUIPOS -->
+            <!-- 2. EQUIPOS REGISTRADOS (Con Buscador Ampliado) -->
             <div id="eq" class="seccion">
-                <div class="card-custom-nopad bg-white table-wrapper max-h-[80vh] overflow-y-auto">
+                <div class="card-custom-nopad table-wrapper h-[75vh] overflow-y-auto">
                     <table class="table-custom table-searchable">
-                        <thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Código</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Patente / VIN</th><th>Lectura</th><th>Margen PM</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead>
+                        <thead class="sticky top-0 shadow-sm"><tr><th>Código</th><th>Marca</th><th>Modelo</th><th>Patente / VIN</th><th>Lectura</th><th>Margen PM</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead>
                         <tbody>
                             {% for e in eqs %}
-                            <tr class="{% if e.estado == 'Fuera de Servicio' %}opacity-50 bg-slate-50 grayscale-[50%]{% endif %} hover:bg-slate-50 transition border-b border-slate-100">
-                                <td class="whitespace-nowrap font-bold text-blue-600 cursor-pointer hover:underline uppercase tracking-wide min-w-[80px]" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
-                                <td class="text-xs uppercase font-medium text-slate-600">{{ e.tipo }}</td>
-                                <td class="font-medium text-slate-800">{{ e.marca }}</td>
-                                <td class="font-medium text-slate-800">{{ e.modelo }}</td>
-                                <td><span class="font-mono font-semibold bg-slate-100 px-2 py-1 rounded text-[10px] border border-slate-200 text-slate-700">{{ e.patente }}</span><br><span class="text-[9px] text-slate-500 font-mono font-medium">{{ e.vin }}</span></td>
-                                <td class="font-mono font-medium text-slate-800">{{ e.lectura }}</td>
-                                <td class="font-mono font-bold {% if e.margen < 0 %}text-red-600{% elif e.margen <= 150 %}text-amber-500{% else %}text-emerald-600{% endif %}">{{ e.margen_str }}</td>
-                                <td><span class="px-2 py-1 rounded text-[9px] font-semibold uppercase tracking-wider {% if e.estado == 'Operativo' %}bg-emerald-50 text-emerald-700 border border-emerald-200{% elif e.estado == 'Taller' %}bg-orange-50 text-orange-700 border border-orange-200{% else %}bg-slate-100 text-slate-600 border border-slate-300{% endif %}">{{ e.estado }}</span></td>
-                                <td class="text-right whitespace-nowrap">
+                            <tr>
+                                <!-- Span oculto para que el buscador encuentre Familia, Tipo, Operador y Ubicación sin desordenar la tabla -->
+                                <span class="hidden" data-search>{{ e.tipo }} {{ e.operador }} {{ e.ubicacion }}</span>
+                                <td class="font-medium text-[#1E3A8A] cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
+                                <td>{{ e.marca }}</td>
+                                <td>{{ e.modelo }}</td>
+                                <td class="text-slate-500">{{ e.patente }}<br><span class="text-[10px] text-slate-400">{{ e.vin }}</span></td>
+                                <td>{{ e.lectura }}</td>
+                                <td>{{ e.margen_str }}</td>
+                                <td>{{ e.estado }}</td>
+                                <td class="text-right">
                                     <a href="/api/imprimir_registro/{{e.codigo}}" target="_blank" class="btn-action">Ficha</a>
-                                    <a href="/api/imprimir_filtros/{{e.codigo}}" target="_blank" class="btn-action text-emerald-700 bg-emerald-50 border-emerald-200">Filtros</a>
-                                    <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Equipo {{e.codigo}}', [{db: 'marca', label: 'Marca', val: '{{e.marca}}'},{db: 'modelo', label: 'Modelo', val: '{{e.modelo}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'},{db: 'estado_base', label: 'Estado', val: '{{e.estado}}'}])" class="btn-action text-blue-600">Editar</button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -272,64 +240,65 @@
                 </div>
             </div>
             
-            <!-- 3. FLOTA -->
+            <!-- 3. FLOTA RENDIMIENTO CPK -->
             <div id="flota" class="seccion">
-                <div class="card-custom mb-6 bg-white"><h3 class="font-bold uppercase tracking-widest text-sm text-slate-800">Rendimiento e Indicadores (CPK/CPH)</h3></div>
-                <!-- ... contenido de flota (igual) ... -->
+                <div class="card-custom-nopad table-wrapper h-[75vh] overflow-y-auto">
+                    <table class="table-custom table-searchable">
+                        <thead class="sticky top-0 shadow-sm"><tr><th>Equipo</th><th>Categoría</th><th>Inversión OTs</th><th>Inversión Repuestos</th><th class="bg-slate-50">Costo Total Equipo</th><th class="bg-[#F8FAFC]">Ratio Rendimiento (CPK/CPH)</th></tr></thead>
+                        <tbody>
+                            {% for f in finanzas_flota %}
+                            <tr>
+                                <td class="font-medium text-[#1E3A8A]">{{ f.codigo }}</td>
+                                <td class="text-slate-500">{{ f.tipo }}</td>
+                                <td>{{ f.costo_mants }}</td>
+                                <td>{{ f.costo_compras }}</td>
+                                <td class="bg-slate-50 font-medium">{{ f.costo_str }}</td>
+                                <td class="bg-[#F8FAFC] font-medium text-[#1E3A8A]">{{ f.cpk_cph_str }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            <!-- 4. NEUMÁTICOS -->
-            <div id="neumaticos" class="seccion"><div class="flex flex-col items-center justify-center h-[60vh] text-center px-4"><h2 class="text-xl font-bold text-slate-800 uppercase tracking-tight mb-2">Control de Neumáticos</h2><p class="font-medium text-slate-600 max-w-lg">Módulo en desarrollo para control de ejes y recauchaje.</p></div></div>
-
-            <!-- 5. MAPAS GRID MÚLTIPLE -->
+            <!-- 5. MAPAS GEOLOCALIZACIÓN -->
             <div id="mapa" class="seccion h-full">
-                <div class="flex justify-between items-end mb-6 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                    <div><h2 class="text-base font-bold text-slate-800 uppercase tracking-widest">Geolocalización Logística</h2></div>
-                    <button onclick="document.getElementById('modal-ubicaciones').classList.remove('hidden')" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded font-semibold text-[10px] uppercase tracking-widest transition">Editar Ubicaciones</button>
+                <div class="flex justify-end mb-4">
+                    <button onclick="document.getElementById('modal-ubicaciones').classList.remove('hidden')" class="btn-action">Actualizar Ubicaciones</button>
                 </div>
                 <div id="mapas-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10"></div>
             </div>
 
             <!-- 7. KANBAN Y BOTONES VER PDF -->
             <div id="plan" class="seccion">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <p class="text-[11px] md:text-xs font-bold text-slate-800 uppercase tracking-widest">Ejecución Operativa</p>
-                    <form action="/api/add_record" method="POST" class="flex flex-wrap md:flex-nowrap gap-3 items-end bg-white p-4 rounded-xl border border-slate-200 shadow-sm w-full md:w-auto">
+                <div class="flex justify-between items-end mb-6">
+                    <form action="/api/add_record" method="POST" class="flex gap-4 items-end bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
                         <input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/?tab=plan"><input type="hidden" name="estado" value="Pendiente"><input type="hidden" name="lectura" value="0"><input type="hidden" name="costo" value="0">
-                        <div class="w-full md:w-32"><label class="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div>
-                        <div class="w-full md:w-48"><label class="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-1 block">Pauta / Fallo</label><input list="lista_pautas" name="tipo" class="form-input w-full" required></div>
-                        <button type="submit" class="btn-primary w-full md:w-auto whitespace-nowrap mt-2 md:mt-0">Generar OT</button>
+                        <div><label class="text-[11px] font-medium text-slate-500 block mb-2">Equipo</label><input type="text" name="codigo" class="form-input w-32" required></div>
+                        <div><label class="text-[11px] font-medium text-slate-500 block mb-2">Pauta o Falla</label><input type="text" name="tipo" class="form-input w-64" required></div>
+                        <button type="submit" class="btn-primary">Añadir Tarea</button>
                     </form>
                 </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     {% for estado, col_id in [('Pendiente','kb-pendiente'), ('En Progreso','kb-progreso'), ('En Revisión','kb-revision'), ('Finalizada','kb-completado')] %}
-                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col h-[70vh]">
-                        <div class="flex justify-between items-center mb-3 px-2 border-b border-slate-200 pb-2 shrink-0">
-                            <h3 class="font-bold text-slate-800 text-[11px] uppercase tracking-widest">{{ estado }}</h3>
-                            <span class="bg-slate-800 text-white text-[10px] px-2 py-0.5 rounded font-semibold">{{ kanban[estado]|length }}</span>
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 h-[65vh] flex flex-col">
+                        <div class="flex justify-between items-center border-b border-slate-200 pb-3 mb-4 shrink-0">
+                            <h3 class="font-semibold text-slate-700 text-xs uppercase">{{ estado }}</h3>
+                            <span class="text-xs text-slate-500 font-medium">{{ kanban[estado]|length }}</span>
                         </div>
-                        <div id="{{ col_id }}" class="space-y-3 overflow-y-auto flex-1 hide-scrollbar pb-6" data-status="{{ estado }}">
+                        <div id="{{ col_id }}" class="space-y-4 overflow-y-auto flex-1 hide-scrollbar" data-status="{{ estado }}">
                             {% for t in kanban[estado] %}
-                            <div class="bg-white p-3 rounded shadow-sm border border-slate-200 cursor-grab" data-id="{{ t.id }}">
+                            <div class="bg-white p-4 rounded border border-slate-200 cursor-grab shadow-sm" data-id="{{ t.id }}">
                                 <div class="flex justify-between items-start mb-2">
-                                    <h4 class="font-bold text-slate-900 text-sm uppercase">{{ t.codigo }}</h4>
-                                    <!-- AQUI AGREGAMOS EL BOTÓN DEL PDF Y DEL CHECKLIST JUNTOS -->
-                                    <div class="flex gap-1">
-                                        <a href="/imprimir_ot/{{ t.id }}" target="_blank" class="bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[9px] uppercase px-2 py-1 rounded hover:bg-blue-100 transition shadow-sm">Ver PDF</a>
-                                        <button onclick="abrirChecklist('{{t.id}}', '{{t.codigo}}', '{{t.tipo}}')" class="bg-white border border-slate-300 text-slate-700 font-semibold text-[9px] uppercase px-2 py-1 rounded hover:bg-slate-50 transition shadow-sm">Firmar</button>
-                                    </div>
+                                    <h4 class="font-medium text-slate-800 text-sm">{{ t.codigo }}</h4>
+                                    <!-- BOTÓN PDF CORREGIDO -->
+                                    <a href="/imprimir_ot/{{ t.id }}" target="_blank" class="text-[10px] font-medium text-[#2563EB] hover:underline">Ver PDF</a>
                                 </div>
-                                <div class="mb-2"><span class="text-[10px] px-2 py-0.5 rounded font-semibold uppercase border {% if t.clasificacion=='Preventiva' %}bg-blue-50 text-blue-700 border-blue-200{% else %}bg-red-50 text-red-700 border-red-200{% endif %}">{{ t.clasificacion }}</span></div>
-                                <!-- AQUÍ QUITAMOS EL LÍMITE DE 45 CARACTERES, AHORA MUESTRA TODO EL DETALLE -->
-                                <p class="text-[11px] text-slate-700 font-medium mb-3 line-clamp-3" title="{{ t.tipo }}">{{ t.tipo }}</p>
-                                <select class="kanban-mecanico-sel w-full text-[10px] border border-slate-300 rounded p-1 mb-2 font-medium text-slate-800" data-id="{{ t.id }}">
-                                    <option value="Sin Asignar">Mecánico Sin Asignar</option>
-                                    {% for m in mecanicos %}<option value="{{ m.nombre }}" {% if t.mecanico == m.nombre %}selected{% endif %}>{{ m.nombre }}</option>{% endfor %}
-                                </select>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] font-mono font-medium text-slate-500">{{ t.fecha }}</span>
-                                    <button onclick="borrarRegistro('ot', '{{t.id}}')" class="text-[10px] text-red-500 hover:text-red-700 font-semibold uppercase">Borrar</button>
+                                <span class="text-[10px] text-slate-500 mb-2 block">{{ t.clasificacion }}</span>
+                                <p class="text-xs text-slate-700 mb-4 line-clamp-3">{{ t.tipo }}</p>
+                                <div class="flex justify-between items-center border-t border-slate-100 pt-3">
+                                    <span class="text-[10px] text-slate-400">{{ t.fecha }}</span>
+                                    <button onclick="borrarRegistro('ot', '{{t.id}}')" class="text-[10px] text-red-400 hover:text-red-600">Eliminar</button>
                                 </div>
                             </div>
                             {% endfor %}
@@ -339,101 +308,97 @@
                 </div>
             </div>
 
-            <!-- 8. CALENDARIO ESTILO MIRRO -->
+            <!-- 8. CALENDARIO -->
             <div id="cal" class="seccion h-full">
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-8 flex flex-col h-[calc(100vh-120px)]">
-                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-6 border-b border-slate-100 pb-2">Planificación de Pautas</h3>
+                <div class="card-custom h-[80vh] flex flex-col">
                     <div id="calendar" class="flex-1 w-full h-full"></div>
                 </div>
             </div>
 
             <!-- 9. PREVENTIVAS -->
             <div id="ot" class="seccion">
-                <div class="card-custom mb-6 bg-white"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/?tab=ot"><div class="min-w-[120px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="min-w-[120px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Folio</label><input type="text" name="folio" class="form-input font-mono"></div><div class="min-w-[120px] flex-[2]"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Pauta</label><input list="lista_pautas" name="tipo" class="form-input" required></div><div class="min-w-[100px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Odo/Hor.</label><input type="number" name="lectura" class="form-input font-mono"></div><div class="min-w-[100px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Costo CLP</label><input type="number" name="costo" class="form-input font-mono" required></div><button type="submit" class="btn-primary mb-1">Registrar PM</button></form></div>
-                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Intervención</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mants_prev %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td><span class="font-medium text-slate-800">{{ m.fecha }}</span><br><span class="text-[10px] font-mono text-slate-500">{{ m.ot_generada }}</span></td><td class="font-bold text-blue-600 uppercase">{{ m.codigo }}</td><td class="font-medium text-slate-800">{{ m.tipo_mantencion }}</td><td class="text-xs font-medium text-slate-700">{{ m.mecanico }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.lectura_str }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.costo_str }}</td><td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-semibold uppercase border border-slate-200 text-slate-700">{{ m.estado }}</span></td>
-                <!-- BOTÓN PDF AÑADIDO -->
-                <td class="text-right whitespace-nowrap"><a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action text-blue-700 border-blue-200 bg-white hover:bg-blue-50">Ver PDF</a><button onclick="borrarRegistro('ot', '{{m.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Borrar</button></td></tr>{% endfor %}</tbody></table></div>
+                <div class="card-custom-nopad table-wrapper h-[80vh] overflow-y-auto">
+                    <table class="table-custom table-searchable">
+                        <thead class="sticky top-0 shadow-sm"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Intervención</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Doc</th></tr></thead>
+                        <tbody>{% for m in mants_prev %}<tr>
+                            <td class="text-slate-500">{{ m.fecha }}<br><span class="text-[10px]">{{ m.ot_generada }}</span></td>
+                            <td class="font-medium text-[#1E3A8A]">{{ m.codigo }}</td><td>{{ m.tipo_mantencion }}</td><td>{{ m.mecanico }}</td><td>{{ m.lectura_str }}</td><td>{{ m.costo_str }}</td><td>{{ m.estado }}</td>
+                            <td class="text-right"><a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action">Ver PDF</a></td>
+                        </tr>{% endfor %}</tbody>
+                    </table>
+                </div>
             </div>
             
             <!-- 10. CORRECTIVAS -->
             <div id="ot_corr" class="seccion">
-                <div class="card-custom mb-6 bg-white"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="referer" value="/?tab=ot_corr"><div class="min-w-[120px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="min-w-[150px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Sistema Falla</label><select name="sistema_falla" class="form-input"><option value="Motor">Motor</option><option value="Hidráulico">Hidráulico</option><option value="Eléctrico">Eléctrico</option><option value="Frenos">Frenos</option><option value="Estructura">Estructura</option><option value="Neumáticos">Neumáticos</option></select></div><div class="min-w-[150px] flex-[2]"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Diagnóstico / Causa</label><input type="text" name="causa_raiz" class="form-input" required></div><div class="min-w-[100px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Folio</label><input type="text" name="folio" class="form-input font-mono"></div><button type="submit" class="btn-danger mb-1">Reportar Avería</button></form></div>
-                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Sistema</th><th>Causa Raíz</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>{% for m in mants_corr %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td><span class="font-medium text-slate-800">{{ m.fecha }}</span><br><span class="text-[10px] font-mono text-slate-500">{{ m.ot_generada }}</span></td><td class="font-bold text-red-600 uppercase">{{ m.codigo }}</td><td class="font-semibold text-[11px] uppercase text-slate-700">{{ m.sistema_falla }}</td><td class="font-medium text-slate-800">{{ m.causa_raiz }}</td><td class="text-xs font-medium text-slate-700">{{ m.mecanico }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.lectura_str }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.costo_str }}</td><td><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-[9px] font-semibold uppercase border border-slate-200">{{ m.estado }}</span></td>
-                <!-- BOTÓN PDF AÑADIDO -->
-                <td class="text-right whitespace-nowrap"><a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action text-blue-700 border-blue-200 bg-white hover:bg-blue-50">Ver PDF</a><button onclick="borrarRegistro('ot', '{{m.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Borrar</button></td></tr>{% endfor %}</tbody></table></div>
+                <div class="card-custom-nopad table-wrapper h-[80vh] overflow-y-auto">
+                    <table class="table-custom table-searchable">
+                        <thead class="sticky top-0 shadow-sm"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Sistema</th><th>Causa Raíz</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Doc</th></tr></thead>
+                        <tbody>{% for m in mants_corr %}<tr>
+                            <td class="text-slate-500">{{ m.fecha }}<br><span class="text-[10px]">{{ m.ot_generada }}</span></td>
+                            <td class="font-medium text-[#1E3A8A]">{{ m.codigo }}</td><td>{{ m.sistema_falla }}</td><td>{{ m.causa_raiz }}</td><td>{{ m.mecanico }}</td><td>{{ m.lectura_str }}</td><td>{{ m.costo_str }}</td><td>{{ m.estado }}</td>
+                            <td class="text-right"><a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action">Ver PDF</a></td>
+                        </tr>{% endfor %}</tbody>
+                    </table>
+                </div>
             </div>
 
-            <!-- 11. LECTURAS -->
+            <!-- 11. INGRESO DE LECTURAS (Conductor Asignado Automáticamente de la BD) -->
             <div id="lec" class="seccion">
-                <div class="card-custom mb-6 bg-white"><form action="/api/add_record" method="POST" class="flex gap-4 items-end"><input type="hidden" name="tabla" value="lectura"><input type="hidden" name="referer" value="/?tab=lec"><div class="flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="flex-[2]"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Valor (Auto HR/KM)</label><input type="number" name="valor" class="form-input font-mono text-base" required></div><button type="submit" class="btn-primary mb-1">Guardar</button></form></div>
-                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha Captura</th><th>Equipo</th><th>Categoría</th><th>Valor Técnico</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for l in lecturas %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td class="font-medium text-xs text-slate-800">{{ l.fecha }}</td><td class="font-bold text-blue-600 uppercase">{{ l.codigo }}</td><td class="text-[11px] uppercase font-semibold text-slate-600">{{ l.tipo_equipo }}</td><td class="font-mono font-bold text-base text-slate-900">{{ l.valor_str }} <span class="text-[10px] font-sans font-medium text-slate-500">{{ l.tipo }}</span></td><td class="text-right"><button onclick="borrarRegistro('lectura', '{{l.id}}')" class="btn-action text-red-600 bg-white border-red-200 hover:bg-red-50">Eliminar</button></td></tr>{% endfor %}</tbody></table></div>
+                <div class="mb-6"><form action="/api/add_record" method="POST" class="flex gap-4 items-end bg-white p-6 rounded border border-slate-200 shadow-sm">
+                    <input type="hidden" name="tabla" value="lectura"><input type="hidden" name="referer" value="/?tab=lec">
+                    <div><label class="text-[11px] font-medium text-slate-500 block mb-2">Equipo</label><input type="text" name="codigo" class="form-input w-32" required></div>
+                    <div><label class="text-[11px] font-medium text-slate-500 block mb-2">Valor (HR/KM)</label><input type="number" name="valor" class="form-input w-48" required></div>
+                    <div>
+                        <label class="text-[11px] font-medium text-slate-500 block mb-2">Responsable / Conductor</label>
+                        <select name="responsable" class="form-input w-64">
+                            <option value="Sistema">Seleccionar...</option>
+                            {% for op in operadores %}
+                            <option value="{{ op.nombre }}">{{ op.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary">Registrar Lectura</button>
+                </form></div>
+                <div class="card-custom-nopad table-wrapper h-[65vh] overflow-y-auto"><table class="table-custom table-searchable">
+                    <thead class="sticky top-0 shadow-sm"><tr><th>Fecha Captura</th><th>Equipo</th><th>Categoría</th><th>Valor Técnico</th><th>Responsable</th></tr></thead>
+                    <tbody>{% for l in lecturas %}<tr>
+                        <td class="text-slate-500">{{ l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else '' }}</td>
+                        <td class="font-medium text-[#1E3A8A]">{{ l.codigo_equipo }}</td><td>{{ l.tipo_equipo }}</td>
+                        <td class="font-medium">{{ "{:,.0f}".format(l.horometro or l.kilometraje or 0).replace(',', '.') }}</td>
+                        <td class="text-slate-600">{{ l.responsable }}</td>
+                    </tr>{% endfor %}</tbody>
+                </table></div>
             </div>
 
-            <!-- 12. BODEGA -->
-            <div id="bodega" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Código SKU</th><th>Descripción de Artículo</th><th>Categoría</th><th>Stock Actual</th><th>Ubicación</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for b in bodega %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td class="font-mono text-xs font-medium text-slate-500">{{ b.codigo_item or '-' }}</td><td class="font-medium text-slate-800">{{ b.nombre }}</td><td class="text-[11px] font-semibold uppercase text-slate-600">{{ b.categoria }}</td><td class="font-mono font-bold text-blue-600 text-base">{{ b.cantidad }}</td><td class="text-xs font-medium text-slate-700">{{ b.ubicacion }}</td><td class="text-right"><button onclick="borrarRegistro('bodega', '{{b.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Borrar</button></td></tr>{% endfor %}</tbody></table></div></div>
-            
-            <!-- 13. COMPRAS -->
-            <div id="compras" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha</th><th>N° OC</th><th>Equipo</th><th>Detalle</th><th>Inversión</th><th class="text-right">Acción</th></tr></thead><tbody>{% for c in compras %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td class="font-medium text-xs text-slate-800">{{ c.fecha }}</td><td class="font-mono font-medium text-xs text-slate-600">{{ c.oc }}</td><td class="font-bold text-blue-600 uppercase">{{ c.codigo }}</td><td class="font-medium text-slate-800">{{ c.descripcion }}</td><td class="font-mono font-medium text-slate-900">{{ c.costo_str }}</td><td class="text-right"><button onclick="borrarRegistro('compra', '{{c.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Anular</button></td></tr>{% endfor %}</tbody></table></div></div>
-            
-            <!-- 14. FINANZAS -->
-            <div id="finanzas" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[70vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Código</th><th>Categoría</th><th>Inversión (Mants)</th><th>Inversión (Insumos/OC)</th><th class="bg-slate-50 text-slate-900">Costo Total Equipo</th></tr></thead><tbody>{% for f in finanzas_flota %}<tr class="hover:bg-slate-50 border-b border-slate-100"><td class="font-bold text-blue-600 text-xs uppercase">{{ f.codigo }}</td><td class="text-[10px] uppercase font-semibold text-slate-500">{{ f.tipo }}</td><td class="font-mono font-medium text-slate-700">{{ f.costo_mants }}</td><td class="font-mono font-medium text-slate-700">{{ f.costo_compras }}</td><td class="font-mono font-bold text-slate-900 bg-slate-50/50 border-l border-slate-200">{{ f.costo_str }}</td></tr>{% endfor %}</tbody></table></div></div>
-            
-            <!-- 15. REPORTES -->
-            <div id="reportes" class="seccion">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center text-center"><h4 class="font-bold text-slate-800 uppercase tracking-widest mb-4 mt-2">Base de Datos (Excel)</h4><a href="/api/exportar/excel_maestro" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs uppercase tracking-widest py-3 px-6 rounded-lg transition w-full">Descargar Excel (.xlsx)</a></div><div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center text-center"><h4 class="font-bold text-slate-800 uppercase tracking-widest mb-4 mt-2">Reporte Gerencial (PDF)</h4><button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs uppercase tracking-widest py-3 px-6 rounded-lg transition w-full">Imprimir / Guardar PDF</button></div></div>
+            <!-- 12. BODEGA E INVENTARIO -->
+            <div id="bodega" class="seccion">
+                <div class="card-custom-nopad table-wrapper h-[80vh] overflow-y-auto">
+                    <table class="table-custom table-searchable">
+                        <thead class="sticky top-0 shadow-sm"><tr><th>Código SKU</th><th>Descripción de Artículo</th><th>Categoría</th><th>Stock Actual</th><th>Ubicación</th></tr></thead>
+                        <tbody>{% for b in bodega %}<tr>
+                            <td class="text-slate-500">{{ b.codigo_item or '-' }}</td>
+                            <td class="font-medium text-slate-800">{{ b.nombre }}</td>
+                            <td>{{ b.categoria }}</td>
+                            <td class="font-medium">{{ b.cantidad }}</td>
+                            <td>{{ b.ubicacion }}</td>
+                        </tr>{% endfor %}</tbody>
+                    </table>
+                </div>
             </div>
             
-            <!-- 16. POWER BI -->
-            <div id="powerbi" class="seccion">
-                <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-4xl mx-auto"><h4 class="font-bold text-slate-800 uppercase tracking-widest mb-4">Conexión Power BI (API)</h4><input type="text" readonly value="https://demotron.cl/api/powerbi/dataset?token=demotron_pbi_2026" class="form-input bg-slate-50 font-mono text-xs font-semibold text-blue-600 w-full p-3 mb-4" id="pbi-url"><button onclick="navigator.clipboard.writeText(document.getElementById('pbi-url').value); alert('Copiado');" class="bg-slate-800 text-white px-6 py-2 rounded font-semibold uppercase text-[10px] tracking-widest hover:bg-slate-900 transition">Copiar URL API</button></div>
-            </div>
-
-            <!-- 17. AUTOMATIZACION -->
-            <div id="automatizacion" class="seccion">
-                <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-2xl mx-auto"><form action="/api/guardar_programacion" method="POST" class="space-y-6"><div><label class="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-2 block">Destinatarios</label><input type="text" name="correos" placeholder="ej: gerencia@demotron.cl" class="form-input" required></div><div><label class="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-2 block">Frecuencia</label><select name="frecuencia" class="form-input"><option value="diario">Diario</option><option value="semanal" selected>Semanal</option></select></div><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs uppercase tracking-widest py-3 rounded-lg transition">Guardar Programación</button></form></div>
-            </div>
-
-            <!-- 18. OPERADORES -->
-            <div id="cond" class="seccion"><div class="card-custom-nopad bg-white flex flex-col"><div class="table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Operador</th><th>Máquina Asignada</th><th>Cargo</th><th>Status</th><th class="text-right">Acción</th></tr></thead><tbody>{% for op in operadores %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td class="font-semibold text-slate-800">{{ op.nombre }}</td><td class="font-bold text-blue-600 uppercase">{{ op.equipo_asignado }}</td><td class="text-[11px] uppercase font-medium text-slate-600">{{ op.cargo }}</td><td><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-[9px] font-semibold uppercase border border-slate-200">{{ op.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('personal', '{{op.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Desvincular</button></td></tr>{% endfor %}</tbody></table></div></div></div>
-            
-            <!-- 19. MECÁNICOS -->
-            <div id="mecanicos" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>RUT Oficial</th><th>Nombre Técnico</th><th>Especialidad</th><th>Status</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mecanicos %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td class="font-mono text-[11px] font-medium text-slate-500">{{ m.rut or 'S/I' }}</td><td class="font-semibold text-slate-800">{{ m.nombre }}</td><td class="text-[11px] uppercase font-medium text-slate-600">{{ m.especialidad }}</td><td><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-[9px] font-semibold uppercase border border-slate-200">{{ m.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Desvincular</button></td></tr>{% endfor %}</tbody></table></div></div>
+            <!-- Resto de módulos secundarios sin cambios de estructura profunda, solo heredan estilo -->
+            <div id="compras" class="seccion"><div class="card-custom-nopad table-wrapper h-[80vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 shadow-sm"><tr><th>Fecha</th><th>N° OC</th><th>Equipo</th><th>Detalle</th><th>Inversión</th></tr></thead><tbody>{% for c in compras %}<tr><td>{{ c.fecha.strftime('%d/%m/%Y') if c.fecha else '' }}</td><td class="text-slate-500">{{ c.oc }}</td><td class="font-medium text-[#1E3A8A]">{{ c.codigo_equipo }}</td><td>{{ c.descripcion }}</td><td>{{ "$ {:,.0f}".format(c.costo_pm_clp or 0).replace(',', '.') }}</td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="reportes" class="seccion"><div class="grid grid-cols-2 gap-6"><div class="card-custom text-center"><p class="text-sm font-medium mb-4">Base de Datos</p><a href="/api/exportar/excel_maestro" class="btn-primary">Descargar Excel (.xlsx)</a></div><div class="card-custom text-center"><p class="text-sm font-medium mb-4">Reporte Gerencial</p><button onclick="window.print()" class="btn-primary bg-slate-800">Imprimir PDF</button></div></div></div>
+            <div id="powerbi" class="seccion"><div class="card-custom max-w-2xl"><p class="text-sm font-medium mb-4">Conexión API</p><input type="text" readonly value="https://demotron.cl/api/powerbi/dataset" class="form-input mb-4" id="pbi-url"><button onclick="navigator.clipboard.writeText(document.getElementById('pbi-url').value); alert('Copiado');" class="btn-primary">Copiar URL</button></div></div>
+            <div id="automatizacion" class="seccion"><div class="card-custom max-w-2xl"><form action="/api/guardar_programacion" method="POST" class="space-y-4"><div><label class="block text-xs font-medium text-slate-500 mb-2">Correos</label><input type="text" name="correos" class="form-input"></div><div><label class="block text-xs font-medium text-slate-500 mb-2">Frecuencia</label><select name="frecuencia" class="form-input"><option value="semanal">Semanal</option></select></div><button type="submit" class="btn-primary">Guardar</button></form></div></div>
+            <div id="cond" class="seccion"><div class="card-custom-nopad table-wrapper h-[80vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 shadow-sm"><tr><th>Operador</th><th>Máquina Asignada</th><th>Cargo</th><th>Status</th></tr></thead><tbody>{% for op in operadores %}<tr><td class="font-medium">{{ op.nombre }}</td><td class="text-[#1E3A8A]">{{ op.equipo_asignado }}</td><td>{{ op.cargo }}</td><td>{{ op.estado }}</td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="mecanicos" class="seccion"><div class="card-custom-nopad table-wrapper h-[80vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 shadow-sm"><tr><th>Nombre Técnico</th><th>Especialidad</th><th>Status</th></tr></thead><tbody>{% for m in mecanicos %}<tr><td class="font-medium">{{ m.nombre }}</td><td>{{ m.especialidad }}</td><td>{{ m.estado }}</td></tr>{% endfor %}</tbody></table></div></div>
         </div>
     </main>
 
-    <!-- MODALES EXTRAS Y CHECKLIST -->
-    <div id="checklist-modal" class="fixed inset-0 bg-slate-900/90 z-50 hidden flex flex-col items-center justify-center p-2 md:p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
-            <div class="p-4 bg-slate-800 flex justify-between items-center shrink-0">
-                <div>
-                    <h3 class="font-bold text-white uppercase text-sm">CHECKLIST Y FIRMA</h3>
-                    <p id="check-ot-title" class="text-[11px] text-blue-300 font-bold uppercase mt-1"></p>
-                </div>
-                <button onclick="document.getElementById('checklist-modal').classList.add('hidden')" class="text-slate-400 hover:text-white text-2xl">&times;</button>
-            </div>
-            <div class="p-5 flex-1 overflow-y-auto space-y-4 bg-slate-50">
-                <div class="bg-slate-200 p-4 rounded-lg border border-slate-300 shadow-inner">
-                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Detalle Técnico / Filtros:</p>
-                    <p id="check-ot-desc" class="text-xs font-semibold text-slate-800 leading-relaxed"></p>
-                </div>
-                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                    <label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded border-slate-300"><span class="text-xs font-semibold text-slate-800 uppercase">Niveles Fluidos OK</span></label>
-                    <label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded border-slate-300"><span class="text-xs font-semibold text-slate-800 uppercase">Cero Fugas</span></label>
-                    <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded border-slate-300"><span class="text-xs font-semibold text-slate-800 uppercase">Prueba Test</span></label>
-                </div>
-                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                    <div class="flex justify-between items-end mb-2">
-                        <h4 class="text-[10px] font-semibold text-slate-600 uppercase">Firma Técnico</h4>
-                        <button onclick="clearPad()" class="text-[9px] font-semibold text-red-500 uppercase hover:text-red-700">Borrar</button>
-                    </div>
-                    <canvas id="signature-pad" width="350" height="120" class="w-full bg-slate-50 border border-slate-200 rounded"></canvas>
-                </div>
-            </div>
-            <div class="p-4 bg-white shrink-0 border-t border-slate-200">
-                <button onclick="firmarYCerrarOT()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-semibold uppercase transition">Terminar y Firmar</button>
-            </div>
-        </div>
-    </div>
+    <!-- Modal Ubicaciones -->
+    <div id="modal-ubicaciones" class="fixed inset-0 bg-slate-900/80 z-[500] hidden flex items-center justify-center p-4"><div class="bg-white w-full max-w-2xl rounded shadow-lg overflow-hidden"><div class="p-4 border-b border-slate-200 flex justify-between"><h3 class="font-medium">Coordenadas y Ubicaciones</h3><button onclick="document.getElementById('modal-ubicaciones').classList.add('hidden')">&times;</button></div><div class="p-4 overflow-y-auto max-h-[60vh]"><table class="w-full text-xs"><tbody>{% for e in eqs %}<tr><td class="py-2">{{ e.codigo }}</td><td><input type="text" class="form-input p-1 h-8 ubicacion-editable" data-codigo="{{ e.codigo }}" value="{{ e.ubicacion if e.ubicacion != 'None' else '' }}"></td></tr>{% endfor %}</tbody></table></div><div class="p-4 border-t border-slate-200 flex justify-end"><button onclick="guardarUbicacionesMasa()" id="btn-save-map" class="btn-primary">Guardar</button></div></div></div>
 
     <script>
         function toggleMenu() {
@@ -447,52 +412,110 @@
             document.getElementById(t).classList.add('active'); if(el) el.classList.add('active'); document.getElementById('title').innerText = el ? el.innerText.trim() : 'DEMOTRON';
             const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + t; window.history.replaceState({path:newUrl}, '', newUrl);
             if(window.innerWidth < 768) { document.getElementById('sidebar').classList.add('-translate-x-full'); document.getElementById('sidebar-backdrop').classList.add('hidden'); }
+            if(t==='cal' && window.calendar) { setTimeout(() => window.calendar.render(), 200); }
+            if(t==='mapa') { setTimeout(() => initMapGrid(), 100); }
         }
 
-        // --- INICIALIZACIÓN MUNDIAL Y GRÁFICOS PREDICTIVOS ---
-        const kpisData = {{ kpis|tojson }};
+        // BUSCADOR CORPORATIVO: Busca en todo el HTML interno de la fila.
+        function filtrarTablas(q) { 
+            q = q.toLowerCase(); 
+            document.querySelector('.seccion.active').querySelectorAll('.table-searchable tbody tr').forEach(r => { 
+                r.style.display = r.innerText.toLowerCase().includes(q) || (r.querySelector('[data-search]') && r.querySelector('[data-search]').innerText.toLowerCase().includes(q)) ? '' : 'none'; 
+            }); 
+        }
+        function borrarRegistro(tabla, id) { if(confirm('¿Confirma la eliminación permanente?')) fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' }).then(() => location.reload()); }
+
+        // MAPAS
+        let mapasInstances = [];
+        const equiposData = {{ eqs|tojson }};
+        function initMapGrid() {
+            if (mapasInstances.length > 0) return; // Evitar recargas si ya se instanció
+            const grid = document.getElementById('mapas-grid'); grid.innerHTML = '';
+            
+            let grouped = {};
+            equiposData.forEach(eq => { if(eq.estado !== 'Fuera de Servicio') { let loc = eq.ubicacion || 'CASA MATRIZ'; if(!grouped[loc]) grouped[loc] = []; grouped[loc].push(eq); }});
+
+            let mapIndex = 0;
+            for (let loc in grouped) {
+                let mapId = "map_box_" + mapIndex++;
+                let cardHtml = `<div class="card-custom-nopad h-72 flex flex-col"><div class="bg-slate-50 p-3 border-b border-slate-100 flex justify-between items-center"><h3 class="font-medium text-xs truncate max-w-[70%]">${loc.toUpperCase()}</h3><span class="text-[10px] text-slate-500">${grouped[loc].length} equipos</span></div><div id="${mapId}" class="flex-1 w-full bg-slate-100 z-0"></div></div>`;
+                grid.insertAdjacentHTML('beforeend', cardHtml);
+                
+                // Coordenada base provisional
+                let coords = [-35.4264, -71.6554];
+                let map = L.map(mapId, { zoomControl: false }).setView(coords, 14); L.control.zoom({ position: 'bottomleft' }).addTo(map);
+                L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(map);
+                mapasInstances.push(map);
+
+                grouped[loc].forEach((eq, idx) => {
+                    let dLat = 0.0005 * Math.cos(idx); let dLng = 0.0005 * Math.sin(idx);
+                    let iconHtml = `<div class="bg-white border border-[#1E3A8A] text-slate-800 font-medium text-[9px] px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">${eq.codigo}</div>`;
+                    let icon = L.divIcon({ html: iconHtml, className: 'leaflet-div-icon' });
+                    L.marker([coords[0] + dLat, coords[1] + dLng], {icon: icon}).bindPopup(`<a href="/equipo/${eq.codigo}" target="_blank" class="text-[#2563EB] text-[10px] hover:underline font-medium">${eq.codigo}</a>`).addTo(map);
+                });
+                setTimeout(() => map.invalidateSize(), 300);
+            }
+        }
+        function guardarUbicacionesMasa() {
+            let cambios = [];
+            document.querySelectorAll('.ubicacion-editable').forEach(inp => { if(inp.value !== inp.defaultValue) cambios.push({codigo: inp.dataset.codigo, ubicacion: inp.value}); });
+            if(cambios.length === 0) return;
+            fetch('/api/actualizar_ubicaciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cambios: cambios }) }).then(() => location.reload());
+        }
+
+        // DATOS PARA GRÁFICOS (Recibidos del Backend)
+        const cinta2 = {{ cinta2|tojson }};
+        const cinta3 = {{ cinta3|tojson }};
+        const eventos_calendario = {{ eventos_calendario|tojson }};
         
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             const tabActiva = urlParams.get('tab');
             if (tabActiva) { const link = document.querySelector(`a[onclick*="switchTab('${tabActiva}'"]`); if (link) switchTab(tabActiva, link); }
 
+            if (typeof Sortable !== 'undefined') {
+                ['kb-pendiente', 'kb-progreso', 'kb-revision', 'kb-completado'].forEach(col => {
+                    const el = document.getElementById(col);
+                    if(el) new Sortable(el, { group: 'kanban', animation: 150, onEnd: function (evt) { fetch('/api/cambiar_estado_ot/' + evt.item.getAttribute('data-id'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: evt.to.getAttribute('data-status') }) }).then(() => location.reload()); }});
+                });
+            }
+
+            if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
+                window.calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+                    initialView: 'dayGridMonth', locale: 'es', height: '100%', headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
+                    events: eventos_calendario
+                });
+            }
+
+            // GRÁFICOS CORPORATIVOS (PALETA AZUL ESTRICTA)
             if (typeof Chart !== 'undefined') {
                 Chart.defaults.font.family = "'Inter', sans-serif"; 
-                Chart.defaults.color = '#0F172A'; 
-                Chart.defaults.font.weight = '600';
+                Chart.defaults.color = '#475569'; 
                 
-                // Gráfico 1: MTBF
-                if(document.getElementById('chartMTBF') && kpisData.chart_labels.length > 0) {
-                    new Chart(document.getElementById('chartMTBF').getContext('2d'), {
-                        type: 'bar',
-                        data: {
-                            labels: kpisData.chart_labels,
-                            datasets: [{
-                                label: 'MTBF (Días)',
-                                data: kpisData.chart_mtbf,
-                                backgroundColor: '#5CB85C',
-                                borderRadius: 2
-                            }]
-                        },
-                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }
+                const bluePalette = ['#1E3A8A', '#2563EB', '#60A5FA', '#93C5FD', '#BFDBFE'];
+
+                if(document.getElementById('chartCompras')) {
+                    new Chart(document.getElementById('chartCompras').getContext('2d'), {
+                        type: 'line', data: { labels: cinta2.compras_labels, datasets: [{ label: 'Inversión', data: cinta2.compras_data, borderColor: '#2563EB', backgroundColor: 'rgba(37, 99, 235, 0.1)', fill: true, tension: 0.3 }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, border: { dash: [4, 4] } } } }
                     });
                 }
-
-                // Gráfico 2: MTTR
-                if(document.getElementById('chartMTTR') && kpisData.chart_labels.length > 0) {
+                if(document.getElementById('chartEstados')) {
+                    new Chart(document.getElementById('chartEstados').getContext('2d'), {
+                        type: 'doughnut', data: { labels: cinta2.estados_labels, datasets: [{ data: cinta2.estados_data, backgroundColor: bluePalette, borderWidth: 0 }] },
+                        options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, usePointStyle: true } } } }
+                    });
+                }
+                if(document.getElementById('chartMTBF')) {
+                    new Chart(document.getElementById('chartMTBF').getContext('2d'), {
+                        type: 'bar', data: { labels: cinta3.labels, datasets: [{ label: 'MTBF (Días)', data: cinta3.mtbf, backgroundColor: '#1E3A8A', borderRadius: 4 }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, border: { dash: [4, 4] } } } }
+                    });
+                }
+                if(document.getElementById('chartMTTR')) {
                     new Chart(document.getElementById('chartMTTR').getContext('2d'), {
-                        type: 'bar',
-                        data: {
-                            labels: kpisData.chart_labels,
-                            datasets: [{
-                                label: 'MTTR (Horas)',
-                                data: kpisData.chart_mttr,
-                                backgroundColor: '#D9534F',
-                                borderRadius: 2
-                            }]
-                        },
-                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }
+                        type: 'bar', data: { labels: cinta3.labels, datasets: [{ label: 'MTTR (Horas)', data: cinta3.mttr, backgroundColor: '#60A5FA', borderRadius: 4 }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, border: { dash: [4, 4] } } } }
                     });
                 }
             }
