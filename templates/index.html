@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ERP CMMS DEMOTRON</title>
-    <!-- Favicon -->
     <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -41,7 +40,6 @@
         .btn-action { font-size: 11px; font-weight: 500; padding: 6px 12px; border-radius: 4px; border: 1px solid #CBD5E1; transition: all 0.2s; margin-right: 8px; display:inline-block; color: #475569; text-decoration: none; cursor: pointer; background: white;}
         .btn-action:hover { background-color: #F1F5F9; color: #0F172A; }
         
-        /* Utilidades */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -61,7 +59,7 @@
             <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard Predictivo</a>
             
             <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Logística de Flota</p>
-            <a onclick="switchTab('eq', this)" class="nav-link">Equipos y Activos</a>
+            <a onclick="switchTab('eq', this)" class="nav-link">Equipos</a>
             <a onclick="switchTab('flota', this)" class="nav-link">Rendimiento (CPK)</a>
             <a onclick="switchTab('mapa', this)" class="nav-link">Geolocalización Logística</a>
             
@@ -88,7 +86,6 @@
     </aside>
 
     <main class="flex-1 flex flex-col min-w-0 w-full">
-        <!-- HEADER -->
         <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-10 shadow-sm">
             <div class="flex items-center gap-4">
                 <button onclick="toggleMenu()" class="md:hidden text-slate-800 text-2xl focus:outline-none">≡</button>
@@ -102,7 +99,6 @@
             <!-- 1. DASHBOARD PRINCIPAL CORPORATIVO -->
             <div id="dash" class="seccion active">
                 
-                <!-- CINTA 1: KPIs AUTOMÁTICOS -->
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 mb-8">
                     <div class="card-custom text-center">
                         <p class="text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Estado Flota</p>
@@ -131,7 +127,6 @@
                     </div>
                 </div>
 
-                <!-- CINTA 2: COMPRAS, ESTADO, GASTOS -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                     <div class="card-custom h-72 flex flex-col">
                         <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Compras Realizadas (Inversión)</p>
@@ -157,7 +152,6 @@
                     </div>
                 </div>
 
-                <!-- CINTA 3: CONFIABILIDAD MTBF Y MTTR -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div class="card-custom h-80 flex flex-col">
                         <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Mean Time Between Failures (Días por Marca)</p>
@@ -169,9 +163,7 @@
                     </div>
                 </div>
 
-                <!-- CINTA 4: TABLAS DE GESTIÓN (TOP 5) -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    <!-- Atrasados -->
                     <div class="card-custom-nopad overflow-x-auto">
                         <div class="px-6 py-4 border-b border-slate-100"><p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Equipos Atrasados</p></div>
                         <table class="w-full text-left text-xs whitespace-nowrap">
@@ -185,7 +177,6 @@
                             </tbody>
                         </table>
                     </div>
-                    <!-- Próximos -->
                     <div class="card-custom-nopad overflow-x-auto">
                         <div class="px-6 py-4 border-b border-slate-100"><p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Próximas Mantenciones</p></div>
                         <table class="w-full text-left text-xs whitespace-nowrap">
@@ -199,7 +190,6 @@
                             </tbody>
                         </table>
                     </div>
-                    <!-- Taller -->
                     <div class="card-custom-nopad overflow-x-auto">
                         <div class="px-6 py-4 border-b border-slate-100"><p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Equipos en Taller</p></div>
                         <table class="w-full text-left text-xs whitespace-nowrap">
@@ -216,7 +206,7 @@
                 </div>
             </div>
 
-            <!-- 2. EQUIPOS REGISTRADOS (Con Buscador Ampliado) -->
+            <!-- 2. EQUIPOS REGISTRADOS (CON BOTONES RESTAURADOS) -->
             <div id="eq" class="seccion">
                 <div class="card-custom-nopad table-wrapper h-[75vh] overflow-y-auto">
                     <table class="table-custom table-searchable">
@@ -224,9 +214,8 @@
                         <tbody>
                             {% for e in eqs %}
                             <tr>
-                                <!-- Span oculto para que el buscador encuentre Familia, Tipo, Operador y Ubicación -->
                                 <span class="hidden" data-search>{{ e.tipo }} {{ e.operador }} {{ e.ubicacion }}</span>
-                                <td class="font-medium text-[#1E3A8A] cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
+                                <td class="font-medium text-[#1E3A8A] cursor-pointer hover:underline" title="Ir al Dashboard del Equipo" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
                                 <td>{{ e.marca }}</td>
                                 <td>{{ e.modelo }}</td>
                                 <td class="text-slate-500">{{ e.patente }}<br><span class="text-[10px] text-slate-400">{{ e.vin }}</span></td>
@@ -234,7 +223,9 @@
                                 <td>{{ e.margen_str }}</td>
                                 <td>{{ e.estado }}</td>
                                 <td class="text-right whitespace-nowrap">
-                                    <a href="/equipo/{{e.codigo}}" class="btn-action">Ver Ficha</a>
+                                    <a href="/api/imprimir_registro/{{e.codigo}}" target="_blank" class="btn-action font-medium">Historial PDF</a>
+                                    <a href="/api/imprimir_filtros/{{e.codigo}}" target="_blank" class="btn-action font-medium">Filtros PDF</a>
+                                    <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Editar Equipo {{e.codigo}}', [{db: 'marca', label: 'Marca', val: '{{e.marca}}'},{db: 'modelo', label: 'Modelo', val: '{{e.modelo}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'},{db: 'estado_base', label: 'Estado', val: '{{e.estado}}'}])" class="btn-action">Editar</button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -448,6 +439,23 @@
         </div>
     </div>
 
+    <!-- Modal Dinámico de Edición de Equipo -->
+    <div id="modal-edit" class="fixed inset-0 bg-slate-900/80 z-[600] hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded shadow-lg overflow-hidden">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 id="edit-title" class="font-semibold text-slate-800 uppercase text-xs tracking-wider">Editar Registro</h3>
+                <button onclick="document.getElementById('modal-edit').classList.add('hidden')" class="text-xl text-slate-500 hover:text-slate-800">&times;</button>
+            </div>
+            <form action="/api/edit_record" method="POST" class="p-6 flex flex-col gap-4">
+                <input type="hidden" name="tabla" id="edit-tabla">
+                <input type="hidden" name="id" id="edit-id">
+                <input type="hidden" name="referer" value="/">
+                <div id="edit-fields" class="flex flex-col gap-4"></div>
+                <button type="submit" class="btn-primary mt-2 w-full">Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         function toggleMenu() {
             const sidebar = document.getElementById('sidebar'); const backdrop = document.getElementById('sidebar-backdrop');
@@ -463,7 +471,6 @@
             if(t==='cal' && window.calendar) { setTimeout(() => window.calendar.render(), 200); }
         }
 
-        // Buscador Corporativo Multicolumna
         function filtrarTablas(q) { 
             q = q.toLowerCase(); 
             document.querySelector('.seccion.active').querySelectorAll('.table-searchable tbody tr').forEach(r => { 
@@ -477,7 +484,24 @@
             }
         }
 
-        // Lógica Kanban de Ubicaciones (NUEVO)
+        // Función de Edición Rápida Restaurada
+        function abrirEditModal(tabla, id, titulo, campos) {
+            document.getElementById('edit-tabla').value = tabla;
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-title').innerText = titulo;
+            let html = '';
+            campos.forEach(c => {
+                html += `<div><label class="text-[10px] font-medium uppercase text-slate-500 mb-1 block">${c.label}</label>`;
+                if (c.db === 'estado_base') {
+                    html += `<select name="${c.db}" class="form-input"><option value="Operativo" ${c.val==='Operativo'?'selected':''}>Operativo</option><option value="Taller" ${c.val==='Taller'?'selected':''}>Taller</option><option value="Fuera de Servicio" ${c.val==='Fuera de Servicio'?'selected':''}>Fuera de Servicio</option></select></div>`;
+                } else {
+                    html += `<input type="text" name="${c.db}" value="${c.val}" class="form-input uppercase"></div>`;
+                }
+            });
+            document.getElementById('edit-fields').innerHTML = html;
+            document.getElementById('modal-edit').classList.remove('hidden');
+        }
+
         function crearNuevaUbicacion() {
             let nombre = prompt("Ingrese el nombre de la nueva Base u Obra Logística:");
             if(nombre && nombre.trim() !== "") {
@@ -511,7 +535,6 @@
             }
         }
 
-        // Datos para gráficos y calendario inyectados por el Backend
         const cinta2 = {{ cinta2|tojson }};
         const cinta3 = {{ cinta3|tojson }};
         const eventos_calendario = {{ eventos_calendario|tojson }};
@@ -521,14 +544,12 @@
             const tabActiva = urlParams.get('tab');
             if (tabActiva) { const link = document.querySelector(`a[onclick*="switchTab('${tabActiva}'"]`); if (link) switchTab(tabActiva, link); }
 
-            // Kanban OTs
             if (typeof Sortable !== 'undefined') {
                 ['kb-pendiente', 'kb-progreso', 'kb-revision', 'kb-completado'].forEach(col => {
                     const el = document.getElementById(col);
                     if(el) new Sortable(el, { group: 'kanban_ot', animation: 150, onEnd: function (evt) { fetch('/api/cambiar_estado_ot/' + evt.item.getAttribute('data-id'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: evt.to.getAttribute('data-status') }) }).then(() => location.reload()); }});
                 });
                 
-                // Kanban Ubicaciones
                 document.querySelectorAll('.espacio-ubicacion').forEach(col => {
                     new Sortable(col, {
                         group: 'ubicaciones', animation: 150,
@@ -544,7 +565,6 @@
                 });
             }
 
-            // Calendario
             if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
                 window.calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
                     initialView: 'dayGridMonth', locale: 'es', height: '100%', headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
@@ -552,7 +572,6 @@
                 });
             }
 
-            // Gráficos Corporativos (Tonos Azules)
             if (typeof Chart !== 'undefined') {
                 Chart.defaults.font.family = "'Inter', sans-serif"; 
                 Chart.defaults.color = '#475569'; 
