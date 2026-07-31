@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ERP CMMS DEMOTRON</title>
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
         body { font-family: 'Inter', sans-serif; font-size: 13px; background-color: #F8FAFC; color: #1E293B; margin: 0; }
@@ -37,17 +38,17 @@
         .form-input:focus { border-color: #3B82F6; }
         .btn-primary { background-color: #1E3A8A; color: white; padding: 10px 24px; border-radius: 6px; font-weight: 500; transition: background 0.2s; cursor: pointer; border:none; font-size: 13px; }
         .btn-primary:hover { background-color: #1D4ED8; }
-        .btn-action { font-size: 11px; font-weight: 500; padding: 6px 12px; border-radius: 4px; border: 1px solid #CBD5E1; transition: all 0.2s; margin-right: 8px; display:inline-block; color: #475569; text-decoration: none; cursor: pointer;}
+        .btn-action { font-size: 11px; font-weight: 500; padding: 6px 12px; border-radius: 4px; border: 1px solid #CBD5E1; transition: all 0.2s; margin-right: 8px; display:inline-block; color: #475569; text-decoration: none; cursor: pointer; background: white;}
         .btn-action:hover { background-color: #F1F5F9; color: #0F172A; }
         
         /* Utilidades */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        #signature-pad { border: 1px solid #CBD5E1; border-radius: 6px; background: #FFFFFF; cursor: crosshair; }
-        .leaflet-div-icon { background: transparent !important; border: none !important; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
     
+    <datalist id="lista_pautas"><option value="PM1"></option><option value="PM2"></option><option value="PM3"></option><option value="PM4"></option><option value="PM5"></option></datalist>
+
     <div id="sidebar-backdrop" onclick="toggleMenu()" class="fixed inset-0 bg-slate-900/50 z-30 hidden md:hidden backdrop-blur-sm"></div>
 
     <!-- MENÚ LATERAL -->
@@ -57,12 +58,12 @@
         </div>
         <nav class="flex-1 py-6 overflow-y-auto hide-scrollbar space-y-1">
             <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-4">General</p>
-            <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard</a>
+            <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard Predictivo</a>
             
-            <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Flota</p>
-            <a onclick="switchTab('eq', this)" class="nav-link">Equipos Registrados</a>
-            <a onclick="switchTab('flota', this)" class="nav-link">Rendimiento CPK</a>
-            <a onclick="switchTab('mapa', this)" class="nav-link">Geolocalización</a>
+            <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Logística de Flota</p>
+            <a onclick="switchTab('eq', this)" class="nav-link">Equipos y Activos</a>
+            <a onclick="switchTab('flota', this)" class="nav-link">Rendimiento (CPK)</a>
+            <a onclick="switchTab('mapa', this)" class="nav-link">Geolocalización Logística</a>
             
             <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Mantenimiento</p>
             <a onclick="switchTab('plan', this)" class="nav-link">Kanban de Taller</a>
@@ -71,11 +72,13 @@
             <a onclick="switchTab('ot_corr', this)" class="nav-link">Averías y Correctivas</a>
             <a onclick="switchTab('lec', this)" class="nav-link">Ingreso Lecturas HR/KM</a>
             
-            <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Materiales</p>
+            <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Suministros</p>
             <a onclick="switchTab('bodega', this)" class="nav-link">Inventario Bodega</a>
             <a onclick="switchTab('compras', this)" class="nav-link">Órdenes de Compra</a>
             
-            <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Reportes</p>
+            <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Directorio y Sistemas</p>
+            <a onclick="switchTab('cond', this)" class="nav-link">Operadores</a>
+            <a onclick="switchTab('mecanicos', this)" class="nav-link">Mecánicos</a>
             <a onclick="switchTab('reportes', this)" class="nav-link">Descargas y PDF</a>
             <a onclick="switchTab('powerbi', this)" class="nav-link">Enlace Power BI</a>
         </nav>
@@ -86,52 +89,52 @@
 
     <main class="flex-1 flex flex-col min-w-0 w-full">
         <!-- HEADER -->
-        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-10">
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-10 shadow-sm">
             <div class="flex items-center gap-4">
                 <button onclick="toggleMenu()" class="md:hidden text-slate-800 text-2xl focus:outline-none">≡</button>
-                <h1 id="title" class="text-xl font-normal text-slate-800 tracking-wide">Dashboard</h1>
+                <h1 id="title" class="text-xl font-normal text-slate-800 tracking-wide">Dashboard Predictivo</h1>
             </div>
-            <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="Buscar registro..." class="form-input w-64 bg-slate-50 border-slate-200 rounded-md shadow-sm">
+            <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="Buscar en tablas..." class="form-input w-64 bg-slate-50 border-slate-200 rounded-md">
         </header>
 
-        <div class="flex-1 overflow-y-auto p-8">
+        <div class="flex-1 overflow-y-auto p-4 md:p-8">
             
             <!-- 1. DASHBOARD PRINCIPAL CORPORATIVO -->
             <div id="dash" class="seccion active">
                 
                 <!-- CINTA 1: KPIs AUTOMÁTICOS -->
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 mb-8">
                     <div class="card-custom text-center">
-                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Estado Flota Operativa</p>
-                        <p class="text-3xl font-normal text-[#1E3A8A]">{{ kpis.op_pct }}%</p>
-                        <p class="text-xs text-slate-400 mt-2">{{ kpis.op_count }} de {{ kpis.total_eq }} equipos</p>
+                        <p class="text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Estado Flota</p>
+                        <p class="text-2xl md:text-3xl font-normal text-[#1E3A8A]">{{ kpis.op_pct }}%</p>
+                        <p class="text-[10px] md:text-xs text-slate-400 mt-2">{{ kpis.op_count }} de {{ kpis.total_eq }} equipos</p>
                     </div>
                     <div class="card-custom text-center">
-                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Cumplimiento PM</p>
-                        <p class="text-3xl font-normal text-[#1E3A8A]">{{ kpis.cumpl_pm_pct }}%</p>
-                        <p class="text-xs text-slate-400 mt-2">Adherencia al plan</p>
+                        <p class="text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Cumplimiento PM</p>
+                        <p class="text-2xl md:text-3xl font-normal text-[#1E3A8A]">{{ kpis.cumpl_pm_pct }}%</p>
+                        <p class="text-[10px] md:text-xs text-slate-400 mt-2">Adherencia al plan</p>
                     </div>
                     <div class="card-custom text-center">
-                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Backlog Crítico</p>
-                        <p class="text-3xl font-normal text-[#1E3A8A]">{{ kpis.backlog_count }}</p>
-                        <p class="text-xs text-slate-400 mt-2">Equipos vencidos</p>
+                        <p class="text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Backlog Crítico</p>
+                        <p class="text-2xl md:text-3xl font-normal text-[#1E3A8A]">{{ kpis.backlog_count }}</p>
+                        <p class="text-[10px] md:text-xs text-slate-400 mt-2">Equipos vencidos</p>
                     </div>
                     <div class="card-custom text-center">
-                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">En Taller / Fuera Serv.</p>
-                        <p class="text-3xl font-normal text-[#1E3A8A]">{{ kpis.taller_fuera_count }}</p>
-                        <p class="text-xs text-slate-400 mt-2">Equipos inactivos</p>
+                        <p class="text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Taller / Fuera Serv.</p>
+                        <p class="text-2xl md:text-3xl font-normal text-[#1E3A8A]">{{ kpis.taller_fuera_count }}</p>
+                        <p class="text-[10px] md:text-xs text-slate-400 mt-2">Equipos inactivos</p>
                     </div>
-                    <div class="card-custom text-center">
-                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Disponibilidad</p>
-                        <p class="text-3xl font-normal text-[#1E3A8A]">{{ kpis.disponibilidad_pct }}%</p>
-                        <p class="text-xs text-slate-400 mt-2">Operacional</p>
+                    <div class="card-custom text-center md:col-span-1 col-span-2">
+                        <p class="text-[10px] md:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Disponibilidad</p>
+                        <p class="text-2xl md:text-3xl font-normal text-[#1E3A8A]">{{ kpis.disponibilidad_pct }}%</p>
+                        <p class="text-[10px] md:text-xs text-slate-400 mt-2">Operacional</p>
                     </div>
                 </div>
 
                 <!-- CINTA 2: COMPRAS, ESTADO, GASTOS -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                     <div class="card-custom h-72 flex flex-col">
-                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Compras Realizadas</p>
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Compras Realizadas (Inversión)</p>
                         <div class="flex-1 relative w-full"><canvas id="chartCompras"></canvas></div>
                     </div>
                     <div class="card-custom h-72 flex flex-col">
@@ -169,9 +172,9 @@
                 <!-- CINTA 4: TABLAS DE GESTIÓN (TOP 5) -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                     <!-- Atrasados -->
-                    <div class="card-custom-nopad">
+                    <div class="card-custom-nopad overflow-x-auto">
                         <div class="px-6 py-4 border-b border-slate-100"><p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Equipos Atrasados</p></div>
-                        <table class="w-full text-left text-xs">
+                        <table class="w-full text-left text-xs whitespace-nowrap">
                             <thead class="bg-slate-50"><tr><th class="px-6 py-3 text-slate-400 font-medium">Código</th><th class="px-6 py-3 text-slate-400 font-medium">Tipo</th><th class="px-6 py-3 text-slate-400 font-medium text-right">Días Atraso</th></tr></thead>
                             <tbody>
                                 {% for item in atrasados_top %}
@@ -183,9 +186,9 @@
                         </table>
                     </div>
                     <!-- Próximos -->
-                    <div class="card-custom-nopad">
+                    <div class="card-custom-nopad overflow-x-auto">
                         <div class="px-6 py-4 border-b border-slate-100"><p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Próximas Mantenciones</p></div>
-                        <table class="w-full text-left text-xs">
+                        <table class="w-full text-left text-xs whitespace-nowrap">
                             <thead class="bg-slate-50"><tr><th class="px-6 py-3 text-slate-400 font-medium">Código</th><th class="px-6 py-3 text-slate-400 font-medium">Tipo</th><th class="px-6 py-3 text-slate-400 font-medium text-right">Días Restantes</th></tr></thead>
                             <tbody>
                                 {% for item in proximos_top %}
@@ -197,9 +200,9 @@
                         </table>
                     </div>
                     <!-- Taller -->
-                    <div class="card-custom-nopad">
+                    <div class="card-custom-nopad overflow-x-auto">
                         <div class="px-6 py-4 border-b border-slate-100"><p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Equipos en Taller</p></div>
-                        <table class="w-full text-left text-xs">
+                        <table class="w-full text-left text-xs whitespace-nowrap">
                             <thead class="bg-slate-50"><tr><th class="px-6 py-3 text-slate-400 font-medium">Código</th><th class="px-6 py-3 text-slate-400 font-medium">Fecha Ingr.</th><th class="px-6 py-3 text-slate-400 font-medium">Estado</th></tr></thead>
                             <tbody>
                                 {% for item in taller_top %}
@@ -221,7 +224,7 @@
                         <tbody>
                             {% for e in eqs %}
                             <tr>
-                                <!-- Span oculto para que el buscador encuentre Familia, Tipo, Operador y Ubicación sin desordenar la tabla -->
+                                <!-- Span oculto para que el buscador encuentre Familia, Tipo, Operador y Ubicación -->
                                 <span class="hidden" data-search>{{ e.tipo }} {{ e.operador }} {{ e.ubicacion }}</span>
                                 <td class="font-medium text-[#1E3A8A] cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
                                 <td>{{ e.marca }}</td>
@@ -230,8 +233,8 @@
                                 <td>{{ e.lectura }}</td>
                                 <td>{{ e.margen_str }}</td>
                                 <td>{{ e.estado }}</td>
-                                <td class="text-right">
-                                    <a href="/api/imprimir_registro/{{e.codigo}}" target="_blank" class="btn-action">Ficha</a>
+                                <td class="text-right whitespace-nowrap">
+                                    <a href="/equipo/{{e.codigo}}" class="btn-action">Ver Ficha</a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -261,25 +264,50 @@
                 </div>
             </div>
 
-            <!-- 5. MAPAS GEOLOCALIZACIÓN -->
+            <!-- 5. KANBAN DE GEOLOCALIZACIÓN LOGÍSTICA -->
             <div id="mapa" class="seccion h-full">
-                <div class="flex justify-end mb-4">
-                    <button onclick="document.getElementById('modal-ubicaciones').classList.remove('hidden')" class="btn-action">Actualizar Ubicaciones</button>
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
+                    <h2 class="text-lg font-normal text-slate-800 tracking-wide">Gestión Logística por Obra/Base</h2>
+                    <div class="flex flex-wrap gap-2 md:gap-4">
+                        <button onclick="crearNuevaUbicacion()" class="btn-action shadow-sm">Añadir Nueva Base</button>
+                        <button onclick="document.getElementById('modal-ubicaciones').classList.remove('hidden')" class="btn-action shadow-sm">Edición Masiva (Tabla)</button>
+                    </div>
                 </div>
-                <div id="mapas-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10"></div>
+                
+                <div class="flex gap-6 overflow-x-auto pb-8 items-start h-[75vh] hide-scrollbar" id="kanban-ubicaciones-container">
+                    {% for ub, equipos in ubicaciones_dict.items() %}
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 w-72 shrink-0 flex flex-col max-h-full">
+                        <div class="flex justify-between items-center border-b border-slate-200 pb-3 mb-4 shrink-0">
+                            <h3 class="font-semibold text-slate-700 text-xs uppercase">{{ ub }}</h3>
+                            <span class="text-xs text-slate-500 font-medium">{{ equipos|length }}</span>
+                        </div>
+                        <div class="espacio-ubicacion space-y-3 overflow-y-auto flex-1 hide-scrollbar" data-ubicacion="{{ ub }}">
+                            {% for eq in equipos %}
+                            <div class="bg-white p-3 rounded border border-slate-200 cursor-grab shadow-sm" data-codigo="{{ eq.codigo }}">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-medium text-[#1E3A8A] text-sm">{{ eq.codigo }}</span>
+                                    <span class="text-[9px] px-2 py-0.5 border border-slate-200 text-slate-500 rounded uppercase">{{ eq.estado_base }}</span>
+                                </div>
+                                <p class="text-[10px] text-slate-500 mt-1 uppercase">{{ eq.tipo_equipo }}</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
 
             <!-- 7. KANBAN Y BOTONES VER PDF -->
             <div id="plan" class="seccion">
                 <div class="flex justify-between items-end mb-6">
-                    <form action="/api/add_record" method="POST" class="flex gap-4 items-end bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+                    <form action="/api/add_record" method="POST" class="flex flex-wrap md:flex-nowrap gap-4 items-end bg-white p-6 rounded-lg border border-slate-200 shadow-sm w-full md:w-auto">
                         <input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/?tab=plan"><input type="hidden" name="estado" value="Pendiente"><input type="hidden" name="lectura" value="0"><input type="hidden" name="costo" value="0">
-                        <div><label class="text-[11px] font-medium text-slate-500 block mb-2">Equipo</label><input type="text" name="codigo" class="form-input w-32" required></div>
-                        <div><label class="text-[11px] font-medium text-slate-500 block mb-2">Pauta o Falla</label><input type="text" name="tipo" class="form-input w-64" required></div>
-                        <button type="submit" class="btn-primary">Añadir Tarea</button>
+                        <div><label class="text-[11px] font-medium text-slate-500 block mb-2">Equipo</label><input type="text" name="codigo" class="form-input w-full md:w-32" required></div>
+                        <div><label class="text-[11px] font-medium text-slate-500 block mb-2">Pauta o Falla</label><input list="lista_pautas" name="tipo" class="form-input w-full md:w-64" required></div>
+                        <button type="submit" class="btn-primary w-full md:w-auto mt-2 md:mt-0">Añadir Tarea</button>
                     </form>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     {% for estado, col_id in [('Pendiente','kb-pendiente'), ('En Progreso','kb-progreso'), ('En Revisión','kb-revision'), ('Finalizada','kb-completado')] %}
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 h-[65vh] flex flex-col">
                         <div class="flex justify-between items-center border-b border-slate-200 pb-3 mb-4 shrink-0">
@@ -291,8 +319,8 @@
                             <div class="bg-white p-4 rounded border border-slate-200 cursor-grab shadow-sm" data-id="{{ t.id }}">
                                 <div class="flex justify-between items-start mb-2">
                                     <h4 class="font-medium text-slate-800 text-sm">{{ t.codigo }}</h4>
-                                    <!-- BOTÓN PDF CORREGIDO -->
-                                    <a href="/imprimir_ot/{{ t.id }}" target="_blank" class="text-[10px] font-medium text-[#2563EB] hover:underline">Ver PDF</a>
+                                    <!-- Botón Ver PDF -->
+                                    <a href="/imprimir_ot/{{ t.id }}" target="_blank" class="text-[10px] font-medium text-[#2563EB] hover:underline bg-blue-50 px-2 py-1 rounded">Ver PDF</a>
                                 </div>
                                 <span class="text-[10px] text-slate-500 mb-2 block">{{ t.clasificacion }}</span>
                                 <p class="text-xs text-slate-700 mb-4 line-clamp-3">{{ t.tipo }}</p>
@@ -310,7 +338,7 @@
 
             <!-- 8. CALENDARIO -->
             <div id="cal" class="seccion h-full">
-                <div class="card-custom h-[80vh] flex flex-col">
+                <div class="card-custom h-[80vh] flex flex-col p-4 md:p-8">
                     <div id="calendar" class="flex-1 w-full h-full"></div>
                 </div>
             </div>
@@ -323,7 +351,7 @@
                         <tbody>{% for m in mants_prev %}<tr>
                             <td class="text-slate-500">{{ m.fecha }}<br><span class="text-[10px]">{{ m.ot_generada }}</span></td>
                             <td class="font-medium text-[#1E3A8A]">{{ m.codigo }}</td><td>{{ m.tipo_mantencion }}</td><td>{{ m.mecanico }}</td><td>{{ m.lectura_str }}</td><td>{{ m.costo_str }}</td><td>{{ m.estado }}</td>
-                            <td class="text-right"><a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action">Ver PDF</a></td>
+                            <td class="text-right whitespace-nowrap"><a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action">Ver PDF</a></td>
                         </tr>{% endfor %}</tbody>
                     </table>
                 </div>
@@ -337,36 +365,37 @@
                         <tbody>{% for m in mants_corr %}<tr>
                             <td class="text-slate-500">{{ m.fecha }}<br><span class="text-[10px]">{{ m.ot_generada }}</span></td>
                             <td class="font-medium text-[#1E3A8A]">{{ m.codigo }}</td><td>{{ m.sistema_falla }}</td><td>{{ m.causa_raiz }}</td><td>{{ m.mecanico }}</td><td>{{ m.lectura_str }}</td><td>{{ m.costo_str }}</td><td>{{ m.estado }}</td>
-                            <td class="text-right"><a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action">Ver PDF</a></td>
+                            <td class="text-right whitespace-nowrap"><a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action">Ver PDF</a></td>
                         </tr>{% endfor %}</tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- 11. INGRESO DE LECTURAS (Conductor Asignado Automáticamente de la BD) -->
+            <!-- 11. INGRESO DE LECTURAS -->
             <div id="lec" class="seccion">
-                <div class="mb-6"><form action="/api/add_record" method="POST" class="flex gap-4 items-end bg-white p-6 rounded border border-slate-200 shadow-sm">
+                <div class="mb-6"><form action="/api/add_record" method="POST" class="flex flex-wrap md:flex-nowrap gap-4 items-end bg-white p-6 rounded border border-slate-200 shadow-sm">
                     <input type="hidden" name="tabla" value="lectura"><input type="hidden" name="referer" value="/?tab=lec">
-                    <div><label class="text-[11px] font-medium text-slate-500 block mb-2">Equipo</label><input type="text" name="codigo" class="form-input w-32" required></div>
-                    <div><label class="text-[11px] font-medium text-slate-500 block mb-2">Valor (HR/KM)</label><input type="number" name="valor" class="form-input w-48" required></div>
-                    <div>
+                    <div class="w-full md:w-32"><label class="text-[11px] font-medium text-slate-500 block mb-2">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div>
+                    <div class="w-full md:w-48"><label class="text-[11px] font-medium text-slate-500 block mb-2">Valor (HR/KM)</label><input type="number" name="valor" class="form-input" required></div>
+                    <div class="w-full md:w-64">
                         <label class="text-[11px] font-medium text-slate-500 block mb-2">Responsable / Conductor</label>
-                        <select name="responsable" class="form-input w-64">
+                        <select name="responsable" class="form-input">
                             <option value="Sistema">Seleccionar...</option>
                             {% for op in operadores %}
                             <option value="{{ op.nombre }}">{{ op.nombre }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <button type="submit" class="btn-primary">Registrar Lectura</button>
+                    <button type="submit" class="btn-primary w-full md:w-auto mt-2 md:mt-0">Registrar Lectura</button>
                 </form></div>
                 <div class="card-custom-nopad table-wrapper h-[65vh] overflow-y-auto"><table class="table-custom table-searchable">
-                    <thead class="sticky top-0 shadow-sm"><tr><th>Fecha Captura</th><th>Equipo</th><th>Categoría</th><th>Valor Técnico</th><th>Responsable</th></tr></thead>
+                    <thead class="sticky top-0 shadow-sm"><tr><th>Fecha Captura</th><th>Equipo</th><th>Categoría</th><th>Valor Técnico</th><th>Responsable</th><th class="text-right">Acción</th></tr></thead>
                     <tbody>{% for l in lecturas %}<tr>
                         <td class="text-slate-500">{{ l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else '' }}</td>
                         <td class="font-medium text-[#1E3A8A]">{{ l.codigo_equipo }}</td><td>{{ l.tipo_equipo }}</td>
                         <td class="font-medium">{{ "{:,.0f}".format(l.horometro or l.kilometraje or 0).replace(',', '.') }}</td>
                         <td class="text-slate-600">{{ l.responsable }}</td>
+                        <td class="text-right"><button onclick="borrarRegistro('lectura', '{{l.id}}')" class="text-[10px] text-red-500 hover:underline">Borrar</button></td>
                     </tr>{% endfor %}</tbody>
                 </table></div>
             </div>
@@ -380,25 +409,44 @@
                             <td class="text-slate-500">{{ b.codigo_item or '-' }}</td>
                             <td class="font-medium text-slate-800">{{ b.nombre }}</td>
                             <td>{{ b.categoria }}</td>
-                            <td class="font-medium">{{ b.cantidad }}</td>
+                            <td class="font-medium text-[#1E3A8A]">{{ b.cantidad }}</td>
                             <td>{{ b.ubicacion }}</td>
                         </tr>{% endfor %}</tbody>
                     </table>
                 </div>
             </div>
             
-            <!-- Resto de módulos secundarios sin cambios de estructura profunda, solo heredan estilo -->
-            <div id="compras" class="seccion"><div class="card-custom-nopad table-wrapper h-[80vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 shadow-sm"><tr><th>Fecha</th><th>N° OC</th><th>Equipo</th><th>Detalle</th><th>Inversión</th></tr></thead><tbody>{% for c in compras %}<tr><td>{{ c.fecha.strftime('%d/%m/%Y') if c.fecha else '' }}</td><td class="text-slate-500">{{ c.oc }}</td><td class="font-medium text-[#1E3A8A]">{{ c.codigo_equipo }}</td><td>{{ c.descripcion }}</td><td>{{ "$ {:,.0f}".format(c.costo_pm_clp or 0).replace(',', '.') }}</td></tr>{% endfor %}</tbody></table></div></div>
-            <div id="reportes" class="seccion"><div class="grid grid-cols-2 gap-6"><div class="card-custom text-center"><p class="text-sm font-medium mb-4">Base de Datos</p><a href="/api/exportar/excel_maestro" class="btn-primary">Descargar Excel (.xlsx)</a></div><div class="card-custom text-center"><p class="text-sm font-medium mb-4">Reporte Gerencial</p><button onclick="window.print()" class="btn-primary bg-slate-800">Imprimir PDF</button></div></div></div>
-            <div id="powerbi" class="seccion"><div class="card-custom max-w-2xl"><p class="text-sm font-medium mb-4">Conexión API</p><input type="text" readonly value="https://demotron.cl/api/powerbi/dataset" class="form-input mb-4" id="pbi-url"><button onclick="navigator.clipboard.writeText(document.getElementById('pbi-url').value); alert('Copiado');" class="btn-primary">Copiar URL</button></div></div>
-            <div id="automatizacion" class="seccion"><div class="card-custom max-w-2xl"><form action="/api/guardar_programacion" method="POST" class="space-y-4"><div><label class="block text-xs font-medium text-slate-500 mb-2">Correos</label><input type="text" name="correos" class="form-input"></div><div><label class="block text-xs font-medium text-slate-500 mb-2">Frecuencia</label><select name="frecuencia" class="form-input"><option value="semanal">Semanal</option></select></div><button type="submit" class="btn-primary">Guardar</button></form></div></div>
-            <div id="cond" class="seccion"><div class="card-custom-nopad table-wrapper h-[80vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 shadow-sm"><tr><th>Operador</th><th>Máquina Asignada</th><th>Cargo</th><th>Status</th></tr></thead><tbody>{% for op in operadores %}<tr><td class="font-medium">{{ op.nombre }}</td><td class="text-[#1E3A8A]">{{ op.equipo_asignado }}</td><td>{{ op.cargo }}</td><td>{{ op.estado }}</td></tr>{% endfor %}</tbody></table></div></div>
+            <!-- 13 - 19. Módulos Secundarios -->
+            <div id="compras" class="seccion"><div class="card-custom-nopad table-wrapper h-[80vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 shadow-sm"><tr><th>Fecha</th><th>N° OC</th><th>Equipo</th><th>Detalle</th><th>Inversión</th></tr></thead><tbody>{% for c in compras %}<tr><td>{{ c.fecha.strftime('%d/%m/%Y') if c.fecha else '' }}</td><td class="text-slate-500">{{ c.oc }}</td><td class="font-medium text-[#1E3A8A]">{{ c.codigo_equipo }}</td><td>{{ c.descripcion }}</td><td class="font-medium">{{ "$ {:,.0f}".format(c.costo_pm_clp or 0).replace(',', '.') }}</td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="reportes" class="seccion"><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="card-custom text-center"><p class="text-sm font-medium mb-4">Base de Datos Logística</p><a href="/api/exportar/excel_maestro" class="btn-primary block w-full text-center">Descargar Excel (.xlsx)</a></div><div class="card-custom text-center"><p class="text-sm font-medium mb-4">Reporte Gerencial (Dashboards)</p><button onclick="window.print()" class="btn-primary bg-slate-800 w-full">Imprimir Vista Actual en PDF</button></div></div></div>
+            <div id="powerbi" class="seccion"><div class="card-custom max-w-2xl"><p class="text-sm font-medium mb-4">Conexión API Externa</p><input type="text" readonly value="https://demotron.cl/api/powerbi/dataset" class="form-input mb-4" id="pbi-url"><button onclick="navigator.clipboard.writeText(document.getElementById('pbi-url').value); alert('Copiado exitosamente al portapapeles');" class="btn-primary">Copiar URL de API</button></div></div>
+            <div id="cond" class="seccion"><div class="card-custom-nopad table-wrapper h-[80vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 shadow-sm"><tr><th>Operador</th><th>Máquina Asignada</th><th>Cargo</th><th>Status</th></tr></thead><tbody>{% for op in operadores %}<tr><td class="font-medium">{{ op.nombre }}</td><td class="text-[#1E3A8A] font-medium">{{ op.equipo_asignado }}</td><td>{{ op.cargo }}</td><td>{{ op.estado }}</td></tr>{% endfor %}</tbody></table></div></div>
             <div id="mecanicos" class="seccion"><div class="card-custom-nopad table-wrapper h-[80vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 shadow-sm"><tr><th>Nombre Técnico</th><th>Especialidad</th><th>Status</th></tr></thead><tbody>{% for m in mecanicos %}<tr><td class="font-medium">{{ m.nombre }}</td><td>{{ m.especialidad }}</td><td>{{ m.estado }}</td></tr>{% endfor %}</tbody></table></div></div>
         </div>
     </main>
 
-    <!-- Modal Ubicaciones -->
-    <div id="modal-ubicaciones" class="fixed inset-0 bg-slate-900/80 z-[500] hidden flex items-center justify-center p-4"><div class="bg-white w-full max-w-2xl rounded shadow-lg overflow-hidden"><div class="p-4 border-b border-slate-200 flex justify-between"><h3 class="font-medium">Coordenadas y Ubicaciones</h3><button onclick="document.getElementById('modal-ubicaciones').classList.add('hidden')">&times;</button></div><div class="p-4 overflow-y-auto max-h-[60vh]"><table class="w-full text-xs"><tbody>{% for e in eqs %}<tr><td class="py-2">{{ e.codigo }}</td><td><input type="text" class="form-input p-1 h-8 ubicacion-editable" data-codigo="{{ e.codigo }}" value="{{ e.ubicacion if e.ubicacion != 'None' else '' }}"></td></tr>{% endfor %}</tbody></table></div><div class="p-4 border-t border-slate-200 flex justify-end"><button onclick="guardarUbicacionesMasa()" id="btn-save-map" class="btn-primary">Guardar</button></div></div></div>
+    <!-- Modal Edición Masiva de Ubicaciones -->
+    <div id="modal-ubicaciones" class="fixed inset-0 bg-slate-900/80 z-[500] hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded shadow-lg overflow-hidden">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="font-semibold text-slate-800 uppercase text-xs tracking-wider">Edición Masiva de Ubicaciones Logísticas</h3>
+                <button onclick="document.getElementById('modal-ubicaciones').classList.add('hidden')" class="text-xl text-slate-500 hover:text-slate-800">&times;</button>
+            </div>
+            <div class="p-4 overflow-y-auto max-h-[60vh]">
+                <table class="w-full text-xs">
+                    <thead class="text-left text-slate-400 border-b border-slate-100"><tr><th class="pb-2">Equipo</th><th class="pb-2">Base / Ubicación Actual</th></tr></thead>
+                    <tbody>
+                        {% for e in eqs %}
+                        <tr class="border-b border-slate-50"><td class="py-3 font-medium text-[#1E3A8A]">{{ e.codigo }}</td><td><input type="text" class="form-input p-2 h-8 ubicacion-editable uppercase" data-codigo="{{ e.codigo }}" value="{{ e.ubicacion if e.ubicacion != 'None' else '' }}"></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="p-4 border-t border-slate-200 flex justify-end bg-slate-50">
+                <button onclick="guardarUbicacionesMasa()" class="btn-primary">Guardar Movimientos</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         function toggleMenu() {
@@ -409,61 +457,61 @@
 
         function switchTab(t, el) {
             document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active')); document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            document.getElementById(t).classList.add('active'); if(el) el.classList.add('active'); document.getElementById('title').innerText = el ? el.innerText.trim() : 'DEMOTRON';
+            document.getElementById(t).classList.add('active'); if(el) el.classList.add('active'); document.getElementById('title').innerText = el ? el.innerText.trim() : 'DEMOTRON ERP';
             const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + t; window.history.replaceState({path:newUrl}, '', newUrl);
             if(window.innerWidth < 768) { document.getElementById('sidebar').classList.add('-translate-x-full'); document.getElementById('sidebar-backdrop').classList.add('hidden'); }
             if(t==='cal' && window.calendar) { setTimeout(() => window.calendar.render(), 200); }
-            if(t==='mapa') { setTimeout(() => initMapGrid(), 100); }
         }
 
-        // BUSCADOR CORPORATIVO: Busca en todo el HTML interno de la fila.
+        // Buscador Corporativo Multicolumna
         function filtrarTablas(q) { 
             q = q.toLowerCase(); 
             document.querySelector('.seccion.active').querySelectorAll('.table-searchable tbody tr').forEach(r => { 
                 r.style.display = r.innerText.toLowerCase().includes(q) || (r.querySelector('[data-search]') && r.querySelector('[data-search]').innerText.toLowerCase().includes(q)) ? '' : 'none'; 
             }); 
         }
-        function borrarRegistro(tabla, id) { if(confirm('¿Confirma la eliminación permanente?')) fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' }).then(() => location.reload()); }
 
-        // MAPAS
-        let mapasInstances = [];
-        const equiposData = {{ eqs|tojson }};
-        function initMapGrid() {
-            if (mapasInstances.length > 0) return; // Evitar recargas si ya se instanció
-            const grid = document.getElementById('mapas-grid'); grid.innerHTML = '';
-            
-            let grouped = {};
-            equiposData.forEach(eq => { if(eq.estado !== 'Fuera de Servicio') { let loc = eq.ubicacion || 'CASA MATRIZ'; if(!grouped[loc]) grouped[loc] = []; grouped[loc].push(eq); }});
-
-            let mapIndex = 0;
-            for (let loc in grouped) {
-                let mapId = "map_box_" + mapIndex++;
-                let cardHtml = `<div class="card-custom-nopad h-72 flex flex-col"><div class="bg-slate-50 p-3 border-b border-slate-100 flex justify-between items-center"><h3 class="font-medium text-xs truncate max-w-[70%]">${loc.toUpperCase()}</h3><span class="text-[10px] text-slate-500">${grouped[loc].length} equipos</span></div><div id="${mapId}" class="flex-1 w-full bg-slate-100 z-0"></div></div>`;
-                grid.insertAdjacentHTML('beforeend', cardHtml);
-                
-                // Coordenada base provisional
-                let coords = [-35.4264, -71.6554];
-                let map = L.map(mapId, { zoomControl: false }).setView(coords, 14); L.control.zoom({ position: 'bottomleft' }).addTo(map);
-                L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 18 }).addTo(map);
-                mapasInstances.push(map);
-
-                grouped[loc].forEach((eq, idx) => {
-                    let dLat = 0.0005 * Math.cos(idx); let dLng = 0.0005 * Math.sin(idx);
-                    let iconHtml = `<div class="bg-white border border-[#1E3A8A] text-slate-800 font-medium text-[9px] px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">${eq.codigo}</div>`;
-                    let icon = L.divIcon({ html: iconHtml, className: 'leaflet-div-icon' });
-                    L.marker([coords[0] + dLat, coords[1] + dLng], {icon: icon}).bindPopup(`<a href="/equipo/${eq.codigo}" target="_blank" class="text-[#2563EB] text-[10px] hover:underline font-medium">${eq.codigo}</a>`).addTo(map);
-                });
-                setTimeout(() => map.invalidateSize(), 300);
+        function borrarRegistro(tabla, id) { 
+            if(confirm('Aviso: ¿Confirma la eliminación permanente de este registro de la base de datos?')) {
+                fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' }).then(() => location.reload()); 
             }
         }
-        function guardarUbicacionesMasa() {
-            let cambios = [];
-            document.querySelectorAll('.ubicacion-editable').forEach(inp => { if(inp.value !== inp.defaultValue) cambios.push({codigo: inp.dataset.codigo, ubicacion: inp.value}); });
-            if(cambios.length === 0) return;
-            fetch('/api/actualizar_ubicaciones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cambios: cambios }) }).then(() => location.reload());
+
+        // Lógica Kanban de Ubicaciones (NUEVO)
+        function crearNuevaUbicacion() {
+            let nombre = prompt("Ingrese el nombre de la nueva Base u Obra Logística:");
+            if(nombre && nombre.trim() !== "") {
+                nombre = nombre.toUpperCase().trim();
+                let html = `<div class="bg-slate-50 border border-slate-200 rounded-lg p-4 w-72 shrink-0 flex flex-col max-h-full"><div class="flex justify-between items-center border-b border-slate-200 pb-3 mb-4 shrink-0"><h3 class="font-semibold text-slate-700 text-xs uppercase">${nombre}</h3><span class="text-xs text-slate-500 font-medium">0</span></div><div class="espacio-ubicacion space-y-3 overflow-y-auto flex-1 hide-scrollbar" data-ubicacion="${nombre}"></div></div>`;
+                document.getElementById('kanban-ubicaciones-container').insertAdjacentHTML('beforeend', html);
+                
+                let nuevaCol = document.getElementById('kanban-ubicaciones-container').lastElementChild.querySelector('.espacio-ubicacion');
+                new Sortable(nuevaCol, {
+                    group: 'ubicaciones', animation: 150,
+                    onEnd: function(evt) {
+                        const item = evt.item; const nuevaUb = evt.to.getAttribute('data-ubicacion'); const viejaUb = evt.from.getAttribute('data-ubicacion'); const codigo = item.getAttribute('data-codigo');
+                        if (nuevaUb !== viejaUb) {
+                            if(confirm(`ALERTA LOGÍSTICA:\n¿Está seguro de registrar el traslado del equipo ${codigo} hacia [ ${nuevaUb} ]?\nEste movimiento quedará registrado en la ficha del equipo.`)) {
+                                fetch('/mover_ubicacion_kanban', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: codigo, nueva_ubicacion: nuevaUb}) }).then(() => location.reload());
+                            } else { evt.from.insertBefore(item, evt.from.children[evt.oldIndex]); }
+                        }
+                    }
+                });
+            }
         }
 
-        // DATOS PARA GRÁFICOS (Recibidos del Backend)
+        function guardarUbicacionesMasa() {
+            let cambios = [];
+            document.querySelectorAll('.ubicacion-editable').forEach(inp => { 
+                if(inp.value !== inp.defaultValue) cambios.push({codigo: inp.dataset.codigo, ubicacion: inp.value.toUpperCase()}); 
+            });
+            if(cambios.length === 0) return;
+            if(confirm('Aviso: ¿Confirma la actualización masiva de estas ubicaciones? Se registrará en el historial.')) {
+                fetch('/guardar_ubicaciones_masivo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cambios: cambios }) }).then(() => location.reload());
+            }
+        }
+
+        // Datos para gráficos y calendario inyectados por el Backend
         const cinta2 = {{ cinta2|tojson }};
         const cinta3 = {{ cinta3|tojson }};
         const eventos_calendario = {{ eventos_calendario|tojson }};
@@ -473,13 +521,30 @@
             const tabActiva = urlParams.get('tab');
             if (tabActiva) { const link = document.querySelector(`a[onclick*="switchTab('${tabActiva}'"]`); if (link) switchTab(tabActiva, link); }
 
+            // Kanban OTs
             if (typeof Sortable !== 'undefined') {
                 ['kb-pendiente', 'kb-progreso', 'kb-revision', 'kb-completado'].forEach(col => {
                     const el = document.getElementById(col);
-                    if(el) new Sortable(el, { group: 'kanban', animation: 150, onEnd: function (evt) { fetch('/api/cambiar_estado_ot/' + evt.item.getAttribute('data-id'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: evt.to.getAttribute('data-status') }) }).then(() => location.reload()); }});
+                    if(el) new Sortable(el, { group: 'kanban_ot', animation: 150, onEnd: function (evt) { fetch('/api/cambiar_estado_ot/' + evt.item.getAttribute('data-id'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: evt.to.getAttribute('data-status') }) }).then(() => location.reload()); }});
+                });
+                
+                // Kanban Ubicaciones
+                document.querySelectorAll('.espacio-ubicacion').forEach(col => {
+                    new Sortable(col, {
+                        group: 'ubicaciones', animation: 150,
+                        onEnd: function(evt) {
+                            const item = evt.item; const nuevaUb = evt.to.getAttribute('data-ubicacion'); const viejaUb = evt.from.getAttribute('data-ubicacion'); const codigo = item.getAttribute('data-codigo');
+                            if (nuevaUb !== viejaUb) {
+                                if(confirm(`ALERTA LOGÍSTICA:\n¿Está seguro de registrar el traslado del equipo ${codigo} hacia [ ${nuevaUb} ]?\nEste movimiento quedará registrado en la ficha del equipo.`)) {
+                                    fetch('/mover_ubicacion_kanban', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({codigo: codigo, nueva_ubicacion: nuevaUb}) }).then(() => location.reload());
+                                } else { evt.from.insertBefore(item, evt.from.children[evt.oldIndex]); }
+                            }
+                        }
+                    });
                 });
             }
 
+            // Calendario
             if (typeof FullCalendar !== 'undefined' && document.getElementById('calendar')) {
                 window.calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
                     initialView: 'dayGridMonth', locale: 'es', height: '100%', headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
@@ -487,12 +552,11 @@
                 });
             }
 
-            // GRÁFICOS CORPORATIVOS (PALETA AZUL ESTRICTA)
+            // Gráficos Corporativos (Tonos Azules)
             if (typeof Chart !== 'undefined') {
                 Chart.defaults.font.family = "'Inter', sans-serif"; 
                 Chart.defaults.color = '#475569'; 
-                
-                const bluePalette = ['#1E3A8A', '#2563EB', '#60A5FA', '#93C5FD', '#BFDBFE'];
+                const bluePalette = ['#1E3A8A', '#1D4ED8', '#2563EB', '#3B82F6', '#60A5FA', '#93C5FD'];
 
                 if(document.getElementById('chartCompras')) {
                     new Chart(document.getElementById('chartCompras').getContext('2d'), {
@@ -503,16 +567,16 @@
                 if(document.getElementById('chartEstados')) {
                     new Chart(document.getElementById('chartEstados').getContext('2d'), {
                         type: 'doughnut', data: { labels: cinta2.estados_labels, datasets: [{ data: cinta2.estados_data, backgroundColor: bluePalette, borderWidth: 0 }] },
-                        options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, usePointStyle: true } } } }
+                        options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'right', labels: { boxWidth: 12, usePointStyle: true, font: {size: 11} } } } }
                     });
                 }
-                if(document.getElementById('chartMTBF')) {
+                if(document.getElementById('chartMTBF') && cinta3.labels.length > 0) {
                     new Chart(document.getElementById('chartMTBF').getContext('2d'), {
                         type: 'bar', data: { labels: cinta3.labels, datasets: [{ label: 'MTBF (Días)', data: cinta3.mtbf, backgroundColor: '#1E3A8A', borderRadius: 4 }] },
                         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, border: { dash: [4, 4] } } } }
                     });
                 }
-                if(document.getElementById('chartMTTR')) {
+                if(document.getElementById('chartMTTR') && cinta3.labels.length > 0) {
                     new Chart(document.getElementById('chartMTTR').getContext('2d'), {
                         type: 'bar', data: { labels: cinta3.labels, datasets: [{ label: 'MTTR (Horas)', data: cinta3.mttr, backgroundColor: '#60A5FA', borderRadius: 4 }] },
                         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, border: { dash: [4, 4] } } } }
