@@ -23,14 +23,14 @@ class Equipo(db.Model):
     control_base = db.Column(db.String(20), default="HORAS") # HORAS o KM
     lectura_actual = db.Column(db.Float, default=0.0)
     proxima_pm = db.Column(db.Float, default=0.0)
-    
-    # Auditoría
-    fecha_creacion = db.Column(db.DateTime, default=datetime.now)
 
     def __repr__(self):
         return f"<Equipo {self.codigo}>"
 
 
+# =========================================================
+# TABLA DE FILTROS ORIGINAL
+# =========================================================
 class FiltroEquipo(db.Model):
     __tablename__ = 'filtro_equipo'
     
@@ -44,6 +44,9 @@ class FiltroEquipo(db.Model):
         return f"<Filtro {self.nombre_filtro} - {self.codigo_equipo}>"
 
 
+# =========================================================
+# NUEVA TABLA: Documentos Legales y Revisiones del Equipo
+# =========================================================
 class DocumentoEquipo(db.Model):
     __tablename__ = 'documento_equipo'
     
