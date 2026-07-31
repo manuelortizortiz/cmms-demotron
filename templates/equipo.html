@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha Técnica | {{ equipo.codigo }}</title>
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F1F5F9; color: #000000; }
+        .card-custom { background: white; border-radius: 8px; border: 2px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; padding: 24px;}
+        .card-custom-nopad { background: white; border-radius: 8px; border: 2px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden;}
+        table { width: 100%; border-collapse: collapse; }
+        th { font-size: 11px; color: #000000; padding: 12px 16px; border-bottom: 2px solid #CBD5E1; text-align: left; font-weight: 900; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; background: #F8FAFC; }
+        td { padding: 12px 16px; border-bottom: 1px solid #E2E8F0; color: #000000; font-size: 12px; font-weight: 600; }
+    </style>
+</head>
+<body class="p-4 md:p-8 max-w-7xl mx-auto">
+
+    <!-- ENCABEZADO Y BOTÓN DE REGRESO -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+            <h1 class="text-3xl font-black uppercase tracking-tighter">FICHA TÉCNICA: <span class="text-blue-700">{{ equipo.codigo }}</span></h1>
+            <p class="text-[11px] font-black uppercase tracking-widest text-slate-500 mt-1">Expediente de Mantenimiento y Rendimiento</p>
+        </div>
+        <a href="/" class="bg-black hover:bg-slate-800 text-white px-6 py-3 rounded-lg font-black uppercase text-[11px] tracking-widest transition shadow-md">Volver al Dashboard</a>
+    </div>
+
+    <!-- SECCIÓN 1: PERFIL DEL EQUIPO Y OPERADOR -->
+    <div class="card-custom mb-6 flex flex-col lg:flex-row gap-8 items-center">
+        <!-- Foto -->
+        <div class="w-full lg:w-1/4 flex justify-center items-center bg-slate-100 rounded border-2 border-slate-300 p-4 h-48">
+            {% if foto_url %}
+                <img src="{{ foto_url }}" alt="Foto Equipo" class="max-h-full object-contain">
+            {% else %}
+                <span class="text-4xl font-black text-slate-400 uppercase">Sin Foto</span>
+            {% endif %}
+        </div>
+        
+        <!-- Especificaciones -->
+        <div class="w-full lg:w-2/4 grid grid-cols-2 gap-6">
+            <div>
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Marca Oficial</p>
+                <p class="text-xl font-black">{{ equipo.marca or 'S/I' }}</p>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Modelo</p>
+                <p class="text-xl font-black">{{ equipo.modelo or 'S/I' }}</p>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Patente</p>
+                <p class="text-xl font-black text-blue-700 bg-blue-50 inline-block px-3 py-1 rounded border-2 border-blue-200 mt-1">{{ equipo.patente or 'S/I' }}</p>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">VIN / Chasis</p>
+                <p class="text-sm font-black font-mono bg-slate-100 inline-block px-2 py-1 rounded border border-slate-300 mt-1">{{ equipo.vin or 'S/I' }}</p>
+            </div>
+        </div>
+        
+        <!-- Operador Asignado -->
+        <div class="w-full lg:w-1/4 bg-slate-50 border-2 border-slate-300 rounded-lg p-6 flex flex-col justify-center text-center h-48">
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Operador Titular</p>
+            {% if operador %}
+                <p class="text-lg font-black text-black leading-tight">{{ operador.nombre }}</p>
+                <p class="text-[11px] font-black text-slate-600 uppercase mt-1">{{ operador.cargo }}</p>
+                <div class="mt-3">
+                    <span class="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-widest rounded border-2 border-emerald-300">{{ operador.estado }}</span>
+                </div>
+            {% else %}
+                <p class="text-sm font-black text-slate-400 uppercase mt-2">Sin Operador Asignado</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- MATEMÁTICA INTERNA PARA COSTO TOTAL -->
+    {% set stats = namespace(total=0) %}
+    {% for m in mants_prev %}{% set stats.total = stats.total + (m.costo_mantencion_clp or 0) %}{% endfor %}
+    {% for m in mants_corr %}{% set stats.total = stats.total + (m.costo_mantencion_clp or 0) %}{% endfor %}
+    {% for c in compras %}{% set stats.total = stats.total + (c.costo_pm_clp or 0) %}{% endfor %}
+
+    <!-- SECCIÓN 2: KPIs EN TIEMPO REAL -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="card-custom text-center">
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado Actual</p>
+            <p class="text-3xl font-black mt-2 uppercase {% if equipo.estado_base == 'Operativo' %}text-emerald-600{% elif equipo.estado_base == 'Taller' %}text-red-600{% else %}text-slate-600{% endif %}">{{ equipo.estado_base }}</p>
+        </div>
+        <div class="card-custom text-center">
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Lectura / Uso</p>
+            <p class="text-3xl font-black mt-2 text-black font-mono">{{ "{:,.0f}".format(equipo.lectura_actual or 0).replace(',', '.') }} <span class="text-sm">{{ equipo.control_base }}</span></p>
+        </div>
+        <div class="card-custom text-center">
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Margen para Mantenimiento</p>
+            <p class="text-3xl font-black mt-2 font-mono {% if equipo.margen < 0 %}text-red-600{% elif equipo.margen <= 150 %}text-amber-500{% else %}text-emerald-600{% endif %}">{{ "{:,.0f}".format(equipo.margen or 0).replace(',', '.') }} <span class="text-sm">{{ equipo.control_base }}</span></p>
+        </div>
+        <div class="card-custom text-center bg-slate-900 border-slate-800">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inversión Acumulada</p>
+            <p class="text-3xl font-black mt-2 font-mono text-white">${{ "{:,.0f}".format(stats.total).replace(',', '.') }}</p>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 3: TABLAS HISTÓRICAS (Grid 2 Columnas) -->
+    <div class="grid grid-cols-1 gap-6 mb-6">
+        <!-- Mantenciones Preventivas -->
+        <div class="card-custom-nopad">
+            <div class="p-4 bg-slate-100 border-b-2 border-slate-300">
+                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">1. Historial de Mantenciones Preventivas (PM)</h3>
+            </div>
+            <div class="overflow-x-auto max-h-64">
+                <table class="w-full text-left">
+                    <thead class="sticky top-0 bg-white shadow-sm">
+                        <tr><th>Fecha</th><th>Folio</th><th>Pauta Efectuada</th><th>Mecánico</th><th>Lectura</th><th>Costo</th><th>Estado</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for m in mants_prev %}
+                        <tr class="hover:bg-slate-50">
+                            <td class="font-black text-black">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '' }}</td>
+                            <td class="font-mono font-black text-slate-500">{{ m.folio }}</td>
+                            <td class="font-black uppercase">{{ m.tipo_mantencion }}</td>
+                            <td class="font-bold text-slate-700">{{ m.mecanico }}</td>
+                            <td class="font-mono font-black">{{ "{:,.0f}".format(m.lectura or 0).replace(',', '.') }}</td>
+                            <td class="font-mono font-black text-blue-700">${{ "{:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
+                            <td><span class="px-2 py-1 bg-slate-200 border border-slate-300 rounded text-[10px] font-black uppercase">{{ m.estado }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="7" class="text-center font-black py-6 text-slate-400 uppercase">Sin registros preventivos.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Averías y Correctivas -->
+        <div class="card-custom-nopad">
+            <div class="p-4 bg-slate-100 border-b-2 border-slate-300">
+                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">2. Historial de Averías y Correctivas</h3>
+            </div>
+            <div class="overflow-x-auto max-h-64">
+                <table class="w-full text-left">
+                    <thead class="sticky top-0 bg-white shadow-sm">
+                        <tr><th>Fecha</th><th>Sistema Afectado</th><th>Diagnóstico / Causa Raíz</th><th>Mecánico</th><th>Lectura</th><th>Costo</th><th>Estado</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for m in mants_corr %}
+                        <tr class="hover:bg-slate-50">
+                            <td class="font-black text-black">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '' }}</td>
+                            <td class="font-black uppercase text-red-600">{{ m.sistema_falla }}</td>
+                            <td class="font-bold text-black">{{ m.causa_raiz }}</td>
+                            <td class="font-bold text-slate-700">{{ m.mecanico }}</td>
+                            <td class="font-mono font-black">{{ "{:,.0f}".format(m.lectura or 0).replace(',', '.') }}</td>
+                            <td class="font-mono font-black text-blue-700">${{ "{:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
+                            <td><span class="px-2 py-1 bg-slate-200 border border-slate-300 rounded text-[10px] font-black uppercase">{{ m.estado }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="7" class="text-center font-black py-6 text-slate-400 uppercase">Sin registros de averías.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 4: COMPRAS Y LECTURAS (Grid Dividido) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
+        <!-- Compras -->
+        <div class="card-custom-nopad">
+            <div class="p-4 bg-slate-100 border-b-2 border-slate-300">
+                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">3. Repuestos Asociados (OC)</h3>
+            </div>
+            <div class="overflow-x-auto max-h-64">
+                <table class="w-full text-left">
+                    <thead class="sticky top-0 bg-white shadow-sm">
+                        <tr><th>Fecha</th><th>N° OC</th><th>Detalle de Compra</th><th>Inversión</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for c in compras %}
+                        <tr class="hover:bg-slate-50">
+                            <td class="font-black text-black">{{ c.fecha.strftime('%d/%m/%Y') if c.fecha else '' }}</td>
+                            <td class="font-mono font-black text-slate-500">{{ c.oc }}</td>
+                            <td class="font-bold text-black">{{ c.descripcion }}</td>
+                            <td class="font-mono font-black text-blue-700">${{ "{:,.0f}".format(c.costo_pm_clp or 0).replace(',', '.') }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center font-black py-6 text-slate-400 uppercase">Sin compras registradas.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Lecturas -->
+        <div class="card-custom-nopad">
+            <div class="p-4 bg-slate-100 border-b-2 border-slate-300">
+                <h3 class="font-black text-black uppercase text-[11px] tracking-widest">4. Bitácora de Lecturas (HR / KM)</h3>
+            </div>
+            <div class="overflow-x-auto max-h-64">
+                <table class="w-full text-left">
+                    <thead class="sticky top-0 bg-white shadow-sm">
+                        <tr><th>Fecha y Hora</th><th>Valor Registrado</th><th>Responsable / Usuario</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for l in lecturas %}
+                        <tr class="hover:bg-slate-50">
+                            <td class="font-black text-black">{{ l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else '' }}</td>
+                            <td class="font-mono font-black text-lg text-black">{{ "{:,.0f}".format(l.horometro or l.kilometraje or 0).replace(',', '.') }}</td>
+                            <td class="font-bold text-slate-600 uppercase">{{ l.responsable or 'Sistema' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-center font-black py-6 text-slate-400 uppercase">Sin lecturas históricas.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
