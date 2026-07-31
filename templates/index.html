@@ -194,13 +194,11 @@
 
                 <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-200 pb-2">3. Inteligencia de Negocio y Costos por Marca</h3>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <!-- Gráfico de Barras Costo por Marca -->
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
                         <h4 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-4">Costo Histórico por Marca (Mants + Compras)</h4>
                         <div class="h-64 relative w-full"><canvas id="chartCostoMarcas"></canvas></div>
                     </div>
                     
-                    <!-- Tabla de Distribución -->
                     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
                         <div class="bg-slate-50 px-4 py-3 border-b border-slate-200">
                             <h4 class="text-[10px] font-semibold text-slate-600 uppercase tracking-widest">Distribución y Desempeño Operativo</h4>
@@ -308,7 +306,7 @@
                 </div>
             </div>
 
-            <!-- 7. KANBAN -->
+            <!-- 7. KANBAN Y BOTONES VER PDF -->
             <div id="plan" class="seccion">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <p class="text-[11px] md:text-xs font-bold text-slate-800 uppercase tracking-widest">Ejecución Operativa</p>
@@ -332,10 +330,15 @@
                             <div class="bg-white p-3 rounded shadow-sm border border-slate-200 cursor-grab" data-id="{{ t.id }}">
                                 <div class="flex justify-between items-start mb-2">
                                     <h4 class="font-bold text-slate-900 text-sm uppercase">{{ t.codigo }}</h4>
-                                    <button onclick="abrirChecklist('{{t.id}}', '{{t.codigo}}', '{{t.tipo}}')" class="bg-white border border-slate-300 text-slate-700 font-semibold text-[9px] uppercase px-2 py-1 rounded hover:bg-slate-50 transition">CHECKLIST</button>
+                                    <!-- AQUI AGREGAMOS EL BOTÓN DEL PDF Y DEL CHECKLIST JUNTOS -->
+                                    <div class="flex gap-1">
+                                        <a href="/imprimir_ot/{{ t.id }}" target="_blank" class="bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[9px] uppercase px-2 py-1 rounded hover:bg-blue-100 transition shadow-sm">Ver PDF</a>
+                                        <button onclick="abrirChecklist('{{t.id}}', '{{t.codigo}}', '{{t.tipo}}')" class="bg-white border border-slate-300 text-slate-700 font-semibold text-[9px] uppercase px-2 py-1 rounded hover:bg-slate-50 transition shadow-sm">Firmar</button>
+                                    </div>
                                 </div>
                                 <div class="mb-2"><span class="text-[10px] px-2 py-0.5 rounded font-semibold uppercase border {% if t.clasificacion=='Preventiva' %}bg-blue-50 text-blue-700 border-blue-200{% else %}bg-red-50 text-red-700 border-red-200{% endif %}">{{ t.clasificacion }}</span></div>
-                                <p class="text-xs text-slate-700 font-medium mb-3">{{ t.tipo[:45] }}</p>
+                                <!-- AQUÍ QUITAMOS EL LÍMITE DE 45 CARACTERES, AHORA MUESTRA TODO EL DETALLE -->
+                                <p class="text-[11px] text-slate-700 font-medium mb-3 line-clamp-3" title="{{ t.tipo }}">{{ t.tipo }}</p>
                                 <select class="kanban-mecanico-sel w-full text-[10px] border border-slate-300 rounded p-1 mb-2 font-medium text-slate-800" data-id="{{ t.id }}">
                                     <option value="Sin Asignar">Mecánico Sin Asignar</option>
                                     {% for m in mecanicos %}<option value="{{ m.nombre }}" {% if t.mecanico == m.nombre %}selected{% endif %}>{{ m.nombre }}</option>{% endfor %}
@@ -363,13 +366,17 @@
             <!-- 9. PREVENTIVAS -->
             <div id="ot" class="seccion">
                 <div class="card-custom mb-6 bg-white"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/?tab=ot"><div class="min-w-[120px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="min-w-[120px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Folio</label><input type="text" name="folio" class="form-input font-mono"></div><div class="min-w-[120px] flex-[2]"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Pauta</label><input list="lista_pautas" name="tipo" class="form-input" required></div><div class="min-w-[100px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Odo/Hor.</label><input type="number" name="lectura" class="form-input font-mono"></div><div class="min-w-[100px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Costo CLP</label><input type="number" name="costo" class="form-input font-mono" required></div><button type="submit" class="btn-primary mb-1">Registrar PM</button></form></div>
-                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Intervención</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mants_prev %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td><span class="font-medium text-slate-800">{{ m.fecha }}</span><br><span class="text-[10px] font-mono text-slate-500">{{ m.ot_generada }}</span></td><td class="font-bold text-blue-600 uppercase">{{ m.codigo }}</td><td class="font-medium text-slate-800">{{ m.tipo_mantencion }}</td><td class="text-xs font-medium text-slate-700">{{ m.mecanico }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.lectura_str }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.costo_str }}</td><td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-semibold uppercase border border-slate-200 text-slate-700">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="borrarRegistro('ot', '{{m.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Borrar</button></td></tr>{% endfor %}</tbody></table></div>
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Intervención</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mants_prev %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td><span class="font-medium text-slate-800">{{ m.fecha }}</span><br><span class="text-[10px] font-mono text-slate-500">{{ m.ot_generada }}</span></td><td class="font-bold text-blue-600 uppercase">{{ m.codigo }}</td><td class="font-medium text-slate-800">{{ m.tipo_mantencion }}</td><td class="text-xs font-medium text-slate-700">{{ m.mecanico }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.lectura_str }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.costo_str }}</td><td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-semibold uppercase border border-slate-200 text-slate-700">{{ m.estado }}</span></td>
+                <!-- BOTÓN PDF AÑADIDO -->
+                <td class="text-right whitespace-nowrap"><a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action text-blue-700 border-blue-200 bg-white hover:bg-blue-50">Ver PDF</a><button onclick="borrarRegistro('ot', '{{m.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Borrar</button></td></tr>{% endfor %}</tbody></table></div>
             </div>
             
             <!-- 10. CORRECTIVAS -->
             <div id="ot_corr" class="seccion">
                 <div class="card-custom mb-6 bg-white"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="referer" value="/?tab=ot_corr"><div class="min-w-[120px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="min-w-[150px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Sistema Falla</label><select name="sistema_falla" class="form-input"><option value="Motor">Motor</option><option value="Hidráulico">Hidráulico</option><option value="Eléctrico">Eléctrico</option><option value="Frenos">Frenos</option><option value="Estructura">Estructura</option><option value="Neumáticos">Neumáticos</option></select></div><div class="min-w-[150px] flex-[2]"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Diagnóstico / Causa</label><input type="text" name="causa_raiz" class="form-input" required></div><div class="min-w-[100px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Folio</label><input type="text" name="folio" class="form-input font-mono"></div><button type="submit" class="btn-danger mb-1">Reportar Avería</button></form></div>
-                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Sistema</th><th>Causa Raíz</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>{% for m in mants_corr %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td><span class="font-medium text-slate-800">{{ m.fecha }}</span><br><span class="text-[10px] font-mono text-slate-500">{{ m.ot_generada }}</span></td><td class="font-bold text-red-600 uppercase">{{ m.codigo }}</td><td class="font-semibold text-[11px] uppercase text-slate-700">{{ m.sistema_falla }}</td><td class="font-medium text-slate-800">{{ m.causa_raiz }}</td><td class="text-xs font-medium text-slate-700">{{ m.mecanico }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.lectura_str }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.costo_str }}</td><td><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-[9px] font-semibold uppercase border border-slate-200">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="borrarRegistro('ot', '{{m.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Borrar</button></td></tr>{% endfor %}</tbody></table></div>
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Sistema</th><th>Causa Raíz</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>{% for m in mants_corr %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td><span class="font-medium text-slate-800">{{ m.fecha }}</span><br><span class="text-[10px] font-mono text-slate-500">{{ m.ot_generada }}</span></td><td class="font-bold text-red-600 uppercase">{{ m.codigo }}</td><td class="font-semibold text-[11px] uppercase text-slate-700">{{ m.sistema_falla }}</td><td class="font-medium text-slate-800">{{ m.causa_raiz }}</td><td class="text-xs font-medium text-slate-700">{{ m.mecanico }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.lectura_str }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.costo_str }}</td><td><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-[9px] font-semibold uppercase border border-slate-200">{{ m.estado }}</span></td>
+                <!-- BOTÓN PDF AÑADIDO -->
+                <td class="text-right whitespace-nowrap"><a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action text-blue-700 border-blue-200 bg-white hover:bg-blue-50">Ver PDF</a><button onclick="borrarRegistro('ot', '{{m.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Borrar</button></td></tr>{% endfor %}</tbody></table></div>
             </div>
 
             <!-- 11. LECTURAS -->
@@ -415,7 +422,45 @@
     
     <div id="modal-obra" class="fixed inset-0 bg-slate-900/90 z-[600] hidden flex flex-col items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"><div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 shrink-0"><h3 class="font-bold text-slate-800 uppercase text-sm">EQUIPOS EN: <span id="modal-obra-titulo" class="text-blue-600"></span></h3><button onclick="document.getElementById('modal-obra').classList.add('hidden')" class="text-slate-400 hover:text-slate-800 font-bold text-2xl">&times;</button></div><div class="p-0 flex-1 overflow-y-auto bg-white"><table class="w-full text-left table-custom"><thead class="sticky top-0 bg-slate-50 shadow-sm z-10 border-b border-slate-200"><tr><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase pl-6">Código</th><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase">Tipo</th><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase">Estado</th><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase text-right pr-6">Acción</th></tr></thead><tbody id="modal-obra-body"></tbody></table></div></div></div>
 
-    <div id="checklist-modal" class="fixed inset-0 bg-slate-900/90 z-50 hidden flex flex-col items-center justify-center p-2 md:p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"><div class="p-4 bg-slate-800 flex justify-between items-center shrink-0"><div><h3 class="font-bold text-white uppercase text-sm">CHECKLIST DIGITAL</h3><p id="check-ot-title" class="text-[10px] text-blue-300 font-medium uppercase mt-1"></p></div><button onclick="document.getElementById('checklist-modal').classList.add('hidden')" class="text-slate-400 hover:text-white text-2xl">&times;</button></div><div class="p-5 flex-1 overflow-y-auto space-y-5 bg-slate-50"><div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm"><label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded border-slate-300"><span class="text-xs font-semibold text-slate-800 uppercase">Niveles Fluidos OK</span></label><label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded border-slate-300"><span class="text-xs font-semibold text-slate-800 uppercase">Cero Fugas</span></label><label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded border-slate-300"><span class="text-xs font-semibold text-slate-800 uppercase">Prueba Test</span></label></div><div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm"><input type="file" id="check-files" multiple accept="image/*,.pdf" class="block w-full text-xs font-medium text-slate-600 file:bg-slate-100 file:text-slate-700 file:font-semibold file:border-none file:px-3 file:py-1.5 cursor-pointer border border-dashed border-slate-300 p-2 rounded"></div><div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm"><div class="flex justify-between items-end mb-2"><h4 class="text-[10px] font-semibold text-slate-600 uppercase">3. Firma Técnico</h4><button onclick="clearPad()" class="text-[9px] font-semibold text-red-500 uppercase hover:text-red-700">Borrar</button></div><canvas id="signature-pad" width="350" height="120" class="w-full bg-slate-50 border border-slate-200 rounded"></canvas></div></div><div class="p-4 bg-white shrink-0 border-t border-slate-200"><button onclick="firmarYCerrarOT()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-semibold uppercase transition">Firmar y Finalizar</button></div></div></div>
+    <!-- EL NUEVO CHECKLIST QUE MUESTRA TODO EL DETALLE -->
+    <div id="checklist-modal" class="fixed inset-0 bg-slate-900/90 z-50 hidden flex flex-col items-center justify-center p-2 md:p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+            <div class="p-4 bg-slate-800 flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="font-bold text-white uppercase text-sm">CHECKLIST Y FIRMA</h3>
+                    <p id="check-ot-title" class="text-[11px] text-blue-300 font-bold uppercase mt-1"></p>
+                </div>
+                <button onclick="document.getElementById('checklist-modal').classList.add('hidden')" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div class="p-5 flex-1 overflow-y-auto space-y-4 bg-slate-50">
+                
+                <!-- ESTE CUADRO GRIS MUESTRA LA PAUTA COMPLETA -->
+                <div class="bg-slate-200 p-4 rounded-lg border border-slate-300 shadow-inner">
+                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Detalle Técnico / Filtros:</p>
+                    <p id="check-ot-desc" class="text-xs font-semibold text-slate-800 leading-relaxed"></p>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                    <label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded border-slate-300"><span class="text-xs font-semibold text-slate-800 uppercase">Niveles Fluidos OK</span></label>
+                    <label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded border-slate-300"><span class="text-xs font-semibold text-slate-800 uppercase">Cero Fugas</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded border-slate-300"><span class="text-xs font-semibold text-slate-800 uppercase">Prueba Test</span></label>
+                </div>
+                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                    <input type="file" id="check-files" multiple accept="image/*,.pdf" class="block w-full text-xs font-medium text-slate-600 file:bg-slate-100 file:text-slate-700 file:font-semibold file:border-none file:px-3 file:py-1.5 cursor-pointer border border-dashed border-slate-300 p-2 rounded">
+                </div>
+                <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-end mb-2">
+                        <h4 class="text-[10px] font-semibold text-slate-600 uppercase">Firma Técnico</h4>
+                        <button onclick="clearPad()" class="text-[9px] font-semibold text-red-500 uppercase hover:text-red-700">Borrar</button>
+                    </div>
+                    <canvas id="signature-pad" width="350" height="120" class="w-full bg-slate-50 border border-slate-200 rounded"></canvas>
+                </div>
+            </div>
+            <div class="p-4 bg-white shrink-0 border-t border-slate-200">
+                <button onclick="firmarYCerrarOT()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-semibold uppercase transition">Terminar y Firmar</button>
+            </div>
+        </div>
+    </div>
 
     <div id="edit-modal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden"><div class="p-4 bg-slate-50 flex justify-between items-center border-b border-slate-200"><h3 class="font-bold text-slate-800 uppercase text-xs" id="edit-title">Modificar</h3><button onclick="cerrarEditModal()" class="text-slate-400 hover:text-slate-600 font-bold text-lg">&times;</button></div><div class="p-6 flex flex-col gap-4" id="edit-fields"></div><div class="p-4 bg-slate-50 flex justify-end border-t border-slate-200"><button onclick="guardarEdicion()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded text-[10px] uppercase font-semibold w-full transition">Guardar</button></div></div></div>
 
@@ -551,7 +596,7 @@
             });
         }
 
-        // --- CHECKLIST DIGITAL ---
+        // --- CHECKLIST DIGITAL (AHORA MUESTRA TODO EL DETALLE TÉCNICO) ---
         let checkOtId = null; let canvas = document.getElementById('signature-pad'); let ctx = canvas.getContext('2d'); let drawing = false;
         canvas.addEventListener('mousedown', () => drawing = true); canvas.addEventListener('mouseup', () => drawing = false); canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('touchstart', (e) => { drawing = true; draw(e.touches[0]); }); canvas.addEventListener('touchend', () => drawing = false); canvas.addEventListener('touchmove', (e) => { draw(e.touches[0]); e.preventDefault(); });
@@ -559,7 +604,13 @@
         function clearPad() { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.beginPath(); }
         
         function abrirChecklist(ot_id, codigo, intervencion) {
-            checkOtId = ot_id; document.getElementById('check-ot-title').innerText = `${codigo} - ${intervencion}`; document.querySelectorAll('#checklist-modal input[type="checkbox"]').forEach(cb => cb.checked = false); document.getElementById('check-files').value = ''; clearPad(); document.getElementById('checklist-modal').classList.remove('hidden');
+            checkOtId = ot_id; 
+            document.getElementById('check-ot-title').innerText = `${codigo}`; 
+            document.getElementById('check-ot-desc').innerText = intervencion; 
+            document.querySelectorAll('#checklist-modal input[type="checkbox"]').forEach(cb => cb.checked = false); 
+            document.getElementById('check-files').value = ''; 
+            clearPad(); 
+            document.getElementById('checklist-modal').classList.remove('hidden');
         }
 
         function firmarYCerrarOT() {
@@ -634,13 +685,12 @@
                 });
             }
 
-            // INICIALIZADOR DE GRÁFICOS (CONTRASTE BALANCEADO)
+            // INICIALIZADOR DE GRÁFICOS
             if (typeof Chart !== 'undefined') {
                 Chart.defaults.font.family = "'Inter', sans-serif"; 
                 Chart.defaults.color = '#0F172A'; 
                 Chart.defaults.font.weight = '600';
                 
-                // 1. Gauge Disponibilidad (Dona 3 Estados)
                 if(document.getElementById('chartGaugeDisp')) {
                     new Chart(document.getElementById('chartGaugeDisp').getContext('2d'), {
                         type: 'doughnut',
@@ -656,7 +706,6 @@
                     });
                 }
 
-                // 2. Gráfico Barras (Costo por Marca)
                 if(document.getElementById('chartCostoMarcas') && chartCostoMarcas.labels.length > 0) {
                     new Chart(document.getElementById('chartCostoMarcas').getContext('2d'), {
                         type: 'bar',
