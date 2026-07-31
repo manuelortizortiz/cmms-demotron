@@ -17,10 +17,10 @@ class Equipo(db.Model):
     
     # Operación y Logística
     ubicacion = db.Column(db.String(100), default="CASA MATRIZ")
-    estado_base = db.Column(db.String(50), default="Operativo") # Operativo, Taller, Fuera de Servicio
+    estado_base = db.Column(db.String(50), default="Operativo") 
     
     # Mantenimiento y Rendimiento
-    control_base = db.Column(db.String(20), default="HORAS") # HORAS o KM
+    control_base = db.Column(db.String(20), default="HORAS") 
     lectura_actual = db.Column(db.Float, default=0.0)
     proxima_pm = db.Column(db.Float, default=0.0)
 
@@ -47,7 +47,7 @@ class FiltroEquipo(db.Model):
     baldwind = db.Column(db.String(100))
     originales = db.Column(db.String(100))
     donaldson = db.Column(db.String(100))
-    otra_alternativa = db.Column(db.String(100))
+    # Eliminamos 'otra_alternativa' ya que no existe en tu Base de Datos actual
 
     # Propiedades dinámicas para compatibilidad con plantillas y vistas
     @property
@@ -64,7 +64,8 @@ class FiltroEquipo(db.Model):
 
     @property
     def codigo_parte(self):
-        for val in [self.originales, self.fleetguard, self.donaldson, self.baldwind, self.otra_alternativa]:
+        # Busca el primer código válido entre las marcas disponibles
+        for val in [self.originales, self.fleetguard, self.donaldson, self.baldwind]:
             if val and str(val).strip() and str(val).strip() != '-':
                 return str(val).strip()
         return '-'
