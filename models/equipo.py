@@ -24,6 +24,11 @@ class Equipo(db.Model):
     lectura_actual = db.Column(db.Float, default=0.0)
     proxima_pm = db.Column(db.Float, default=0.0)
 
+    # CÁLCULO AUTOMÁTICO DEL MARGEN
+    @property
+    def margen(self):
+        return (self.proxima_pm or 0.0) - (self.lectura_actual or 0.0)
+
     def __repr__(self):
         return f"<Equipo {self.codigo}>"
 
