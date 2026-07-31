@@ -31,9 +31,19 @@ class Equipo(db.Model):
         return f"<Equipo {self.codigo}>"
 
 
-# =========================================================
-# NUEVA TABLA: Documentos Legales y Revisiones del Equipo
-# =========================================================
+class FiltroEquipo(db.Model):
+    __tablename__ = 'filtro_equipo'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    codigo_equipo = db.Column(db.String(50), nullable=False)
+    sistema = db.Column(db.String(100))
+    nombre_filtro = db.Column(db.String(100))
+    codigo_parte = db.Column(db.String(100))
+
+    def __repr__(self):
+        return f"<Filtro {self.nombre_filtro} - {self.codigo_equipo}>"
+
+
 class DocumentoEquipo(db.Model):
     __tablename__ = 'documento_equipo'
     
