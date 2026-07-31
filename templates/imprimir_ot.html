@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>OT - {{ ot.folio or ot.id }} | {{ equipo.codigo if equipo else 'N/A' }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #1E293B;
+            margin: 0;
+            padding: 0;
+            background-color: #F8FAFC;
+        }
+        .a4-container {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 20px auto;
+            padding: 20mm;
+            box-sizing: border-box;
+            background: white;
+            border: 1px solid #CBD5E1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 2px solid #1E3A8A;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1E3A8A;
+            letter-spacing: 1px;
+        }
+        .ot-title {
+            text-align: right;
+        }
+        .ot-title h1 {
+            margin: 0;
+            font-size: 18px;
+            text-transform: uppercase;
+            color: #0F172A;
+            letter-spacing: 0.5px;
+        }
+        .ot-title p {
+            margin: 6px 0 0 0;
+            font-size: 12px;
+            color: #475569;
+            font-weight: 500;
+        }
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #1E3A8A;
+            text-transform: uppercase;
+            border-bottom: 1px solid #E2E8F0;
+            margin-bottom: 12px;
+            padding-bottom: 4px;
+            margin-top: 25px;
+            letter-spacing: 0.5px;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .info-box {
+            border: 1px solid #E2E8F0;
+            padding: 16px;
+            border-radius: 4px;
+            background-color: #F8FAFC;
+        }
+        .info-item {
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+        .info-item:last-child {
+            margin-bottom: 0;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #64748B;
+            display: inline-block;
+            width: 130px;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #0F172A;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 11px;
+        }
+        th, td {
+            border: 1px solid #CBD5E1;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #F1F5F9;
+            color: #475569;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+        }
+        td {
+            font-weight: 500;
+            color: #1E293B;
+        }
+        .signature-section {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 80px;
+        }
+        .signature-box {
+            width: 35%;
+            text-align: center;
+            border-top: 1px solid #1E293B;
+            padding-top: 10px;
+        }
+        .signature-box p {
+            margin: 0;
+            font-size: 10px;
+            font-weight: 600;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .btn-print {
+            display: block;
+            width: 250px;
+            margin: 20px auto;
+            text-align: center;
+            background-color: #1E3A8A;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 6px;
+            border: none;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: background 0.2s;
+        }
+        .btn-print:hover {
+            background-color: #1D4ED8;
+        }
+        /* Configuración especial para que se imprima perfecto y quite botones */
+        @media print {
+            body { background: white; }
+            .a4-container { margin: 0; padding: 10mm; width: 100%; box-shadow: none; border: none; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Barra superior solo visible en pantalla, se oculta al imprimir -->
+    <div class="no-print" style="background:#FFFFFF; padding: 15px 0; border-bottom:1px solid #CBD5E1; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <button onclick="window.print()" class="btn-print">IMPRIMIR ORDEN / GUARDAR PDF</button>
+        <p style="font-size: 11px; color: #64748B; margin-top: 10px;">Presione el botón para generar el PDF oficial. La hoja está formateada en tamaño A4.</p>
+    </div>
+    
+    <div class="a4-container">
+        <!-- HEADER CORPORATIVO -->
+        <div class="header">
+            <div class="logo">DEMOTRON ERP</div>
+            <div class="ot-title">
+                <h1>ORDEN DE TRABAJO - {{ ot.tipo_ot }}</h1>
+                <p>N° Folio Interno: <strong style="color: #1E3A8A; font-size: 14px;">{{ ot.folio or ot.id }}</strong></p>
+                <p>Fecha de Emisión: <strong>{{ ot.fecha.strftime('%d/%m/%Y') if ot.fecha else hoy.strftime('%d/%m/%Y') }}</strong></p>
+            </div>
+        </div>
+
+        <!-- 1. IDENTIFICACIÓN DEL EQUIPO -->
+        <div class="section-title">1. Ficha de Identificación de Activo</div>
+        <div class="info-box">
+            <div class="grid-2">
+                <div>
+                    <div class="info-item"><span class="info-label">Código Activo:</span> <span class="info-value" style="color:#1E3A8A; font-size: 14px;">{{ equipo.codigo if equipo else 'S/I' }}</span></div>
+                    <div class="info-item"><span class="info-label">Marca / Modelo:</span> <span class="info-value">{{ equipo.marca if equipo else 'S/I' }} / {{ equipo.modelo if equipo else 'S/I' }}</span></div>
+                    <div class="info-item"><span class="info-label">Tipo de Equipo:</span> <span class="info-value">{{ equipo.tipo_equipo if equipo else 'S/I' }}</span></div>
+                </div>
+                <div>
+                    <div class="info-item"><span class="info-label">Patente / VIN:</span> <span class="info-value" style="font-family: monospace;">{{ equipo.patente if equipo else 'S/I' }} / {{ equipo.vin if equipo else 'S/I' }}</span></div>
+                    <div class="info-item"><span class="info-label">Lectura Actual:</span> <span class="info-value">{{ "{:,.0f}".format(equipo.lectura_actual or 0).replace(',', '.') if equipo else '0' }} {{ equipo.control_base if equipo else '' }}</span></div>
+                    <div class="info-item"><span class="info-label">Estado actual:</span> <span class="info-value">{{ equipo.estado_base if equipo else 'S/I' }}</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. DETALLE DE LA INTERVENCIÓN -->
+        <div class="section-title">2. Descripción de la Intervención</div>
+        <div class="info-box" style="background-color: #ffffff;">
+            <div class="info-item"><span class="info-label">Pauta / Tarea:</span> <span class="info-value">{{ ot.tipo_mantencion }}</span></div>
+            {% if ot.tipo_ot == 'Correctiva' %}
+            <div class="info-item" style="margin-top:12px;"><span class="info-label">Sistema Afectado:</span> <span class="info-value">{{ ot.sistema_falla }}</span></div>
+            <div class="info-item" style="margin-top:12px;"><span class="info-label">Causa / Diagnóstico:</span> <span class="info-value">{{ ot.causa_raiz }}</span></div>
+            {% else %}
+            <div class="info-item" style="margin-top:12px;"><span class="info-label">Observaciones:</span> <span class="info-value">{{ getattr(ot, 'observacion', '') or 'Mantenimiento preventivo programado según pauta vigente.' }}</span></div>
+            {% endif %}
+            <div class="info-item" style="margin-top:12px;"><span class="info-label">Técnico Asignado:</span> <span class="info-value">{{ ot.mecanico or 'Técnico no especificado' }}</span></div>
+            <div class="info-item" style="margin-top:12px;"><span class="info-label">Status OT:</span> <span class="info-value">{{ ot.estado }}</span></div>
+        </div>
+
+        <!-- 3. LISTADO DE REPUESTOS -->
+        <div class="section-title">3. Especificación de Filtros y Repuestos</div>
+        {% if filtros %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Sistema / Aplicación</th>
+                    <th>Código / N° de Parte (Principal)</th>
+                    <th style="width: 60px; text-align:center;">Cant.</th>
+                    <th style="width: 90px; text-align:center;">Verificado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in filtros %}
+                <tr>
+                    <td><strong>{{ f.sistema }}</strong></td>
+                    <td style="font-family: monospace; font-size:12px; font-weight: 600;">{{ f.codigo }}</td>
+                    <td style="text-align:center;">{{ f.cantidad }}</td>
+                    <td style="text-align:center;">[ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="border: 1px dashed #CBD5E1; padding: 20px; text-align: center; border-radius: 4px; background: #F8FAFC;">
+            <p style="font-size: 11px; color: #64748B; margin: 0;">No existen filtros ni componentes pre-asignados en la Base de Datos para este modelo.</p>
+        </div>
+        {% endif %}
+
+        <!-- 4. CHECKLIST -->
+        <div class="section-title">4. Checklist de Protocolo Estándar</div>
+        <table>
+            <tbody>
+                <tr><td style="width:30px; text-align:center; font-weight: bold;">[ &nbsp; ]</td><td>Revisión, rellenado y control de niveles de fluidos operativos (Refrigerante, Hidráulico, Motor).</td></tr>
+                <tr><td style="width:30px; text-align:center; font-weight: bold;">[ &nbsp; ]</td><td>Inspección visual minuciosa de fugas en mangueras, acoples y banco de válvulas.</td></tr>
+                <tr><td style="width:30px; text-align:center; font-weight: bold;">[ &nbsp; ]</td><td>Inspección de desgaste y presión en neumáticos / estado general del tren de rodaje.</td></tr>
+                <tr><td style="width:30px; text-align:center; font-weight: bold;">[ &nbsp; ]</td><td>Verificación en vacío: Arranque, sistema de frenos, iluminación y alarmas acústicas.</td></tr>
+            </tbody>
+        </table>
+
+        <!-- 5. COMENTARIOS DE CIERRE -->
+        <div class="section-title" style="margin-top:25px;">5. Observaciones Finales del Técnico</div>
+        <div style="border: 1px solid #CBD5E1; height: 100px; border-radius:4px; margin-top:10px; background-color: #F8FAFC;"></div>
+
+        <!-- 6. FIRMAS -->
+        <div class="signature-section">
+            <div class="signature-box">
+                <p>Firma Técnico Especialista</p>
+            </div>
+            <div class="signature-box">
+                <p>V°B° Jefatura de Mantenimiento</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
