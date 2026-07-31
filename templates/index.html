@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>DEMOTRON ERP CMMS</title>
-    <!-- FAVICON RESTAURADO Y FUNCIONAL -->
     <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
@@ -16,27 +15,27 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
-        body { font-family: 'Inter', sans-serif; font-size: 13px; background-color: #F1F5F9; color: #000000; margin: 0; }
+        body { font-family: 'Inter', sans-serif; font-size: 13px; background-color: #F1F5F9; color: #0F172A; margin: 0; }
         .seccion { display: none; } .seccion.active { display: block; }
         .sidebar-bg { background-color: #0F172A; border-right: 1px solid #1E293B; }
         .nav-link { color: #94A3B8; display: block; padding: 10px 24px; cursor: pointer; transition: all 0.2s; border-radius: 0 24px 24px 0; margin-right: 16px; margin-bottom: 2px; font-weight: 500; font-size: 12px; }
         .nav-link:hover { background: #1E293B; color: #F8FAFC; }
         .nav-link.active { background: #2563EB; color: #FFFFFF; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); }
-        .card-custom { background: white; border-radius: 8px; border: 2px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; padding: 16px;}
-        .card-custom-nopad { background: white; border-radius: 8px; border: 2px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden;}
+        .card-custom { background: white; border-radius: 8px; border: 1px solid #CBD5E1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden; padding: 16px;}
+        .card-custom-nopad { background: white; border-radius: 8px; border: 1px solid #CBD5E1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden;}
         @media (min-width: 768px) { .card-custom { padding: 24px; } }
         .table-wrapper { width: 100%; overflow-x: auto; }
         .table-custom { width: 100%; border-collapse: collapse; min-width: 600px; }
-        .table-custom th { font-size: 11px; color: #000000; padding: 12px 16px; border-bottom: 2px solid #CBD5E1; text-align: left; font-weight: 900; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; background: #F8FAFC; }
-        .table-custom td { padding: 12px 16px; border-bottom: 1px solid #E2E8F0; color: #000000; font-size: 12px; font-weight: 500; }
-        .form-input { border: 1px solid #94A3B8; padding: 8px 12px; border-radius: 6px; font-size: 12px; width: 100%; outline: none; transition: border-color 0.2s; font-weight: 600; color: #000000; }
+        .table-custom th { font-size: 11px; color: #1E293B; padding: 12px 16px; border-bottom: 2px solid #CBD5E1; text-align: left; font-weight: 700; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; background: #F8FAFC; }
+        .table-custom td { padding: 12px 16px; border-bottom: 1px solid #E2E8F0; color: #0F172A; font-size: 12px; font-weight: 500; }
+        .form-input { border: 1px solid #94A3B8; padding: 8px 12px; border-radius: 6px; font-size: 12px; width: 100%; outline: none; transition: border-color 0.2s; font-weight: 500; color: #0F172A; }
         .form-input:focus { border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2); }
-        .btn-primary { background-color: #2563EB; color: white; padding: 8px 16px; border-radius: 6px; font-weight: 900; transition: background 0.2s; cursor: pointer; border:none; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
+        .btn-primary { background-color: #2563EB; color: white; padding: 8px 16px; border-radius: 6px; font-weight: 700; transition: background 0.2s; cursor: pointer; border:none; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
         .btn-primary:hover { background-color: #1D4ED8; }
-        .btn-danger { background-color: #DC2626; color: white; padding: 8px 16px; border-radius: 6px; font-weight: 900; cursor: pointer; border:none; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
+        .btn-danger { background-color: #DC2626; color: white; padding: 8px 16px; border-radius: 6px; font-weight: 700; cursor: pointer; border:none; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
         .btn-danger:hover { background-color: #B91C1C; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .btn-action { font-size: 10px; font-weight: 900; text-transform: uppercase; padding: 5px 10px; border-radius: 4px; border: 1px solid #94A3B8; transition: all 0.2s; margin-right: 4px; display:inline-block; color: #000000;}
+        .btn-action { font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 5px 10px; border-radius: 4px; border: 1px solid #94A3B8; transition: all 0.2s; margin-right: 4px; display:inline-block; color: #1E293B;}
         .btn-action:hover { background-color: #E2E8F0; }
         #signature-pad { border: 2px dashed #94A3B8; border-radius: 8px; background: #F8FAFC; cursor: crosshair; touch-action: none; }
         .leaflet-div-icon { background: transparent !important; border: none !important; }
@@ -44,17 +43,17 @@
         /* CALENDARIO ESTILO MIRRO */
         .fc { font-family: 'Inter', sans-serif; }
         .fc-theme-standard td, .fc-theme-standard th { border-color: #E2E8F0 !important; border-width: 1px !important; }
-        .fc-col-header-cell-cushion { padding: 16px !important; font-weight: 900; text-transform: uppercase; font-size: 11px; color: #000000; }
-        .fc-daygrid-day-number { font-weight: 900; font-size: 13px; color: #000000; padding: 12px !important; }
-        .fc-event { border-radius: 6px; border: none !important; padding: 4px 8px; font-size: 11px; font-weight: 900; margin: 2px 4px !important; transition: all 0.2s; }
-        .fc-event:hover { transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2); }
-        .fc .fc-toolbar-title { font-weight: 900; font-size: 20px; color: #000000; letter-spacing: -0.02em; }
-        .fc .fc-button-primary { background-color: #000000 !important; border: none !important; color: #FFFFFF !important; font-weight: 900 !important; border-radius: 8px !important; padding: 8px 16px !important; text-transform: uppercase; font-size: 11px; transition: all 0.2s; }
+        .fc-col-header-cell-cushion { padding: 16px !important; font-weight: 700; text-transform: uppercase; font-size: 11px; color: #1E293B; }
+        .fc-daygrid-day-number { font-weight: 600; font-size: 13px; color: #0F172A; padding: 12px !important; }
+        .fc-event { border-radius: 6px; border: none !important; padding: 4px 8px; font-size: 11px; font-weight: 600; margin: 2px 4px !important; transition: all 0.2s; }
+        .fc-event:hover { transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .fc .fc-toolbar-title { font-weight: 800; font-size: 20px; color: #0F172A; letter-spacing: -0.02em; }
+        .fc .fc-button-primary { background-color: #0F172A !important; border: none !important; color: #FFFFFF !important; font-weight: 600 !important; border-radius: 8px !important; padding: 8px 16px !important; text-transform: uppercase; font-size: 11px; transition: all 0.2s; }
         .fc .fc-button-primary:hover { background-color: #334155 !important; }
-        .fc-day-today { background-color: #F1F5F9 !important; }
+        .fc-day-today { background-color: #F8FAFC !important; }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden relative">
+<body class="flex h-screen overflow-hidden relative text-slate-800">
     
     <datalist id="lista_mecanicos">{% for m in mecanicos %}<option value="{{ m.nombre }}"></option>{% endfor %}</datalist>
     <datalist id="lista_pautas"><option value="PM1"></option><option value="PM2"></option><option value="PM3"></option><option value="PM4"></option><option value="PM5"></option></datalist>
@@ -64,38 +63,38 @@
     <!-- MENÚ LATERAL -->
     <aside id="sidebar" class="w-64 sidebar-bg flex flex-col z-40 shadow-2xl shrink-0 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out">
         <div class="h-16 md:h-20 flex items-center justify-between px-6 border-b border-slate-800">
-            <span class='text-2xl font-black text-white tracking-tighter'>DEMOTRON</span>
+            <span class='text-2xl font-bold text-white tracking-tighter'>DEMOTRON</span>
             <button onclick="toggleMenu()" class="md:hidden text-slate-400 hover:text-white text-2xl">&times;</button>
         </div>
         <nav class="flex-1 py-6 overflow-y-auto hide-scrollbar">
-            <p class="px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Principal</p>
+            <p class="px-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Principal</p>
             <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard</a>
             
-            <p class="px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 mt-5">Gestión de Flota</p>
+            <p class="px-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 mt-5">Gestión de Flota</p>
             <a onclick="switchTab('eq', this)" class="nav-link">Equipos y Fichas</a>
             <a onclick="switchTab('flota', this)" class="nav-link">Rendimiento (CPK)</a>
             <a onclick="switchTab('neumaticos', this)" class="nav-link">Neumáticos</a>
             <a onclick="switchTab('mapa', this)" class="nav-link">Geolocalización</a>
             <a onclick="switchTab('predictivo', this)" class="nav-link">Predictivo</a>
             
-            <p class="px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 mt-5">Terreno y Mantenimiento</p>
+            <p class="px-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 mt-5">Terreno y Mantenimiento</p>
             <a onclick="switchTab('plan', this)" class="nav-link">Kanban y Ejecución</a>
             <a onclick="switchTab('cal', this)" class="nav-link">Calendario de Pautas</a>
             <a onclick="switchTab('ot', this)" class="nav-link">Preventivas</a>
             <a onclick="switchTab('ot_corr', this)" class="nav-link">Correctivas</a>
             <a onclick="switchTab('lec', this)" class="nav-link">Ingreso de Lecturas</a>
             
-            <p class="px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 mt-5">Suministros y Finanzas</p>
+            <p class="px-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 mt-5">Suministros y Finanzas</p>
             <a onclick="switchTab('bodega', this)" class="nav-link">Inventario Bodega</a>
             <a onclick="switchTab('compras', this)" class="nav-link">Registro de Compras</a>
             <a onclick="switchTab('finanzas', this)" class="nav-link">Estructura de Costos</a>
             
-            <p class="px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 mt-5">Data y Sistema</p>
+            <p class="px-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 mt-5">Data y Sistema</p>
             <a onclick="switchTab('reportes', this)" class="nav-link">Exportación de Datos</a>
             <a onclick="switchTab('powerbi', this)" class="nav-link">Conexión Power BI</a>
             <a onclick="switchTab('automatizacion', this)" class="nav-link">Automatización</a>
             
-            <p class="px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 mt-5">Directorio</p>
+            <p class="px-6 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 mt-5">Directorio</p>
             <a onclick="switchTab('cond', this)" class="nav-link">Operadores</a>
             <a onclick="switchTab('mecanicos', this)" class="nav-link">Mecánicos</a>
             <a href="/admin/usuarios" class="nav-link">Auditoría / Usuarios</a>
@@ -104,22 +103,22 @@
         <div class="mt-auto border-t border-slate-800 p-4 bg-slate-900/50">
             <div class="flex items-center justify-between">
                 <div class="truncate pr-2 cursor-pointer hover:bg-slate-800 p-1.5 rounded transition" onclick="document.getElementById('modal-password').classList.remove('hidden')">
-                    <p class="text-xs font-bold text-slate-200 truncate uppercase">{{ current_user.nombre if current_user.nombre else current_user.username }}</p>
-                    <p class="text-[9px] text-blue-400 uppercase font-bold tracking-widest mt-0.5">Cambiar Clave</p>
+                    <p class="text-xs font-semibold text-slate-200 truncate uppercase">{{ current_user.nombre if current_user.nombre else current_user.username }}</p>
+                    <p class="text-[9px] text-blue-400 uppercase font-semibold tracking-widest mt-0.5">Cambiar Clave</p>
                 </div>
-                <a href="/logout" class="text-slate-400 hover:text-white hover:bg-red-600 border border-slate-700 p-2 rounded transition-colors font-bold text-[10px] uppercase tracking-wider">Salir</a>
+                <a href="/logout" class="text-slate-400 hover:text-white hover:bg-red-600 border border-slate-700 p-2 rounded transition-colors font-semibold text-[10px] uppercase tracking-wider">Salir</a>
             </div>
         </div>
     </aside>
 
     <main class="flex-1 flex flex-col min-w-0 w-full">
-        <!-- HEADER (Sin cinta roja) -->
-        <header class="h-14 md:h-16 bg-white border-b-2 border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0 shadow-sm z-10">
+        <!-- HEADER -->
+        <header class="h-14 md:h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 shrink-0 shadow-sm z-10">
             <div class="flex items-center gap-3">
-                <button onclick="toggleMenu()" class="md:hidden text-black p-1 text-2xl font-black leading-none focus:outline-none">☰</button>
-                <h1 id="title" class="text-base md:text-lg font-black text-black uppercase tracking-wider truncate">Dashboard</h1>
+                <button onclick="toggleMenu()" class="md:hidden text-slate-900 p-1 text-2xl font-bold leading-none focus:outline-none">☰</button>
+                <h1 id="title" class="text-base md:text-lg font-bold text-slate-900 uppercase tracking-wider truncate">Dashboard</h1>
             </div>
-            <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="BUSCAR EN TABLAS..." class="form-input w-32 md:w-64 bg-slate-50 border-slate-300 rounded-full pl-4 shadow-inner">
+            <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="Buscar en tablas..." class="form-input w-32 md:w-64 bg-slate-50 border-slate-300 rounded-full pl-4 shadow-inner">
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
@@ -127,94 +126,94 @@
             <!-- 1. DASHBOARD INTELIGENTE -->
             <div id="dash" class="seccion active">
                 
-                <h3 class="text-xs font-black text-black uppercase tracking-widest mb-4 border-b-2 border-slate-300 pb-2">1. Disponibilidad y Cumplimiento</h3>
+                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-200 pb-2">1. Disponibilidad y Cumplimiento</h3>
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
                     <!-- Gauge 3 Estados -->
-                    <div class="bg-white p-5 rounded-xl shadow-md border-2 border-slate-200 col-span-2 flex flex-col relative">
-                        <span class="text-[11px] font-black text-black uppercase tracking-widest absolute top-4 left-4">Estado Operativo</span>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 col-span-2 flex flex-col relative">
+                        <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest absolute top-4 left-4">Estado Operativo</span>
                         <div class="w-full h-32 mt-6 relative flex justify-center">
                             <canvas id="chartGaugeDisp"></canvas>
                         </div>
-                        <div class="flex justify-around text-[10px] font-black uppercase tracking-widest mt-2">
+                        <div class="flex justify-around text-[10px] font-bold uppercase tracking-widest mt-2">
                             <span class="text-blue-600">{{ kpis.operativos }} OP</span>
                             <span class="text-red-600">{{ kpis.en_taller }} TALLER</span>
-                            <span class="text-slate-500">{{ kpis.fuera_servicio }} FUERA</span>
+                            <span class="text-slate-600">{{ kpis.fuera_servicio }} FUERA</span>
                         </div>
                     </div>
                     <!-- Stats -->
-                    <div class="bg-white p-5 rounded-xl shadow-md border-2 border-slate-200 flex flex-col justify-center">
-                        <span class="text-[11px] font-black text-black uppercase tracking-widest mb-1">Cumplimiento PM</span>
-                        <h3 class="text-4xl font-black text-blue-600">{{ kpis.cumpl_pm_pct|default('0') }}%</h3>
-                        <span class="text-[10px] font-black text-black mt-1 uppercase">Adherencia al Plan</span>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
+                        <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Cumplimiento PM</span>
+                        <h3 class="text-3xl font-bold text-blue-600">{{ kpis.cumpl_pm_pct|default('0') }}%</h3>
+                        <span class="text-[10px] font-medium text-slate-600 mt-1 uppercase">Adherencia al Plan</span>
                     </div>
-                    <div class="bg-white p-5 rounded-xl shadow-md border-2 border-slate-200 flex flex-col justify-center">
-                        <span class="text-[11px] font-black text-black uppercase tracking-widest mb-1">Backlog Crítico</span>
-                        <h3 class="text-4xl font-black text-red-600">{{ kpis.atrasados|default('0') }}</h3>
-                        <span class="text-[10px] font-black text-black mt-1 uppercase">Equipos Vencidos</span>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
+                        <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Backlog Crítico</span>
+                        <h3 class="text-3xl font-bold text-red-600">{{ kpis.atrasados|default('0') }}</h3>
+                        <span class="text-[10px] font-medium text-slate-600 mt-1 uppercase">Equipos Vencidos</span>
                     </div>
-                    <div class="bg-white p-5 rounded-xl shadow-md border-2 border-slate-200 flex flex-col justify-center col-span-2 md:col-span-1">
-                        <span class="text-[11px] font-black text-black uppercase tracking-widest mb-1">Equipos Sin Mant.</span>
-                        <h3 class="text-4xl font-black text-amber-500">{{ kpis.equipos_sin_mantencion|default('0') }}</h3>
-                        <span class="text-[10px] font-black text-black mt-1 uppercase">Sin Historial PM</span>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center col-span-2 md:col-span-1">
+                        <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Equipos Sin Mant.</span>
+                        <h3 class="text-3xl font-bold text-amber-500">{{ kpis.equipos_sin_mantencion|default('0') }}</h3>
+                        <span class="text-[10px] font-medium text-slate-600 mt-1 uppercase">Sin Historial PM</span>
                     </div>
                 </div>
 
-                <h3 class="text-xs font-black text-black uppercase tracking-widest mb-4 border-b-2 border-slate-300 pb-2">2. Análisis de Costos y Eficiencia</h3>
+                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-200 pb-2">2. Análisis de Costos y Eficiencia</h3>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                     <!-- Ratio Correctivo/Preventivo -->
-                    <div class="bg-white p-5 rounded-xl shadow-md border-2 border-slate-200 flex flex-col justify-center col-span-2">
-                        <h4 class="text-[11px] font-black text-black uppercase tracking-widest mb-4">Volumen OTs (Correctivo vs Preventivo)</h4>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center col-span-2">
+                        <h4 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-4">Volumen OTs (Correctivo vs Preventivo)</h4>
                         <div class="flex h-8 rounded overflow-hidden mb-3">
-                            <div class="bg-red-600 h-full flex items-center justify-center text-white text-[12px] font-black" style="width: {{ kpis.ratio_corr|default(50) }}%;">{{ kpis.ratio_corr|default(0) }}% Falla</div>
-                            <div class="bg-blue-600 h-full flex items-center justify-center text-white text-[12px] font-black" style="width: {{ kpis.ratio_prev|default(50) }}%;">{{ kpis.ratio_prev|default(0) }}% PM</div>
+                            <div class="bg-red-500 h-full flex items-center justify-center text-white text-xs font-bold" style="width: {{ kpis.ratio_corr|default(50) }}%;">{{ kpis.ratio_corr|default(0) }}% Falla</div>
+                            <div class="bg-blue-600 h-full flex items-center justify-center text-white text-xs font-bold" style="width: {{ kpis.ratio_prev|default(50) }}%;">{{ kpis.ratio_prev|default(0) }}% PM</div>
                         </div>
-                        <div class="flex justify-between font-black text-black text-[10px] uppercase">
+                        <div class="flex justify-between font-semibold text-slate-700 text-[10px] uppercase">
                             <span>Cantidad Fallas: {{ kpis.correctivas_count }}</span>
                             <span>Cantidad PM: {{ kpis.preventivas_count }}</span>
                         </div>
                     </div>
                     
-                    <div class="bg-white p-5 rounded-xl shadow-md border-2 border-slate-200 flex flex-col justify-center">
-                        <h4 class="text-[11px] font-black text-black uppercase tracking-widest mb-2">Inversión YTD (2026)</h4>
-                        <h3 class="text-3xl font-black text-black">{{ kpis.costo_total_ytd|default('$0') }}</h3>
-                        <span class="text-[10px] font-black text-black mt-1 uppercase">OTs + Compras de Repuestos</span>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
+                        <h4 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Inversión YTD (2026)</h4>
+                        <h3 class="text-2xl font-bold text-slate-900">{{ kpis.costo_total_ytd|default('$0') }}</h3>
+                        <span class="text-[10px] font-medium text-slate-600 mt-1 uppercase">OTs + Compras Repuestos</span>
                     </div>
 
                     <!-- MTTB y MTTR Combinados -->
-                    <div class="bg-white p-5 rounded-xl shadow-md border-2 border-slate-200 flex flex-col justify-center">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
                         <div class="flex justify-between items-center mb-2">
-                            <h4 class="text-[11px] font-black text-black uppercase tracking-widest">MTTB / Frecuencia</h4>
-                            <h3 class="text-xl font-black text-blue-600">{{ kpis.mttb|default('0') }} Días</h3>
+                            <h4 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">MTTB / Frecuencia</h4>
+                            <h3 class="text-lg font-bold text-blue-600">{{ kpis.mttb|default('0') }} Días</h3>
                         </div>
-                        <div class="flex justify-between items-center border-t-2 border-slate-100 pt-2">
-                            <h4 class="text-[11px] font-black text-black uppercase tracking-widest">MTTR / Resolución</h4>
-                            <h3 class="text-xl font-black text-red-600">{{ kpis.mttr|default('0') }} Hrs</h3>
+                        <div class="flex justify-between items-center border-t border-slate-100 pt-2">
+                            <h4 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">MTTR / Resolución</h4>
+                            <h3 class="text-lg font-bold text-red-600">{{ kpis.mttr|default('0') }} Hrs</h3>
                         </div>
                     </div>
                 </div>
 
-                <h3 class="text-xs font-black text-black uppercase tracking-widest mb-4 border-b-2 border-slate-300 pb-2">3. Inteligencia de Negocio y Costos por Marca</h3>
+                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-200 pb-2">3. Inteligencia de Negocio y Costos por Marca</h3>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     <!-- Gráfico de Barras Costo por Marca -->
-                    <div class="bg-white p-5 rounded-xl shadow-md border-2 border-slate-200">
-                        <h4 class="text-[11px] font-black text-black uppercase tracking-widest mb-4">Costo Histórico por Marca (Mants + Compras)</h4>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <h4 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-4">Costo Histórico por Marca (Mants + Compras)</h4>
                         <div class="h-64 relative w-full"><canvas id="chartCostoMarcas"></canvas></div>
                     </div>
                     
                     <!-- Tabla de Distribución -->
-                    <div class="bg-white rounded-xl shadow-md border-2 border-slate-200 overflow-hidden flex flex-col">
-                        <div class="bg-slate-100 px-4 py-3 border-b-2 border-slate-200">
-                            <h4 class="text-[11px] font-black text-black uppercase tracking-widest">Distribución y Desempeño Operativo</h4>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                        <div class="bg-slate-50 px-4 py-3 border-b border-slate-200">
+                            <h4 class="text-[10px] font-semibold text-slate-600 uppercase tracking-widest">Distribución y Desempeño Operativo</h4>
                         </div>
                         <div class="p-4 flex-1 overflow-y-auto max-h-64">
                             <table class="w-full text-left text-xs">
                                 <tbody>
                                     {% for marca in dist_marcas %}
-                                    <tr class="border-b-2 border-slate-100">
-                                        <td class="py-3 font-black text-black uppercase text-sm">{{ marca.marca }}</td>
+                                    <tr class="border-b border-slate-100">
+                                        <td class="py-3 font-semibold text-slate-900 uppercase text-sm">{{ marca.marca }}</td>
                                         <td class="text-right">
-                                            <span class="font-black text-black text-sm">{{ marca.total }} Unid.</span> <br>
-                                            <span class="text-[10px] font-black {% if marca.operativos == marca.total %}text-blue-600{% else %}text-red-600{% endif %} uppercase">{{ marca.operativos }} Operativos</span>
+                                            <span class="font-bold text-slate-900 text-sm">{{ marca.total }} Unid.</span> <br>
+                                            <span class="text-[10px] font-bold {% if marca.operativos == marca.total %}text-blue-600{% else %}text-red-600{% endif %} uppercase">{{ marca.operativos }} Operativos</span>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -225,23 +224,23 @@
                 </div>
 
                 <!-- Tira Inferior: TOP EQUIPOS CON FALLAS (Fotos) -->
-                <h3 class="text-xs font-black text-black uppercase tracking-widest mb-4 border-b-2 border-slate-300 pb-2">4. Top 5: Equipos Críticos (Mayor Cantidad de Averías)</h3>
+                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-200 pb-2">4. Top 5: Equipos Críticos (Mayor Cantidad de Averías)</h3>
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
                     {% for eq in top_equipos_fallas %}
-                    <div class="bg-white border-2 border-slate-200 rounded-xl p-4 flex flex-col items-center text-center shadow-md">
+                    <div class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col items-center text-center shadow-sm hover:shadow transition">
                         <div class="h-16 w-full flex justify-center mb-3">
                             {% if eq.foto_url %}
                             <img src="{{ eq.foto_url }}" class="h-full object-contain" alt="Foto">
                             {% else %}
-                            <div class="h-full w-16 bg-slate-100 rounded border border-slate-300 flex items-center justify-center font-black text-xs text-slate-400">S/F</div>
+                            <div class="h-full w-16 bg-slate-100 rounded border border-slate-200 flex items-center justify-center font-semibold text-xs text-slate-400">S/F</div>
                             {% endif %}
                         </div>
-                        <h4 class="font-black text-black text-sm uppercase">{{ eq.codigo }}</h4>
-                        <p class="text-[11px] font-black text-red-600 uppercase mt-1">{{ eq.cantidad }} Fallas Reg.</p>
+                        <h4 class="font-bold text-slate-900 text-sm uppercase">{{ eq.codigo }}</h4>
+                        <p class="text-[10px] font-bold text-red-600 uppercase mt-1">{{ eq.cantidad }} Fallas Reg.</p>
                     </div>
                     {% else %}
-                    <div class="col-span-5 text-center p-6 bg-white rounded-xl border-2 border-slate-200">
-                        <p class="font-black text-black uppercase">Sin registros de averías por el momento.</p>
+                    <div class="col-span-5 text-center p-6 bg-white rounded-xl border border-slate-200">
+                        <p class="font-medium text-slate-600 uppercase">Sin registros de averías por el momento.</p>
                     </div>
                     {% endfor %}
                 </div>
@@ -255,18 +254,18 @@
                         <tbody>
                             {% for e in eqs %}
                             <tr class="{% if e.estado == 'Fuera de Servicio' %}opacity-50 bg-slate-50 grayscale-[50%]{% endif %} hover:bg-slate-50 transition border-b border-slate-100">
-                                <td class="whitespace-nowrap font-black text-blue-700 cursor-pointer hover:underline uppercase tracking-wide min-w-[80px]" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
-                                <td class="text-xs uppercase font-bold text-black">{{ e.tipo }}</td>
-                                <td class="font-bold text-black">{{ e.marca }}</td>
-                                <td class="font-bold text-black">{{ e.modelo }}</td>
-                                <td><span class="font-mono font-black bg-slate-100 px-2 py-1 rounded text-[10px] border border-slate-300 text-black">{{ e.patente }}</span><br><span class="text-[9px] text-black font-mono font-bold">{{ e.vin }}</span></td>
-                                <td class="font-mono font-black text-black">{{ e.lectura }}</td>
-                                <td class="font-mono font-black {% if e.margen < 0 %}text-red-700{% elif e.margen <= 150 %}text-amber-600{% else %}text-emerald-700{% endif %}">{{ e.margen_str }}</td>
-                                <td><span class="px-2 py-1 rounded text-[9px] font-black uppercase tracking-wider {% if e.estado == 'Operativo' %}bg-emerald-100 text-emerald-800 border border-emerald-300{% elif e.estado == 'Taller' %}bg-orange-100 text-orange-800 border border-orange-300{% else %}bg-slate-200 text-black border border-slate-400{% endif %}">{{ e.estado }}</span></td>
+                                <td class="whitespace-nowrap font-bold text-blue-600 cursor-pointer hover:underline uppercase tracking-wide min-w-[80px]" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
+                                <td class="text-xs uppercase font-medium text-slate-600">{{ e.tipo }}</td>
+                                <td class="font-medium text-slate-800">{{ e.marca }}</td>
+                                <td class="font-medium text-slate-800">{{ e.modelo }}</td>
+                                <td><span class="font-mono font-semibold bg-slate-100 px-2 py-1 rounded text-[10px] border border-slate-200 text-slate-700">{{ e.patente }}</span><br><span class="text-[9px] text-slate-500 font-mono font-medium">{{ e.vin }}</span></td>
+                                <td class="font-mono font-medium text-slate-800">{{ e.lectura }}</td>
+                                <td class="font-mono font-bold {% if e.margen < 0 %}text-red-600{% elif e.margen <= 150 %}text-amber-500{% else %}text-emerald-600{% endif %}">{{ e.margen_str }}</td>
+                                <td><span class="px-2 py-1 rounded text-[9px] font-semibold uppercase tracking-wider {% if e.estado == 'Operativo' %}bg-emerald-50 text-emerald-700 border border-emerald-200{% elif e.estado == 'Taller' %}bg-orange-50 text-orange-700 border border-orange-200{% else %}bg-slate-100 text-slate-600 border border-slate-300{% endif %}">{{ e.estado }}</span></td>
                                 <td class="text-right whitespace-nowrap">
                                     <a href="/api/imprimir_registro/{{e.codigo}}" target="_blank" class="btn-action">Ficha</a>
-                                    <a href="/api/imprimir_filtros/{{e.codigo}}" target="_blank" class="btn-action text-emerald-800 bg-emerald-50 border-emerald-300">Filtros</a>
-                                    <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Equipo {{e.codigo}}', [{db: 'marca', label: 'Marca', val: '{{e.marca}}'},{db: 'modelo', label: 'Modelo', val: '{{e.modelo}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'},{db: 'estado_base', label: 'Estado', val: '{{e.estado}}'}])" class="btn-action text-blue-700">Editar</button>
+                                    <a href="/api/imprimir_filtros/{{e.codigo}}" target="_blank" class="btn-action text-emerald-700 bg-emerald-50 border-emerald-200">Filtros</a>
+                                    <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Equipo {{e.codigo}}', [{db: 'marca', label: 'Marca', val: '{{e.marca}}'},{db: 'modelo', label: 'Modelo', val: '{{e.modelo}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'},{db: 'estado_base', label: 'Estado', val: '{{e.estado}}'}])" class="btn-action text-blue-600">Editar</button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -274,39 +273,37 @@
                     </table>
                 </div>
             </div>
-
-            <!-- LAS DEMAS SECCIONES SE MANTIENEN INTACTAS EN CÓDIGO PERO ADOPTAN LA FUENTE NEGRA Y NEGRITA AUTOMÁTICAMENTE POR EL CSS PRINCIPAL -->
             
             <!-- 3. FLOTA -->
             <div id="flota" class="seccion">
-                <div class="card-custom mb-6 bg-white border border-slate-200 shadow-sm"><h3 class="font-black uppercase tracking-widest text-sm text-black">Rendimiento e Indicadores (CPK/CPH)</h3></div>
+                <div class="card-custom mb-6 bg-white"><h3 class="font-bold uppercase tracking-widest text-sm text-slate-800">Rendimiento e Indicadores (CPK/CPH)</h3></div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[70vh] overflow-y-auto">
                     <table class="table-custom table-searchable">
-                        <thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Equipo</th><th>Uso Actual</th><th>Costo Histórico Acumulado</th><th class="bg-slate-200 text-black">Ratio Rendimiento (CPK/CPH)</th><th>Status Doc.</th></tr></thead>
-                        <tbody>{% for f in finanzas_flota %}<tr class="hover:bg-slate-50 border-b border-slate-200"><td class="font-black text-blue-700 text-xs tracking-wide uppercase">{{ f.codigo }}</td><td class="font-mono font-black text-black">{{ f.lectura }} <span class="text-[9px] text-black">{{ f.ctrl }}</span></td><td class="font-mono text-black font-bold">{{ f.costo_str }}</td><td class="bg-slate-50"><span class="font-mono font-black text-black text-sm bg-white border-2 border-slate-300 px-2 py-1 rounded">{{ f.cpk_cph_str }}</span></td><td><span class="text-[9px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-1 rounded">VIGENTE</span></td></tr>{% endfor %}</tbody>
+                        <thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Equipo</th><th>Uso Actual</th><th>Costo Histórico Acumulado</th><th class="bg-slate-200 text-slate-900">Ratio Rendimiento (CPK/CPH)</th><th>Status Doc.</th></tr></thead>
+                        <tbody>{% for f in finanzas_flota %}<tr class="hover:bg-slate-50 border-b border-slate-100"><td class="font-bold text-blue-600 text-xs tracking-wide uppercase">{{ f.codigo }}</td><td class="font-mono font-medium text-slate-800">{{ f.lectura }} <span class="text-[9px] text-slate-500">{{ f.ctrl }}</span></td><td class="font-mono text-slate-700 font-medium">{{ f.costo_str }}</td><td class="bg-slate-50"><span class="font-mono font-semibold text-slate-900 text-sm bg-white border border-slate-300 px-2 py-1 rounded">{{ f.cpk_cph_str }}</span></td><td><span class="text-[9px] font-semibold uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 rounded">VIGENTE</span></td></tr>{% endfor %}</tbody>
                     </table>
                 </div>
             </div>
 
             <!-- 4. NEUMÁTICOS -->
-            <div id="neumaticos" class="seccion"><div class="flex flex-col items-center justify-center h-[60vh] text-center px-4"><h2 class="text-xl font-black text-black uppercase tracking-tight mb-2">Control de Neumáticos</h2><p class="font-bold text-black max-w-lg">Módulo en desarrollo para control de ejes y recauchaje.</p></div></div>
+            <div id="neumaticos" class="seccion"><div class="flex flex-col items-center justify-center h-[60vh] text-center px-4"><h2 class="text-xl font-bold text-slate-800 uppercase tracking-tight mb-2">Control de Neumáticos</h2><p class="font-medium text-slate-600 max-w-lg">Módulo en desarrollo para control de ejes y recauchaje.</p></div></div>
 
             <!-- 5. MAPAS GRID MÚLTIPLE -->
             <div id="mapa" class="seccion h-full">
-                <div class="flex justify-between items-end mb-6 bg-white p-4 rounded-lg border-2 border-slate-200 shadow-sm">
-                    <div><h2 class="text-base font-black text-black uppercase tracking-widest">Geolocalización Logística</h2></div>
-                    <button onclick="document.getElementById('modal-ubicaciones').classList.remove('hidden')" class="bg-white border-2 border-slate-400 text-black hover:bg-slate-100 px-4 py-2 rounded font-black text-[10px] uppercase tracking-widest transition">Editar Ubicaciones</button>
+                <div class="flex justify-between items-end mb-6 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                    <div><h2 class="text-base font-bold text-slate-800 uppercase tracking-widest">Geolocalización Logística</h2></div>
+                    <button onclick="document.getElementById('modal-ubicaciones').classList.remove('hidden')" class="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded font-semibold text-[10px] uppercase tracking-widest transition">Editar Ubicaciones</button>
                 </div>
                 <div id="mapas-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-10"></div>
             </div>
 
             <!-- 6. PREDICTIVO -->
             <div id="predictivo" class="seccion">
-                <div class="card-custom mb-6 bg-white"><h3 class="font-black text-black uppercase tracking-widest text-sm">Planificador Predictivo</h3></div>
+                <div class="card-custom mb-6 bg-white"><h3 class="font-bold text-slate-800 uppercase tracking-widest text-sm">Planificador Predictivo</h3></div>
                 <div class="card-custom-nopad bg-white table-wrapper max-h-[70vh] overflow-y-auto">
                     <table class="table-custom table-searchable">
                         <thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Equipo</th><th>Lectura Act.</th><th>Límite PM</th><th>Margen</th><th>Proyección Estimada</th></tr></thead>
-                        <tbody>{% for p in predictivo_list %}<tr class="hover:bg-slate-50 transition border-b border-slate-200"><td class="font-black text-blue-700 text-xs tracking-wide uppercase">{{ p.codigo }}</td><td class="font-mono text-black font-bold">{{ p.lectura }}</td><td class="font-mono text-black font-bold">{{ p.limite }}</td><td><span class="font-mono font-black text-xs {% if p.margen < 0 %}text-red-700{% elif p.margen <= 150 %}text-amber-600{% else %}text-emerald-700{% endif %}">{{ p.margen_str }}</span></td><td><span class="px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-widest border-2 {% if p.dias_restantes <= 7 %} bg-red-100 text-red-800 border-red-300 {% elif p.dias_restantes <= 15 %} bg-orange-100 text-orange-800 border-orange-300 {% else %} bg-emerald-100 text-emerald-800 border-emerald-300 {% endif %}">FECHA: {{ p.fecha_est }} (En {{ p.dias_restantes }} Días)</span></td></tr>{% endfor %}</tbody>
+                        <tbody>{% for p in predictivo_list %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td class="font-bold text-blue-600 text-xs tracking-wide uppercase">{{ p.codigo }}</td><td class="font-mono text-slate-800 font-medium">{{ p.lectura }}</td><td class="font-mono text-slate-800 font-medium">{{ p.limite }}</td><td><span class="font-mono font-bold text-xs {% if p.margen < 0 %}text-red-600{% elif p.margen <= 150 %}text-amber-500{% else %}text-emerald-600{% endif %}">{{ p.margen_str }}</span></td><td><span class="px-3 py-1.5 rounded text-[10px] font-semibold uppercase tracking-widest border {% if p.dias_restantes <= 7 %} bg-red-50 text-red-700 border-red-200 {% elif p.dias_restantes <= 15 %} bg-orange-50 text-orange-700 border-orange-200 {% else %} bg-emerald-50 text-emerald-700 border-emerald-200 {% endif %}">FECHA: {{ p.fecha_est }} (En {{ p.dias_restantes }} Días)</span></td></tr>{% endfor %}</tbody>
                     </table>
                 </div>
             </div>
@@ -314,38 +311,38 @@
             <!-- 7. KANBAN -->
             <div id="plan" class="seccion">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <p class="text-[11px] md:text-xs font-black text-black uppercase tracking-widest">Ejecución Operativa</p>
-                    <form action="/api/add_record" method="POST" class="flex flex-wrap md:flex-nowrap gap-3 items-end bg-white p-4 rounded-xl border-2 border-slate-300 shadow-md w-full md:w-auto">
+                    <p class="text-[11px] md:text-xs font-bold text-slate-800 uppercase tracking-widest">Ejecución Operativa</p>
+                    <form action="/api/add_record" method="POST" class="flex flex-wrap md:flex-nowrap gap-3 items-end bg-white p-4 rounded-xl border border-slate-200 shadow-sm w-full md:w-auto">
                         <input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/?tab=plan"><input type="hidden" name="estado" value="Pendiente"><input type="hidden" name="lectura" value="0"><input type="hidden" name="costo" value="0">
-                        <div class="w-full md:w-32"><label class="text-[10px] font-black text-black uppercase tracking-widest mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div>
-                        <div class="w-full md:w-48"><label class="text-[10px] font-black text-black uppercase tracking-widest mb-1 block">Pauta / Fallo</label><input list="lista_pautas" name="tipo" class="form-input w-full" required></div>
+                        <div class="w-full md:w-32"><label class="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div>
+                        <div class="w-full md:w-48"><label class="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-1 block">Pauta / Fallo</label><input list="lista_pautas" name="tipo" class="form-input w-full" required></div>
                         <button type="submit" class="btn-primary w-full md:w-auto whitespace-nowrap mt-2 md:mt-0">Generar OT</button>
                     </form>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
                     {% for estado, col_id in [('Pendiente','kb-pendiente'), ('En Progreso','kb-progreso'), ('En Revisión','kb-revision'), ('Finalizada','kb-completado')] %}
-                    <div class="bg-slate-100 border-2 border-slate-300 rounded-lg p-3 flex flex-col h-[70vh]">
-                        <div class="flex justify-between items-center mb-3 px-2 border-b-2 border-slate-300 pb-2 shrink-0">
-                            <h3 class="font-black text-black text-[12px] uppercase tracking-widest">{{ estado }}</h3>
-                            <span class="bg-black text-white text-[10px] px-2 py-0.5 rounded font-black">{{ kanban[estado]|length }}</span>
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col h-[70vh]">
+                        <div class="flex justify-between items-center mb-3 px-2 border-b border-slate-200 pb-2 shrink-0">
+                            <h3 class="font-bold text-slate-800 text-[11px] uppercase tracking-widest">{{ estado }}</h3>
+                            <span class="bg-slate-800 text-white text-[10px] px-2 py-0.5 rounded font-semibold">{{ kanban[estado]|length }}</span>
                         </div>
                         <div id="{{ col_id }}" class="space-y-3 overflow-y-auto flex-1 hide-scrollbar pb-6" data-status="{{ estado }}">
                             {% for t in kanban[estado] %}
-                            <div class="bg-white p-3 rounded shadow-md border-2 border-slate-300 cursor-grab" data-id="{{ t.id }}">
+                            <div class="bg-white p-3 rounded shadow-sm border border-slate-200 cursor-grab" data-id="{{ t.id }}">
                                 <div class="flex justify-between items-start mb-2">
-                                    <h4 class="font-black text-black text-sm uppercase">{{ t.codigo }}</h4>
-                                    <button onclick="abrirChecklist('{{t.id}}', '{{t.codigo}}', '{{t.tipo}}')" class="bg-white border-2 border-slate-400 text-black font-black text-[9px] uppercase px-2 py-1 rounded hover:bg-slate-200 transition">CHECKLIST</button>
+                                    <h4 class="font-bold text-slate-900 text-sm uppercase">{{ t.codigo }}</h4>
+                                    <button onclick="abrirChecklist('{{t.id}}', '{{t.codigo}}', '{{t.tipo}}')" class="bg-white border border-slate-300 text-slate-700 font-semibold text-[9px] uppercase px-2 py-1 rounded hover:bg-slate-50 transition">CHECKLIST</button>
                                 </div>
-                                <div class="mb-2"><span class="text-[10px] px-2 py-0.5 rounded font-black uppercase border-2 {% if t.clasificacion=='Preventiva' %}bg-blue-100 text-blue-800 border-blue-400{% else %}bg-red-100 text-red-800 border-red-400{% endif %}">{{ t.clasificacion }}</span></div>
-                                <p class="text-[12px] text-black font-bold mb-3">{{ t.tipo[:45] }}</p>
-                                <select class="kanban-mecanico-sel w-full text-[11px] border-2 border-slate-400 rounded p-1 mb-2 font-black text-black" data-id="{{ t.id }}">
+                                <div class="mb-2"><span class="text-[10px] px-2 py-0.5 rounded font-semibold uppercase border {% if t.clasificacion=='Preventiva' %}bg-blue-50 text-blue-700 border-blue-200{% else %}bg-red-50 text-red-700 border-red-200{% endif %}">{{ t.clasificacion }}</span></div>
+                                <p class="text-xs text-slate-700 font-medium mb-3">{{ t.tipo[:45] }}</p>
+                                <select class="kanban-mecanico-sel w-full text-[10px] border border-slate-300 rounded p-1 mb-2 font-medium text-slate-800" data-id="{{ t.id }}">
                                     <option value="Sin Asignar">Mecánico Sin Asignar</option>
                                     {% for m in mecanicos %}<option value="{{ m.nombre }}" {% if t.mecanico == m.nombre %}selected{% endif %}>{{ m.nombre }}</option>{% endfor %}
                                 </select>
                                 <div class="flex justify-between items-center">
-                                    <span class="text-[10px] font-mono font-bold text-black">{{ t.fecha }}</span>
-                                    <button onclick="borrarRegistro('ot', '{{t.id}}')" class="text-[10px] text-red-600 hover:text-red-800 font-black uppercase">Borrar</button>
+                                    <span class="text-[10px] font-mono font-medium text-slate-500">{{ t.fecha }}</span>
+                                    <button onclick="borrarRegistro('ot', '{{t.id}}')" class="text-[10px] text-red-500 hover:text-red-700 font-semibold uppercase">Borrar</button>
                                 </div>
                             </div>
                             {% endfor %}
@@ -357,72 +354,72 @@
 
             <!-- 8. CALENDARIO ESTILO MIRRO -->
             <div id="cal" class="seccion h-full">
-                <div class="bg-white rounded-xl border-2 border-slate-200 shadow-md p-4 md:p-8 flex flex-col h-[calc(100vh-120px)]">
-                    <h3 class="text-xs font-black text-black uppercase tracking-widest mb-6 border-b-2 border-slate-200 pb-2">Planificación de Pautas</h3>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-8 flex flex-col h-[calc(100vh-120px)]">
+                    <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest mb-6 border-b border-slate-100 pb-2">Planificación de Pautas</h3>
                     <div id="calendar" class="flex-1 w-full h-full"></div>
                 </div>
             </div>
 
             <!-- 9. PREVENTIVAS -->
             <div id="ot" class="seccion">
-                <div class="card-custom mb-6 bg-white"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/?tab=ot"><div class="min-w-[120px] flex-1"><label class="text-[10px] font-black text-black uppercase mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="min-w-[120px] flex-1"><label class="text-[10px] font-black text-black uppercase mb-1 block">Folio</label><input type="text" name="folio" class="form-input font-mono"></div><div class="min-w-[120px] flex-[2]"><label class="text-[10px] font-black text-black uppercase mb-1 block">Pauta</label><input list="lista_pautas" name="tipo" class="form-input" required></div><div class="min-w-[100px] flex-1"><label class="text-[10px] font-black text-black uppercase mb-1 block">Odo/Hor.</label><input type="number" name="lectura" class="form-input font-mono"></div><div class="min-w-[100px] flex-1"><label class="text-[10px] font-black text-black uppercase mb-1 block">Costo CLP</label><input type="number" name="costo" class="form-input font-mono" required></div><button type="submit" class="btn-primary mb-1">Registrar PM</button></form></div>
-                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Intervención</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mants_prev %}<tr><td><span class="font-bold text-black">{{ m.fecha }}</span><br><span class="text-[10px] font-mono font-bold text-black">{{ m.ot_generada }}</span></td><td class="font-black text-blue-700 uppercase">{{ m.codigo }}</td><td class="font-bold text-black">{{ m.tipo_mantencion }}</td><td class="text-xs font-bold text-black">{{ m.mecanico }}</td><td class="font-mono text-xs font-black text-black">{{ m.lectura_str }}</td><td class="font-mono text-xs font-black text-black">{{ m.costo_str }}</td><td><span class="px-2 py-1 bg-slate-200 rounded text-[10px] font-black uppercase border border-slate-300 text-black">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="borrarRegistro('ot', '{{m.id}}')" class="btn-action text-red-700 border-red-300 bg-white">Borrar</button></td></tr>{% endfor %}</tbody></table></div>
+                <div class="card-custom mb-6 bg-white"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="ot"><input type="hidden" name="referer" value="/?tab=ot"><div class="min-w-[120px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="min-w-[120px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Folio</label><input type="text" name="folio" class="form-input font-mono"></div><div class="min-w-[120px] flex-[2]"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Pauta</label><input list="lista_pautas" name="tipo" class="form-input" required></div><div class="min-w-[100px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Odo/Hor.</label><input type="number" name="lectura" class="form-input font-mono"></div><div class="min-w-[100px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Costo CLP</label><input type="number" name="costo" class="form-input font-mono" required></div><button type="submit" class="btn-primary mb-1">Registrar PM</button></form></div>
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Intervención</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mants_prev %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td><span class="font-medium text-slate-800">{{ m.fecha }}</span><br><span class="text-[10px] font-mono text-slate-500">{{ m.ot_generada }}</span></td><td class="font-bold text-blue-600 uppercase">{{ m.codigo }}</td><td class="font-medium text-slate-800">{{ m.tipo_mantencion }}</td><td class="text-xs font-medium text-slate-700">{{ m.mecanico }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.lectura_str }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.costo_str }}</td><td><span class="px-2 py-1 bg-slate-100 rounded text-[9px] font-semibold uppercase border border-slate-200 text-slate-700">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="borrarRegistro('ot', '{{m.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Borrar</button></td></tr>{% endfor %}</tbody></table></div>
             </div>
             
             <!-- 10. CORRECTIVAS -->
             <div id="ot_corr" class="seccion">
-                <div class="card-custom mb-6 bg-white"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="referer" value="/?tab=ot_corr"><div class="min-w-[120px] flex-1"><label class="text-[10px] font-black text-black uppercase mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="min-w-[150px] flex-1"><label class="text-[10px] font-black text-black uppercase mb-1 block">Sistema Falla</label><select name="sistema_falla" class="form-input"><option value="Motor">Motor</option><option value="Hidráulico">Hidráulico</option><option value="Eléctrico">Eléctrico</option><option value="Frenos">Frenos</option><option value="Estructura">Estructura</option><option value="Neumáticos">Neumáticos</option></select></div><div class="min-w-[150px] flex-[2]"><label class="text-[10px] font-black text-black uppercase mb-1 block">Diagnóstico / Causa</label><input type="text" name="causa_raiz" class="form-input" required></div><div class="min-w-[100px] flex-1"><label class="text-[10px] font-black text-black uppercase mb-1 block">Folio</label><input type="text" name="folio" class="form-input font-mono"></div><button type="submit" class="btn-danger mb-1">Reportar Avería</button></form></div>
-                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Sistema</th><th>Causa Raíz</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>{% for m in mants_corr %}<tr><td><span class="font-bold text-black">{{ m.fecha }}</span><br><span class="text-[10px] font-mono font-bold text-black">{{ m.ot_generada }}</span></td><td class="font-black text-red-700 uppercase">{{ m.codigo }}</td><td class="font-black text-xs uppercase text-black">{{ m.sistema_falla }}</td><td class="font-bold text-black">{{ m.causa_raiz }}</td><td class="text-xs font-bold text-black">{{ m.mecanico }}</td><td class="font-mono text-xs font-black text-black">{{ m.lectura_str }}</td><td class="font-mono text-xs font-black text-black">{{ m.costo_str }}</td><td><span class="px-2 py-1 bg-slate-200 text-black rounded text-[10px] font-black uppercase border border-slate-300">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="borrarRegistro('ot', '{{m.id}}')" class="btn-action text-red-700 border-red-300 bg-white">Borrar</button></td></tr>{% endfor %}</tbody></table></div>
+                <div class="card-custom mb-6 bg-white"><form action="/api/add_record" method="POST" class="flex flex-wrap gap-4 items-end"><input type="hidden" name="tabla" value="ot_corr"><input type="hidden" name="referer" value="/?tab=ot_corr"><div class="min-w-[120px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="min-w-[150px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Sistema Falla</label><select name="sistema_falla" class="form-input"><option value="Motor">Motor</option><option value="Hidráulico">Hidráulico</option><option value="Eléctrico">Eléctrico</option><option value="Frenos">Frenos</option><option value="Estructura">Estructura</option><option value="Neumáticos">Neumáticos</option></select></div><div class="min-w-[150px] flex-[2]"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Diagnóstico / Causa</label><input type="text" name="causa_raiz" class="form-input" required></div><div class="min-w-[100px] flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Folio</label><input type="text" name="folio" class="form-input font-mono"></div><button type="submit" class="btn-danger mb-1">Reportar Avería</button></form></div>
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Sistema</th><th>Causa Raíz</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acción</th></tr></thead><tbody>{% for m in mants_corr %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td><span class="font-medium text-slate-800">{{ m.fecha }}</span><br><span class="text-[10px] font-mono text-slate-500">{{ m.ot_generada }}</span></td><td class="font-bold text-red-600 uppercase">{{ m.codigo }}</td><td class="font-semibold text-[11px] uppercase text-slate-700">{{ m.sistema_falla }}</td><td class="font-medium text-slate-800">{{ m.causa_raiz }}</td><td class="text-xs font-medium text-slate-700">{{ m.mecanico }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.lectura_str }}</td><td class="font-mono text-xs font-medium text-slate-800">{{ m.costo_str }}</td><td><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-[9px] font-semibold uppercase border border-slate-200">{{ m.estado }}</span></td><td class="text-right whitespace-nowrap"><button onclick="borrarRegistro('ot', '{{m.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Borrar</button></td></tr>{% endfor %}</tbody></table></div>
             </div>
 
             <!-- 11. LECTURAS -->
             <div id="lec" class="seccion">
-                <div class="card-custom mb-6 bg-white"><form action="/api/add_record" method="POST" class="flex gap-4 items-end"><input type="hidden" name="tabla" value="lectura"><input type="hidden" name="referer" value="/?tab=lec"><div class="flex-1"><label class="text-[10px] font-black text-black uppercase mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="flex-[2]"><label class="text-[10px] font-black text-black uppercase mb-1 block">Valor (Auto HR/KM)</label><input type="number" name="valor" class="form-input font-mono text-base" required></div><button type="submit" class="btn-primary mb-1">Guardar</button></form></div>
-                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha Captura</th><th>Equipo</th><th>Categoría</th><th>Valor Técnico</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for l in lecturas %}<tr><td class="font-bold text-xs text-black">{{ l.fecha }}</td><td class="font-black text-blue-700 uppercase">{{ l.codigo }}</td><td class="text-xs uppercase font-bold text-black">{{ l.tipo_equipo }}</td><td class="font-mono font-black text-base text-black">{{ l.valor_str }} <span class="text-[10px] font-sans font-bold text-black">{{ l.tipo }}</span></td><td class="text-right"><button onclick="borrarRegistro('lectura', '{{l.id}}')" class="btn-action text-red-700 bg-white border-red-300">Eliminar</button></td></tr>{% endfor %}</tbody></table></div>
+                <div class="card-custom mb-6 bg-white"><form action="/api/add_record" method="POST" class="flex gap-4 items-end"><input type="hidden" name="tabla" value="lectura"><input type="hidden" name="referer" value="/?tab=lec"><div class="flex-1"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Equipo</label><input type="text" name="codigo" class="form-input uppercase" required></div><div class="flex-[2]"><label class="text-[10px] font-semibold text-slate-600 uppercase mb-1 block">Valor (Auto HR/KM)</label><input type="number" name="valor" class="form-input font-mono text-base" required></div><button type="submit" class="btn-primary mb-1">Guardar</button></form></div>
+                <div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha Captura</th><th>Equipo</th><th>Categoría</th><th>Valor Técnico</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for l in lecturas %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td class="font-medium text-xs text-slate-800">{{ l.fecha }}</td><td class="font-bold text-blue-600 uppercase">{{ l.codigo }}</td><td class="text-[11px] uppercase font-semibold text-slate-600">{{ l.tipo_equipo }}</td><td class="font-mono font-bold text-base text-slate-900">{{ l.valor_str }} <span class="text-[10px] font-sans font-medium text-slate-500">{{ l.tipo }}</span></td><td class="text-right"><button onclick="borrarRegistro('lectura', '{{l.id}}')" class="btn-action text-red-600 bg-white border-red-200 hover:bg-red-50">Eliminar</button></td></tr>{% endfor %}</tbody></table></div>
             </div>
 
             <!-- 12. BODEGA -->
-            <div id="bodega" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Código SKU</th><th>Descripción de Artículo</th><th>Categoría</th><th>Stock Actual</th><th>Ubicación</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for b in bodega %}<tr><td class="font-mono text-xs font-bold text-black">{{ b.codigo_item or '-' }}</td><td class="font-bold text-black">{{ b.nombre }}</td><td class="text-xs font-bold uppercase text-black">{{ b.categoria }}</td><td class="font-mono font-black text-blue-700 text-base">{{ b.cantidad }}</td><td class="text-xs font-bold text-black">{{ b.ubicacion }}</td><td class="text-right"><button onclick="borrarRegistro('bodega', '{{b.id}}')" class="btn-action text-red-700 border-red-300 bg-white">Borrar</button></td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="bodega" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Código SKU</th><th>Descripción de Artículo</th><th>Categoría</th><th>Stock Actual</th><th>Ubicación</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for b in bodega %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td class="font-mono text-xs font-medium text-slate-500">{{ b.codigo_item or '-' }}</td><td class="font-medium text-slate-800">{{ b.nombre }}</td><td class="text-[11px] font-semibold uppercase text-slate-600">{{ b.categoria }}</td><td class="font-mono font-bold text-blue-600 text-base">{{ b.cantidad }}</td><td class="text-xs font-medium text-slate-700">{{ b.ubicacion }}</td><td class="text-right"><button onclick="borrarRegistro('bodega', '{{b.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Borrar</button></td></tr>{% endfor %}</tbody></table></div></div>
             
             <!-- 13. COMPRAS -->
-            <div id="compras" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha</th><th>N° OC</th><th>Equipo</th><th>Detalle</th><th>Inversión</th><th class="text-right">Acción</th></tr></thead><tbody>{% for c in compras %}<tr><td class="font-bold text-xs text-black">{{ c.fecha }}</td><td class="font-mono font-bold text-xs text-black">{{ c.oc }}</td><td class="font-black text-blue-700 uppercase">{{ c.codigo }}</td><td class="font-bold text-black">{{ c.descripcion }}</td><td class="font-mono font-black text-black">{{ c.costo_str }}</td><td class="text-right"><button onclick="borrarRegistro('compra', '{{c.id}}')" class="btn-action text-red-700 border-red-300 bg-white">Anular</button></td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="compras" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Fecha</th><th>N° OC</th><th>Equipo</th><th>Detalle</th><th>Inversión</th><th class="text-right">Acción</th></tr></thead><tbody>{% for c in compras %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td class="font-medium text-xs text-slate-800">{{ c.fecha }}</td><td class="font-mono font-medium text-xs text-slate-600">{{ c.oc }}</td><td class="font-bold text-blue-600 uppercase">{{ c.codigo }}</td><td class="font-medium text-slate-800">{{ c.descripcion }}</td><td class="font-mono font-medium text-slate-900">{{ c.costo_str }}</td><td class="text-right"><button onclick="borrarRegistro('compra', '{{c.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Anular</button></td></tr>{% endfor %}</tbody></table></div></div>
             
             <!-- 14. FINANZAS -->
-            <div id="finanzas" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[70vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Código</th><th>Categoría</th><th>Inversión (Mants)</th><th>Inversión (Insumos/OC)</th><th class="bg-slate-200 text-black">Costo Total Equipo</th></tr></thead><tbody>{% for f in finanzas_flota %}<tr class="hover:bg-slate-50 border-b border-slate-200"><td class="font-black text-blue-700 text-xs uppercase">{{ f.codigo }}</td><td class="text-[11px] uppercase font-bold text-black">{{ f.tipo }}</td><td class="font-mono font-bold text-black">{{ f.costo_mants }}</td><td class="font-mono font-bold text-black">{{ f.costo_compras }}</td><td class="font-mono font-black text-black bg-slate-50 border-l border-slate-300">{{ f.costo_str }}</td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="finanzas" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[70vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Código</th><th>Categoría</th><th>Inversión (Mants)</th><th>Inversión (Insumos/OC)</th><th class="bg-slate-50 text-slate-900">Costo Total Equipo</th></tr></thead><tbody>{% for f in finanzas_flota %}<tr class="hover:bg-slate-50 border-b border-slate-100"><td class="font-bold text-blue-600 text-xs uppercase">{{ f.codigo }}</td><td class="text-[10px] uppercase font-semibold text-slate-500">{{ f.tipo }}</td><td class="font-mono font-medium text-slate-700">{{ f.costo_mants }}</td><td class="font-mono font-medium text-slate-700">{{ f.costo_compras }}</td><td class="font-mono font-bold text-slate-900 bg-slate-50/50 border-l border-slate-200">{{ f.costo_str }}</td></tr>{% endfor %}</tbody></table></div></div>
             
             <!-- 15. REPORTES -->
             <div id="reportes" class="seccion">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-white border-2 border-slate-200 rounded-xl p-6 shadow-md flex flex-col items-center text-center"><h4 class="font-black text-black uppercase tracking-widest mb-4 mt-2">Base de Datos (Excel)</h4><a href="/api/exportar/excel_maestro" class="bg-blue-700 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-widest py-3 px-6 rounded-lg transition w-full">Descargar Excel (.xlsx)</a></div><div class="bg-white border-2 border-slate-200 rounded-xl p-6 shadow-md flex flex-col items-center text-center"><h4 class="font-black text-black uppercase tracking-widest mb-4 mt-2">Reporte Gerencial (PDF)</h4><button onclick="window.print()" class="bg-black hover:bg-slate-800 text-white font-black text-xs uppercase tracking-widest py-3 px-6 rounded-lg transition w-full">Imprimir / Guardar PDF</button></div></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center text-center"><h4 class="font-bold text-slate-800 uppercase tracking-widest mb-4 mt-2">Base de Datos (Excel)</h4><a href="/api/exportar/excel_maestro" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs uppercase tracking-widest py-3 px-6 rounded-lg transition w-full">Descargar Excel (.xlsx)</a></div><div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col items-center text-center"><h4 class="font-bold text-slate-800 uppercase tracking-widest mb-4 mt-2">Reporte Gerencial (PDF)</h4><button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs uppercase tracking-widest py-3 px-6 rounded-lg transition w-full">Imprimir / Guardar PDF</button></div></div>
             </div>
             
             <!-- 16. POWER BI -->
             <div id="powerbi" class="seccion">
-                <div class="bg-white border-2 border-slate-200 rounded-xl p-8 shadow-md max-w-4xl mx-auto"><h4 class="font-black text-black uppercase tracking-widest mb-4">Conexión Power BI (API)</h4><input type="text" readonly value="https://demotron.cl/api/powerbi/dataset?token=demotron_pbi_2026" class="form-input bg-slate-100 font-mono text-xs font-black text-blue-700 w-full p-3 mb-4" id="pbi-url"><button onclick="navigator.clipboard.writeText(document.getElementById('pbi-url').value); alert('Copiado');" class="bg-black text-white px-6 py-2 rounded font-black uppercase text-[11px] tracking-widest hover:bg-slate-800 transition">Copiar URL API</button></div>
+                <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-4xl mx-auto"><h4 class="font-bold text-slate-800 uppercase tracking-widest mb-4">Conexión Power BI (API)</h4><input type="text" readonly value="https://demotron.cl/api/powerbi/dataset?token=demotron_pbi_2026" class="form-input bg-slate-50 font-mono text-xs font-semibold text-blue-600 w-full p-3 mb-4" id="pbi-url"><button onclick="navigator.clipboard.writeText(document.getElementById('pbi-url').value); alert('Copiado');" class="bg-slate-800 text-white px-6 py-2 rounded font-semibold uppercase text-[10px] tracking-widest hover:bg-slate-900 transition">Copiar URL API</button></div>
             </div>
 
             <!-- 17. AUTOMATIZACION -->
             <div id="automatizacion" class="seccion">
-                <div class="bg-white border-2 border-slate-200 rounded-xl p-8 shadow-md max-w-2xl mx-auto"><form action="/api/guardar_programacion" method="POST" class="space-y-6"><div><label class="text-[11px] font-black text-black uppercase tracking-widest mb-2 block">Destinatarios</label><input type="text" name="correos" placeholder="ej: gerencia@demotron.cl" class="form-input" required></div><div><label class="text-[11px] font-black text-black uppercase tracking-widest mb-2 block">Frecuencia</label><select name="frecuencia" class="form-input"><option value="diario">Diario</option><option value="semanal" selected>Semanal</option></select></div><button type="submit" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-widest py-3 rounded-lg transition">Guardar Programación</button></form></div>
+                <div class="bg-white border border-slate-200 rounded-xl p-8 shadow-sm max-w-2xl mx-auto"><form action="/api/guardar_programacion" method="POST" class="space-y-6"><div><label class="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-2 block">Destinatarios</label><input type="text" name="correos" placeholder="ej: gerencia@demotron.cl" class="form-input" required></div><div><label class="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-2 block">Frecuencia</label><select name="frecuencia" class="form-input"><option value="diario">Diario</option><option value="semanal" selected>Semanal</option></select></div><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs uppercase tracking-widest py-3 rounded-lg transition">Guardar Programación</button></form></div>
             </div>
 
             <!-- 18. OPERADORES -->
-            <div id="cond" class="seccion"><div class="card-custom-nopad bg-white flex flex-col"><div class="table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Operador</th><th>Máquina Asignada</th><th>Cargo</th><th>Status</th><th class="text-right">Acción</th></tr></thead><tbody>{% for op in operadores %}<tr><td class="font-black text-black">{{ op.nombre }}</td><td class="font-black text-blue-700 uppercase">{{ op.equipo_asignado }}</td><td class="text-xs uppercase font-bold text-black">{{ op.cargo }}</td><td><span class="px-2 py-1 bg-slate-200 text-black rounded text-[10px] font-black uppercase border border-slate-300">{{ op.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('personal', '{{op.id}}')" class="btn-action text-red-700 border-red-300 bg-white">Desvincular</button></td></tr>{% endfor %}</tbody></table></div></div></div>
+            <div id="cond" class="seccion"><div class="card-custom-nopad bg-white flex flex-col"><div class="table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>Operador</th><th>Máquina Asignada</th><th>Cargo</th><th>Status</th><th class="text-right">Acción</th></tr></thead><tbody>{% for op in operadores %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td class="font-semibold text-slate-800">{{ op.nombre }}</td><td class="font-bold text-blue-600 uppercase">{{ op.equipo_asignado }}</td><td class="text-[11px] uppercase font-medium text-slate-600">{{ op.cargo }}</td><td><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-[9px] font-semibold uppercase border border-slate-200">{{ op.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('personal', '{{op.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Desvincular</button></td></tr>{% endfor %}</tbody></table></div></div></div>
             
             <!-- 19. MECÁNICOS -->
-            <div id="mecanicos" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>RUT Oficial</th><th>Nombre Técnico</th><th>Especialidad</th><th>Status</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mecanicos %}<tr><td class="font-mono text-xs font-bold text-black">{{ m.rut or 'S/I' }}</td><td class="font-black text-black">{{ m.nombre }}</td><td class="text-xs uppercase font-bold text-black">{{ m.especialidad }}</td><td><span class="px-2 py-1 bg-slate-200 text-black rounded text-[10px] font-black uppercase border border-slate-300">{{ m.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="btn-action text-red-700 border-red-300 bg-white">Desvincular</button></td></tr>{% endfor %}</tbody></table></div></div>
+            <div id="mecanicos" class="seccion"><div class="card-custom-nopad bg-white table-wrapper max-h-[60vh] overflow-y-auto"><table class="table-custom table-searchable"><thead class="sticky top-0 bg-slate-100 shadow-sm z-10"><tr><th>RUT Oficial</th><th>Nombre Técnico</th><th>Especialidad</th><th>Status</th><th class="text-right">Acciones</th></tr></thead><tbody>{% for m in mecanicos %}<tr class="hover:bg-slate-50 transition border-b border-slate-100"><td class="font-mono text-[11px] font-medium text-slate-500">{{ m.rut or 'S/I' }}</td><td class="font-semibold text-slate-800">{{ m.nombre }}</td><td class="text-[11px] uppercase font-medium text-slate-600">{{ m.especialidad }}</td><td><span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-[9px] font-semibold uppercase border border-slate-200">{{ m.estado }}</span></td><td class="text-right"><button onclick="borrarRegistro('mecanico', '{{m.id}}')" class="btn-action text-red-600 border-red-200 bg-white hover:bg-red-50">Desvincular</button></td></tr>{% endfor %}</tbody></table></div></div>
         </div>
     </main>
 
     <!-- MODALES EXTRAS -->
-    <div id="modal-ubicaciones" class="fixed inset-0 bg-slate-900/90 z-[500] hidden flex flex-col items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"><div class="p-4 border-b-2 border-slate-200 flex justify-between items-center bg-slate-100 shrink-0"><div><h3 class="font-black text-black uppercase text-sm">EDICIÓN DE UBICACIONES</h3></div><button onclick="document.getElementById('modal-ubicaciones').classList.add('hidden')" class="text-black font-black text-2xl">&times;</button></div><div class="p-0 flex-1 overflow-y-auto bg-slate-50"><table class="w-full text-left table-searchable"><thead class="sticky top-0 bg-white shadow-sm z-10"><tr><th class="p-3 text-[11px] font-black text-black uppercase pl-6">Código de Equipo</th><th class="p-3 text-[11px] font-black text-black uppercase">Coordenada GPS o Ciudad</th></tr></thead><tbody>{% for e in eqs %}<tr class="border-b-2 border-slate-200 bg-white"><td class="p-3 font-black text-blue-700 text-xs pl-6 w-32">{{ e.codigo }}</td><td class="p-3 pr-6"><input type="text" class="w-full bg-transparent border-b-2 border-slate-400 focus:border-blue-600 outline-none text-black font-black text-xs uppercase py-1 ubicacion-editable" data-codigo="{{ e.codigo }}" value="{{ e.ubicacion if e.ubicacion != 'None' else '' }}"></td></tr>{% endfor %}</tbody></table></div><div class="p-4 border-t-2 border-slate-200 bg-white shrink-0 flex justify-end"><button onclick="guardarUbicacionesMasa()" id="btn-save-map" class="bg-black text-white px-6 py-2 rounded text-xs font-black uppercase shadow-sm">Guardar Cambios</button></div></div></div>
+    <div id="modal-ubicaciones" class="fixed inset-0 bg-slate-900/90 z-[500] hidden flex flex-col items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"><div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 shrink-0"><div><h3 class="font-bold text-slate-800 uppercase text-sm">EDICIÓN DE UBICACIONES</h3></div><button onclick="document.getElementById('modal-ubicaciones').classList.add('hidden')" class="text-slate-400 hover:text-slate-800 font-bold text-2xl">&times;</button></div><div class="p-0 flex-1 overflow-y-auto bg-white"><table class="w-full text-left table-searchable"><thead class="sticky top-0 bg-slate-50 shadow-sm z-10"><tr><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase pl-6">Código de Equipo</th><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase">Coordenada GPS o Ciudad</th></tr></thead><tbody>{% for e in eqs %}<tr class="border-b border-slate-100"><td class="p-3 font-bold text-blue-600 text-xs pl-6 w-32">{{ e.codigo }}</td><td class="p-3 pr-6"><input type="text" class="w-full bg-transparent border-b border-slate-200 focus:border-blue-500 outline-none text-slate-800 font-medium text-xs uppercase py-1 ubicacion-editable" data-codigo="{{ e.codigo }}" value="{{ e.ubicacion if e.ubicacion != 'None' else '' }}"></td></tr>{% endfor %}</tbody></table></div><div class="p-4 border-t border-slate-200 bg-slate-50 shrink-0 flex justify-end"><button onclick="guardarUbicacionesMasa()" id="btn-save-map" class="bg-blue-600 text-white px-6 py-2 rounded text-[11px] font-semibold uppercase shadow-sm">Guardar Cambios</button></div></div></div>
     
-    <div id="modal-obra" class="fixed inset-0 bg-slate-900/90 z-[600] hidden flex flex-col items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"><div class="p-4 border-b-2 border-slate-200 flex justify-between items-center bg-slate-100 shrink-0"><h3 class="font-black text-black uppercase text-sm">EQUIPOS EN: <span id="modal-obra-titulo" class="text-blue-700"></span></h3><button onclick="document.getElementById('modal-obra').classList.add('hidden')" class="text-black font-black text-2xl">&times;</button></div><div class="p-0 flex-1 overflow-y-auto bg-slate-50"><table class="w-full text-left table-custom"><thead class="sticky top-0 bg-white shadow-sm z-10 border-b-2 border-slate-200"><tr><th class="p-3 text-[11px] font-black text-black uppercase pl-6">Código</th><th class="p-3 text-[11px] font-black text-black uppercase">Tipo</th><th class="p-3 text-[11px] font-black text-black uppercase">Estado</th><th class="p-3 text-[11px] font-black text-black uppercase text-right pr-6">Acción</th></tr></thead><tbody id="modal-obra-body"></tbody></table></div></div></div>
+    <div id="modal-obra" class="fixed inset-0 bg-slate-900/90 z-[600] hidden flex flex-col items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-2xl rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"><div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 shrink-0"><h3 class="font-bold text-slate-800 uppercase text-sm">EQUIPOS EN: <span id="modal-obra-titulo" class="text-blue-600"></span></h3><button onclick="document.getElementById('modal-obra').classList.add('hidden')" class="text-slate-400 hover:text-slate-800 font-bold text-2xl">&times;</button></div><div class="p-0 flex-1 overflow-y-auto bg-white"><table class="w-full text-left table-custom"><thead class="sticky top-0 bg-slate-50 shadow-sm z-10 border-b border-slate-200"><tr><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase pl-6">Código</th><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase">Tipo</th><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase">Estado</th><th class="p-3 text-[10px] font-semibold text-slate-500 uppercase text-right pr-6">Acción</th></tr></thead><tbody id="modal-obra-body"></tbody></table></div></div></div>
 
-    <div id="checklist-modal" class="fixed inset-0 bg-slate-900/90 z-50 hidden flex flex-col items-center justify-center p-2 md:p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"><div class="p-4 bg-black flex justify-between items-center shrink-0"><div><h3 class="font-black text-white uppercase text-sm">CHECKLIST DIGITAL</h3><p id="check-ot-title" class="text-[11px] text-blue-400 font-black uppercase mt-1"></p></div><button onclick="document.getElementById('checklist-modal').classList.add('hidden')" class="text-white font-black text-2xl">&times;</button></div><div class="p-5 flex-1 overflow-y-auto space-y-5 bg-slate-100"><div class="bg-white p-4 rounded-lg border-2 border-slate-300 shadow-sm"><label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded border-2 border-slate-400"><span class="text-xs font-black text-black uppercase">Niveles Fluidos OK</span></label><label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded border-2 border-slate-400"><span class="text-xs font-black text-black uppercase">Cero Fugas</span></label><label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded border-2 border-slate-400"><span class="text-xs font-black text-black uppercase">Prueba Test</span></label></div><div class="bg-white p-4 rounded-lg border-2 border-slate-300 shadow-sm"><input type="file" id="check-files" multiple accept="image/*,.pdf" class="block w-full text-xs font-bold text-black file:bg-black file:text-white file:font-black file:border-none file:px-4 file:py-2 cursor-pointer border-2 border-dashed border-slate-400 p-2"></div><div class="bg-white p-4 rounded-lg border-2 border-slate-300 shadow-sm"><div class="flex justify-between items-end mb-2"><h4 class="text-[11px] font-black text-black uppercase">3. Firma Técnico</h4><button onclick="clearPad()" class="text-[10px] font-black text-red-600 uppercase">Borrar</button></div><canvas id="signature-pad" width="350" height="120" class="w-full bg-slate-50 border-2 border-slate-400 rounded"></canvas></div></div><div class="p-4 bg-white shrink-0 border-t-2 border-slate-300"><button onclick="firmarYCerrarOT()" class="w-full bg-black hover:bg-slate-800 text-white py-3 rounded-lg text-xs font-black uppercase transition">Firmar y Finalizar</button></div></div></div>
+    <div id="checklist-modal" class="fixed inset-0 bg-slate-900/90 z-50 hidden flex flex-col items-center justify-center p-2 md:p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-md rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"><div class="p-4 bg-slate-800 flex justify-between items-center shrink-0"><div><h3 class="font-bold text-white uppercase text-sm">CHECKLIST DIGITAL</h3><p id="check-ot-title" class="text-[10px] text-blue-300 font-medium uppercase mt-1"></p></div><button onclick="document.getElementById('checklist-modal').classList.add('hidden')" class="text-slate-400 hover:text-white text-2xl">&times;</button></div><div class="p-5 flex-1 overflow-y-auto space-y-5 bg-slate-50"><div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm"><label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded border-slate-300"><span class="text-xs font-semibold text-slate-800 uppercase">Niveles Fluidos OK</span></label><label class="flex items-center gap-3 mb-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded border-slate-300"><span class="text-xs font-semibold text-slate-800 uppercase">Cero Fugas</span></label><label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" class="w-5 h-5 text-blue-600 rounded border-slate-300"><span class="text-xs font-semibold text-slate-800 uppercase">Prueba Test</span></label></div><div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm"><input type="file" id="check-files" multiple accept="image/*,.pdf" class="block w-full text-xs font-medium text-slate-600 file:bg-slate-100 file:text-slate-700 file:font-semibold file:border-none file:px-3 file:py-1.5 cursor-pointer border border-dashed border-slate-300 p-2 rounded"></div><div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm"><div class="flex justify-between items-end mb-2"><h4 class="text-[10px] font-semibold text-slate-600 uppercase">3. Firma Técnico</h4><button onclick="clearPad()" class="text-[9px] font-semibold text-red-500 uppercase hover:text-red-700">Borrar</button></div><canvas id="signature-pad" width="350" height="120" class="w-full bg-slate-50 border border-slate-200 rounded"></canvas></div></div><div class="p-4 bg-white shrink-0 border-t border-slate-200"><button onclick="firmarYCerrarOT()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-xs font-semibold uppercase transition">Firmar y Finalizar</button></div></div></div>
 
-    <div id="edit-modal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden"><div class="p-4 bg-slate-100 flex justify-between items-center border-b-2 border-slate-300"><h3 class="font-black text-black uppercase text-xs" id="edit-title">Modificar</h3><button onclick="cerrarEditModal()" class="text-black font-black text-lg">&times;</button></div><div class="p-6 flex flex-col gap-4" id="edit-fields"></div><div class="p-4 bg-slate-100 flex justify-end border-t-2 border-slate-300"><button onclick="guardarEdicion()" class="bg-black hover:bg-slate-800 text-white px-6 py-2 rounded text-[11px] uppercase font-black w-full transition">Guardar</button></div></div></div>
+    <div id="edit-modal" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden"><div class="p-4 bg-slate-50 flex justify-between items-center border-b border-slate-200"><h3 class="font-bold text-slate-800 uppercase text-xs" id="edit-title">Modificar</h3><button onclick="cerrarEditModal()" class="text-slate-400 hover:text-slate-600 font-bold text-lg">&times;</button></div><div class="p-6 flex flex-col gap-4" id="edit-fields"></div><div class="p-4 bg-slate-50 flex justify-end border-t border-slate-200"><button onclick="guardarEdicion()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded text-[10px] uppercase font-semibold w-full transition">Guardar</button></div></div></div>
 
-    <div id="modal-password" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden"><div class="p-4 bg-slate-100 flex justify-between items-center border-b-2 border-slate-300"><h3 class="font-black text-black uppercase text-xs">Clave</h3><button onclick="document.getElementById('modal-password').classList.add('hidden')" class="text-black font-black text-lg">&times;</button></div><div class="p-6 flex flex-col gap-4"><div><label class="text-[11px] font-black uppercase text-black mb-1 block">Actual</label><input type="password" id="pass_actual" class="form-input"></div><div><label class="text-[11px] font-black uppercase text-black mb-1 block">Nueva</label><input type="password" id="pass_nueva" class="form-input"></div><p id="pass_msg" class="text-[11px] font-black text-red-600 hidden"></p></div><div class="p-4 bg-slate-100 flex justify-end border-t-2 border-slate-300"><button onclick="cambiarPassword()" class="bg-black hover:bg-slate-800 text-white px-6 py-2 rounded text-[11px] uppercase font-black w-full transition">Actualizar</button></div></div></div>
+    <div id="modal-password" class="fixed inset-0 bg-slate-900/80 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded shadow-2xl flex flex-col overflow-hidden"><div class="p-4 bg-slate-50 flex justify-between items-center border-b border-slate-200"><h3 class="font-bold text-slate-800 uppercase text-xs">Clave</h3><button onclick="document.getElementById('modal-password').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 font-bold text-lg">&times;</button></div><div class="p-6 flex flex-col gap-4"><div><label class="text-[10px] font-semibold uppercase text-slate-600 mb-1 block">Actual</label><input type="password" id="pass_actual" class="form-input"></div><div><label class="text-[10px] font-semibold uppercase text-slate-600 mb-1 block">Nueva</label><input type="password" id="pass_nueva" class="form-input"></div><p id="pass_msg" class="text-[10px] font-semibold text-red-500 hidden"></p></div><div class="p-4 bg-slate-50 flex justify-end border-t border-slate-200"><button onclick="cambiarPassword()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded text-[10px] uppercase font-semibold w-full transition">Actualizar</button></div></div></div>
 
     <script>
         function toggleMenu() {
@@ -500,7 +497,7 @@
                 let mapId = "map_box_" + mapIndex; mapIndex++;
                 let displayName = esGPS ? "COORDENADAS GPS" : loc; let safeLoc = loc.replace(/'/g, "\'");
 
-                let cardHtml = `<div class="flex flex-col h-[22rem] rounded-xl shadow-md border-2 border-slate-300 overflow-hidden bg-white"><div class="bg-slate-100 text-black p-3 flex justify-between items-center shrink-0 border-b-2 border-slate-300"><h3 class="font-black uppercase tracking-widest text-xs truncate max-w-[50%]">${displayName}</h3><div class="flex gap-2"><span class="text-[11px] font-black bg-white px-2 py-1 rounded border-2 border-slate-300 text-black">📍 ${grouped[loc].length}</span><button onclick="abrirModalEquiposObra('${safeLoc}')" class="text-[11px] font-black bg-black text-white hover:bg-slate-800 px-3 py-1 rounded transition">Ver Equipos</button></div></div><div id="${mapId}" class="flex-1 w-full bg-slate-200 z-0"></div></div>`;
+                let cardHtml = `<div class="flex flex-col h-[22rem] rounded-xl shadow-sm border border-slate-200 overflow-hidden bg-white"><div class="bg-slate-50 text-slate-800 p-3 flex justify-between items-center shrink-0 border-b border-slate-200"><h3 class="font-bold uppercase tracking-widest text-xs truncate max-w-[50%]">${displayName}</h3><div class="flex gap-2"><span class="text-[10px] font-semibold bg-white px-2 py-1 rounded border border-slate-200 text-slate-700">📍 ${grouped[loc].length}</span><button onclick="abrirModalEquiposObra('${safeLoc}')" class="text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 px-3 py-1 rounded transition">Ver Equipos</button></div></div><div id="${mapId}" class="flex-1 w-full bg-slate-200 z-0"></div></div>`;
                 let tempDiv = document.createElement('div'); tempDiv.innerHTML = cardHtml; grid.appendChild(tempDiv.firstElementChild);
 
                 let map = L.map(mapId, { zoomControl: false }).setView(coords, 16); L.control.zoom({ position: 'bottomleft' }).addTo(map);
@@ -512,9 +509,9 @@
                     let borderColor = eq.estado === 'Operativo' ? '#059669' : (eq.estado === 'Taller' ? '#DC2626' : '#D97706');
                     let dotColor = eq.estado === 'Operativo' ? 'bg-emerald-500' : (eq.estado === 'Taller' ? 'bg-red-500' : 'bg-orange-500');
 
-                    let iconHtml = `<div class="bg-white border-2 text-black font-black text-[10px] px-2 py-1 rounded shadow-md whitespace-nowrap flex items-center gap-1.5" style="border-color: ${borderColor}; min-width: max-content;"><span class="w-2 h-2 rounded-full ${dotColor}"></span>${eq.codigo}</div>`;
+                    let iconHtml = `<div class="bg-white border text-slate-800 font-bold text-[10px] px-2 py-1 rounded shadow-sm whitespace-nowrap flex items-center gap-1.5" style="border-color: ${borderColor}; min-width: max-content;"><span class="w-2 h-2 rounded-full ${dotColor}"></span>${eq.codigo}</div>`;
                     let icon = L.divIcon({ html: iconHtml, className: 'leaflet-div-icon', iconSize: null, iconAnchor: [30, 15] });
-                    L.marker([coords[0] + dLat, coords[1] + dLng], {icon: icon}).bindPopup(`<div class="text-center"><p class="font-black text-xs uppercase text-black">${eq.codigo}</p><p class="text-[10px] font-bold uppercase text-slate-700">${eq.tipo}</p><a href="/equipo/${eq.codigo}" target="_blank" class="text-blue-700 text-[11px] hover:underline font-black block mt-1">Ver Ficha</a></div>`).addTo(map);
+                    L.marker([coords[0] + dLat, coords[1] + dLng], {icon: icon}).bindPopup(`<div class="text-center"><p class="font-bold text-xs uppercase text-slate-900">${eq.codigo}</p><p class="text-[9px] font-medium uppercase text-slate-500">${eq.tipo}</p><a href="/equipo/${eq.codigo}" target="_blank" class="text-blue-600 text-[10px] hover:underline font-semibold block mt-1">Ver Ficha</a></div>`).addTo(map);
                 });
                 setTimeout(() => { map.invalidateSize(); }, 200);
             }
@@ -533,8 +530,8 @@
             });
 
             equiposLoc.forEach(eq => {
-                let badge = eq.estado === 'Operativo' ? 'bg-emerald-100 text-emerald-800 border-2 border-emerald-300' : (eq.estado === 'Taller' ? 'bg-red-100 text-red-800 border-2 border-red-300' : 'bg-orange-100 text-orange-800 border-2 border-orange-300');
-                tbody.innerHTML += `<tr class="border-b-2 border-slate-200 bg-white hover:bg-slate-50"><td class="p-3 font-black text-blue-700 text-xs pl-6 uppercase">${eq.codigo}</td><td class="p-3 text-[11px] font-bold text-black uppercase">${eq.tipo}</td><td class="p-3"><span class="px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider ${badge}">${eq.estado}</span></td><td class="p-3 text-right pr-6"><a href="/equipo/${eq.codigo}" target="_blank" class="text-blue-700 font-black text-[11px] hover:underline uppercase bg-blue-50 px-2 py-1 rounded border-2 border-blue-200">Ver Ficha</a></td></tr>`;
+                let badge = eq.estado === 'Operativo' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : (eq.estado === 'Taller' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-orange-50 text-orange-700 border border-orange-200');
+                tbody.innerHTML += `<tr class="border-b border-slate-100 bg-white hover:bg-slate-50"><td class="p-3 font-bold text-blue-600 text-xs pl-6 uppercase">${eq.codigo}</td><td class="p-3 text-[10px] font-medium text-slate-700 uppercase">${eq.tipo}</td><td class="p-3"><span class="px-2 py-1 rounded text-[9px] font-semibold uppercase tracking-wider ${badge}">${eq.estado}</span></td><td class="p-3 text-right pr-6"><a href="/equipo/${eq.codigo}" target="_blank" class="text-blue-600 font-semibold text-[10px] hover:underline uppercase bg-blue-50 px-2 py-1 rounded border border-blue-100">Ver Ficha</a></td></tr>`;
             });
             document.getElementById('modal-obra').classList.remove('hidden');
         }
@@ -558,7 +555,7 @@
         let checkOtId = null; let canvas = document.getElementById('signature-pad'); let ctx = canvas.getContext('2d'); let drawing = false;
         canvas.addEventListener('mousedown', () => drawing = true); canvas.addEventListener('mouseup', () => drawing = false); canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('touchstart', (e) => { drawing = true; draw(e.touches[0]); }); canvas.addEventListener('touchend', () => drawing = false); canvas.addEventListener('touchmove', (e) => { draw(e.touches[0]); e.preventDefault(); });
-        function draw(e) { if(!drawing) return; let rect = canvas.getBoundingClientRect(); let x = (e.clientX || e.pageX) - rect.left; let y = (e.clientY || e.pageY) - rect.top; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000000'; ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y); }
+        function draw(e) { if(!drawing) return; let rect = canvas.getBoundingClientRect(); let x = (e.clientX || e.pageX) - rect.left; let y = (e.clientY || e.pageY) - rect.top; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#0F172A'; ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y); }
         function clearPad() { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.beginPath(); }
         
         function abrirChecklist(ot_id, codigo, intervencion) {
@@ -575,7 +572,7 @@
         let editData = {};
         function abrirEditModal(tabla, id, titulo, campos) {
             editData = { tabla, id, campos: [] }; document.getElementById('edit-title').innerText = "EDICIÓN: " + titulo; let html = '';
-            campos.forEach(c => { editData.campos.push(c.db); html += `<div><label class="text-[11px] font-black text-black block mb-1.5 uppercase tracking-widest">${c.label}</label><input type="text" id="edit_${c.db}" value="${c.val}" class="form-input font-bold text-black"></div>`; });
+            campos.forEach(c => { editData.campos.push(c.db); html += `<div><label class="text-[10px] font-semibold text-slate-500 block mb-1.5 uppercase tracking-widest">${c.label}</label><input type="text" id="edit_${c.db}" value="${c.val}" class="form-input font-medium text-slate-800"></div>`; });
             document.getElementById('edit-fields').innerHTML = html; document.getElementById('edit-modal').classList.remove('hidden');
         }
         function cerrarEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
@@ -637,11 +634,11 @@
                 });
             }
 
-            // INICIALIZADOR DE GRÁFICOS (DASHBOARD ALTO CONTRASTE)
+            // INICIALIZADOR DE GRÁFICOS (CONTRASTE BALANCEADO)
             if (typeof Chart !== 'undefined') {
                 Chart.defaults.font.family = "'Inter', sans-serif"; 
-                Chart.defaults.color = '#000000'; 
-                Chart.defaults.font.weight = '900';
+                Chart.defaults.color = '#0F172A'; 
+                Chart.defaults.font.weight = '600';
                 
                 // 1. Gauge Disponibilidad (Dona 3 Estados)
                 if(document.getElementById('chartGaugeDisp')) {
@@ -668,15 +665,15 @@
                             datasets: [{
                                 label: 'Costo Histórico Acumulado ($)',
                                 data: chartCostoMarcas.data,
-                                backgroundColor: '#0F172A',
-                                borderRadius: 6
+                                backgroundColor: '#1E293B',
+                                borderRadius: 4
                             }]
                         },
                         options: {
                             responsive: true, maintainAspectRatio: false,
                             scales: {
-                                y: { beginAtZero: true, grid: { color: '#E2E8F0' }, ticks: { font: { weight: '900' } } },
-                                x: { grid: { display: false }, ticks: { font: { weight: '900', size: 10 } } }
+                                y: { beginAtZero: true, grid: { color: '#F1F5F9' }, ticks: { font: { weight: '600' } } },
+                                x: { grid: { display: false }, ticks: { font: { weight: '600', size: 10 } } }
                             },
                             plugins: { legend: { display: false } }
                         }
