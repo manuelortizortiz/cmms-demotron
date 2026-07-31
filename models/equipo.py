@@ -24,7 +24,6 @@ class Equipo(db.Model):
     lectura_actual = db.Column(db.Float, default=0.0)
     proxima_pm = db.Column(db.Float, default=0.0)
 
-    # CÁLCULO AUTOMÁTICO DEL MARGEN
     @property
     def margen(self):
         return (self.proxima_pm or 0.0) - (self.lectura_actual or 0.0)
@@ -33,9 +32,6 @@ class Equipo(db.Model):
         return f"<Equipo {self.codigo}>"
 
 
-# =========================================================
-# TABLA DE FILTROS (Mapeada desde Plantilla Maestro)
-# =========================================================
 class FiltroEquipo(db.Model):
     __tablename__ = 'filtro_equipo'
     
@@ -47,40 +43,25 @@ class FiltroEquipo(db.Model):
     baldwind = db.Column(db.String(100))
     originales = db.Column(db.String(100))
     donaldson = db.Column(db.String(100))
-    # Eliminamos 'otra_alternativa' ya que no existe en tu Base de Datos actual
-
-    # Propiedades dinámicas para compatibilidad con plantillas y vistas
-    @property
-    def filtro(self):
-        return self.sistema
 
     @property
-    def nombre_filtro(self):
-        return self.sistema
-
+    def filtro(self): return self.sistema
     @property
-    def cantidad(self):
-        return self.cant
-
+    def nombre_filtro(self): return self.sistema
+    @property
+    def cantidad(self): return self.cant
     @property
     def codigo_parte(self):
-        # Busca el primer código válido entre las marcas disponibles
         for val in [self.originales, self.fleetguard, self.donaldson, self.baldwind]:
-            if val and str(val).strip() and str(val).strip() != '-':
-                return str(val).strip()
+            if val and str(val).strip() and str(val).strip() != '-': return str(val).strip()
         return '-'
-
     @property
-    def codigo(self):
-        return self.codigo_parte
+    def codigo(self): return self.codigo_parte
 
     def __repr__(self):
         return f"<Filtro {self.sistema} - {self.codigo_equipo}>"
 
 
-# =========================================================
-# TABLA DE DOCUMENTOS LEGALES (Revisión Técnica, SOAP, etc)
-# =========================================================
 class DocumentoEquipo(db.Model):
     __tablename__ = 'documento_equipo'
     
@@ -93,3 +74,19 @@ class DocumentoEquipo(db.Model):
 
     def __repr__(self):
         return f"<Documento {self.tipo_documento} - {self.codigo_equipo}>"
+
+
+# =========================================================
+# NUEVA TABLA: Historial de Ubicaciones (Trazabilidad Logística)
+# =========================================================
+class HistorialUbicacion(db.Model):
+    __tablename__ = 'historial_ubicacion'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    codigo_equipo = db.Column(db.String(50), nullable=False)
+    ubicacion_anterior = db.Column(db.String(100))
+    ubicacion_nueva = db.Column(db.String(100), nullable=False)
+    fecha = db.Column(db.DateTime, default=datetime.now)
+
+    def __repr__(self):
+        return f"<Movimiento {self.codigo_equipo}: {self.ubicacion_anterior} -> {self.ubicacion_nueva}>"
