@@ -152,9 +152,8 @@ def dashboard():
             ub_original = e.ubicacion.upper().strip() if e.ubicacion and e.ubicacion != 'None' else 'SIN ASIGNAR'
             
             # Palabras clave y coordenadas parciales
-            casa_matriz_exact = ["OFICINA", "TALLER", "TALLER DEMOTRON", "FUERA DE SERVICIO"]
-            casa_matriz_coords = ["35°20'31.7", "35°20'32.5", "35°20'34.1", "35°20'35.3"]
             taller_ext_partial = ["KAUFFMAN", "DEL VALLE", "ROSSELOT", "MORAGA", "TALLER EXT"]
+            casa_matriz_claves = ["OFICINA", "TALLER DEMOTRON", "TALLER CENTRAL", "CASA MATRIZ", "35°20'31.7", "35°20'32.5", "35°20'34.1", "35°20'35.3"]
             
             ub_final = ub_original
 
@@ -164,8 +163,8 @@ def dashboard():
             # 2. Talleres Externos
             elif any(k in ub_original for k in taller_ext_partial):
                 ub_final = 'TALLER EXTERNO'
-            # 3. Casa Matriz San Rafael (Coordenadas o textos específicos)
-            elif ub_original in casa_matriz_exact or any(k in ub_original for k in casa_matriz_coords):
+            # 3. Casa Matriz San Rafael
+            elif ub_original == 'TALLER' or any(k in ub_original for k in casa_matriz_claves):
                 ub_final = 'CASA MATRIZ SAN RAFAEL'
 
             if ub_final not in ubicaciones_dict: 
@@ -184,7 +183,7 @@ def dashboard():
                 'costo_str': format_clp(tot_cost), 'cpk_cph_str': format_clp(cpk)
             })
 
-        # ORDENAR KANBAN DE UBICACIONES: Alfabéticamente, pero "FUERA DE SERVICIO" al final siempre (índice 1 vs 0)
+        # ORDENAR KANBAN DE UBICACIONES: Alfabéticamente, pero "FUERA DE SERVICIO" al final siempre
         ubicaciones_dict = dict(sorted(ubicaciones_dict.items(), key=lambda item: (1 if item[0] == 'FUERA DE SERVICIO' else 0, item[0])))
 
         kanban = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Finalizada': []}
