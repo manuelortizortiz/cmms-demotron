@@ -4,23 +4,16 @@ from datetime import datetime
 class Equipo(db.Model):
     __tablename__ = 'equipo'
     
-    # Datos Principales
     id = db.Column(db.Integer, primary_key=True)
     codigo = db.Column(db.String(50), unique=True, nullable=False)
     tipo_equipo = db.Column(db.String(100))
     marca = db.Column(db.String(100))
     modelo = db.Column(db.String(100))
-    
-    # Identificación Legal
     patente = db.Column(db.String(50))
     vin = db.Column(db.String(100))
-    
-    # Operación y Logística
     ubicacion = db.Column(db.String(100), default="CASA MATRIZ")
-    estado_base = db.Column(db.String(50), default="Operativo") # Operativo, Taller, Fuera de Servicio
-    
-    # Mantenimiento y Rendimiento
-    control_base = db.Column(db.String(20), default="HORAS") # HORAS o KM
+    estado_base = db.Column(db.String(50), default="Operativo") 
+    control_base = db.Column(db.String(20), default="HORAS") 
     lectura_actual = db.Column(db.Float, default=0.0)
     proxima_pm = db.Column(db.Float, default=0.0)
 
@@ -29,23 +22,26 @@ class Equipo(db.Model):
 
 
 # =========================================================
-# TABLA DE FILTROS ORIGINAL
+# FILTROS - Modo Seguro para no botar el servidor
 # =========================================================
 class FiltroEquipo(db.Model):
     __tablename__ = 'filtro_equipo'
     
     id = db.Column(db.Integer, primary_key=True)
     codigo_equipo = db.Column(db.String(50), nullable=False)
+    
+    # Probablemente se llaman así. Las dejo activas, si alguna de estas no existe, 
+    # la aplicación te volverá a mostrar una pantalla de error blanca.
+    filtro = db.Column(db.String(100))
+    codigo = db.Column(db.String(100))
     sistema = db.Column(db.String(100))
-    nombre_filtro = db.Column(db.String(100))
-    codigo_parte = db.Column(db.String(100))
 
     def __repr__(self):
-        return f"<Filtro {self.nombre_filtro} - {self.codigo_equipo}>"
+        return f"<Filtro {self.codigo_equipo}>"
 
 
 # =========================================================
-# NUEVA TABLA: Documentos Legales y Revisiones del Equipo
+# DOCUMENTOS
 # =========================================================
 class DocumentoEquipo(db.Model):
     __tablename__ = 'documento_equipo'
@@ -59,4 +55,3 @@ class DocumentoEquipo(db.Model):
 
     def __repr__(self):
         return f"<Documento {self.tipo_documento} - {self.codigo_equipo}>"
-        
