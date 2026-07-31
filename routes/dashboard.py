@@ -13,6 +13,9 @@ from utils.formatters import format_num, format_clp, buscar_foto_por_tipo
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
+# =========================================================
+# 1. VISTA PRINCIPAL: DASHBOARD Y GESTIÓN GENERAL
+# =========================================================
 @dashboard_bp.route('/', strict_slashes=False)
 @login_required
 def dashboard():
@@ -39,7 +42,7 @@ def dashboard():
         correctivas = [o for o in ots_db if o.tipo_ot == 'Correctiva']
         preventivas = [o for o in ots_db if o.tipo_ot == 'Preventiva']
         
-        # RATIO REAL: Basado en cantidad de órdenes, no en costos parciales
+        # RATIO REAL: Basado en cantidad de órdenes
         total_ots = len(correctivas) + len(preventivas)
         ratio_corr = int(round((len(correctivas) / total_ots * 100), 0)) if total_ots > 0 else 0
         ratio_prev = 100 - ratio_corr if total_ots > 0 else 0
@@ -83,7 +86,6 @@ def dashboard():
             marcas_stats[m]['total'] += 1
             if e.estado_base == 'Operativo': marcas_stats[m]['operativos'] += 1
             
-            # AHORA SÍ SUMA OTs + COMPRAS PARA CADA MARCA
             c_ots = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.codigo_equipo == e.codigo)
             c_compras = sum(float(c.costo_pm_clp or 0) for c in compras_db if c.codigo_equipo == e.codigo)
             c_eq_total = c_ots + c_compras
@@ -145,3 +147,38 @@ def dashboard():
                                dist_marcas=dist_marcas, top_equipos_fallas=top_equipos_fallas, chart_costo_marcas=chart_costo_marcas)
     except Exception as e:
         return f"Error en Dashboard: {str(e)}"
+
+
+# =========================================================
+# 2. VISTA INDIVIDUAL DE CADA EQUIPO (FICHA TÉCNICA)
+# =========================================================
+@dashboard_bp.route('/equipo/<codigo>', strict_slashes=False)
+@login_required
+def detalle_equipo(codigo):
+    try:
+        # Obtener el equipo principal
+        equipo = Equipo.query.filter_by(codigo=codigo).first()
+        if not equipo:
+            return "Equipo no encontrado en la base de datos.", 404
+            
+        # Obtener los historiales de mantenimiento y compras de este equipo
+        mants_prev = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Preventiva').order_by(OrdenTrabajo.fecha.desc()).all()
+        mants_corr = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Correctiva').order_by(OrdenTrabajo.fecha.desc()).all()
+        lecturas = HistorialLectura.query.filter_by(codigo_equipo=codigo).order_by(HistorialLectura.fecha.desc()).all()
+        compras = CompraRepuesto.query.filter_by(codigo_equipo=codigo).order_by(CompraRepuesto.fecha.desc()).all()
+        
+        # Operador actual y foto
+        operador = Personal.query.filter_by(equipo_asignado=codigo).first()
+        foto_url = buscar_foto_por_tipo(equipo.tipo_equipo, equipo.marca)
+        
+        # Enviar todo a la página original del equipo
+        return render_template('equipo.html', 
+                               equipo=equipo, 
+                               mants_prev=mants_prev,
+                               mants_corr=mants_corr,
+                               lecturas=lecturas, 
+                               compras=compras, 
+                               operador=operador,
+                               foto_url=foto_url)
+    except Exception as e:
+        return f"Error al cargar la ficha del equipo: {str(e)}"
