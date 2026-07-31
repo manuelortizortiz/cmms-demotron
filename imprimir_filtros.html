@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Filtros - {{ equipo.codigo }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; color: #1E293B; margin: 0; padding: 0; background-color: #F8FAFC; }
+        .a4-container { width: 210mm; min-height: 297mm; margin: 20px auto; padding: 20mm; box-sizing: border-box; background: white; border: 1px solid #CBD5E1; }
+        .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #1E3A8A; padding-bottom: 15px; margin-bottom: 25px; }
+        .logo { font-size: 24px; font-weight: 700; color: #1E3A8A; letter-spacing: 1px; }
+        .doc-title { text-align: right; }
+        .doc-title h1 { margin: 0; font-size: 16px; text-transform: uppercase; color: #0F172A; }
+        .doc-title p { margin: 4px 0 0 0; font-size: 11px; color: #475569; font-weight: 500; }
+        .section-title { font-size: 11px; font-weight: 700; color: #1E3A8A; text-transform: uppercase; border-bottom: 1px solid #E2E8F0; margin-bottom: 12px; padding-bottom: 4px; margin-top: 25px; letter-spacing: 0.5px; }
+        .info-box { border: 1px solid #E2E8F0; padding: 16px; border-radius: 4px; background-color: #F8FAFC; display: flex; justify-content: space-between; align-items: center;}
+        .info-item { font-size: 12px; }
+        .info-label { font-weight: 600; color: #64748B; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; margin-right: 5px;}
+        .info-value { font-weight: 700; color: #1E3A8A; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10px; }
+        th, td { border: 1px solid #CBD5E1; padding: 10px 12px; text-align: left; }
+        th { background-color: #F1F5F9; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 9px; letter-spacing: 0.5px; }
+        td { font-weight: 500; color: #1E293B; }
+        td.mono { font-family: monospace; font-size: 11px; font-weight: 600;}
+        .btn-print { display: block; width: 250px; margin: 20px auto; text-align: center; background-color: #1E3A8A; color: white; padding: 12px 15px; border-radius: 6px; border: none; font-weight: 600; font-size: 12px; cursor: pointer; text-transform: uppercase; }
+        @media print { body { background: white; } .a4-container { margin: 0; padding: 10mm; width: 100%; border: none; } .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="text-align: center; padding: 15px; background: white; border-bottom: 1px solid #CBD5E1;">
+        <button onclick="window.print()" class="btn-print">IMPRIMIR / GUARDAR PDF</button>
+    </div>
+    
+    <div class="a4-container">
+        <div class="header">
+            <div class="logo">DEMOTRON ERP</div>
+            <div class="doc-title">
+                <h1>ESPECIFICACIÓN DE FILTROS</h1>
+                <p>Fecha de Emisión: <strong>{{ hoy.strftime('%d/%m/%Y') }}</strong></p>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <div class="info-item"><span class="info-label">Código Activo:</span> <span class="info-value">{{ equipo.codigo }}</span></div>
+            <div class="info-item"><span class="info-label">Marca:</span> <span class="info-value" style="font-size: 13px; color: #0F172A;">{{ equipo.marca }}</span></div>
+            <div class="info-item"><span class="info-label">Modelo:</span> <span class="info-value" style="font-size: 13px; color: #0F172A;">{{ equipo.modelo }}</span></div>
+        </div>
+
+        <div class="section-title">Cartilla Técnica de Repuestos (Cruce de Marcas)</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Sistema / Aplicación</th>
+                    <th style="text-align:center; width:40px;">Cant.</th>
+                    <th>N° Original</th>
+                    <th>Fleetguard</th>
+                    <th>Donaldson</th>
+                    <th>Baldwind</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in filtros %}
+                <tr>
+                    <td><strong>{{ f.sistema }}</strong></td>
+                    <td style="text-align:center; font-weight: bold;">{{ f.cant }}</td>
+                    <td class="mono">{{ f.originales if f.originales and f.originales != 'nan' else '-' }}</td>
+                    <td class="mono">{{ f.fleetguard if f.fleetguard and f.fleetguard != 'nan' else '-' }}</td>
+                    <td class="mono">{{ f.donaldson if f.donaldson and f.donaldson != 'nan' else '-' }}</td>
+                    <td class="mono">{{ f.baldwind if f.baldwind and f.baldwind != 'nan' else '-' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" style="text-align:center; padding: 30px; color:#64748B;">No hay filtros cargados en la base de datos para este equipo.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
