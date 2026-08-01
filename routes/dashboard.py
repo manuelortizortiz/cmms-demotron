@@ -127,30 +127,43 @@ def dashboard():
         ubicaciones_dict = {}
 
         # ==============================================================
-        # INYECCIÓN DE HISTORIAL AL CALENDARIO
+        # INYECCIÓN DE HISTORIAL AL CALENDARIO (FILTRADO Y DEDUPLICADO)
         # ==============================================================
+        eventos_deduplicados = set()
         
-        # 1. Preventivas Históricas (Azul Claro)
+        # 1. Preventivas Históricas (Azul Claro) - Solo Finalizadas
         for ot in preventivas:
-            if ot.fecha:
-                eventos_calendario.append({
-                    'title': f"PREV: {ot.codigo_equipo}", 
-                    'start': ot.fecha.strftime('%Y-%m-%d'),
-                    'backgroundColor': '#3B82F6', 
-                    'textColor': '#FFFFFF', 
-                    'borderColor': 'transparent'
-                })
+            # Ignora las tarjetas del Kanban (Pendiente, En Progreso, Revisión)
+            if ot.fecha and ot.estado not in ['Pendiente', 'En Progreso', 'En Revisión']:
+                fecha_str = ot.fecha.strftime('%Y-%m-%d')
+                clave = f"PREV_{ot.codigo_equipo}_{fecha_str}"
+                
+                # Evita pintar múltiples veces el mismo equipo el mismo día
+                if clave not in eventos_deduplicados:
+                    eventos_calendario.append({
+                        'title': f"PREV: {ot.codigo_equipo}", 
+                        'start': fecha_str,
+                        'backgroundColor': '#3B82F6', 
+                        'textColor': '#FFFFFF', 
+                        'borderColor': 'transparent'
+                    })
+                    eventos_deduplicados.add(clave)
         
-        # 2. Correctivas Históricas (Rojo)
+        # 2. Correctivas / Averías Históricas (Rojo) - Solo Finalizadas
         for ot in correctivas:
-            if ot.fecha:
-                eventos_calendario.append({
-                    'title': f"CORR: {ot.codigo_equipo}", 
-                    'start': ot.fecha.strftime('%Y-%m-%d'),
-                    'backgroundColor': '#EF4444', 
-                    'textColor': '#FFFFFF', 
-                    'borderColor': 'transparent'
-                })
+            if ot.fecha and ot.estado not in ['Pendiente', 'En Progreso', 'En Revisión']:
+                fecha_str = ot.fecha.strftime('%Y-%m-%d')
+                clave = f"CORR_{ot.codigo_equipo}_{fecha_str}"
+                
+                if clave not in eventos_deduplicados:
+                    eventos_calendario.append({
+                        'title': f"CORR: {ot.codigo_equipo}", 
+                        'start': fecha_str,
+                        'backgroundColor': '#EF4444', 
+                        'textColor': '#FFFFFF', 
+                        'borderColor': 'transparent'
+                    })
+                    eventos_deduplicados.add(clave)
         # ==============================================================
 
         for e in eqs_db:
