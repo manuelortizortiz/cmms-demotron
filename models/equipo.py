@@ -21,11 +21,10 @@ class Equipo(db.Model):
     
     # Mantenimiento y Rendimiento
     control_base = db.Column(db.String(20), default="HORAS") 
-    frecuencia_base = db.Column(db.Float, default=250.0)  # <-- RESTAURADO PARA QUE PASE TU EXCEL
+    frecuencia_base = db.Column(db.Float, default=250.0) 
     lectura_actual = db.Column(db.Float, default=0.0)
     proxima_pm = db.Column(db.Float, default=0.0)
 
-    # CÁLCULO AUTOMÁTICO DEL MARGEN
     @property
     def margen(self):
         return (self.proxima_pm or 0.0) - (self.lectura_actual or 0.0)
@@ -35,51 +34,61 @@ class Equipo(db.Model):
 
 
 # =========================================================
-# TABLA DE FILTROS (Mapeada desde Plantilla Maestro)
+# TABLA DE FILTROS BLINDADA CONTRA ERRORES DE EXCEL
 # =========================================================
 class FiltroEquipo(db.Model):
     __tablename__ = 'filtro_equipo'
     
     id = db.Column(db.Integer, primary_key=True)
     codigo_equipo = db.Column(db.String(50), nullable=False)
-    sistema = db.Column(db.String(100))
-    cant = db.Column(db.String(50))
-    fleetguard = db.Column(db.String(100))
-    baldwind = db.Column(db.String(100))
-    originales = db.Column(db.String(100))
-    donaldson = db.Column(db.String(100))
+    
+    # COLUMNAS CLÁSICAS (Las reales que espera tu Excel / SQL)
+    filtro = db.Column(db.String(100))
+    cantidad = db.Column(db.String(50))
+    codigo = db.Column(db.String(100))
 
-    # Propiedades dinámicas para compatibilidad con plantillas y vistas
+    # ==================================================
+    # ALIAS MÁGICOS (Para que tu script no vuelva a chocar)
+    # ==================================================
     @property
-    def filtro(self):
-        return self.sistema
-
-    @property
-    def nombre_filtro(self):
-        return self.sistema
+    def sistema(self): return self.filtro
+    @sistema.setter
+    def sistema(self, val): self.filtro = val
 
     @property
-    def cantidad(self):
-        return self.cant
+    def cant(self): return self.cantidad
+    @cant.setter
+    def cant(self, val): self.cantidad = val
 
     @property
-    def codigo_parte(self):
-        # Busca el primer código válido entre las marcas disponibles
-        for val in [self.originales, self.fleetguard, self.donaldson, self.baldwind]:
-            if val and str(val).strip() and str(val).strip() != '-':
-                return str(val).strip()
-        return '-'
+    def originales(self): return self.codigo
+    @originales.setter
+    def originales(self, val): self.codigo = val
 
     @property
-    def codigo(self):
-        return self.codigo_parte
+    def codigo_parte(self): return self.codigo
+    @codigo_parte.setter
+    def codigo_parte(self, val): self.codigo = val
+
+    @property
+    def nombre_filtro(self): return self.filtro
+    @nombre_filtro.setter
+    def nombre_filtro(self, val): self.filtro = val
+
+    # Marcas alternativas (Simuladas para que el PDF se vea bien sin alterar la BD original)
+    @property
+    def fleetguard(self): return "-"
+    @property
+    def donaldson(self): return "-"
+    @property
+    def baldwind(self): return "-"
 
     def __repr__(self):
-        return f"<Filtro {self.sistema} - {self.codigo_equipo}>"
+        return f"<Filtro {self.filtro} - {self.codigo_equipo}>"
 
 
 # =========================================================
-# TABLA DE DOCUMENTOS LEGALES (Revisión Técnica, SOAP, etc)
+# DOCUMENTOS Y TRAZABILIDAD
 # =========================================================
 class DocumentoEquipo(db.Model):
     __tablename__ = 'documento_equipo'
@@ -95,9 +104,6 @@ class DocumentoEquipo(db.Model):
         return f"<Documento {self.tipo_documento} - {self.codigo_equipo}>"
 
 
-# =========================================================
-# NUEVA TABLA: Historial de Ubicaciones (Trazabilidad Logística)
-# =========================================================
 class HistorialUbicacion(db.Model):
     __tablename__ = 'historial_ubicacion'
     
