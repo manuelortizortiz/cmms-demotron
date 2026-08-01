@@ -21,9 +21,11 @@ class Equipo(db.Model):
     
     # Mantenimiento y Rendimiento
     control_base = db.Column(db.String(20), default="HORAS") 
+    frecuencia_base = db.Column(db.Float, default=250.0)  # <-- RESTAURADO PARA QUE PASE TU EXCEL
     lectura_actual = db.Column(db.Float, default=0.0)
     proxima_pm = db.Column(db.Float, default=0.0)
 
+    # CÁLCULO AUTOMÁTICO DEL MARGEN
     @property
     def margen(self):
         return (self.proxima_pm or 0.0) - (self.lectura_actual or 0.0)
@@ -32,6 +34,9 @@ class Equipo(db.Model):
         return f"<Equipo {self.codigo}>"
 
 
+# =========================================================
+# TABLA DE FILTROS (Mapeada desde Plantilla Maestro)
+# =========================================================
 class FiltroEquipo(db.Model):
     __tablename__ = 'filtro_equipo'
     
@@ -44,24 +49,38 @@ class FiltroEquipo(db.Model):
     originales = db.Column(db.String(100))
     donaldson = db.Column(db.String(100))
 
+    # Propiedades dinámicas para compatibilidad con plantillas y vistas
     @property
-    def filtro(self): return self.sistema
+    def filtro(self):
+        return self.sistema
+
     @property
-    def nombre_filtro(self): return self.sistema
+    def nombre_filtro(self):
+        return self.sistema
+
     @property
-    def cantidad(self): return self.cant
+    def cantidad(self):
+        return self.cant
+
     @property
     def codigo_parte(self):
+        # Busca el primer código válido entre las marcas disponibles
         for val in [self.originales, self.fleetguard, self.donaldson, self.baldwind]:
-            if val and str(val).strip() and str(val).strip() != '-': return str(val).strip()
+            if val and str(val).strip() and str(val).strip() != '-':
+                return str(val).strip()
         return '-'
+
     @property
-    def codigo(self): return self.codigo_parte
+    def codigo(self):
+        return self.codigo_parte
 
     def __repr__(self):
         return f"<Filtro {self.sistema} - {self.codigo_equipo}>"
 
 
+# =========================================================
+# TABLA DE DOCUMENTOS LEGALES (Revisión Técnica, SOAP, etc)
+# =========================================================
 class DocumentoEquipo(db.Model):
     __tablename__ = 'documento_equipo'
     
