@@ -12,7 +12,6 @@ from models.historial import HistorialLectura, CompraRepuesto
 from models.bodega import InventarioBodega
 from models.personal import Personal, Mecanico
 
-# ¡AQUÍ SE DEFINE api_bp!
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 # =========================================================
@@ -209,7 +208,7 @@ def imprimir_filtros(codigo):
         return f"Aviso del Sistema: No se pudo generar la hoja de filtros PDF ({str(e)})."
 
 # =========================================================
-# CARGA MASIVA DEL EXCEL "MAESTRO DE FILTROS"
+# CARGA MASIVA DEL EXCEL "MAESTRO DE FILTROS" (BLINDADO)
 # =========================================================
 @api_bp.route('/cargar_maestro_filtros', methods=['GET', 'POST'])
 def cargar_maestro_filtros():
@@ -234,20 +233,36 @@ def cargar_maestro_filtros():
         
     try:
         df = pd.read_excel(file)
+        
+        # MAGIA: Convertir todos los títulos de columnas a minúsculas y sin espacios a los lados
+        df.columns = df.columns.astype(str).str.strip().str.lower()
+        
         db.session.query(FiltroEquipo).delete()
         registros_agregados = 0
         
         for index, row in df.iterrows():
-            codigo_eq = str(row.get('Equipo') or row.get('codigo_equipo') or '').strip()
+            # Extracción a prueba de balas (lee incluso si la celda dice "nan")
+            c_eq = row.get('equipo') or row.get('codigo equipo') or row.get('codigo_equipo')
+            c_eq = str(c_eq).strip() if pd.notna(c_eq) else ''
             
-            if not codigo_eq or codigo_eq == 'nan':
+            if not c_eq or c_eq.lower() == 'nan' or c_eq.lower() == 'none':
                 continue
                 
+            c_sist = row.get('filtro') or row.get('sistema')
+            c_sist = str(c_sist).strip() if pd.notna(c_sist) else '-'
+            
+            c_cant = row.get('cantidad') or row.get('cant')
+            c_cant = str(c_cant).strip() if pd.notna(c_cant) else '1'
+            
+            # Buscar la palabra 'codigo', o 'originales', o 'parte'
+            c_orig = row.get('codigo') or row.get('originales') or row.get('n original') or row.get('n° original')
+            c_orig = str(c_orig).strip() if pd.notna(c_orig) else '-'
+            
             nuevo_filtro = FiltroEquipo(
-                codigo_equipo=codigo_eq,
-                sistema=str(row.get('Filtro') or row.get('Sistema') or '-'),
-                cant=str(row.get('Cantidad') or row.get('Cant') or '1'),
-                originales=str(row.get('Codigo') or row.get('Originales') or '-'),
+                codigo_equipo=c_eq,
+                sistema=c_sist,
+                cant=c_cant,
+                originales=c_orig,
                 fleetguard='-',
                 donaldson='-',
                 baldwind='-'
