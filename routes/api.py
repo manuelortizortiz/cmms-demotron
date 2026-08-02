@@ -12,6 +12,7 @@ from models.historial import HistorialLectura, CompraRepuesto
 from models.bodega import InventarioBodega
 from models.personal import Personal, Mecanico
 
+# Definición del Blueprint (MUY IMPORTANTE QUE ESTÉ AQUÍ ARRIBA)
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 # =========================================================
@@ -208,7 +209,7 @@ def imprimir_filtros(codigo):
         return f"Aviso del Sistema: No se pudo generar la hoja de filtros PDF ({str(e)})."
 
 # =========================================================
-# CARGA MASIVA DEL EXCEL "MAESTRO DE FILTROS" (BLINDADO)
+# CARGA MASIVA DEL EXCEL "MAESTRO DE FILTROS" (BLINDADO Y SEGURO)
 # =========================================================
 @api_bp.route('/cargar_maestro_filtros', methods=['GET', 'POST'])
 def cargar_maestro_filtros():
@@ -218,44 +219,60 @@ def cargar_maestro_filtros():
 
     if request.method == 'GET':
         return '''
-        <div style="font-family: sans-serif; padding: 40px; text-align: center;">
-            <h2>Subir Maestro de Filtros (Excel)</h2>
-            <form method="POST" enctype="multipart/form-data" style="margin-top: 20px;">
-                <input type="file" name="file" accept=".xlsx, .xls" style="margin-bottom: 20px;"><br>
-                <button type="submit" style="padding: 10px 20px; background: #1E3A8A; color: white; border: none; border-radius: 5px; cursor: pointer;">Subir e Importar</button>
+        <div style="font-family: sans-serif; padding: 40px; text-align: center; max-width: 600px; margin: auto;">
+            <h2 style="color: #1E3A8A;">Subir Maestro de Filtros (Excel)</h2>
+            <p style="color: #64748B; font-size: 14px;">Asegúrate de seleccionar el archivo antes de presionar el botón azul.</p>
+            
+            <form method="POST" enctype="multipart/form-data" style="margin-top: 30px; padding: 20px; border: 2px dashed #CBD5E1; border-radius: 10px; background: #F8FAFC;">
+                <input type="file" name="file" accept=".xlsx, .xls" required style="margin-bottom: 20px; width: 100%; font-size: 16px;"><br>
+                <button type="submit" style="padding: 12px 25px; background: #1E3A8A; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%;">Subir e Importar</button>
             </form>
         </div>
         '''
     
-    file = request.files.get('file')
-    if not file:
-        return "No se subió ningún archivo", 400
+    # 1. Verificamos que el archivo venga en la solicitud
+    if 'file' not in request.files:
+        return "<h3 style='color:red; text-align:center;'>Error: No se envió la instrucción de archivo.</h3>", 400
+        
+    file = request.files['file']
+    
+    # 2. Verificamos que el archivo tenga nombre (que no esté vacío)
+    if file.filename == '':
+        return "<div style='text-align:center; padding: 40px;'><h2 style='color:red;'>No se seleccionó ningún archivo</h2><p>Por favor, haz clic en 'Elegir archivo' antes de presionar el botón.</p><a href='/api/cargar_maestro_filtros?token=DemotronFiltros2026'>Volver atrás</a></div>", 400
         
     try:
         df = pd.read_excel(file)
         
-        # MAGIA: Convertir todos los títulos de columnas a minúsculas y sin espacios a los lados
+        columnas_reales = list(df.columns)
         df.columns = df.columns.astype(str).str.strip().str.lower()
         
         db.session.query(FiltroEquipo).delete()
         registros_agregados = 0
         
         for index, row in df.iterrows():
-            # Extracción a prueba de balas (lee incluso si la celda dice "nan")
-            c_eq = row.get('equipo') or row.get('codigo equipo') or row.get('codigo_equipo')
+            # Lector Blindado por Posición y Nombre adaptado exactamente a tu Maestro
+            c_eq = row.get('equipo') or row.get('codigo equipo') or row.get('código equipo')
+            if c_eq is None and len(df.columns) > 0: c_eq = row.iloc[0]
             c_eq = str(c_eq).strip() if pd.notna(c_eq) else ''
             
-            if not c_eq or c_eq.lower() == 'nan' or c_eq.lower() == 'none':
-                continue
+            if not c_eq or c_eq.lower() in ['nan', 'none', '']: continue
                 
-            c_sist = row.get('filtro') or row.get('sistema')
+            c_sist = row.get('sistema / tipo de filtro') or row.get('filtro') or row.get('sistema')
+            if c_sist is None and len(df.columns) > 1: c_sist = row.iloc[1]
             c_sist = str(c_sist).strip() if pd.notna(c_sist) else '-'
             
-            c_cant = row.get('cantidad') or row.get('cant')
+            c_cant = row.get('cant') or row.get('cantidad')
+            if c_cant is None and len(df.columns) > 2: c_cant = row.iloc[2]
             c_cant = str(c_cant).strip() if pd.notna(c_cant) else '1'
             
-            # Buscar la palabra 'codigo', o 'originales', o 'parte'
-            c_orig = row.get('codigo') or row.get('originales') or row.get('n original') or row.get('n° original')
+            # Buscamos en 'originales', 'fleetguard' u otra posición
+            c_orig = row.get('originales') or row.get('codigo')
+            if c_orig is None and len(df.columns) > 5: c_orig = row.iloc[5] # Columna 6 (ORIGINALES)
+            
+            if pd.isna(c_orig) or str(c_orig).strip().lower() == 'nan':
+                # Si Originales está vacío, intentamos sacar de Fleetguard (Columna 4)
+                if len(df.columns) > 3 and pd.notna(row.iloc[3]): c_orig = row.iloc[3]
+                
             c_orig = str(c_orig).strip() if pd.notna(c_orig) else '-'
             
             nuevo_filtro = FiltroEquipo(
@@ -272,7 +289,11 @@ def cargar_maestro_filtros():
             registros_agregados += 1
             
         db.session.commit()
-        return f"<div style='font-family: sans-serif; padding: 40px; text-align: center; color: green;'><h2>¡Éxito!</h2><p>Se importaron {registros_agregados} filtros correctamente.</p><a href='/'>Volver al Inicio</a></div>"
+        
+        if registros_agregados == 0:
+            return f"<div style='padding: 40px; text-align: center; color: red;'><h2>El archivo está vacío.</h2><p>Columnas que el sistema detectó: <b>{columnas_reales}</b></p><br><a href='/api/cargar_maestro_filtros?token=DemotronFiltros2026'>Intentar de nuevo</a></div>"
+
+        return f"<div style='font-family: sans-serif; padding: 40px; text-align: center; color: green;'><h2>¡Éxito Total!</h2><p>Se importaron {registros_agregados} filtros corporativos correctamente.</p><a href='/'>Volver al Inicio</a></div>"
         
     except Exception as e:
         db.session.rollback()
