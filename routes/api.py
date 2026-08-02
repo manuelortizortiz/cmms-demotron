@@ -4,7 +4,7 @@ from flask import Blueprint, request, jsonify, redirect, send_file, render_templ
 from datetime import datetime
 from flask_login import login_required
 from extensions import db
-from sqlalchemy import text  # IMPORTANTE: Para hablar con SQL puro
+from sqlalchemy import text 
 
 # Importación de Modelos
 from models.equipo import Equipo, FiltroEquipo
@@ -210,7 +210,7 @@ def imprimir_filtros(codigo):
         return f"Aviso del Sistema: No se pudo generar la hoja de filtros PDF ({str(e)})."
 
 # =========================================================
-# CARGA MASIVA DEL EXCEL "MAESTRO DE FILTROS" (VÍA SQL DIRECTO)
+# CARGA MASIVA DEL EXCEL "MAESTRO DE FILTROS" (LEE TODAS LAS MARCAS)
 # =========================================================
 @api_bp.route('/cargar_maestro_filtros', methods=['GET', 'POST'])
 def cargar_maestro_filtros():
@@ -245,19 +245,18 @@ def cargar_maestro_filtros():
         columnas_reales = list(df.columns)
         df.columns = df.columns.astype(str).str.strip().str.lower()
         
-        # SQL DIRECTO 1: Borrar todo el historial antiguo de filtros
+        # SQL DIRECTO: Borrar todo el historial antiguo de filtros
         db.session.execute(text("DELETE FROM filtro_equipo"))
         registros_agregados = 0
         
-        # PREPARAR LA CONSULTA INSERT PARA SQL DIRECTO
+        # AQUÍ ESTÁ EL CAMBIO: Ahora inyectamos todas las marcas a la BD
         sql_insert = text("""
             INSERT INTO filtro_equipo 
             (codigo_equipo, sistema, cant, originales, fleetguard, donaldson, baldwind) 
-            VALUES (:eq, :sist, :cant, :orig, '-', '-', '-')
+            VALUES (:eq, :sist, :cant, :orig, :fleet, :don, :bald)
         """)
         
         for index, row in df.iterrows():
-            # Lector de Excel por posición de tu maestro
             c_eq = row.get('equipo') or row.get('codigo equipo') or row.get('código equipo')
             if c_eq is None and len(df.columns) > 0: c_eq = row.iloc[0]
             c_eq = str(c_eq).strip() if pd.notna(c_eq) else ''
@@ -272,20 +271,36 @@ def cargar_maestro_filtros():
             if c_cant is None and len(df.columns) > 2: c_cant = row.iloc[2]
             c_cant = str(c_cant).strip() if pd.notna(c_cant) else '1'
             
+            # --- NUEVO: Leer TODAS las marcas desde el Excel ---
+            # Fleetguard (Normalmente en la columna 3 de tu maestro)
+            c_fleet = row.get('fleetguard')
+            if c_fleet is None and len(df.columns) > 3: c_fleet = row.iloc[3]
+            c_fleet = str(c_fleet).strip() if pd.notna(c_fleet) and str(c_fleet).strip().lower() != 'nan' else '-'
+            
+            # Baldwind (Normalmente en la columna 4 de tu maestro)
+            c_bald = row.get('baldwind') or row.get('baldwin')
+            if c_bald is None and len(df.columns) > 4: c_bald = row.iloc[4]
+            c_bald = str(c_bald).strip() if pd.notna(c_bald) and str(c_bald).strip().lower() != 'nan' else '-'
+            
+            # Originales (Normalmente en la columna 5 de tu maestro)
             c_orig = row.get('originales') or row.get('codigo')
             if c_orig is None and len(df.columns) > 5: c_orig = row.iloc[5]
+            c_orig = str(c_orig).strip() if pd.notna(c_orig) and str(c_orig).strip().lower() != 'nan' else '-'
             
-            if pd.isna(c_orig) or str(c_orig).strip().lower() == 'nan':
-                if len(df.columns) > 3 and pd.notna(row.iloc[3]): c_orig = row.iloc[3]
-                
-            c_orig = str(c_orig).strip() if pd.notna(c_orig) else '-'
+            # Donaldson (Normalmente en la columna 6 de tu maestro)
+            c_don = row.get('donaldson')
+            if c_don is None and len(df.columns) > 6: c_don = row.iloc[6]
+            c_don = str(c_don).strip() if pd.notna(c_don) and str(c_don).strip().lower() != 'nan' else '-'
             
-            # SQL DIRECTO 2: Inyectar la fila directo a Postgres saltándose SQLAlchemy
+            
             db.session.execute(sql_insert, {
                 "eq": c_eq,
                 "sist": c_sist,
                 "cant": c_cant,
-                "orig": c_orig
+                "orig": c_orig,
+                "fleet": c_fleet,
+                "bald": c_bald,
+                "don": c_don
             })
             
             registros_agregados += 1
@@ -295,7 +310,7 @@ def cargar_maestro_filtros():
         if registros_agregados == 0:
             return f"<div style='padding: 40px; text-align: center; color: red;'><h2>El archivo está vacío.</h2><p>Columnas detectadas: <b>{columnas_reales}</b></p><br><a href='/api/cargar_maestro_filtros?token=DemotronFiltros2026'>Intentar de nuevo</a></div>"
 
-        return f"<div style='font-family: sans-serif; padding: 40px; text-align: center; color: green;'><h2>¡Éxito Total!</h2><p>Se importaron {registros_agregados} filtros corporativos correctamente.</p><a href='/'>Volver al Inicio</a></div>"
+        return f"<div style='font-family: sans-serif; padding: 40px; text-align: center; color: green;'><h2>¡Éxito Total!</h2><p>Se importaron {registros_agregados} filtros con TODAS sus marcas.</p><a href='/'>Volver al Inicio</a></div>"
         
     except Exception as e:
         db.session.rollback()
