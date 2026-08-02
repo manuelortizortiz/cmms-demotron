@@ -12,7 +12,7 @@ from models.historial import HistorialLectura, CompraRepuesto
 from models.bodega import InventarioBodega
 from models.personal import Personal, Mecanico
 
-# Definición del Blueprint (MUY IMPORTANTE QUE ESTÉ AQUÍ ARRIBA)
+# Definición del Blueprint
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 # =========================================================
@@ -209,7 +209,7 @@ def imprimir_filtros(codigo):
         return f"Aviso del Sistema: No se pudo generar la hoja de filtros PDF ({str(e)})."
 
 # =========================================================
-# CARGA MASIVA DEL EXCEL "MAESTRO DE FILTROS" (BLINDADO Y SEGURO)
+# CARGA MASIVA DEL EXCEL "MAESTRO DE FILTROS" (CORREGIDO)
 # =========================================================
 @api_bp.route('/cargar_maestro_filtros', methods=['GET', 'POST'])
 def cargar_maestro_filtros():
@@ -275,14 +275,12 @@ def cargar_maestro_filtros():
                 
             c_orig = str(c_orig).strip() if pd.notna(c_orig) else '-'
             
+            # AQUÍ ESTÁ LA CORRECCIÓN: Quitamos fleetguard, donaldson y baldwind
             nuevo_filtro = FiltroEquipo(
                 codigo_equipo=c_eq,
                 sistema=c_sist,
                 cant=c_cant,
-                originales=c_orig,
-                fleetguard='-',
-                donaldson='-',
-                baldwind='-'
+                originales=c_orig
             )
             
             db.session.add(nuevo_filtro)
