@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify, redirect, send_file, render_templ
 from datetime import datetime
 from flask_login import login_required
 from extensions import db
+from sqlalchemy import text  # IMPORTANTE: Para hablar con SQL puro
 
 # Importación de Modelos
 from models.equipo import Equipo, FiltroEquipo
@@ -209,7 +210,7 @@ def imprimir_filtros(codigo):
         return f"Aviso del Sistema: No se pudo generar la hoja de filtros PDF ({str(e)})."
 
 # =========================================================
-# CARGA MASIVA DEL EXCEL "MAESTRO DE FILTROS" (CORREGIDO)
+# CARGA MASIVA DEL EXCEL "MAESTRO DE FILTROS" (VÍA SQL DIRECTO)
 # =========================================================
 @api_bp.route('/cargar_maestro_filtros', methods=['GET', 'POST'])
 def cargar_maestro_filtros():
@@ -230,15 +231,13 @@ def cargar_maestro_filtros():
         </div>
         '''
     
-    # 1. Verificamos que el archivo venga en la solicitud
     if 'file' not in request.files:
         return "<h3 style='color:red; text-align:center;'>Error: No se envió la instrucción de archivo.</h3>", 400
         
     file = request.files['file']
     
-    # 2. Verificamos que el archivo tenga nombre (que no esté vacío)
     if file.filename == '':
-        return "<div style='text-align:center; padding: 40px;'><h2 style='color:red;'>No se seleccionó ningún archivo</h2><p>Por favor, haz clic en 'Elegir archivo' antes de presionar el botón.</p><a href='/api/cargar_maestro_filtros?token=DemotronFiltros2026'>Volver atrás</a></div>", 400
+        return "<div style='text-align:center; padding: 40px;'><h2 style='color:red;'>No se seleccionó ningún archivo</h2><a href='/api/cargar_maestro_filtros?token=DemotronFiltros2026'>Volver atrás</a></div>", 400
         
     try:
         df = pd.read_excel(file)
@@ -246,11 +245,19 @@ def cargar_maestro_filtros():
         columnas_reales = list(df.columns)
         df.columns = df.columns.astype(str).str.strip().str.lower()
         
-        db.session.query(FiltroEquipo).delete()
+        # SQL DIRECTO 1: Borrar todo el historial antiguo de filtros
+        db.session.execute(text("DELETE FROM filtro_equipo"))
         registros_agregados = 0
         
+        # PREPARAR LA CONSULTA INSERT PARA SQL DIRECTO
+        sql_insert = text("""
+            INSERT INTO filtro_equipo 
+            (codigo_equipo, sistema, cant, originales, fleetguard, donaldson, baldwind) 
+            VALUES (:eq, :sist, :cant, :orig, '-', '-', '-')
+        """)
+        
         for index, row in df.iterrows():
-            # Lector Blindado por Posición y Nombre adaptado exactamente a tu Maestro
+            # Lector de Excel por posición de tu maestro
             c_eq = row.get('equipo') or row.get('codigo equipo') or row.get('código equipo')
             if c_eq is None and len(df.columns) > 0: c_eq = row.iloc[0]
             c_eq = str(c_eq).strip() if pd.notna(c_eq) else ''
@@ -265,31 +272,28 @@ def cargar_maestro_filtros():
             if c_cant is None and len(df.columns) > 2: c_cant = row.iloc[2]
             c_cant = str(c_cant).strip() if pd.notna(c_cant) else '1'
             
-            # Buscamos en 'originales', 'fleetguard' u otra posición
             c_orig = row.get('originales') or row.get('codigo')
-            if c_orig is None and len(df.columns) > 5: c_orig = row.iloc[5] # Columna 6 (ORIGINALES)
+            if c_orig is None and len(df.columns) > 5: c_orig = row.iloc[5]
             
             if pd.isna(c_orig) or str(c_orig).strip().lower() == 'nan':
-                # Si Originales está vacío, intentamos sacar de Fleetguard (Columna 4)
                 if len(df.columns) > 3 and pd.notna(row.iloc[3]): c_orig = row.iloc[3]
                 
             c_orig = str(c_orig).strip() if pd.notna(c_orig) else '-'
             
-            # AQUÍ ESTÁ LA CORRECCIÓN: Quitamos fleetguard, donaldson y baldwind
-            nuevo_filtro = FiltroEquipo(
-                codigo_equipo=c_eq,
-                sistema=c_sist,
-                cant=c_cant,
-                originales=c_orig
-            )
+            # SQL DIRECTO 2: Inyectar la fila directo a Postgres saltándose SQLAlchemy
+            db.session.execute(sql_insert, {
+                "eq": c_eq,
+                "sist": c_sist,
+                "cant": c_cant,
+                "orig": c_orig
+            })
             
-            db.session.add(nuevo_filtro)
             registros_agregados += 1
             
         db.session.commit()
         
         if registros_agregados == 0:
-            return f"<div style='padding: 40px; text-align: center; color: red;'><h2>El archivo está vacío.</h2><p>Columnas que el sistema detectó: <b>{columnas_reales}</b></p><br><a href='/api/cargar_maestro_filtros?token=DemotronFiltros2026'>Intentar de nuevo</a></div>"
+            return f"<div style='padding: 40px; text-align: center; color: red;'><h2>El archivo está vacío.</h2><p>Columnas detectadas: <b>{columnas_reales}</b></p><br><a href='/api/cargar_maestro_filtros?token=DemotronFiltros2026'>Intentar de nuevo</a></div>"
 
         return f"<div style='font-family: sans-serif; padding: 40px; text-align: center; color: green;'><h2>¡Éxito Total!</h2><p>Se importaron {registros_agregados} filtros corporativos correctamente.</p><a href='/'>Volver al Inicio</a></div>"
         
