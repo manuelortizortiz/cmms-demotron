@@ -34,7 +34,7 @@ class Equipo(db.Model):
 
 
 # =========================================================
-# TABLA DE FILTROS BLINDADA CONTRA ERRORES DE EXCEL
+# TABLA DE FILTROS (ALINEADA 100% CON POSTGRESQL)
 # =========================================================
 class FiltroEquipo(db.Model):
     __tablename__ = 'filtro_equipo'
@@ -42,49 +42,34 @@ class FiltroEquipo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     codigo_equipo = db.Column(db.String(50), nullable=False)
     
-    # COLUMNAS CLÁSICAS (Las reales que espera tu Excel / SQL)
-    filtro = db.Column(db.String(100))
-    cantidad = db.Column(db.String(50))
-    codigo = db.Column(db.String(100))
+    # ESTAS SON LAS COLUMNAS REALES QUE POSTGRESQL TIENE ADENTRO
+    sistema = db.Column(db.String(100))
+    cant = db.Column(db.String(50))
+    fleetguard = db.Column(db.String(100))
+    baldwind = db.Column(db.String(100))
+    originales = db.Column(db.String(100))
+    donaldson = db.Column(db.String(100))
 
     # ==================================================
-    # ALIAS MÁGICOS (Para que tu script no vuelva a chocar)
+    # ALIAS MÁGICOS (Para que el PDF lea bien sin chocar)
     # ==================================================
     @property
-    def sistema(self): return self.filtro
-    @sistema.setter
-    def sistema(self, val): self.filtro = val
+    def filtro(self): return self.sistema
+    
+    @property
+    def cantidad(self): return self.cant
+    
+    @property
+    def codigo(self): return self.originales
+        
+    @property
+    def codigo_parte(self): return self.originales
 
     @property
-    def cant(self): return self.cantidad
-    @cant.setter
-    def cant(self, val): self.cantidad = val
-
-    @property
-    def originales(self): return self.codigo
-    @originales.setter
-    def originales(self, val): self.codigo = val
-
-    @property
-    def codigo_parte(self): return self.codigo
-    @codigo_parte.setter
-    def codigo_parte(self, val): self.codigo = val
-
-    @property
-    def nombre_filtro(self): return self.filtro
-    @nombre_filtro.setter
-    def nombre_filtro(self, val): self.filtro = val
-
-    # Marcas alternativas (Simuladas para que el PDF se vea bien sin alterar la BD original)
-    @property
-    def fleetguard(self): return "-"
-    @property
-    def donaldson(self): return "-"
-    @property
-    def baldwind(self): return "-"
+    def nombre_filtro(self): return self.sistema
 
     def __repr__(self):
-        return f"<Filtro {self.filtro} - {self.codigo_equipo}>"
+        return f"<Filtro {self.sistema} - {self.codigo_equipo}>"
 
 
 # =========================================================
