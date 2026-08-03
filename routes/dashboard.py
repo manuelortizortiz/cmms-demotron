@@ -302,8 +302,9 @@ def imprimir_ot(ot_id):
     except Exception as e:
         return f"Aviso del Sistema: No se pudo generar la vista del PDF corporativo ({str(e)})."
 
+
 # =========================================================
-# RUTAS DE ACCIÓN RÁPIDA DE BODEGA
+# RUTAS DE BODEGA VIVA (KITS Y SUELTOS)
 # =========================================================
 @dashboard_bp.route('/api/bodega_movimiento', methods=['POST'])
 @login_required
@@ -321,9 +322,31 @@ def bodega_movimiento():
     db.session.commit()
     return redirect('/bodega_kpi')
 
-# =========================================================
-# MÓDULO BODEGA: KARDEX ACORDEÓN Y FILTROS SUELTOS
-# =========================================================
+@dashboard_bp.route('/api/bodega_suelta_mov', methods=['POST'])
+@login_required
+def bodega_suelta_mov():
+    codigo = request.form.get('codigo_item').upper().strip()
+    cantidad = request.form.get('cantidad', type=float)
+    accion = request.form.get('accion') 
+    
+    if not codigo or cantidad is None:
+        return redirect('/bodega_kpi?tab=sueltos')
+        
+    item = InventarioBodega.query.filter_by(codigo_item=codigo).first()
+    if item:
+        try: actual = float(item.cantidad)
+        except: actual = 0.0
+        
+        if accion == 'INGRESO': item.cantidad = str(actual + cantidad)
+        elif accion == 'SALIDA': item.cantidad = str(max(0.0, actual - cantidad))
+    else:
+        if accion == 'INGRESO':
+            nuevo = InventarioBodega(codigo_item=codigo, nombre=f"FILTRO/REPUESTO {codigo}", categoria="Filtros Sueltos", cantidad=str(cantidad), ubicacion="Bodega Central")
+            db.session.add(nuevo)
+            
+    db.session.commit()
+    return redirect('/bodega_kpi?tab=sueltos')
+
 @dashboard_bp.route('/bodega_kpi', strict_slashes=False)
 @login_required
 def bodega_kpi():
@@ -333,26 +356,22 @@ def bodega_kpi():
         compras_db = CompraRepuesto.query.all()
         eqs_db = Equipo.query.all()
         
-        # 1. KPIs DE GESTIÓN TALLER
+        # 1. KPIs TALLER (KITS)
         tiempos_respuesta = []
         ots_abandonadas = []
-        
         for ot in ots_db:
             if ot.estado == 'Finalizada' and ot.fecha_cierre and ot.fecha:
                 dias = (ot.fecha_cierre - ot.fecha).days
                 if dias >= 0: tiempos_respuesta.append(dias)
             elif ot.estado != 'Finalizada' and ot.fecha:
                 dias_retraso = (hoy - ot.fecha).days
-                if dias_retraso > 20: 
-                    ots_abandonadas.append({'ot': ot, 'dias': dias_retraso})
-                    
+                if dias_retraso > 20: ots_abandonadas.append({'ot': ot, 'dias': dias_retraso})
         ots_abandonadas.sort(key=lambda x: x['dias'], reverse=True)
         mttr_dias = round(sum(tiempos_respuesta) / max(1, len(tiempos_respuesta)), 1) if tiempos_respuesta else 0
 
-        # 2. MOTOR DE KARDEX LOGÍSTICO
+        # 2. MOTOR DE KARDEX (KITS)
         inventario_por_equipo = {}
         eventos_por_equipo = {}
-
         for c in compras_db:
             eq = c.codigo_equipo or 'STOCK GENERAL'
             if eq not in eventos_por_equipo: eventos_por_equipo[eq] = []
@@ -365,12 +384,10 @@ def bodega_kpi():
                 eventos_por_equipo[eq].append({'tipo': 'OT', 'fecha': ot.fecha_cierre or ot.fecha or datetime.min, 'obj': ot})
 
         valor_total_bodega = 0.0
-
         for eq, eventos in eventos_por_equipo.items():
             eventos.sort(key=lambda x: x['fecha'])
             stock, entradas, salidas, movimientos = 0, 0, 0, []
             costos_acumulados, cantidad_compras = 0.0, 0
-            
             compras_eq = [e['costo'] for e in eventos if e['tipo'] == 'COMPRA' and e['costo'] > 0]
             precio_ref = sum(compras_eq)/len(compras_eq) if compras_eq else 0.0
 
@@ -392,13 +409,12 @@ def bodega_kpi():
         from utils.formatters import format_clp
         valor_bodega_str = format_clp(valor_total_bodega)
 
-        # 3. CAJAS DE SALUD DE STOCK
         con_stock = {k: v for k, v in inventario_por_equipo.items() if v['stock'] >= 2}
         bajo_stock = {k: v for k, v in inventario_por_equipo.items() if v['stock'] == 1}
         sin_stock = {k: v for k, v in inventario_por_equipo.items() if v['stock'] <= 0}
 
-        # 4. MOTOR INTELIGENTE DE FILTROS SUELTOS
-        bodega_suelta_db = InventarioBodega.query.all()
+        # 3. BASE DE DATOS FILTROS SUELTOS
+        bodega_suelta_db = InventarioBodega.query.order_by(InventarioBodega.codigo_item).all()
         stock_suelto = {}
         for b in bodega_suelta_db:
             if b.codigo_item:
@@ -417,6 +433,11 @@ def bodega_kpi():
             except: c = 1
             maestro_filtros[eq].append({'sistema': f.sistema, 'cant': c, 'marcas': marcas})
 
-        return render_template('bodega_kpi.html', mttr_dias=mttr_dias, abandonadas=ots_abandonadas, inventario=inventario_por_equipo, valor_bodega_str=valor_bodega_str, con_stock=con_stock, bajo_stock=bajo_stock, sin_stock=sin_stock, stock_suelto=stock_suelto, maestro_filtros=maestro_filtros, eqs_db=eqs_db, hoy=hoy)
+        return render_template('bodega_kpi.html', 
+                               mttr_dias=mttr_dias, abandonadas=ots_abandonadas, 
+                               inventario=inventario_por_equipo, valor_bodega_str=valor_bodega_str, 
+                               con_stock=con_stock, bajo_stock=bajo_stock, sin_stock=sin_stock, 
+                               bodega_sueltos=bodega_suelta_db, stock_suelto=stock_suelto, 
+                               maestro_filtros=maestro_filtros, eqs_db=eqs_db, hoy=hoy)
     except Exception as e:
         return f"Error crítico en Módulo Bodega: {str(e)}"
