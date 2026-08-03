@@ -73,9 +73,7 @@ def dashboard():
                 if 0 <= idx < len(meses_nombres):
                     compras_por_mes[meses_nombres[idx]] += float(c.costo_pm_clp or 0)
 
-        # =========================================================
         # CÁLCULO FINANCIERO CORREGIDO (OTS + REPUESTOS)
-        # =========================================================
         estados_counts = Counter(e.estado_base for e in eqs_db)
         
         gasto_ot_total = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.fecha and o.fecha >= fecha_febrero)
@@ -100,9 +98,7 @@ def dashboard():
             'gasto_anterior': format_clp(gasto_anterior)
         }
 
-        # =========================================================
-        # ESTADÍSTICAS Y COSTOS POR MARCA (PROMEDIADOS)
-        # =========================================================
+        # ESTADÍSTICAS Y COSTOS POR MARCA
         marcas_stats = {}
         for e in eqs_db:
             m = e.marca or 'Sin Marca'
@@ -135,8 +131,6 @@ def dashboard():
                 cinta3['mttr'].append(round(st['horas_rep'] / max(1, st['fallas']), 1))
                 cinta3['costo_promedio'].append(round(st['costo_total'] / st['count'], 0))
 
-        # =========================================================
-
         atrasados_top = sorted([e for e in eqs_margen if e['dias'] < 0], key=lambda x: x['dias'])[:5]
         proximos_top = sorted([e for e in eqs_margen if e['dias'] >= 0], key=lambda x: x['dias'])[:5]
         taller_top = [e for e in eqs_db if e.estado_base == 'Taller'][:5]
@@ -159,13 +153,7 @@ def dashboard():
                 fecha_str = ot.fecha.strftime('%Y-%m-%d')
                 clave = f"PREV_{ot.codigo_equipo}_{fecha_str}"
                 if clave not in eventos_deduplicados:
-                    eventos_calendario.append({
-                        'title': f"PREV: {ot.codigo_equipo}", 
-                        'start': fecha_str,
-                        'backgroundColor': '#3B82F6', 
-                        'textColor': '#FFFFFF', 
-                        'borderColor': 'transparent'
-                    })
+                    eventos_calendario.append({'title': f"PREV: {ot.codigo_equipo}", 'start': fecha_str, 'backgroundColor': '#3B82F6', 'textColor': '#FFFFFF', 'borderColor': 'transparent'})
                     eventos_deduplicados.add(clave)
         
         for ot in correctivas:
@@ -173,13 +161,7 @@ def dashboard():
                 fecha_str = ot.fecha.strftime('%Y-%m-%d')
                 clave = f"CORR_{ot.codigo_equipo}_{fecha_str}"
                 if clave not in eventos_deduplicados:
-                    eventos_calendario.append({
-                        'title': f"CORR: {ot.codigo_equipo}", 
-                        'start': fecha_str,
-                        'backgroundColor': '#EF4444', 
-                        'textColor': '#FFFFFF', 
-                        'borderColor': 'transparent'
-                    })
+                    eventos_calendario.append({'title': f"CORR: {ot.codigo_equipo}", 'start': fecha_str, 'backgroundColor': '#EF4444', 'textColor': '#FFFFFF', 'borderColor': 'transparent'})
                     eventos_deduplicados.add(clave)
 
         for e in eqs_db:
@@ -190,13 +172,7 @@ def dashboard():
             d_est = int(m / (8 if e.control_base == 'HORAS' else 100))
             
             if m >= 0 and e.estado_base != 'Fuera de Servicio' and d_est <= 45:
-                eventos_calendario.append({
-                    'title': f"PROY: {e.codigo}", 
-                    'start': (hoy + timedelta(days=max(1, d_est))).strftime('%Y-%m-%d'),
-                    'backgroundColor': '#1E3A8A', 
-                    'textColor': '#FFFFFF', 
-                    'borderColor': 'transparent'
-                })
+                eventos_calendario.append({'title': f"PROY: {e.codigo}", 'start': (hoy + timedelta(days=max(1, d_est))).strftime('%Y-%m-%d'), 'backgroundColor': '#1E3A8A', 'textColor': '#FFFFFF', 'borderColor': 'transparent'})
 
             equipos_list.append({
                 'codigo': e.codigo, 'tipo': e.tipo_equipo, 'marca': e.marca, 'modelo': e.modelo,
@@ -211,15 +187,11 @@ def dashboard():
             
             ub_final = ub_original
 
-            if e.estado_base == 'Fuera de Servicio' or ub_original == 'SIN ASIGNAR':
-                ub_final = 'FUERA DE SERVICIO'
-            elif any(k in ub_original for k in taller_ext_partial):
-                ub_final = 'TALLER EXTERNO'
-            elif ub_original == 'TALLER' or any(k in ub_original for k in casa_matriz_claves):
-                ub_final = 'CASA MATRIZ SAN RAFAEL'
+            if e.estado_base == 'Fuera de Servicio' or ub_original == 'SIN ASIGNAR': ub_final = 'FUERA DE SERVICIO'
+            elif any(k in ub_original for k in taller_ext_partial): ub_final = 'TALLER EXTERNO'
+            elif ub_original == 'TALLER' or any(k in ub_original for k in casa_matriz_claves): ub_final = 'CASA MATRIZ SAN RAFAEL'
 
-            if ub_final not in ubicaciones_dict: 
-                ubicaciones_dict[ub_final] = []
+            if ub_final not in ubicaciones_dict: ubicaciones_dict[ub_final] = []
             ubicaciones_dict[ub_final].append(e)
 
             c_mants = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.codigo_equipo == e.codigo)
@@ -242,14 +214,7 @@ def dashboard():
             txt = f"{ot.tipo_mantencion} | {det}" if det else ot.tipo_mantencion
             kanban[k].append({'id': ot.id, 'codigo': ot.codigo_equipo, 'folio': ot.folio, 'tipo': txt, 'clasificacion': ot.tipo_ot, 'mecanico': ot.mecanico, 'fecha': ot.fecha.strftime('%d/%m %H:%M') if ot.fecha else ''})
 
-        return render_template('index.html', 
-            kpis=kpis, cinta2=cinta2, cinta3=cinta3, 
-            atrasados_top=atrasados_top, proximos_top=proximos_top, taller_top=taller_list,
-            eqs=equipos_list, finanzas_flota=finanzas_flota, bodega=bodega_db, 
-            lecturas=lecturas_db, operadores=personal_db, mecanicos=mecanicos_db,
-            mants_prev=preventivas, mants_corr=correctivas, compras=compras_db, 
-            kanban=kanban, eventos_calendario=eventos_calendario, ubicaciones_dict=ubicaciones_dict
-        )
+        return render_template('index.html', kpis=kpis, cinta2=cinta2, cinta3=cinta3, atrasados_top=atrasados_top, proximos_top=proximos_top, taller_top=taller_list, eqs=equipos_list, finanzas_flota=finanzas_flota, bodega=bodega_db, lecturas=lecturas_db, operadores=personal_db, mecanicos=mecanicos_db, mants_prev=preventivas, mants_corr=correctivas, compras=compras_db, kanban=kanban, eventos_calendario=eventos_calendario, ubicaciones_dict=ubicaciones_dict)
     except Exception as e:
         return f"Error crítico en Dashboard Corporativo: {str(e)}"
 
@@ -292,7 +257,6 @@ def detalle_equipo(codigo):
     try:
         equipo = Equipo.query.filter_by(codigo=codigo).first()
         if not equipo: return "Equipo no encontrado en la base de datos.", 404
-        
         mants_prev = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Preventiva').order_by(OrdenTrabajo.fecha.desc()).all()
         mants_corr = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Correctiva').order_by(OrdenTrabajo.fecha.desc()).all()
         lecturas = HistorialLectura.query.filter_by(codigo_equipo=codigo).order_by(HistorialLectura.fecha.desc()).all()
@@ -301,7 +265,6 @@ def detalle_equipo(codigo):
         historial_ub = HistorialUbicacion.query.filter_by(codigo_equipo=codigo).order_by(HistorialUbicacion.fecha.desc()).all()
         operador = Personal.query.filter_by(equipo_asignado=codigo).first()
         foto_url = buscar_foto_por_tipo(equipo.tipo_equipo, equipo.marca)
-        
         return render_template('equipo.html', equipo=equipo, mants_prev=mants_prev, mants_corr=mants_corr, lecturas=lecturas, compras=compras, documentos=documentos, historial_ub=historial_ub, operador=operador, foto_url=foto_url, hoy=datetime.now())
     except Exception as e:
         return f"Error al cargar la ficha del equipo: {str(e)}"
@@ -340,8 +303,9 @@ def imprimir_ot(ot_id):
         return render_template('imprimir_ot.html', ot=ot, equipo=equipo, filtros=filtros, hoy=datetime.now())
     except Exception as e:
         return f"Aviso del Sistema: No se pudo generar la vista del PDF corporativo ({str(e)})."
+
 # =========================================================
-# NUEVO MÓDULO: KPI DE TALLER Y BODEGA VIVA (KARDEX)
+# NUEVO MÓDULO: KPI DE TALLER Y BODEGA VIVA (KARDEX CRONOLÓGICO)
 # =========================================================
 @dashboard_bp.route('/bodega_kpi', strict_slashes=False)
 @login_required
@@ -356,80 +320,120 @@ def bodega_kpi():
         ots_abandonadas = []
         
         for ot in ots_db:
-            # Calcular tiempo promedio de respuesta
             if ot.estado == 'Finalizada' and ot.fecha_cierre and ot.fecha:
                 dias = (ot.fecha_cierre - ot.fecha).days
                 if dias >= 0: tiempos_respuesta.append(dias)
-            
-            # Detectar OTs fantasmas/abandonadas (Más de 20 días sin finalizar)
             elif ot.estado != 'Finalizada' and ot.fecha:
                 dias_retraso = (hoy - ot.fecha).days
                 if dias_retraso > 20: 
                     ots_abandonadas.append({'ot': ot, 'dias': dias_retraso})
                     
-        # Ordenar abandonadas de mayor a menor tiempo
         ots_abandonadas.sort(key=lambda x: x['dias'], reverse=True)
-        mttr_dias = round(sum(tiempos_respuesta) / max(1, len(tiempos_respuesta)), 1)
-        
-        # 2. MOTOR DE BODEGA E INVENTARIO (Entradas vs Salidas)
+        mttr_dias = round(sum(tiempos_respuesta) / max(1, len(tiempos_respuesta)), 1) if tiempos_respuesta else 0
+
+        # 2. MOTOR DE KARDEX LOGÍSTICO (CRONOLÓGICO Y AUTO-CORREGIDO)
         inventario_por_equipo = {}
-        valor_total_bodega = 0.0
-        
-        # A) Procesar Entradas (Compras)
+        eventos_por_equipo = {}
+
+        # Recopilar todos los eventos sin procesar todavía
         for c in compras_db:
             eq = c.codigo_equipo or 'STOCK GENERAL'
-            if eq not in inventario_por_equipo:
-                inventario_por_equipo[eq] = {'entradas': 0, 'salidas': 0, 'stock': 0, 'valor': 0.0, 'movimientos': []}
-            
-            inventario_por_equipo[eq]['entradas'] += 1
-            costo_compra = float(c.costo_pm_clp or 0)
-            inventario_por_equipo[eq]['valor'] += costo_compra
-            
-            inventario_por_equipo[eq]['movimientos'].append({
-                'fecha_obj': c.fecha or datetime.min,
-                'fecha_str': c.fecha.strftime('%d/%m/%Y') if c.fecha else 'S/F',
-                'tipo': 'INGRESO',
-                'doc': c.oc or 'N/A',
-                'detalle': c.descripcion or 'Compra de Repuestos',
-                'color': 'text-emerald-600 bg-emerald-50'
+            if eq not in eventos_por_equipo: eventos_por_equipo[eq] = []
+            eventos_por_equipo[eq].append({
+                'tipo': 'COMPRA',
+                'fecha': c.fecha or datetime.min,
+                'costo': float(c.costo_pm_clp or 0),
+                'obj': c
             })
             
-        # B) Procesar Salidas (Aplicación en Mantención)
         for ot in ots_db:
             if ot.estado == 'Finalizada':
                 eq = ot.codigo_equipo or 'STOCK GENERAL'
-                if eq in inventario_por_equipo:
-                    inventario_por_equipo[eq]['salidas'] += 1
-                    inventario_por_equipo[eq]['movimientos'].append({
-                        'fecha_obj': ot.fecha_cierre or ot.fecha or datetime.min,
-                        'fecha_str': (ot.fecha_cierre or ot.fecha).strftime('%d/%m/%Y') if (ot.fecha_cierre or ot.fecha) else 'S/F',
-                        'tipo': 'SALIDA',
-                        'doc': ot.folio or f"OT-{ot.id}",
-                        'detalle': f"Instalado en {ot.tipo_mantencion}",
-                        'color': 'text-red-500 bg-red-50'
-                    })
-                    
-        # C) Calcular Stock Teórico y Balance
-        for eq, data in inventario_por_equipo.items():
-            data['stock'] = data['entradas'] - data['salidas']
-            # Si hay stock positivo, sumamos el valor proporcional a la bodega activa
-            if data['stock'] > 0 and data['entradas'] > 0:
-                valor_proporcional = (data['valor'] / data['entradas']) * data['stock']
-                valor_total_bodega += valor_proporcional
-                
-            data['movimientos'].sort(key=lambda x: x['fecha_obj'], reverse=True)
+                if eq not in eventos_por_equipo: eventos_por_equipo[eq] = []
+                eventos_por_equipo[eq].append({
+                    'tipo': 'OT',
+                    'fecha': ot.fecha_cierre or ot.fecha or datetime.min,
+                    'obj': ot
+                })
+
+        valor_total_bodega = 0.0
+
+        for eq, eventos in eventos_por_equipo.items():
+            # ORDEN CRONOLÓGICO ESTRICTO: Para simular la realidad física
+            eventos.sort(key=lambda x: x['fecha'])
             
-        # Ocultar equipos que nunca han tenido ingresos
-        inventario_filtrado = {k: v for k, v in inventario_por_equipo.items() if v['entradas'] > 0}
-        
-        # Formatear el valor
+            stock = 0
+            entradas = 0
+            salidas = 0
+            movimientos = []
+            costos_acumulados = 0.0
+            cantidad_compras = 0
+            
+            compras_eq = [e['costo'] for e in eventos if e['tipo'] == 'COMPRA' and e['costo'] > 0]
+            precio_ref = sum(compras_eq)/len(compras_eq) if compras_eq else 0.0
+
+            for ev in eventos:
+                if ev['tipo'] == 'COMPRA':
+                    stock += 1
+                    entradas += 1
+                    costos_acumulados += ev['costo']
+                    cantidad_compras += 1
+                    precio_ref = costos_acumulados / cantidad_compras
+                    
+                    movimientos.append({
+                        'fecha_obj': ev['fecha'],
+                        'fecha_str': ev['fecha'].strftime('%d/%m/%Y') if ev['fecha'] > datetime.min else 'S/F',
+                        'tipo': 'INGRESO FACTURADO',
+                        'doc': ev['obj'].oc or 'N/A',
+                        'detalle': ev['obj'].descripcion or 'Compra de Repuestos',
+                        'color': 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                    })
+                
+                elif ev['tipo'] == 'OT':
+                    if stock <= 0:
+                        # LA MAGIA LOGÍSTICA: Si sale algo y no hay stock, generamos el Inventario Inicial
+                        stock += 1
+                        entradas += 1
+                        fecha_hist = ev['fecha'] - timedelta(days=1) if ev['fecha'] > datetime.min else datetime.min
+                        movimientos.append({
+                            'fecha_obj': fecha_hist,
+                            'fecha_str': 'PREVIO A OT',
+                            'tipo': 'AJUSTE INICIAL',
+                            'doc': 'AUTO-STOCK',
+                            'detalle': 'Stock existente previo a facturas',
+                            'color': 'text-blue-700 bg-blue-50 border-blue-200'
+                        })
+                        
+                    stock -= 1
+                    salidas += 1
+                    movimientos.append({
+                        'fecha_obj': ev['fecha'],
+                        'fecha_str': ev['fecha'].strftime('%d/%m/%Y') if ev['fecha'] > datetime.min else 'S/F',
+                        'tipo': 'SALIDA TALLER',
+                        'doc': ev['obj'].folio or f"OT-{ev['obj'].id}",
+                        'detalle': f"Aplicado en {ev['obj'].tipo_mantencion}",
+                        'color': 'text-red-700 bg-red-50 border-red-200'
+                    })
+            
+            if stock > 0:
+                valor_total_bodega += (stock * precio_ref)
+                
+            movimientos.sort(key=lambda x: x['fecha_obj'], reverse=True)
+            
+            inventario_por_equipo[eq] = {
+                'entradas': entradas,
+                'salidas': salidas,
+                'stock': stock,
+                'movimientos': movimientos
+            }
+
         from utils.formatters import format_clp
         valor_bodega_str = format_clp(valor_total_bodega)
 
         return render_template('bodega_kpi.html', 
                                mttr_dias=mttr_dias, 
                                abandonadas=ots_abandonadas,
-                               inventario=inventario_filtrado,
+                               inventario=inventario_por_equipo,
                                valor_bodega_str=valor_bodega_str,
                                hoy=hoy)
     except Exception as e:
