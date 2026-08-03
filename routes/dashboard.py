@@ -203,6 +203,9 @@ def dashboard():
                 'costo_str': format_clp(tot_cost), 'cpk_cph_str': format_clp(cpk)
             })
 
+        # ORDENAMIENTO INTELIGENTE: Manda los "Fuera de Servicio" al final de la tabla
+        equipos_list.sort(key=lambda x: (1 if x['estado'] == 'Fuera de Servicio' else 0, x['codigo']))
+
         ubicaciones_dict = dict(sorted(ubicaciones_dict.items(), key=lambda item: (1 if item[0] == 'FUERA DE SERVICIO' else 0, item[0])))
 
         kanban = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Finalizada': []}
@@ -302,7 +305,6 @@ def imprimir_ot(ot_id):
     except Exception as e:
         return f"Aviso del Sistema: No se pudo generar la vista del PDF corporativo ({str(e)})."
 
-
 # =========================================================
 # RUTAS DE ACCIÓN RÁPIDA DE BODEGA (BLINDADAS ANTICHOQUE)
 # =========================================================
@@ -337,7 +339,6 @@ def bodega_suelta_mov():
         if not codigo: return redirect('/bodega_kpi?tab=sueltos')
         codigo = codigo.upper().strip()
         
-        # EL CAMBIO MÁGICO: Transformar obligatoriamente a Entero
         try: cantidad = int(float(request.form.get('cantidad', 0)))
         except: cantidad = 0
             
@@ -349,14 +350,14 @@ def bodega_suelta_mov():
             except: actual = 0
             
             nueva_cant = actual + cantidad if accion == 'INGRESO' else max(0, actual - cantidad)
-            item.cantidad = int(nueva_cant)  # GUARDAR SIEMPRE COMO ENTERO (Ej: 20)
+            item.cantidad = int(nueva_cant)
         else:
             if accion == 'INGRESO':
                 nuevo = InventarioBodega(
                     codigo_item=codigo, 
                     nombre=f"FILTRO/REPUESTO {codigo}", 
                     categoria="Filtros Sueltos", 
-                    cantidad=int(cantidad),  # GUARDAR SIEMPRE COMO ENTERO (Ej: 20)
+                    cantidad=int(cantidad),
                     ubicacion="BODEGA CENTRAL"
                 )
                 db.session.add(nuevo)
@@ -367,7 +368,6 @@ def bodega_suelta_mov():
     except Exception as e:
         db.session.rollback()
         return f"<div style='padding: 50px; font-family: sans-serif; color: red;'><h2>Error de Base de Datos (Bodega Suelta):</h2><p>Por favor, copia este error y envíaselo al desarrollador:</p><p style='padding:15px; background:#fee2e2; border-left:4px solid red; font-family:monospace;'><b>{str(e)}</b></p><br><a href='/bodega_kpi?tab=sueltos' style='padding: 10px; background: #1E3A8A; color: white; text-decoration: none; border-radius: 5px;'>Volver al Sistema</a></div>"
-
 
 # =========================================================
 # MÓDULO BODEGA: KARDEX ACORDEÓN Y FILTROS SUELTOS
