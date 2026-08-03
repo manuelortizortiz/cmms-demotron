@@ -3,27 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demotron - Bodega y Taller</title>
+    <title>Demotron - WMS Bodega y Taller</title>
     <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; color: #1E293B; }
-        .card-custom { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .sidebar-bg { background-color: #0F172A; border-right: 1px solid #1E293B; }
         .nav-link { color: #94A3B8; display: block; padding: 12px 24px; text-decoration: none; font-weight: 500; font-size: 13px; transition: 0.2s; }
         .nav-link:hover { color: #FFFFFF; background-color: rgba(255,255,255,0.05); }
         .nav-link.active { color: #FFFFFF; background-color: #1E3A8A; font-weight: 600; border-left: 4px solid #60A5FA; padding-left: 20px;}
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        
+        .card-custom { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .form-input { border: 1px solid #CBD5E1; padding: 10px 16px; border-radius: 6px; font-size: 13px; width: 100%; outline: none; }
         .btn-primary { background-color: #1E3A8A; color: white; padding: 10px 24px; border-radius: 6px; font-weight: 500; cursor: pointer; border:none; font-size: 13px; transition: 0.2s; }
         .btn-primary:hover { background-color: #1D4ED8; }
         .btn-danger { background-color: #EF4444; color: white; padding: 10px 24px; border-radius: 6px; font-weight: 500; cursor: pointer; border:none; font-size: 13px; transition: 0.2s; }
         .btn-danger:hover { background-color: #DC2626; }
+        
+        /* SCROLL ELEGANTE PARA TARJETAS REDUCIDAS */
+        .mini-scroll::-webkit-scrollbar { width: 4px; }
+        .mini-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+        .mini-scroll:hover::-webkit-scrollbar-thumb { background: #94A3B8; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* PESTAÑAS INTERNAS */
+        .sub-tab { display: none; }
+        .sub-tab.active { display: block; }
+        .tab-btn { padding: 12px 24px; font-weight: 600; font-size: 13px; color: #64748B; border-bottom: 2px solid transparent; cursor: pointer; transition: 0.2s; }
+        .tab-btn:hover { color: #1E3A8A; }
+        .tab-btn.active { color: #1E3A8A; border-bottom-color: #1E3A8A; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
     
+    <!-- MENÚ LATERAL -->
     <aside class="w-64 sidebar-bg flex flex-col shrink-0">
         <div class="h-20 flex items-center px-6 border-b border-slate-800">
             <span class='text-lg font-semibold text-white tracking-wide'>DEMOTRON ERP</span>
@@ -36,174 +50,260 @@
     </aside>
 
     <main class="flex-1 flex flex-col min-w-0 overflow-y-auto w-full">
-        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 shadow-sm">
-            <h1 class="text-xl font-normal text-slate-800 tracking-wide">Analítica de Bodega y Gestión de Taller</h1>
+        <!-- HEADER Y MENÚ DE PESTAÑAS WMS -->
+        <header class="bg-white border-b border-slate-200 shrink-0 shadow-sm flex flex-col justify-end px-8 pt-6">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-xl font-normal text-slate-800 tracking-wide">Analítica de Bodega y Gestión de Taller (WMS)</h1>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="switchBodegaTab('tab-kits', this)" class="tab-btn active" id="btn-kits">📦 Gestión de Kits por Equipo (Kardex)</button>
+                <button onclick="switchBodegaTab('tab-sueltos', this)" class="tab-btn" id="btn-sueltos">🔧 Filtros Sueltos y Simulador Inteligente</button>
+            </div>
         </header>
 
-        <div class="p-8 space-y-8">
-            
-            <!-- 1. KPIs PRINCIPALES -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="card-custom">
-                    <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Lead Time de Reparación</p>
-                    <p class="text-4xl font-normal text-[#1E3A8A]">{{ mttr_dias }} <span class="text-lg text-slate-400">Días</span></p>
-                    <p class="text-xs text-slate-500 mt-2">Promedio desde creación hasta finalización</p>
-                </div>
-                <div class="card-custom">
-                    <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">OTs Abandonadas / Olvidadas</p>
-                    <p class="text-4xl font-normal text-red-600">{{ abandonadas|length }}</p>
-                    <p class="text-xs text-slate-500 mt-2">Documentos abiertos sin ejecutar (>20 días)</p>
-                </div>
-                <div class="card-custom bg-[#1E3A8A] text-white border-none">
-                    <p class="text-[11px] font-semibold text-blue-200 uppercase tracking-wider mb-2">Valor Actual en Bodega Activa</p>
-                    <p class="text-4xl font-normal">{{ valor_bodega_str }}</p>
-                    <p class="text-xs text-blue-300 mt-2">Capital inmovilizado (Entradas sin usar)</p>
-                </div>
-            </div>
+        <div class="p-8">
 
-            <!-- 2. RESUMEN SALUD DE STOCK -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-6">
-                    <p class="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider mb-4">✅ Stock Seguro (>1 Kit)</p>
-                    <div class="flex flex-wrap gap-2">
-                        {% for eq in con_stock %}
-                        <span class="bg-white border border-emerald-200 text-emerald-700 text-xs px-2 py-1 rounded font-bold">{{ eq }}</span>
-                        {% else %}<span class="text-xs text-emerald-600">Ninguno en este nivel.</span>{% endfor %}
-                    </div>
-                </div>
-                <div class="bg-amber-50 border border-amber-200 rounded-lg p-6">
-                    <p class="text-[11px] font-semibold text-amber-800 uppercase tracking-wider mb-4">⚠️ Stock Crítico (1 Kit)</p>
-                    <div class="flex flex-wrap gap-2">
-                        {% for eq in bajo_stock %}
-                        <span class="bg-white border border-amber-200 text-amber-700 text-xs px-2 py-1 rounded font-bold">{{ eq }}</span>
-                        {% else %}<span class="text-xs text-amber-600">Ninguno en este nivel.</span>{% endfor %}
-                    </div>
-                </div>
-                <div class="bg-red-50 border border-red-200 rounded-lg p-6">
-                    <p class="text-[11px] font-semibold text-red-800 uppercase tracking-wider mb-4">❌ Sin Stock (0 Kits)</p>
-                    <div class="flex flex-wrap gap-2">
-                        {% for eq in sin_stock %}
-                        <span class="bg-white border border-red-200 text-red-700 text-xs px-2 py-1 rounded font-bold">{{ eq }}</span>
-                        {% else %}<span class="text-xs text-red-600">Todos tienen stock.</span>{% endfor %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3. CINTAS DE ACCIÓN RÁPIDA (ENCARGADO DE BODEGA) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
-                    <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider mb-4">📥 Agregar Kit a Bodega (Ingreso)</h3>
-                    <form action="/api/bodega_movimiento" method="POST" class="flex gap-4">
-                        <input type="hidden" name="tipo_movimiento" value="INGRESO">
-                        <input type="text" name="codigo_equipo" placeholder="Ej: CD-102" class="form-input uppercase" required>
-                        <button type="submit" class="btn-primary whitespace-nowrap">Registrar Entrada</button>
-                    </form>
-                </div>
-                <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
-                    <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider mb-4">📤 Sacar Kit de Bodega (Salida)</h3>
-                    <form action="/api/bodega_movimiento" method="POST" class="flex gap-4">
-                        <input type="hidden" name="tipo_movimiento" value="SALIDA">
-                        <input type="text" name="codigo_equipo" placeholder="Ej: CD-102" class="form-input uppercase" required>
-                        <button type="submit" class="btn-danger whitespace-nowrap">Registrar Salida</button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- 4. SIMULADOR DE FILTROS SUELTOS -->
-            <div class="bg-white border border-slate-200 rounded-lg shadow-sm p-6">
-                <h3 class="font-semibold text-[#1E3A8A] uppercase text-xs tracking-wider mb-2">🔍 Buscador Inteligente: Filtros Sueltos vs Equipos</h3>
-                <p class="text-xs text-slate-500 mb-6">Seleccione un equipo para ver si las marcas equivalentes que hay sueltas en bodega sirven para armar un kit completo.</p>
+            <!-- ========================================== -->
+            <!-- PESTAÑA 1: KITS Y KARDEX POR EQUIPO -->
+            <!-- ========================================== -->
+            <div id="tab-kits" class="sub-tab active space-y-8">
                 
-                <div class="flex flex-col md:flex-row gap-6 items-start">
-                    <select id="sim_equipo" onchange="calcularFiltrosSueltos(this.value)" class="form-input md:w-1/3">
-                        <option value="">Seleccione Equipo...</option>
-                        {% for eq in eqs_db %}
-                        <option value="{{ eq.codigo }}">{{ eq.codigo }}</option>
-                        {% endfor %}
-                    </select>
-                    
-                    <div id="sim_results" class="bg-slate-50 border border-slate-200 rounded p-4 flex-1 w-full min-h-[100px] text-sm">
-                        <span class="text-slate-400">Seleccione un equipo a la izquierda para ejecutar el cruce de datos.</span>
+                <!-- 1. KPIs PRINCIPALES -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="card-custom">
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Lead Time de Reparación</p>
+                        <p class="text-4xl font-normal text-[#1E3A8A]">{{ mttr_dias }} <span class="text-lg text-slate-400">Días</span></p>
+                        <p class="text-xs text-slate-500 mt-2">Promedio desde creación hasta finalización</p>
+                    </div>
+                    <div class="card-custom">
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">OTs Abandonadas / Olvidadas</p>
+                        <p class="text-4xl font-normal text-red-600">{{ abandonadas|length }}</p>
+                        <p class="text-xs text-slate-500 mt-2">Documentos abiertos sin ejecutar (>20 días)</p>
+                    </div>
+                    <div class="card-custom bg-[#1E3A8A] text-white border-none">
+                        <p class="text-[11px] font-semibold text-blue-200 uppercase tracking-wider mb-2">Valor Actual en Bodega Activa</p>
+                        <p class="text-4xl font-normal">{{ valor_bodega_str }}</p>
+                        <p class="text-xs text-blue-300 mt-2">Capital inmovilizado (Kits sin usar)</p>
+                    </div>
+                </div>
+
+                <!-- 2. RESUMEN SALUD DE STOCK (REDUCIDO A 1/4 CON SCROLL) -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                        <p class="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider mb-2">✅ Stock Seguro (>1 Kit)</p>
+                        <div class="flex flex-wrap gap-2 max-h-[90px] overflow-y-auto mini-scroll cursor-ns-resize">
+                            {% for eq in con_stock %}<span class="bg-white border border-emerald-200 text-emerald-700 text-xs px-2 py-1 rounded font-bold">{{ eq }}</span>
+                            {% else %}<span class="text-xs text-emerald-600">Ninguno en este nivel.</span>{% endfor %}
+                        </div>
+                    </div>
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <p class="text-[11px] font-semibold text-amber-800 uppercase tracking-wider mb-2">⚠️ Stock Crítico (1 Kit)</p>
+                        <div class="flex flex-wrap gap-2 max-h-[90px] overflow-y-auto mini-scroll cursor-ns-resize">
+                            {% for eq in bajo_stock %}<span class="bg-white border border-amber-200 text-amber-700 text-xs px-2 py-1 rounded font-bold">{{ eq }}</span>
+                            {% else %}<span class="text-xs text-amber-600">Ninguno en este nivel.</span>{% endfor %}
+                        </div>
+                    </div>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <p class="text-[11px] font-semibold text-red-800 uppercase tracking-wider mb-2">❌ Sin Stock (0 Kits)</p>
+                        <div class="flex flex-wrap gap-2 max-h-[90px] overflow-y-auto mini-scroll cursor-ns-resize">
+                            {% for eq in sin_stock %}<span class="bg-white border border-red-200 text-red-700 text-xs px-2 py-1 rounded font-bold">{{ eq }}</span>
+                            {% else %}<span class="text-xs text-red-600">Todos tienen stock.</span>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. CINTAS DE ACCIÓN RÁPIDA -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
+                        <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider mb-3">📥 Agregar Kit a Bodega (Ingreso)</h3>
+                        <form action="/api/bodega_movimiento" method="POST" class="flex gap-4">
+                            <input type="hidden" name="tipo_movimiento" value="INGRESO">
+                            <input type="text" name="codigo_equipo" placeholder="Ej: CD-102" class="form-input uppercase" required>
+                            <button type="submit" class="btn-primary whitespace-nowrap">Registrar Entrada</button>
+                        </form>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
+                        <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider mb-3">📤 Sacar Kit de Bodega (Salida Taller)</h3>
+                        <form action="/api/bodega_movimiento" method="POST" class="flex gap-4">
+                            <input type="hidden" name="tipo_movimiento" value="SALIDA">
+                            <input type="text" name="codigo_equipo" placeholder="Ej: CD-102" class="form-input uppercase" required>
+                            <button type="submit" class="btn-danger whitespace-nowrap">Registrar Salida</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 4. KARDEX DESPLEGABLE -->
+                <div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden flex flex-col">
+                    <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                        <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider">Kardex Logístico (Clic en la fila para desplegar detalles de la historia)</h3>
+                    </div>
+                    <div class="overflow-y-auto hide-scrollbar" style="max-height: 400px;">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 z-10">
+                                <tr>
+                                    <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider">Equipo</th>
+                                    <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-center">Compras</th>
+                                    <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-center">Salidas</th>
+                                    <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-right">Status Bodega</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for eq, data in inventario.items() %}
+                                <tr class="border-b border-slate-100 bg-white cursor-pointer hover:bg-blue-50 transition-colors" onclick="document.getElementById('det-{{ loop.index }}').classList.toggle('hidden')">
+                                    <td class="px-6 py-4 font-bold text-[#1E3A8A] text-base flex items-center gap-3">
+                                        <span class="text-[10px] bg-slate-200 px-2 py-1 rounded text-slate-500">▼</span> {{ eq }}
+                                    </td>
+                                    <td class="px-6 py-4 text-center font-medium text-slate-600">{{ data.entradas }}</td>
+                                    <td class="px-6 py-4 text-center font-medium text-slate-600">{{ data.salidas }}</td>
+                                    <td class="px-6 py-4 text-right">
+                                        {% if data.stock > 0 %}
+                                            <span class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs">{{ data.stock }} KIT EN ESPERA</span>
+                                        {% else %}
+                                            <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full font-bold text-xs">SIN STOCK</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr id="det-{{ loop.index }}" class="hidden bg-slate-50/50 border-b border-slate-200">
+                                    <td colspan="4" class="px-6 pb-6 pt-4">
+                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {% for mov in data.movimientos %}
+                                            <div class="flex flex-col text-[10px] p-3 rounded {{ mov.color }} border shadow-sm">
+                                                <div class="flex justify-between items-center mb-2">
+                                                    <span class="font-bold tracking-wide">{{ mov.tipo }}</span>
+                                                    <span class="font-bold opacity-75">{{ mov.fecha_str }}</span>
+                                                </div>
+                                                <div class="flex justify-between items-center text-slate-700">
+                                                    <span class="truncate pr-2">{{ mov.detalle }}</span>
+                                                    <span class="font-mono text-slate-800 bg-white/50 px-1 rounded">{{ mov.doc }}</span>
+                                                </div>
+                                            </div>
+                                            {% else %}
+                                            <span class="text-xs text-slate-400">No hay movimientos registrados para este equipo.</span>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
 
-            <!-- 5. KARDEX CON ACORDEÓN DESPLEGABLE -->
-            <div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden flex flex-col">
-                <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider">Kardex Logístico (Clic en la fila para desplegar detalles)</h3>
-                </div>
-                <div class="overflow-y-auto hide-scrollbar" style="max-height: 500px;">
-                    <table class="w-full text-left text-sm whitespace-nowrap">
-                        <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 z-10">
-                            <tr>
-                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider">Equipo</th>
-                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-center">Compras</th>
-                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-center">Salidas</th>
-                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-right">Status Bodega</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for eq, data in inventario.items() %}
-                            <!-- Fila Principal Clickable -->
-                            <tr class="border-b border-slate-100 bg-white cursor-pointer hover:bg-blue-50 transition-colors" onclick="document.getElementById('det-{{ loop.index }}').classList.toggle('hidden')">
-                                <td class="px-6 py-4 font-bold text-[#1E3A8A] text-base flex items-center gap-3">
-                                    <span class="text-[10px] bg-slate-200 px-2 py-1 rounded text-slate-500">▼</span> {{ eq }}
-                                </td>
-                                <td class="px-6 py-4 text-center font-medium text-slate-600">{{ data.entradas }}</td>
-                                <td class="px-6 py-4 text-center font-medium text-slate-600">{{ data.salidas }}</td>
-                                <td class="px-6 py-4 text-right">
-                                    {% if data.stock > 0 %}
-                                        <span class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs">{{ data.stock }} KIT EN ESPERA</span>
-                                    {% else %}
-                                        <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full font-bold text-xs">SIN STOCK</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            <!-- Historial Oculto -->
-                            <tr id="det-{{ loop.index }}" class="hidden bg-slate-50/50 border-b border-slate-200">
-                                <td colspan="4" class="px-6 pb-6 pt-4">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                        {% for mov in data.movimientos %}
-                                        <div class="flex flex-col text-[10px] p-3 rounded {{ mov.color }} border shadow-sm">
-                                            <div class="flex justify-between items-center mb-2">
-                                                <span class="font-bold tracking-wide">{{ mov.tipo }}</span>
-                                                <span class="font-bold opacity-75">{{ mov.fecha_str }}</span>
-                                            </div>
-                                            <div class="flex justify-between items-center text-slate-700">
-                                                <span class="truncate pr-2">{{ mov.detalle }}</span>
-                                                <span class="font-mono text-slate-800 bg-white/50 px-1 rounded">{{ mov.doc }}</span>
-                                            </div>
-                                        </div>
-                                        {% else %}
-                                        <span class="text-xs text-slate-400">No hay movimientos registrados para este equipo.</span>
-                                        {% endfor %}
-                                    </div>
-                                </td>
-                            </tr>
+            <!-- ========================================== -->
+            <!-- PESTAÑA 2: FILTROS SUELTOS Y SIMULADOR -->
+            <!-- ========================================== -->
+            <div id="tab-sueltos" class="sub-tab space-y-8">
+                
+                <!-- SIMULADOR INTELIGENTE -->
+                <div class="bg-white border border-slate-200 rounded-lg shadow-sm p-6">
+                    <h3 class="font-semibold text-[#1E3A8A] uppercase text-xs tracking-wider mb-2">🔍 Simulador Inteligente de Kits (Cruce de Marcas)</h3>
+                    <p class="text-xs text-slate-500 mb-6">Seleccione un equipo para que el sistema busque en el stock de "Filtros Sueltos" todas las marcas compatibles (Original, Fleetguard, Donaldson, etc) y verifique si puede armar un Kit completo.</p>
+                    
+                    <div class="flex flex-col md:flex-row gap-6 items-start">
+                        <select id="sim_equipo" onchange="calcularFiltrosSueltos(this.value)" class="form-input md:w-1/3 text-[#1E3A8A] font-medium bg-blue-50/50">
+                            <option value="">-- Seleccione Equipo a Evaluar --</option>
+                            {% for eq in eqs_db %}
+                            <option value="{{ eq.codigo }}">{{ eq.codigo }}</option>
                             {% endfor %}
-                        </tbody>
-                    </table>
+                        </select>
+                        
+                        <div id="sim_results" class="bg-slate-50 border border-slate-200 rounded p-5 flex-1 w-full min-h-[120px] text-sm">
+                            <span class="text-slate-400 font-medium">👈 Seleccione un equipo a la izquierda para ejecutar el cruce en milisegundos.</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
+                <!-- GESTIÓN Y TABLA DE FILTROS SUELTOS -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- PANEL DE INGRESO -->
+                    <div class="lg:col-span-1 bg-white border border-slate-200 rounded-lg shadow-sm p-6 flex flex-col h-[450px]">
+                        <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider mb-4 border-b pb-2">📦 Ingresar o Retirar Filtro Suelto</h3>
+                        <form action="/api/bodega_suelta_mov" method="POST" class="flex flex-col gap-4 flex-1">
+                            <div>
+                                <label class="text-[10px] font-medium text-slate-500 block mb-1">Código de Marca / SKU</label>
+                                <input type="text" name="codigo_item" placeholder="Ej: LF3038" class="form-input uppercase" required>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-medium text-slate-500 block mb-1">Cantidad a Mover</label>
+                                <input type="number" name="cantidad" step="0.1" placeholder="Ej: 20" class="form-input" required>
+                            </div>
+                            <div class="flex gap-3 mt-auto">
+                                <button type="submit" name="accion" value="INGRESO" class="btn-primary w-full whitespace-nowrap bg-emerald-600 hover:bg-emerald-700">+ Ingresar</button>
+                                <button type="submit" name="accion" value="SALIDA" class="btn-danger w-full whitespace-nowrap">- Retirar</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- TABLA GENERAL -->
+                    <div class="lg:col-span-2 bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden h-[450px] flex flex-col">
+                        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                            <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider">Inventario Físico de Filtros Sueltos</h3>
+                        </div>
+                        <div class="overflow-y-auto mini-scroll flex-1">
+                            <table class="w-full text-left text-sm whitespace-nowrap">
+                                <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 z-10">
+                                    <tr>
+                                        <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider">Código Filtro</th>
+                                        <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider">Categoría</th>
+                                        <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-right">Cant. Actual</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for f in bodega_sueltos %}
+                                    <tr class="border-b border-slate-50 hover:bg-slate-50">
+                                        <td class="px-6 py-3 font-bold text-slate-800">{{ f.codigo_item }}</td>
+                                        <td class="px-6 py-3 text-slate-500">{{ f.categoria }}</td>
+                                        <td class="px-6 py-3 text-right">
+                                            <span class="bg-[#1E3A8A] text-white px-3 py-1 rounded font-bold text-xs">{{ f.cantidad }}</span>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr><td colspan="3" class="px-6 py-8 text-center text-slate-400 text-xs">No hay filtros sueltos registrados en bodega. Utilice el panel izquierdo.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </main>
 
-    <!-- SCRIPT DEL SIMULADOR INTELIGENTE -->
+    <!-- LOGICA DE PESTAÑAS Y SIMULADOR -->
     <script>
+        function switchBodegaTab(tabId, btn) {
+            document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+            
+            // Conservar en la URL para cuando recargue la página
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + tabId.replace('tab-',''); 
+            window.history.replaceState({path:newUrl}, '', newUrl);
+        }
+
+        // Si vienes desde una URL con tab específica
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('tab') === 'sueltos') {
+                switchBodegaTab('tab-sueltos', document.getElementById('btn-sueltos'));
+            }
+        };
+
         const maestroFiltros = {{ maestro_filtros | tojson }};
         const stockSuelto = {{ stock_suelto | tojson }};
         
         function calcularFiltrosSueltos(eq) {
             if(!eq) {
-                document.getElementById('sim_results').innerHTML = "<span class='text-slate-400'>Seleccione un equipo a la izquierda para ejecutar el cruce de datos.</span>";
+                document.getElementById('sim_results').innerHTML = "<span class='text-slate-400 font-medium'>👈 Seleccione un equipo a la izquierda para ejecutar el cruce en milisegundos.</span>";
                 return;
             }
             
             const reqs = maestroFiltros[eq];
             if(!reqs || reqs.length === 0) {
-                document.getElementById('sim_results').innerHTML = `<span class='text-red-500'>El equipo <b>${eq}</b> no tiene filtros registrados en el Maestro.</span>`;
+                document.getElementById('sim_results').innerHTML = `<span class='text-red-500'>El equipo <b class="font-bold">${eq}</b> no tiene filtros registrados en el Maestro.</span>`;
                 return;
             }
             
@@ -216,23 +316,32 @@
                 let marcaEncontrada = null;
                 let stockDisponible = 0;
                 
-                // Buscar en bodega si existe alguna de las marcas alternativas
                 for(let marca of req.marcas) {
                     if(stockSuelto[marca] && stockSuelto[marca] > 0) {
                         marcaEncontrada = marca;
                         stockDisponible = stockSuelto[marca];
-                        break; // Se detiene al hallar la primera marca con stock
+                        break; 
                     }
                 }
                 
                 if(marcaEncontrada && stockDisponible >= cantNecesaria) {
-                    html += `<li class='text-emerald-700 flex items-center bg-emerald-50 px-3 py-2 rounded border border-emerald-100'>✅ <b>${req.sistema}</b> (Req: ${cantNecesaria}) - Tienes stock de la marca/código: <b>${marcaEncontrada}</b> (${stockDisponible} unidades disponibles en estante).</li>`;
+                    html += `<li class='text-emerald-800 flex items-center bg-emerald-50/80 px-4 py-2 rounded border border-emerald-200 shadow-sm'>
+                                <span class="mr-3 text-lg">✅</span> 
+                                <div><b>${req.sistema}</b> (Necesitas ${cantNecesaria}) <br> <span class="text-xs">Ubicado en Bodega: <b>${stockDisponible} unid. de código [${marcaEncontrada}]</b></span></div>
+                             </li>`;
                     found++;
                 } else if (marcaEncontrada && stockDisponible < cantNecesaria) {
-                    html += `<li class='text-amber-600 flex items-center bg-amber-50 px-3 py-2 rounded border border-amber-100'>⚠️ <b>${req.sistema}</b> (Req: ${cantNecesaria}) - Stock Insuficiente. Solo hay ${stockDisponible} unidades de la marca ${marcaEncontrada}.</li>`;
+                    html += `<li class='text-amber-800 flex items-center bg-amber-50/80 px-4 py-2 rounded border border-amber-200 shadow-sm'>
+                                <span class="mr-3 text-lg">⚠️</span> 
+                                <div><b>${req.sistema}</b> (Necesitas ${cantNecesaria}) <br> <span class="text-xs">Faltante Crítico: Solo hay <b>${stockDisponible} unid. de código [${marcaEncontrada}]</b></span></div>
+                             </li>`;
                     missing++;
                 } else {
-                    html += `<li class='text-red-600 flex items-center bg-red-50 px-3 py-2 rounded border border-red-100'>❌ <b>${req.sistema}</b> (Req: ${cantNecesaria}) - No tienes NADA en bodega de las marcas permitidas para este filtro.</li>`;
+                    let recomendados = req.marcas.slice(0,3).join(", ");
+                    html += `<li class='text-red-800 flex items-center bg-red-50/80 px-4 py-2 rounded border border-red-200 shadow-sm'>
+                                <span class="mr-3 text-lg">❌</span> 
+                                <div><b>${req.sistema}</b> (Necesitas ${cantNecesaria}) <br> <span class="text-xs">Sin stock en ninguna marca. (Comprar: ${recomendados})</span></div>
+                             </li>`;
                     missing++;
                 }
             });
@@ -240,9 +349,9 @@
             html += "</ul>";
             html += `<div class='mt-5 pt-4 border-t border-slate-200 font-bold text-[15px]'>`;
             if(missing === 0) {
-                html += `<span class='text-emerald-600'>¡Excelente! Tienes todos los filtros sueltos necesarios para armar el Kit completo del ${eq}.</span>`;
+                html += `<span class='text-emerald-700 bg-emerald-100 px-3 py-1 rounded inline-block'>¡ESTADO VERDE! Tienes todos los filtros sueltos para armar un Kit completo para el ${eq}.</span>`;
             } else {
-                html += `<span class='text-red-600'>Resumen: Te faltan ${missing} tipos de filtro para completar el mantenimiento. Tienes ${found} cubiertos.</span>`;
+                html += `<span class='text-red-700 bg-red-100 px-3 py-1 rounded inline-block'>STATUS ROJO: Faltan ${missing} tipos de filtro. Solo tienes ${found} cubiertos.</span>`;
             }
             html += `</div>`;
             
