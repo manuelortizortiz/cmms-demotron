@@ -302,6 +302,7 @@ def imprimir_ot(ot_id):
     except Exception as e:
         return f"Aviso del Sistema: No se pudo generar la vista del PDF corporativo ({str(e)})."
 
+
 # =========================================================
 # RUTAS DE ACCIÓN RÁPIDA DE BODEGA (BLINDADAS ANTICHOQUE)
 # =========================================================
@@ -336,25 +337,26 @@ def bodega_suelta_mov():
         if not codigo: return redirect('/bodega_kpi?tab=sueltos')
         codigo = codigo.upper().strip()
         
-        try: cantidad = float(request.form.get('cantidad', 0))
-        except: cantidad = 0.0
+        # EL CAMBIO MÁGICO: Transformar obligatoriamente a Entero
+        try: cantidad = int(float(request.form.get('cantidad', 0)))
+        except: cantidad = 0
             
         accion = request.form.get('accion') 
         item = InventarioBodega.query.filter_by(codigo_item=codigo).first()
         
         if item:
-            try: actual = float(item.cantidad)
-            except: actual = 0.0
+            try: actual = int(float(item.cantidad))
+            except: actual = 0
             
-            nueva_cant = actual + cantidad if accion == 'INGRESO' else max(0.0, actual - cantidad)
-            item.cantidad = str(nueva_cant) if isinstance(item.cantidad, str) else nueva_cant
+            nueva_cant = actual + cantidad if accion == 'INGRESO' else max(0, actual - cantidad)
+            item.cantidad = int(nueva_cant)  # GUARDAR SIEMPRE COMO ENTERO (Ej: 20)
         else:
             if accion == 'INGRESO':
                 nuevo = InventarioBodega(
                     codigo_item=codigo, 
                     nombre=f"FILTRO/REPUESTO {codigo}", 
                     categoria="Filtros Sueltos", 
-                    cantidad=str(cantidad), 
+                    cantidad=int(cantidad),  # GUARDAR SIEMPRE COMO ENTERO (Ej: 20)
                     ubicacion="BODEGA CENTRAL"
                 )
                 db.session.add(nuevo)
@@ -365,6 +367,7 @@ def bodega_suelta_mov():
     except Exception as e:
         db.session.rollback()
         return f"<div style='padding: 50px; font-family: sans-serif; color: red;'><h2>Error de Base de Datos (Bodega Suelta):</h2><p>Por favor, copia este error y envíaselo al desarrollador:</p><p style='padding:15px; background:#fee2e2; border-left:4px solid red; font-family:monospace;'><b>{str(e)}</b></p><br><a href='/bodega_kpi?tab=sueltos' style='padding: 10px; background: #1E3A8A; color: white; text-decoration: none; border-radius: 5px;'>Volver al Sistema</a></div>"
+
 
 # =========================================================
 # MÓDULO BODEGA: KARDEX ACORDEÓN Y FILTROS SUELTOS
