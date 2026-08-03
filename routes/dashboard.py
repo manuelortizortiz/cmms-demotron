@@ -340,3 +340,97 @@ def imprimir_ot(ot_id):
         return render_template('imprimir_ot.html', ot=ot, equipo=equipo, filtros=filtros, hoy=datetime.now())
     except Exception as e:
         return f"Aviso del Sistema: No se pudo generar la vista del PDF corporativo ({str(e)})."
+# =========================================================
+# NUEVO MÓDULO: KPI DE TALLER Y BODEGA VIVA (KARDEX)
+# =========================================================
+@dashboard_bp.route('/bodega_kpi', strict_slashes=False)
+@login_required
+def bodega_kpi():
+    try:
+        hoy = datetime.now()
+        ots_db = OrdenTrabajo.query.all()
+        compras_db = CompraRepuesto.query.all()
+        
+        # 1. KPIs DE GESTIÓN TALLER
+        tiempos_respuesta = []
+        ots_abandonadas = []
+        
+        for ot in ots_db:
+            # Calcular tiempo promedio de respuesta
+            if ot.estado == 'Finalizada' and ot.fecha_cierre and ot.fecha:
+                dias = (ot.fecha_cierre - ot.fecha).days
+                if dias >= 0: tiempos_respuesta.append(dias)
+            
+            # Detectar OTs fantasmas/abandonadas (Más de 20 días sin finalizar)
+            elif ot.estado != 'Finalizada' and ot.fecha:
+                dias_retraso = (hoy - ot.fecha).days
+                if dias_retraso > 20: 
+                    ots_abandonadas.append({'ot': ot, 'dias': dias_retraso})
+                    
+        # Ordenar abandonadas de mayor a menor tiempo
+        ots_abandonadas.sort(key=lambda x: x['dias'], reverse=True)
+        mttr_dias = round(sum(tiempos_respuesta) / max(1, len(tiempos_respuesta)), 1)
+        
+        # 2. MOTOR DE BODEGA E INVENTARIO (Entradas vs Salidas)
+        inventario_por_equipo = {}
+        valor_total_bodega = 0.0
+        
+        # A) Procesar Entradas (Compras)
+        for c in compras_db:
+            eq = c.codigo_equipo or 'STOCK GENERAL'
+            if eq not in inventario_por_equipo:
+                inventario_por_equipo[eq] = {'entradas': 0, 'salidas': 0, 'stock': 0, 'valor': 0.0, 'movimientos': []}
+            
+            inventario_por_equipo[eq]['entradas'] += 1
+            costo_compra = float(c.costo_pm_clp or 0)
+            inventario_por_equipo[eq]['valor'] += costo_compra
+            
+            inventario_por_equipo[eq]['movimientos'].append({
+                'fecha_obj': c.fecha or datetime.min,
+                'fecha_str': c.fecha.strftime('%d/%m/%Y') if c.fecha else 'S/F',
+                'tipo': 'INGRESO',
+                'doc': c.oc or 'N/A',
+                'detalle': c.descripcion or 'Compra de Repuestos',
+                'color': 'text-emerald-600 bg-emerald-50'
+            })
+            
+        # B) Procesar Salidas (Aplicación en Mantención)
+        for ot in ots_db:
+            if ot.estado == 'Finalizada':
+                eq = ot.codigo_equipo or 'STOCK GENERAL'
+                if eq in inventario_por_equipo:
+                    inventario_por_equipo[eq]['salidas'] += 1
+                    inventario_por_equipo[eq]['movimientos'].append({
+                        'fecha_obj': ot.fecha_cierre or ot.fecha or datetime.min,
+                        'fecha_str': (ot.fecha_cierre or ot.fecha).strftime('%d/%m/%Y') if (ot.fecha_cierre or ot.fecha) else 'S/F',
+                        'tipo': 'SALIDA',
+                        'doc': ot.folio or f"OT-{ot.id}",
+                        'detalle': f"Instalado en {ot.tipo_mantencion}",
+                        'color': 'text-red-500 bg-red-50'
+                    })
+                    
+        # C) Calcular Stock Teórico y Balance
+        for eq, data in inventario_por_equipo.items():
+            data['stock'] = data['entradas'] - data['salidas']
+            # Si hay stock positivo, sumamos el valor proporcional a la bodega activa
+            if data['stock'] > 0 and data['entradas'] > 0:
+                valor_proporcional = (data['valor'] / data['entradas']) * data['stock']
+                valor_total_bodega += valor_proporcional
+                
+            data['movimientos'].sort(key=lambda x: x['fecha_obj'], reverse=True)
+            
+        # Ocultar equipos que nunca han tenido ingresos
+        inventario_filtrado = {k: v for k, v in inventario_por_equipo.items() if v['entradas'] > 0}
+        
+        # Formatear el valor
+        from utils.formatters import format_clp
+        valor_bodega_str = format_clp(valor_total_bodega)
+
+        return render_template('bodega_kpi.html', 
+                               mttr_dias=mttr_dias, 
+                               abandonadas=ots_abandonadas,
+                               inventario=inventario_filtrado,
+                               valor_bodega_str=valor_bodega_str,
+                               hoy=hoy)
+    except Exception as e:
+        return f"Error crítico en Módulo Bodega: {str(e)}"
