@@ -15,11 +15,15 @@
         .nav-link:hover { color: #FFFFFF; background-color: rgba(255,255,255,0.05); }
         .nav-link.active { color: #FFFFFF; background-color: #1E3A8A; font-weight: 600; border-left: 4px solid #60A5FA; padding-left: 20px;}
         .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .form-input { border: 1px solid #CBD5E1; padding: 10px 16px; border-radius: 6px; font-size: 13px; width: 100%; outline: none; }
+        .btn-primary { background-color: #1E3A8A; color: white; padding: 10px 24px; border-radius: 6px; font-weight: 500; cursor: pointer; border:none; font-size: 13px; transition: 0.2s; }
+        .btn-primary:hover { background-color: #1D4ED8; }
+        .btn-danger { background-color: #EF4444; color: white; padding: 10px 24px; border-radius: 6px; font-weight: 500; cursor: pointer; border:none; font-size: 13px; transition: 0.2s; }
+        .btn-danger:hover { background-color: #DC2626; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
     
-    <!-- MENÚ LATERAL -->
     <aside class="w-64 sidebar-bg flex flex-col shrink-0">
         <div class="h-20 flex items-center px-6 border-b border-slate-800">
             <span class='text-lg font-semibold text-white tracking-wide'>DEMOTRON ERP</span>
@@ -36,10 +40,10 @@
             <h1 class="text-xl font-normal text-slate-800 tracking-wide">Analítica de Bodega y Gestión de Taller</h1>
         </header>
 
-        <div class="p-8">
+        <div class="p-8 space-y-8">
             
-            <!-- TARJETAS SUPERIORES -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- 1. KPIs PRINCIPALES -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="card-custom">
                     <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Lead Time de Reparación</p>
                     <p class="text-4xl font-normal text-[#1E3A8A]">{{ mttr_dias }} <span class="text-lg text-slate-400">Días</span></p>
@@ -57,89 +61,193 @@
                 </div>
             </div>
 
-            <!-- SECCIÓN DOBLE -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                <!-- OTs ABANDONADAS -->
-                <div class="lg:col-span-1 bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden h-[600px] flex flex-col">
-                    <div class="p-4 border-b border-slate-100 bg-red-50">
-                        <h3 class="font-semibold text-red-800 uppercase text-[11px] tracking-wider">⚠️ Riesgo: Mantenciones Olvidadas</h3>
-                    </div>
-                    <div class="p-4 overflow-y-auto hide-scrollbar flex-1">
-                        {% for item in abandonadas %}
-                        <div class="mb-4 border-b border-slate-100 pb-4">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="font-bold text-[#1E3A8A]">{{ item.ot.codigo_equipo }}</span>
-                                <span class="text-xs font-medium text-red-500">{{ item.dias }} Días atrás</span>
-                            </div>
-                            <p class="text-xs text-slate-700">{{ item.ot.tipo_mantencion }}</p>
-                            <p class="text-[10px] text-slate-400 mt-1">Creada el: {{ item.ot.fecha.strftime('%d/%m/%Y') }}</p>
-                        </div>
-                        {% else %}
-                        <div class="text-center py-10 text-slate-400 text-sm">
-                            ¡Excelente! No hay Órdenes de Trabajo abandonadas.
-                        </div>
-                        {% endfor %}
+            <!-- 2. RESUMEN SALUD DE STOCK -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-6">
+                    <p class="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider mb-4">✅ Stock Seguro (>1 Kit)</p>
+                    <div class="flex flex-wrap gap-2">
+                        {% for eq in con_stock %}
+                        <span class="bg-white border border-emerald-200 text-emerald-700 text-xs px-2 py-1 rounded font-bold">{{ eq }}</span>
+                        {% else %}<span class="text-xs text-emerald-600">Ninguno en este nivel.</span>{% endfor %}
                     </div>
                 </div>
-
-                <!-- KARDEX DE INVENTARIO VIVO -->
-                <div class="lg:col-span-2 bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden h-[600px] flex flex-col">
-                    <div class="p-4 border-b border-slate-100 flex justify-between items-center">
-                        <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider">Kardex Logístico (Inventario Cronológico)</h3>
-                    </div>
-                    <div class="overflow-y-auto hide-scrollbar flex-1">
-                        <table class="w-full text-left text-sm whitespace-nowrap">
-                            <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 z-10">
-                                <tr>
-                                    <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider">Equipo</th>
-                                    <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-center">Entradas Totales</th>
-                                    <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-center">Salidas Taller</th>
-                                    <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-right">Balance de Stock</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for eq, data in inventario.items() %}
-                                <!-- Resumen Principal -->
-                                <tr class="border-b border-slate-100 bg-white">
-                                    <td class="px-6 py-4 font-bold text-[#1E3A8A] text-base">{{ eq }}</td>
-                                    <td class="px-6 py-4 text-center font-medium text-slate-600">{{ data.entradas }}</td>
-                                    <td class="px-6 py-4 text-center font-medium text-slate-600">{{ data.salidas }}</td>
-                                    <td class="px-6 py-4 text-right">
-                                        {% if data.stock > 0 %}
-                                            <span class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs">{{ data.stock }} KIT EN ESPERA</span>
-                                        {% else %}
-                                            <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full font-bold text-xs">SIN STOCK</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                <!-- Fila Desplegada con el Historial de Movimientos -->
-                                <tr class="bg-slate-50/50">
-                                    <td colspan="4" class="px-6 pb-6 pt-2">
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                            {% for mov in data.movimientos %}
-                                            <div class="flex flex-col text-[10px] p-2 rounded {{ mov.color }} border">
-                                                <div class="flex justify-between items-center mb-1">
-                                                    <span class="font-bold tracking-wide">{{ mov.tipo }}</span>
-                                                    <span class="font-bold opacity-75">{{ mov.fecha_str }}</span>
-                                                </div>
-                                                <div class="flex justify-between items-center text-slate-600">
-                                                    <span class="truncate">{{ mov.detalle }}</span>
-                                                    <span class="font-mono text-slate-800 ml-2">{{ mov.doc }}</span>
-                                                </div>
-                                            </div>
-                                            {% endfor %}
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-6">
+                    <p class="text-[11px] font-semibold text-amber-800 uppercase tracking-wider mb-4">⚠️ Stock Crítico (1 Kit)</p>
+                    <div class="flex flex-wrap gap-2">
+                        {% for eq in bajo_stock %}
+                        <span class="bg-white border border-amber-200 text-amber-700 text-xs px-2 py-1 rounded font-bold">{{ eq }}</span>
+                        {% else %}<span class="text-xs text-amber-600">Ninguno en este nivel.</span>{% endfor %}
                     </div>
                 </div>
-
+                <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+                    <p class="text-[11px] font-semibold text-red-800 uppercase tracking-wider mb-4">❌ Sin Stock (0 Kits)</p>
+                    <div class="flex flex-wrap gap-2">
+                        {% for eq in sin_stock %}
+                        <span class="bg-white border border-red-200 text-red-700 text-xs px-2 py-1 rounded font-bold">{{ eq }}</span>
+                        {% else %}<span class="text-xs text-red-600">Todos tienen stock.</span>{% endfor %}
+                    </div>
+                </div>
             </div>
+
+            <!-- 3. CINTAS DE ACCIÓN RÁPIDA (ENCARGADO DE BODEGA) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+                    <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider mb-4">📥 Agregar Kit a Bodega (Ingreso)</h3>
+                    <form action="/api/bodega_movimiento" method="POST" class="flex gap-4">
+                        <input type="hidden" name="tipo_movimiento" value="INGRESO">
+                        <input type="text" name="codigo_equipo" placeholder="Ej: CD-102" class="form-input uppercase" required>
+                        <button type="submit" class="btn-primary whitespace-nowrap">Registrar Entrada</button>
+                    </form>
+                </div>
+                <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm">
+                    <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider mb-4">📤 Sacar Kit de Bodega (Salida)</h3>
+                    <form action="/api/bodega_movimiento" method="POST" class="flex gap-4">
+                        <input type="hidden" name="tipo_movimiento" value="SALIDA">
+                        <input type="text" name="codigo_equipo" placeholder="Ej: CD-102" class="form-input uppercase" required>
+                        <button type="submit" class="btn-danger whitespace-nowrap">Registrar Salida</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 4. SIMULADOR DE FILTROS SUELTOS -->
+            <div class="bg-white border border-slate-200 rounded-lg shadow-sm p-6">
+                <h3 class="font-semibold text-[#1E3A8A] uppercase text-xs tracking-wider mb-2">🔍 Buscador Inteligente: Filtros Sueltos vs Equipos</h3>
+                <p class="text-xs text-slate-500 mb-6">Seleccione un equipo para ver si las marcas equivalentes que hay sueltas en bodega sirven para armar un kit completo.</p>
+                
+                <div class="flex flex-col md:flex-row gap-6 items-start">
+                    <select id="sim_equipo" onchange="calcularFiltrosSueltos(this.value)" class="form-input md:w-1/3">
+                        <option value="">Seleccione Equipo...</option>
+                        {% for eq in eqs_db %}
+                        <option value="{{ eq.codigo }}">{{ eq.codigo }}</option>
+                        {% endfor %}
+                    </select>
+                    
+                    <div id="sim_results" class="bg-slate-50 border border-slate-200 rounded p-4 flex-1 w-full min-h-[100px] text-sm">
+                        <span class="text-slate-400">Seleccione un equipo a la izquierda para ejecutar el cruce de datos.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. KARDEX CON ACORDEÓN DESPLEGABLE -->
+            <div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden flex flex-col">
+                <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider">Kardex Logístico (Clic en la fila para desplegar detalles)</h3>
+                </div>
+                <div class="overflow-y-auto hide-scrollbar" style="max-height: 500px;">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 z-10">
+                            <tr>
+                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider">Equipo</th>
+                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-center">Compras</th>
+                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-center">Salidas</th>
+                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-right">Status Bodega</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for eq, data in inventario.items() %}
+                            <!-- Fila Principal Clickable -->
+                            <tr class="border-b border-slate-100 bg-white cursor-pointer hover:bg-blue-50 transition-colors" onclick="document.getElementById('det-{{ loop.index }}').classList.toggle('hidden')">
+                                <td class="px-6 py-4 font-bold text-[#1E3A8A] text-base flex items-center gap-3">
+                                    <span class="text-[10px] bg-slate-200 px-2 py-1 rounded text-slate-500">▼</span> {{ eq }}
+                                </td>
+                                <td class="px-6 py-4 text-center font-medium text-slate-600">{{ data.entradas }}</td>
+                                <td class="px-6 py-4 text-center font-medium text-slate-600">{{ data.salidas }}</td>
+                                <td class="px-6 py-4 text-right">
+                                    {% if data.stock > 0 %}
+                                        <span class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs">{{ data.stock }} KIT EN ESPERA</span>
+                                    {% else %}
+                                        <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full font-bold text-xs">SIN STOCK</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <!-- Historial Oculto -->
+                            <tr id="det-{{ loop.index }}" class="hidden bg-slate-50/50 border-b border-slate-200">
+                                <td colspan="4" class="px-6 pb-6 pt-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {% for mov in data.movimientos %}
+                                        <div class="flex flex-col text-[10px] p-3 rounded {{ mov.color }} border shadow-sm">
+                                            <div class="flex justify-between items-center mb-2">
+                                                <span class="font-bold tracking-wide">{{ mov.tipo }}</span>
+                                                <span class="font-bold opacity-75">{{ mov.fecha_str }}</span>
+                                            </div>
+                                            <div class="flex justify-between items-center text-slate-700">
+                                                <span class="truncate pr-2">{{ mov.detalle }}</span>
+                                                <span class="font-mono text-slate-800 bg-white/50 px-1 rounded">{{ mov.doc }}</span>
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-xs text-slate-400">No hay movimientos registrados para este equipo.</span>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </main>
+
+    <!-- SCRIPT DEL SIMULADOR INTELIGENTE -->
+    <script>
+        const maestroFiltros = {{ maestro_filtros | tojson }};
+        const stockSuelto = {{ stock_suelto | tojson }};
+        
+        function calcularFiltrosSueltos(eq) {
+            if(!eq) {
+                document.getElementById('sim_results').innerHTML = "<span class='text-slate-400'>Seleccione un equipo a la izquierda para ejecutar el cruce de datos.</span>";
+                return;
+            }
+            
+            const reqs = maestroFiltros[eq];
+            if(!reqs || reqs.length === 0) {
+                document.getElementById('sim_results').innerHTML = `<span class='text-red-500'>El equipo <b>${eq}</b> no tiene filtros registrados en el Maestro.</span>`;
+                return;
+            }
+            
+            let html = "<ul class='space-y-3'>";
+            let found = 0;
+            let missing = 0;
+            
+            reqs.forEach(req => {
+                let cantNecesaria = req.cant;
+                let marcaEncontrada = null;
+                let stockDisponible = 0;
+                
+                // Buscar en bodega si existe alguna de las marcas alternativas
+                for(let marca of req.marcas) {
+                    if(stockSuelto[marca] && stockSuelto[marca] > 0) {
+                        marcaEncontrada = marca;
+                        stockDisponible = stockSuelto[marca];
+                        break; // Se detiene al hallar la primera marca con stock
+                    }
+                }
+                
+                if(marcaEncontrada && stockDisponible >= cantNecesaria) {
+                    html += `<li class='text-emerald-700 flex items-center bg-emerald-50 px-3 py-2 rounded border border-emerald-100'>✅ <b>${req.sistema}</b> (Req: ${cantNecesaria}) - Tienes stock de la marca/código: <b>${marcaEncontrada}</b> (${stockDisponible} unidades disponibles en estante).</li>`;
+                    found++;
+                } else if (marcaEncontrada && stockDisponible < cantNecesaria) {
+                    html += `<li class='text-amber-600 flex items-center bg-amber-50 px-3 py-2 rounded border border-amber-100'>⚠️ <b>${req.sistema}</b> (Req: ${cantNecesaria}) - Stock Insuficiente. Solo hay ${stockDisponible} unidades de la marca ${marcaEncontrada}.</li>`;
+                    missing++;
+                } else {
+                    html += `<li class='text-red-600 flex items-center bg-red-50 px-3 py-2 rounded border border-red-100'>❌ <b>${req.sistema}</b> (Req: ${cantNecesaria}) - No tienes NADA en bodega de las marcas permitidas para este filtro.</li>`;
+                    missing++;
+                }
+            });
+            
+            html += "</ul>";
+            html += `<div class='mt-5 pt-4 border-t border-slate-200 font-bold text-[15px]'>`;
+            if(missing === 0) {
+                html += `<span class='text-emerald-600'>¡Excelente! Tienes todos los filtros sueltos necesarios para armar el Kit completo del ${eq}.</span>`;
+            } else {
+                html += `<span class='text-red-600'>Resumen: Te faltan ${missing} tipos de filtro para completar el mantenimiento. Tienes ${found} cubiertos.</span>`;
+            }
+            html += `</div>`;
+            
+            document.getElementById('sim_results').innerHTML = html;
+        }
+    </script>
 </body>
 </html>
