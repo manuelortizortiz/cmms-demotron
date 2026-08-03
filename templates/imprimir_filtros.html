@@ -10,7 +10,34 @@
             color: #333; 
             margin: 0;
             padding: 20px;
+            max-width: 800px; /* Centra el documento en la pantalla de la PC */
+            margin-left: auto;
+            margin-right: auto;
         }
+        
+        /* ZONA NO IMPRIMIBLE (Solo se ve en pantalla) */
+        .no-print {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #F8FAFC;
+            border: 1px solid #CBD5E1;
+            border-radius: 8px;
+        }
+        .btn-print {
+            padding: 10px 24px;
+            background-color: #1E3A8A;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+        .btn-print:hover { background-color: #1D4ED8; }
+
+        /* ZONA DEL DOCUMENTO */
         .header { 
             text-align: center; 
             border-bottom: 3px solid #1E3A8A; 
@@ -20,7 +47,7 @@
         .header h1 { 
             margin: 0; 
             color: #1E3A8A; 
-            font-size: 22px; 
+            font-size: 20px; 
             text-transform: uppercase;
         }
         .header p {
@@ -52,7 +79,7 @@
         }
         .filters-table th, .filters-table td { 
             border: 1px solid #CBD5E1; 
-            padding: 8px 5px; 
+            padding: 6px 4px; 
             text-align: center; 
         }
         .filters-table th { 
@@ -61,55 +88,69 @@
             font-size: 10px;
         }
         .filters-table td {
-            font-size: 11px;
+            font-size: 10px; /* Tamaño optimizado para Vertical */
         }
         .footer { 
             margin-top: 30px; 
             text-align: center; 
             font-size: 10px; 
             color: #94A3B8; 
+            font-weight: bold;
         }
+
+        /* MAGIA CSS: Configuración estricta para el momento de Imprimir */
         @media print {
-            @page { margin: 1cm; size: landscape; }
-            body { -webkit-print-color-adjust: exact; padding: 0; }
-            .info-box { background-color: #F8FAFC !important; }
-            .filters-table th { background-color: #1E3A8A !important; color: white !important; }
+            .no-print { display: none !important; } /* Oculta el botón al imprimir */
+            @page { margin: 1cm; size: portrait; } /* Fuerza formato Vertical */
+            body { padding: 0; max-width: 100%; }
+            .info-box { background-color: #F8FAFC !important; -webkit-print-color-adjust: exact; }
+            .filters-table th { background-color: #1E3A8A !important; color: white !important; -webkit-print-color-adjust: exact; }
         }
     </style>
 </head>
 <body>
+    
+    <!-- ÁREA DE CONTROL VISUAL (No saldrá en papel) -->
+    <div class="no-print">
+        <p style="margin-top: 0; margin-bottom: 10px; color: #64748B; font-size: 13px;">Vista previa del documento. Verifique los datos en pantalla antes de enviarlos a la impresora.</p>
+        <button onclick="window.print()" class="btn-print">🖨️ Imprimir Hoja de Filtros</button>
+    </div>
+
+    <!-- INICIO DEL DOCUMENTO OFICIAL -->
     <div class="header">
         <h1>HOJA CORPORATIVA DE FILTROS Y LUBRICANTES</h1>
         <p>Fecha de emisión: {{ hoy.strftime('%d-%m-%Y %H:%M') }}</p>
     </div>
 
-    <!-- CAJA SUPERIOR: DATOS DEL EQUIPO Y COMPATIBILIDAD -->
+    <!-- CAJA SUPERIOR: DATOS DEL EQUIPO (Diseño 2x2 para Vertical) -->
     <div class="info-box">
         <table class="info-table">
             <tr>
-                <td style="width: 25%;"><strong>EQUIPO:</strong> <span style="font-size: 14px; font-weight: bold;">{{ equipo.codigo }}</span></td>
-                <td style="width: 25%;"><strong>PATENTE:</strong> {{ equipo.patente or '-' }}</td>
-                <td style="width: 25%;"><strong>VIN / CHASIS:</strong> {{ equipo.vin or '-' }}</td>
-                <td style="width: 25%;"><strong>N° MOTOR:</strong> {{ equipo.numero_motor or '-' }}</td>
+                <td style="width: 50%;"><strong>EQUIPO:</strong> <span style="font-size: 14px; font-weight: bold;">{{ equipo.codigo }}</span></td>
+                <td style="width: 50%;"><strong>PATENTE:</strong> {{ equipo.patente or '-' }}</td>
             </tr>
             <tr>
-                <td colspan="4" style="padding-top: 12px; border-top: 1px dashed #CBD5E1; margin-top: 5px;">
+                <td><strong>VIN / CHASIS:</strong> {{ equipo.vin or '-' }}</td>
+                <td><strong>N° MOTOR:</strong> <span style="font-weight: bold;">{{ equipo.numero_motor or '-' }}</span></td>
+            </tr>
+            <tr>
+                <td colspan="2" style="padding-top: 12px; border-top: 1px dashed #CBD5E1; margin-top: 5px;">
                     <strong>EQUIPOS CON MISMOS FILTROS:</strong> 
-                    <span style="color: #047857; font-weight: bold; font-size: 13px;">{{ compatibles }}</span>
+                    <span style="color: #047857; font-weight: bold; font-size: 12px;">{{ compatibles }}</span>
                 </td>
             </tr>
         </table>
     </div>
 
-    <!-- TABLA DE FILTROS LIMPIA -->
+    <!-- TABLA DE FILTROS -->
     <table class="filters-table">
         <thead>
             <tr>
-                <th style="width: 20%;">SISTEMA / TIPO</th>
+                <th style="width: 22%;">SISTEMA / TIPO</th>
                 <th style="width: 5%;">CANT</th>
                 <th style="width: 15%;">ORIGINALES</th>
-                <th style="width: 15%;">FLEETGUARD</th>
-                <th style="width: 15%;">BALDWIN</th>
+                <th style="width: 14%;">FLEETGUARD</th>
+                <th style="width: 14%;">BALDWIN</th>
                 <th style="width: 15%;">DONALDSON</th>
                 <th style="width: 15%;">OTRA ALTERNATIVA</th>
             </tr>
@@ -134,13 +175,8 @@
     </table>
 
     <div class="footer">
-        Generado por Demotron | Uso Exclusivo Interno de Mantenimiento
+        Generado por Demotron | Uso Exclusivo Interno de Mantenimiento | Manuel Ortiz Ortiz
     </div>
     
-    <script>
-        window.onload = function() { 
-            setTimeout(function() { window.print(); }, 500);
-        }
-    </script>
 </body>
 </html>
