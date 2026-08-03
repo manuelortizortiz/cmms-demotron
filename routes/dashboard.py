@@ -73,11 +73,22 @@ def dashboard():
                 if 0 <= idx < len(meses_nombres):
                     compras_por_mes[meses_nombres[idx]] += float(c.costo_pm_clp or 0)
 
+        # =========================================================
+        # CÁLCULO FINANCIERO CORREGIDO (OTS + REPUESTOS)
+        # =========================================================
         estados_counts = Counter(e.estado_base for e in eqs_db)
         
-        gasto_total = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.fecha and o.fecha >= fecha_febrero)
-        gasto_actual = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.fecha and o.fecha >= mes_actual_inicio)
-        gasto_anterior = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.fecha and mes_anterior_inicio <= o.fecha <= mes_anterior_fin)
+        gasto_ot_total = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.fecha and o.fecha >= fecha_febrero)
+        gasto_ot_actual = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.fecha and o.fecha >= mes_actual_inicio)
+        gasto_ot_anterior = sum(float(o.costo_mantencion_clp or 0) for o in ots_db if o.fecha and mes_anterior_inicio <= o.fecha <= mes_anterior_fin)
+
+        gasto_rep_total = sum(float(c.costo_pm_clp or 0) for c in compras_db if c.fecha and c.fecha >= fecha_febrero)
+        gasto_rep_actual = sum(float(c.costo_pm_clp or 0) for c in compras_db if c.fecha and c.fecha >= mes_actual_inicio)
+        gasto_rep_anterior = sum(float(c.costo_pm_clp or 0) for c in compras_db if c.fecha and mes_anterior_inicio <= c.fecha <= mes_anterior_fin)
+
+        gasto_total = gasto_ot_total + gasto_rep_total
+        gasto_actual = gasto_ot_actual + gasto_rep_actual
+        gasto_anterior = gasto_ot_anterior + gasto_rep_anterior
 
         cinta2 = {
             'compras_labels': list(compras_por_mes.keys()),
@@ -89,27 +100,42 @@ def dashboard():
             'gasto_anterior': format_clp(gasto_anterior)
         }
 
+        # =========================================================
+        # ESTADÍSTICAS Y COSTOS POR MARCA (PROMEDIADOS)
+        # =========================================================
         marcas_stats = {}
         for e in eqs_db:
             m = e.marca or 'Sin Marca'
-            if m not in marcas_stats: marcas_stats[m] = {'count': 0, 'fallas': 0, 'horas_rep': 0}
+            if m not in marcas_stats: 
+                marcas_stats[m] = {'count': 0, 'fallas': 0, 'horas_rep': 0, 'costo_total': 0.0}
             marcas_stats[m]['count'] += 1
 
-        for o in correctivas:
+        for o in ots_db:
             eq = next((e for e in eqs_db if e.codigo == o.codigo_equipo), None)
             if eq:
                 m = eq.marca or 'Sin Marca'
-                marcas_stats[m]['fallas'] += 1
-                if o.estado == 'Finalizada' and o.fecha_cierre and o.fecha:
-                    marcas_stats[m]['horas_rep'] += (o.fecha_cierre - o.fecha).total_seconds() / 3600
+                marcas_stats[m]['costo_total'] += float(o.costo_mantencion_clp or 0)
+                if o.tipo_ot == 'Correctiva':
+                    marcas_stats[m]['fallas'] += 1
+                    if o.estado == 'Finalizada' and o.fecha_cierre and o.fecha:
+                        marcas_stats[m]['horas_rep'] += (o.fecha_cierre - o.fecha).total_seconds() / 3600
 
-        cinta3 = {'labels': [], 'mtbf': [], 'mttr': []}
+        for c in compras_db:
+            eq = next((e for e in eqs_db if e.codigo == c.codigo_equipo), None)
+            if eq:
+                m = eq.marca or 'Sin Marca'
+                marcas_stats[m]['costo_total'] += float(c.costo_pm_clp or 0)
+
+        cinta3 = {'labels': [], 'mtbf': [], 'mttr': [], 'costo_promedio': []}
         for m, st in marcas_stats.items():
             if st['count'] > 0:
                 cinta3['labels'].append(m)
                 dias_op = st['count'] * 365
                 cinta3['mtbf'].append(round(dias_op / max(1, st['fallas']), 1))
                 cinta3['mttr'].append(round(st['horas_rep'] / max(1, st['fallas']), 1))
+                cinta3['costo_promedio'].append(round(st['costo_total'] / st['count'], 0))
+
+        # =========================================================
 
         atrasados_top = sorted([e for e in eqs_margen if e['dias'] < 0], key=lambda x: x['dias'])[:5]
         proximos_top = sorted([e for e in eqs_margen if e['dias'] >= 0], key=lambda x: x['dias'])[:5]
@@ -126,19 +152,12 @@ def dashboard():
         eventos_calendario = []
         ubicaciones_dict = {}
 
-        # ==============================================================
-        # INYECCIÓN DE HISTORIAL AL CALENDARIO (FILTRADO Y DEDUPLICADO)
-        # ==============================================================
         eventos_deduplicados = set()
         
-        # 1. Preventivas Históricas (Azul Claro) - Solo Finalizadas
         for ot in preventivas:
-            # Ignora las tarjetas del Kanban (Pendiente, En Progreso, Revisión)
             if ot.fecha and ot.estado not in ['Pendiente', 'En Progreso', 'En Revisión']:
                 fecha_str = ot.fecha.strftime('%Y-%m-%d')
                 clave = f"PREV_{ot.codigo_equipo}_{fecha_str}"
-                
-                # Evita pintar múltiples veces el mismo equipo el mismo día
                 if clave not in eventos_deduplicados:
                     eventos_calendario.append({
                         'title': f"PREV: {ot.codigo_equipo}", 
@@ -149,12 +168,10 @@ def dashboard():
                     })
                     eventos_deduplicados.add(clave)
         
-        # 2. Correctivas / Averías Históricas (Rojo) - Solo Finalizadas
         for ot in correctivas:
             if ot.fecha and ot.estado not in ['Pendiente', 'En Progreso', 'En Revisión']:
                 fecha_str = ot.fecha.strftime('%Y-%m-%d')
                 clave = f"CORR_{ot.codigo_equipo}_{fecha_str}"
-                
                 if clave not in eventos_deduplicados:
                     eventos_calendario.append({
                         'title': f"CORR: {ot.codigo_equipo}", 
@@ -164,7 +181,6 @@ def dashboard():
                         'borderColor': 'transparent'
                     })
                     eventos_deduplicados.add(clave)
-        # ==============================================================
 
         for e in eqs_db:
             op = next((p for p in personal_db if p.equipo_asignado == e.codigo), None)
@@ -173,7 +189,6 @@ def dashboard():
             m = (e.proxima_pm or 0) - (e.lectura_actual or 0)
             d_est = int(m / (8 if e.control_base == 'HORAS' else 100))
             
-            # 3. Proyecciones Futuras (Azul Oscuro Corporativo)
             if m >= 0 and e.estado_base != 'Fuera de Servicio' and d_est <= 45:
                 eventos_calendario.append({
                     'title': f"PROY: {e.codigo}", 
@@ -190,7 +205,6 @@ def dashboard():
                 'operador': nom_op
             })
 
-            # Reglas de Agrupación Geográfica (Kanban)
             ub_original = e.ubicacion.upper().strip() if e.ubicacion and e.ubicacion != 'None' else 'SIN ASIGNAR'
             taller_ext_partial = ["KAUFFMAN", "DEL VALLE", "ROSSELOT", "MORAGA", "TALLER EXT"]
             casa_matriz_claves = ["OFICINA", "TALLER DEMOTRON", "TALLER CENTRAL", "CASA MATRIZ", "35°20'31.7", "35°20'32.5", "35°20'34.1", "35°20'35.3"]
@@ -239,10 +253,6 @@ def dashboard():
     except Exception as e:
         return f"Error crítico en Dashboard Corporativo: {str(e)}"
 
-
-# =========================================================
-# RUTAS DE GEOLOCALIZACIÓN Y TRAZABILIDAD
-# =========================================================
 @dashboard_bp.route('/mover_ubicacion_kanban', methods=['POST'])
 @login_required
 def mover_ubicacion_kanban():
@@ -276,7 +286,6 @@ def guardar_ubicaciones_masivo():
     db.session.commit()
     return {"status": "success"}
 
-
 @dashboard_bp.route('/equipo/<codigo>', strict_slashes=False)
 @login_required
 def detalle_equipo(codigo):
@@ -296,7 +305,6 @@ def detalle_equipo(codigo):
         return render_template('equipo.html', equipo=equipo, mants_prev=mants_prev, mants_corr=mants_corr, lecturas=lecturas, compras=compras, documentos=documentos, historial_ub=historial_ub, operador=operador, foto_url=foto_url, hoy=datetime.now())
     except Exception as e:
         return f"Error al cargar la ficha del equipo: {str(e)}"
-
 
 @dashboard_bp.route('/equipo/<codigo>/subir_documento', methods=['POST'])
 @login_required
@@ -320,7 +328,6 @@ def subir_documento(codigo):
         return redirect(url_for('dashboard.detalle_equipo', codigo=codigo))
     except Exception as e:
         return f"Error al subir documento: {str(e)}", 500
-
 
 @dashboard_bp.route('/imprimir_ot/<int:ot_id>', strict_slashes=False)
 @login_required
