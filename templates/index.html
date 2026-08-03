@@ -152,16 +152,23 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <!-- SECCIÓN DE GRÁFICOS ACTUALIZADA -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="card-custom h-80 flex flex-col">
-                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Mean Time Between Failures (Días por Marca)</p>
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">MTBF (Días Promedio sin Fallas por Marca)</p>
                         <div class="flex-1 relative w-full"><canvas id="chartMTBF"></canvas></div>
                     </div>
                     <div class="card-custom h-80 flex flex-col">
-                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Mean Time To Repair (Horas por Marca)</p>
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">MTTR (Horas de Reparación por Marca)</p>
                         <div class="flex-1 relative w-full"><canvas id="chartMTTR"></canvas></div>
                     </div>
+                    <!-- NUEVO GRÁFICO: COSTO POR UNIDAD -->
+                    <div class="card-custom h-80 flex flex-col">
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Costo Promedio por Unidad (Mano de Obra + Repuestos)</p>
+                        <div class="flex-1 relative w-full"><canvas id="chartCostoUnidad"></canvas></div>
+                    </div>
                 </div>
+                <!-- FIN DE SECCIÓN ACTUALIZADA -->
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                     <div class="card-custom-nopad overflow-x-auto">
@@ -206,7 +213,7 @@
                 </div>
             </div>
 
-            <!-- 2. EQUIPOS REGISTRADOS (CON BOTONES RESTAURADOS) -->
+            <!-- 2. EQUIPOS REGISTRADOS -->
             <div id="eq" class="seccion">
                 <div class="card-custom-nopad table-wrapper h-[75vh] overflow-y-auto">
                     <table class="table-custom table-searchable">
@@ -484,7 +491,6 @@
             }
         }
 
-        // Función de Edición Rápida Restaurada
         function abrirEditModal(tabla, id, titulo, campos) {
             document.getElementById('edit-tabla').value = tabla;
             document.getElementById('edit-id').value = id;
@@ -589,6 +595,9 @@
                         options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'right', labels: { boxWidth: 12, usePointStyle: true, font: {size: 11} } } } }
                     });
                 }
+                
+                // --- INICIO DE GRÁFICOS ACTUALIZADOS ---
+                
                 if(document.getElementById('chartMTBF') && cinta3.labels.length > 0) {
                     new Chart(document.getElementById('chartMTBF').getContext('2d'), {
                         type: 'bar', data: { labels: cinta3.labels, datasets: [{ label: 'MTBF (Días)', data: cinta3.mtbf, backgroundColor: '#1E3A8A', borderRadius: 4 }] },
@@ -601,6 +610,35 @@
                         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, border: { dash: [4, 4] } } } }
                     });
                 }
+                
+                // MAGIA: El nuevo gráfico de Costo Promedio por Unidad (Marca)
+                if(document.getElementById('chartCostoUnidad') && cinta3.labels.length > 0) {
+                    new Chart(document.getElementById('chartCostoUnidad').getContext('2d'), {
+                        type: 'bar', data: { labels: cinta3.labels, datasets: [{ label: 'Costo Promedio CLP', data: cinta3.costo_promedio, backgroundColor: '#059669', borderRadius: 4 }] },
+                        options: { 
+                            responsive: true, maintainAspectRatio: false, 
+                            plugins: { 
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            let label = context.dataset.label || '';
+                                            if (label) { label += ': '; }
+                                            if (context.parsed.y !== null) {
+                                                // Formatear a pesos chilenos en el cuadrito negro al pasar el mouse
+                                                label += new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(context.parsed.y);
+                                            }
+                                            return label;
+                                        }
+                                    }
+                                }
+                            }, 
+                            scales: { x: { grid: { display: false } }, y: { beginAtZero: true, border: { dash: [4, 4] } } } 
+                        }
+                    });
+                }
+                
+                // --- FIN DE GRÁFICOS ACTUALIZADOS ---
             }
         };
     </script>
