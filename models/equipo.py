@@ -11,6 +11,7 @@ class Equipo(db.Model):
     modelo = db.Column(db.String(100))
     patente = db.Column(db.String(50))
     vin = db.Column(db.String(100))
+    numero_motor = db.Column(db.String(100)) # CAMPO RECUPERADO
     ubicacion = db.Column(db.String(100), default="CASA MATRIZ")
     estado_base = db.Column(db.String(50), default="Operativo") 
     control_base = db.Column(db.String(20), default="HORAS") 
@@ -25,21 +26,17 @@ class Equipo(db.Model):
     def __repr__(self):
         return f"<Equipo {self.codigo}>"
 
-
 class FiltroEquipo(db.Model):
     __tablename__ = 'filtro_equipo'
     
     id = db.Column(db.Integer, primary_key=True)
     codigo_equipo = db.Column(db.String(50), nullable=False)
-    
     sistema = db.Column(db.String(100))
     cant = db.Column(db.String(50))
     fleetguard = db.Column(db.String(100))
     baldwind = db.Column(db.String(100))
     originales = db.Column(db.String(100))
     donaldson = db.Column(db.String(100))
-    
-    # LA NUEVA COLUMNA:
     otra_alternativa = db.Column(db.String(150))
 
     @property
@@ -55,7 +52,6 @@ class FiltroEquipo(db.Model):
 
     def __repr__(self):
         return f"<Filtro {self.sistema} - {self.codigo_equipo}>"
-
 
 class DocumentoEquipo(db.Model):
     __tablename__ = 'documento_equipo'
