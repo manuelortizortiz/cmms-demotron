@@ -195,10 +195,10 @@
             <!-- ========================================== -->
             <div id="tab-sueltos" class="sub-tab space-y-8">
                 
-                <!-- SIMULADOR INTELIGENTE -->
+                <!-- SIMULADOR INTELIGENTE (AHORA CRUZA CON KITS DE OTROS EQUIPOS) -->
                 <div class="bg-white border border-slate-200 rounded-lg shadow-sm p-6">
-                    <h3 class="font-semibold text-[#1E3A8A] uppercase text-xs tracking-wider mb-2">🔍 Simulador Inteligente de Kits (Cruce de Marcas)</h3>
-                    <p class="text-xs text-slate-500 mb-6">Seleccione un equipo para que el sistema busque en el stock de "Filtros Sueltos" todas las marcas compatibles (Original, Fleetguard, Donaldson, etc) y verifique si puede armar un Kit completo.</p>
+                    <h3 class="font-semibold text-[#1E3A8A] uppercase text-xs tracking-wider mb-2">🔍 Simulador Inteligente de Kits (Búsqueda en Sueltos y Canibalización de Kits)</h3>
+                    <p class="text-xs text-slate-500 mb-6">El sistema buscará en bodega si puedes armar un Kit. Si no hay repuestos sueltos, rastreará automáticamente en los Kits armados de otros equipos compatibles.</p>
                     
                     <div class="flex flex-col md:flex-row gap-6 items-start">
                         <select id="sim_equipo" onchange="calcularFiltrosSueltos(this.value)" class="form-input md:w-1/3 text-[#1E3A8A] font-medium bg-blue-50/50">
@@ -209,7 +209,7 @@
                         </select>
                         
                         <div id="sim_results" class="bg-slate-50 border border-slate-200 rounded p-5 flex-1 w-full min-h-[120px] text-sm">
-                            <span class="text-slate-400 font-medium">👈 Seleccione un equipo a la izquierda para ejecutar el cruce en milisegundos.</span>
+                            <span class="text-slate-400 font-medium">👈 Seleccione un equipo a la izquierda para ejecutar el escaneo cruzado de bodega.</span>
                         </div>
                     </div>
                 </div>
@@ -226,7 +226,7 @@
                             </div>
                             <div>
                                 <label class="text-[10px] font-medium text-slate-500 block mb-1">Cantidad a Mover</label>
-                                <input type="number" name="cantidad" step="0.1" placeholder="Ej: 20" class="form-input" required>
+                                <input type="number" name="cantidad" step="1" placeholder="Ej: 20" class="form-input" required>
                             </div>
                             <div class="flex gap-3 mt-auto">
                                 <button type="submit" name="accion" value="INGRESO" class="btn-primary w-full whitespace-nowrap bg-emerald-600 hover:bg-emerald-700">+ Ingresar</button>
@@ -271,7 +271,7 @@
         </div>
     </main>
 
-    <!-- LOGICA DE PESTAÑAS Y SIMULADOR -->
+    <!-- LOGICA DE PESTAÑAS Y SIMULADOR (AHORA CRUZA CON KITS COMPLETOS) -->
     <script>
         function switchBodegaTab(tabId, btn) {
             document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
@@ -284,7 +284,6 @@
             window.history.replaceState({path:newUrl}, '', newUrl);
         }
 
-        // Si vienes desde una URL con tab específica
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('tab') === 'sueltos') {
@@ -294,10 +293,11 @@
 
         const maestroFiltros = {{ maestro_filtros | tojson }};
         const stockSuelto = {{ stock_suelto | tojson }};
+        const inventarioKits = {{ inventario | tojson }};
         
         function calcularFiltrosSueltos(eq) {
             if(!eq) {
-                document.getElementById('sim_results').innerHTML = "<span class='text-slate-400 font-medium'>👈 Seleccione un equipo a la izquierda para ejecutar el cruce en milisegundos.</span>";
+                document.getElementById('sim_results').innerHTML = "<span class='text-slate-400 font-medium'>👈 Seleccione un equipo a la izquierda para ejecutar el escaneo cruzado de bodega.</span>";
                 return;
             }
             
@@ -308,7 +308,8 @@
             }
             
             let html = "<ul class='space-y-3'>";
-            let found = 0;
+            let foundSuelto = 0;
+            let foundPrestado = 0;
             let missing = 0;
             
             reqs.forEach(req => {
@@ -316,6 +317,7 @@
                 let marcaEncontrada = null;
                 let stockDisponible = 0;
                 
+                // 1. ESCANEO EN FILTROS SUELTOS
                 for(let marca of req.marcas) {
                     if(stockSuelto[marca] && stockSuelto[marca] > 0) {
                         marcaEncontrada = marca;
@@ -327,31 +329,64 @@
                 if(marcaEncontrada && stockDisponible >= cantNecesaria) {
                     html += `<li class='text-emerald-800 flex items-center bg-emerald-50/80 px-4 py-2 rounded border border-emerald-200 shadow-sm'>
                                 <span class="mr-3 text-lg">✅</span> 
-                                <div><b>${req.sistema}</b> (Necesitas ${cantNecesaria}) <br> <span class="text-xs">Ubicado en Bodega: <b>${stockDisponible} unid. de código [${marcaEncontrada}]</b></span></div>
+                                <div><b>${req.sistema}</b> (Necesitas ${cantNecesaria}) <br> <span class="text-xs">Ubicado en Bodega: <b>${stockDisponible} unid. sueltas [${marcaEncontrada}]</b></span></div>
                              </li>`;
-                    found++;
+                    foundSuelto++;
                 } else if (marcaEncontrada && stockDisponible < cantNecesaria) {
                     html += `<li class='text-amber-800 flex items-center bg-amber-50/80 px-4 py-2 rounded border border-amber-200 shadow-sm'>
                                 <span class="mr-3 text-lg">⚠️</span> 
-                                <div><b>${req.sistema}</b> (Necesitas ${cantNecesaria}) <br> <span class="text-xs">Faltante Crítico: Solo hay <b>${stockDisponible} unid. de código [${marcaEncontrada}]</b></span></div>
+                                <div><b>${req.sistema}</b> (Necesitas ${cantNecesaria}) <br> <span class="text-xs">Faltante Crítico: Solo hay <b>${stockDisponible} unid. sueltas [${marcaEncontrada}]</b></span></div>
                              </li>`;
                     missing++;
                 } else {
-                    let recomendados = req.marcas.slice(0,3).join(", ");
-                    html += `<li class='text-red-800 flex items-center bg-red-50/80 px-4 py-2 rounded border border-red-200 shadow-sm'>
-                                <span class="mr-3 text-lg">❌</span> 
-                                <div><b>${req.sistema}</b> (Necesitas ${cantNecesaria}) <br> <span class="text-xs">Sin stock en ninguna marca. (Comprar: ${recomendados})</span></div>
-                             </li>`;
-                    missing++;
+                    
+                    // 2. ESCANEO DE CANIBALIZACIÓN EN KITS DE OTROS EQUIPOS
+                    let equiposCompatiblesConStock = [];
+                    
+                    for(let otroEq in maestroFiltros) {
+                        if(otroEq === eq) continue; // No buscar en sí mismo
+                        
+                        // ¿Este otro equipo usa el mismo filtro?
+                        let usaMismoFiltro = maestroFiltros[otroEq].some(otroReq => 
+                            otroReq.marcas.some(m => req.marcas.includes(m))
+                        );
+                        
+                        if(usaMismoFiltro) {
+                            // ¿Este otro equipo tiene stock de kits guardados en bodega?
+                            if(inventarioKits[otroEq] && inventarioKits[otroEq].stock > 0) {
+                                equiposCompatiblesConStock.push(`<b>${otroEq}</b> (${inventarioKits[otroEq].stock} Kits armados)`);
+                            }
+                        }
+                    }
+                    
+                    if(equiposCompatiblesConStock.length > 0) {
+                        let eqList = equiposCompatiblesConStock.join(", ");
+                        html += `<li class='text-blue-800 flex items-center bg-blue-50/80 px-4 py-2 rounded border border-blue-200 shadow-sm'>
+                                    <span class="mr-3 text-lg">💡</span> 
+                                    <div><b>${req.sistema}</b> (Necesitas ${cantNecesaria}) <br> 
+                                    <span class="text-[11px]">Sin stock suelto, pero <span class="font-bold underline">puedes sacarlo del Kit guardado de:</span> ${eqList}</span></div>
+                                 </li>`;
+                        foundPrestado++;
+                    } else {
+                        // Si falla todo, se debe comprar
+                        let recomendados = req.marcas.slice(0,3).join(", ");
+                        html += `<li class='text-red-800 flex items-center bg-red-50/80 px-4 py-2 rounded border border-red-200 shadow-sm'>
+                                    <span class="mr-3 text-lg">❌</span> 
+                                    <div><b>${req.sistema}</b> (Necesitas ${cantNecesaria}) <br> <span class="text-[11px]">Sin stock suelto y sin kits compatibles para canibalizar. (Comprar: ${recomendados})</span></div>
+                                 </li>`;
+                        missing++;
+                    }
                 }
             });
             
             html += "</ul>";
-            html += `<div class='mt-5 pt-4 border-t border-slate-200 font-bold text-[15px]'>`;
-            if(missing === 0) {
-                html += `<span class='text-emerald-700 bg-emerald-100 px-3 py-1 rounded inline-block'>¡ESTADO VERDE! Tienes todos los filtros sueltos para armar un Kit completo para el ${eq}.</span>`;
+            html += `<div class='mt-5 pt-4 border-t border-slate-200 font-bold text-[14px] leading-relaxed'>`;
+            if(missing === 0 && foundPrestado === 0) {
+                html += `<span class='text-emerald-700 bg-emerald-100 px-3 py-1 rounded inline-block'>¡ESTADO VERDE! Tienes todos los filtros sueltos para armar un Kit completo.</span>`;
+            } else if (missing === 0 && foundPrestado > 0) {
+                html += `<span class='text-blue-700 bg-blue-100 px-3 py-1 rounded inline-block'>¡ESTADO AZUL! Tienes los filtros, pero deberás "canibalizar" o desarmar kits asignados a otros equipos.</span>`;
             } else {
-                html += `<span class='text-red-700 bg-red-100 px-3 py-1 rounded inline-block'>STATUS ROJO: Faltan ${missing} tipos de filtro. Solo tienes ${found} cubiertos.</span>`;
+                html += `<span class='text-red-700 bg-red-100 px-3 py-1 rounded inline-block'>STATUS ROJO: Faltan ${missing} tipos de filtro para completar el equipo.</span>`;
             }
             html += `</div>`;
             
