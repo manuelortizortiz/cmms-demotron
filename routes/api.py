@@ -15,6 +15,9 @@ from models.personal import Personal, Mecanico
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
+# =========================================================
+# RUTAS DE INGRESO DE DATOS (FORMULARIOS)
+# =========================================================
 @api_bp.route('/add_record', methods=['POST'])
 @login_required
 def add_record():
@@ -55,12 +58,16 @@ def add_record():
         
     return redirect(referer)
 
+# =========================================================
+# EDICIÓN RÁPIDA Y ELIMINACIÓN
+# =========================================================
 @api_bp.route('/edit_record', methods=['POST'])
 @login_required
 def edit_record():
     tabla = request.form.get('tabla')
     obj_id = request.form.get('id')
     referer = request.form.get('referer') or '/'
+    
     try:
         if tabla == 'equipo':
             eq = Equipo.query.filter_by(codigo=obj_id).first()
@@ -72,6 +79,7 @@ def edit_record():
                 db.session.commit()
     except Exception as e:
         db.session.rollback()
+        
     return redirect(referer)
 
 @api_bp.route('/delete_record/<tabla>/<int:id>', methods=['POST'])
@@ -85,6 +93,7 @@ def delete_record(tabla, id):
         elif tabla == 'compra': obj = CompraRepuesto.query.get(id)
         elif tabla == 'personal': obj = Personal.query.get(id)
         elif tabla == 'mecanico': obj = Mecanico.query.get(id)
+            
         if obj:
             db.session.delete(obj)
             db.session.commit()
@@ -94,6 +103,9 @@ def delete_record(tabla, id):
         return jsonify({'status': 'error', 'message': str(e)}), 500
     return jsonify({'status': 'not_found'}), 404
 
+# =========================================================
+# KANBAN (DRAG & DROP)
+# =========================================================
 @api_bp.route('/cambiar_estado_ot/<int:id>', methods=['POST'])
 @login_required
 def cambiar_estado_ot(id):
@@ -111,6 +123,9 @@ def cambiar_estado_ot(id):
         return jsonify({'status': 'error', 'message': str(e)}), 500
     return jsonify({'status': 'error'}), 400
 
+# =========================================================
+# EXPORTACIÓN EXCEL
+# =========================================================
 @api_bp.route('/exportar/excel_maestro', methods=['GET'])
 @login_required
 def exportar_excel():
@@ -126,6 +141,9 @@ def exportar_excel():
     except Exception as e:
         return f"Error al generar Excel: {str(e)}"
 
+# =========================================================
+# RUTAS DE IMPRESIÓN PDF
+# =========================================================
 @api_bp.route('/imprimir_registro/<codigo>', strict_slashes=False)
 @login_required
 def imprimir_registro(codigo):
@@ -136,7 +154,7 @@ def imprimir_registro(codigo):
         mants_corr = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Correctiva').order_by(OrdenTrabajo.fecha.desc()).all()
         return render_template('imprimir_registro.html', equipo=equipo, mants_prev=mants_prev, mants_corr=mants_corr, hoy=datetime.now())
     except Exception as e:
-        return f"Aviso del Sistema: No se pudo generar la vista del PDF ({str(e)})."
+        return f"Aviso del Sistema: No se pudo generar la vista del PDF corporativo ({str(e)})."
 
 @api_bp.route('/imprimir_filtros/<codigo>', strict_slashes=False)
 @login_required
@@ -144,11 +162,57 @@ def imprimir_filtros(codigo):
     try:
         equipo = Equipo.query.filter_by(codigo=codigo).first()
         if not equipo: return "Equipo no encontrado en la Base de Datos", 404
+            
         filtros = FiltroEquipo.query.filter_by(codigo_equipo=codigo).all()
-        return render_template('imprimir_filtros.html', equipo=equipo, filtros=filtros, hoy=datetime.now())
+        
+        # MAGIA: Rastrear toda la flota buscando equipos con los mismos repuestos
+        equipos_hermanos = set()
+        for f in filtros:
+            if f.originales and str(f.originales).strip() not in ['-', 'NAN', '', 'nan']:
+                otros = FiltroEquipo.query.filter(
+                    FiltroEquipo.originales == f.originales, 
+                    FiltroEquipo.codigo_equipo != codigo
+                ).all()
+                for o in otros:
+                    equipos_hermanos.add(o.codigo_equipo)
+        
+        compatibles_str = ", ".join(sorted(list(equipos_hermanos))) if equipos_hermanos else "Ningún otro equipo de la flota usa estos filtros."
+                
+        return render_template('imprimir_filtros.html', equipo=equipo, filtros=filtros, compatibles=compatibles_str, hoy=datetime.now())
     except Exception as e:
         return f"Aviso del Sistema: No se pudo generar la hoja de filtros PDF ({str(e)})."
 
+# =========================================================
+# HERRAMIENTA DE SINCRONIZACIÓN DE BASE DE DATOS
+# =========================================================
+@api_bp.route('/sincronizar_bd')
+def sincronizar_bd():
+    mensajes = []
+    
+    # 1. Reparar tabla Equipo (numero_motor)
+    try:
+        db.session.execute(text("ALTER TABLE equipo ADD COLUMN numero_motor VARCHAR(100);"))
+        db.session.commit()
+        mensajes.append("✅ Columna 'numero_motor' inyectada exitosamente a los Equipos.")
+    except Exception:
+        db.session.rollback()
+        mensajes.append("✔️ La columna 'numero_motor' ya estaba sincronizada.")
+
+    # 2. Reparar tabla Filtros (otra_alternativa)
+    try:
+        db.session.execute(text("ALTER TABLE filtro_equipo ADD COLUMN otra_alternativa VARCHAR(150);"))
+        db.session.commit()
+        mensajes.append("✅ Columna 'otra_alternativa' inyectada exitosamente a los Filtros.")
+    except Exception:
+        db.session.rollback()
+        mensajes.append("✔️ La columna 'otra_alternativa' ya estaba sincronizada.")
+
+    html = "<br><br>".join(mensajes)
+    return f"<div style='font-family: sans-serif; padding: 40px; text-align: center; max-width: 600px; margin: auto;'><h2>Sincronización Completada</h2><p style='font-size: 16px;'>{html}</p><br><br><a href='/' style='padding: 12px 25px; background: #1E3A8A; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;'>Volver al Sistema</a></div>"
+
+# =========================================================
+# CARGA MASIVA DEL EXCEL "MAESTRO DE FILTROS"
+# =========================================================
 @api_bp.route('/cargar_maestro_filtros', methods=['GET', 'POST'])
 def cargar_maestro_filtros():
     token = request.args.get('token')
@@ -172,17 +236,9 @@ def cargar_maestro_filtros():
         df = pd.read_excel(file)
         df.columns = df.columns.astype(str).str.strip().str.lower()
         
-        # === MAGIA: AUTO-CREADOR DE COLUMNA EN POSTGRESQL ===
-        try:
-            db.session.execute(text("ALTER TABLE filtro_equipo ADD COLUMN otra_alternativa VARCHAR(150)"))
-            db.session.commit()
-        except Exception:
-            db.session.rollback() # Si la columna ya existe, ignora el error y avanza
-            
         db.session.execute(text("DELETE FROM filtro_equipo"))
         registros_agregados = 0
         
-        # INYECTAMOS INCLUYENDO OTRA_ALTERNATIVA
         sql_insert = text("""
             INSERT INTO filtro_equipo 
             (codigo_equipo, sistema, cant, originales, fleetguard, donaldson, baldwind, otra_alternativa) 
@@ -219,7 +275,6 @@ def cargar_maestro_filtros():
             if c_don is None and len(df.columns) > 6: c_don = row.iloc[6]
             c_don = str(c_don).strip() if pd.notna(c_don) and str(c_don).strip().lower() != 'nan' else '-'
             
-            # NUEVO: Leer Otra Alternativa (Columna 8 de tu Excel)
             c_otra = row.get('otra alternativa') or row.get('otra')
             if c_otra is None and len(df.columns) > 7: c_otra = row.iloc[7]
             c_otra = str(c_otra).strip() if pd.notna(c_otra) and str(c_otra).strip().lower() != 'nan' else '-'
@@ -232,7 +287,7 @@ def cargar_maestro_filtros():
             registros_agregados += 1
             
         db.session.commit()
-        return f"<div style='padding: 40px; text-align: center; color: green;'><h2>¡Éxito!</h2><p>Se importaron {registros_agregados} filtros con la columna OTRA ALTERNATIVA.</p><a href='/'>Volver</a></div>"
+        return f"<div style='padding: 40px; text-align: center; color: green;'><h2>¡Éxito!</h2><p>Se importaron {registros_agregados} filtros correctamente.</p><a href='/'>Volver al Inicio</a></div>"
         
     except Exception as e:
         db.session.rollback()
