@@ -302,51 +302,73 @@ def imprimir_ot(ot_id):
     except Exception as e:
         return f"Aviso del Sistema: No se pudo generar la vista del PDF corporativo ({str(e)})."
 
-
 # =========================================================
-# RUTAS DE BODEGA VIVA (KITS Y SUELTOS)
+# RUTAS DE ACCIÓN RÁPIDA DE BODEGA (BLINDADAS ANTICHOQUE)
 # =========================================================
 @dashboard_bp.route('/api/bodega_movimiento', methods=['POST'])
 @login_required
 def bodega_movimiento():
-    tipo = request.form.get('tipo_movimiento')
-    codigo_eq = request.form.get('codigo_equipo').upper().strip()
-    
-    if tipo == 'INGRESO':
-        nueva_compra = CompraRepuesto(codigo_equipo=codigo_eq, fecha=datetime.now(), descripcion="Ingreso Manual de Kit a Bodega", costo_pm_clp=0, oc="STOCK-MANUAL")
-        db.session.add(nueva_compra)
-    elif tipo == 'SALIDA':
-        nueva_ot = OrdenTrabajo(codigo_equipo=codigo_eq, fecha=datetime.now(), fecha_cierre=datetime.now(), estado='Finalizada', tipo_ot='Preventiva', tipo_mantencion="Retiro Manual Kit Bodega")
-        db.session.add(nueva_ot)
+    try:
+        tipo = request.form.get('tipo_movimiento')
+        codigo_eq = request.form.get('codigo_equipo')
+        if not codigo_eq: return redirect('/bodega_kpi?tab=kits')
         
-    db.session.commit()
-    return redirect('/bodega_kpi')
+        codigo_eq = codigo_eq.upper().strip()
+        
+        if tipo == 'INGRESO':
+            nueva_compra = CompraRepuesto(codigo_equipo=codigo_eq, fecha=datetime.now(), descripcion="Ingreso Manual de Kit a Bodega", costo_pm_clp=0, oc="STOCK-MANUAL")
+            db.session.add(nueva_compra)
+        elif tipo == 'SALIDA':
+            nueva_ot = OrdenTrabajo(codigo_equipo=codigo_eq, fecha=datetime.now(), fecha_cierre=datetime.now(), estado='Finalizada', tipo_ot='Preventiva', tipo_mantencion="Retiro Manual Kit Bodega")
+            db.session.add(nueva_ot)
+            
+        db.session.commit()
+        return redirect('/bodega_kpi?tab=kits')
+    except Exception as e:
+        db.session.rollback()
+        return f"<div style='padding: 50px; font-family: sans-serif; color: red;'><h2>Error al Mover Kit:</h2><p><b>{str(e)}</b></p><br><a href='/bodega_kpi?tab=kits' style='padding: 10px; background: #1E3A8A; color: white; text-decoration: none;'>Volver atrás</a></div>"
 
 @dashboard_bp.route('/api/bodega_suelta_mov', methods=['POST'])
 @login_required
 def bodega_suelta_mov():
-    codigo = request.form.get('codigo_item').upper().strip()
-    cantidad = request.form.get('cantidad', type=float)
-    accion = request.form.get('accion') 
-    
-    if not codigo or cantidad is None:
+    try:
+        codigo = request.form.get('codigo_item')
+        if not codigo: return redirect('/bodega_kpi?tab=sueltos')
+        codigo = codigo.upper().strip()
+        
+        try: cantidad = float(request.form.get('cantidad', 0))
+        except: cantidad = 0.0
+            
+        accion = request.form.get('accion') 
+        item = InventarioBodega.query.filter_by(codigo_item=codigo).first()
+        
+        if item:
+            try: actual = float(item.cantidad)
+            except: actual = 0.0
+            
+            nueva_cant = actual + cantidad if accion == 'INGRESO' else max(0.0, actual - cantidad)
+            item.cantidad = str(nueva_cant) if isinstance(item.cantidad, str) else nueva_cant
+        else:
+            if accion == 'INGRESO':
+                nuevo = InventarioBodega(
+                    codigo_item=codigo, 
+                    nombre=f"FILTRO/REPUESTO {codigo}", 
+                    categoria="Filtros Sueltos", 
+                    cantidad=str(cantidad), 
+                    ubicacion="BODEGA CENTRAL"
+                )
+                db.session.add(nuevo)
+                
+        db.session.commit()
         return redirect('/bodega_kpi?tab=sueltos')
         
-    item = InventarioBodega.query.filter_by(codigo_item=codigo).first()
-    if item:
-        try: actual = float(item.cantidad)
-        except: actual = 0.0
-        
-        if accion == 'INGRESO': item.cantidad = str(actual + cantidad)
-        elif accion == 'SALIDA': item.cantidad = str(max(0.0, actual - cantidad))
-    else:
-        if accion == 'INGRESO':
-            nuevo = InventarioBodega(codigo_item=codigo, nombre=f"FILTRO/REPUESTO {codigo}", categoria="Filtros Sueltos", cantidad=str(cantidad), ubicacion="Bodega Central")
-            db.session.add(nuevo)
-            
-    db.session.commit()
-    return redirect('/bodega_kpi?tab=sueltos')
+    except Exception as e:
+        db.session.rollback()
+        return f"<div style='padding: 50px; font-family: sans-serif; color: red;'><h2>Error de Base de Datos (Bodega Suelta):</h2><p>Por favor, copia este error y envíaselo al desarrollador:</p><p style='padding:15px; background:#fee2e2; border-left:4px solid red; font-family:monospace;'><b>{str(e)}</b></p><br><a href='/bodega_kpi?tab=sueltos' style='padding: 10px; background: #1E3A8A; color: white; text-decoration: none; border-radius: 5px;'>Volver al Sistema</a></div>"
 
+# =========================================================
+# MÓDULO BODEGA: KARDEX ACORDEÓN Y FILTROS SUELTOS
+# =========================================================
 @dashboard_bp.route('/bodega_kpi', strict_slashes=False)
 @login_required
 def bodega_kpi():
