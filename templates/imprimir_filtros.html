@@ -15,7 +15,7 @@
             text-align: center; 
             border-bottom: 3px solid #1E3A8A; 
             padding-bottom: 10px; 
-            margin-bottom: 20px; 
+            margin-bottom: 15px; 
         }
         .header h1 { 
             margin: 0; 
@@ -29,7 +29,7 @@
         }
         .info-box { 
             border: 1px solid #CBD5E1; 
-            padding: 15px; 
+            padding: 12px; 
             border-radius: 8px; 
             margin-bottom: 20px; 
             background-color: #F8FAFC; 
@@ -63,18 +63,12 @@
         .filters-table td {
             font-size: 11px;
         }
-        .compatibles {
-            color: #047857;
-            font-weight: bold;
-            font-size: 10px;
-        }
         .footer { 
             margin-top: 30px; 
             text-align: center; 
             font-size: 10px; 
             color: #94A3B8; 
         }
-        /* Configuración de Impresión PDF */
         @media print {
             @page { margin: 1cm; size: landscape; }
             body { -webkit-print-color-adjust: exact; padding: 0; }
@@ -89,34 +83,35 @@
         <p>Fecha de emisión: {{ hoy.strftime('%d-%m-%Y %H:%M') }}</p>
     </div>
 
-    <!-- MÁS DATOS DEL EQUIPO -->
+    <!-- CAJA SUPERIOR: DATOS DEL EQUIPO Y COMPATIBILIDAD -->
     <div class="info-box">
         <table class="info-table">
             <tr>
-                <td><strong>CÓDIGO INTERNO:</strong> <span style="font-size: 14px; font-weight: bold;">{{ equipo.codigo }}</span></td>
-                <td><strong>MARCA:</strong> {{ equipo.marca or 'N/A' }}</td>
-                <td><strong>MODELO:</strong> {{ equipo.modelo or 'N/A' }}</td>
+                <td style="width: 25%;"><strong>EQUIPO:</strong> <span style="font-size: 14px; font-weight: bold;">{{ equipo.codigo }}</span></td>
+                <td style="width: 25%;"><strong>PATENTE:</strong> {{ equipo.patente or '-' }}</td>
+                <td style="width: 25%;"><strong>VIN / CHASIS:</strong> {{ equipo.vin or '-' }}</td>
+                <td style="width: 25%;"><strong>N° MOTOR:</strong> {{ equipo.numero_motor or '-' }}</td>
             </tr>
             <tr>
-                <td><strong>PATENTE:</strong> {{ equipo.patente or 'N/A' }}</td>
-                <td><strong>TIPO EQUIPO:</strong> {{ equipo.tipo_equipo or 'N/A' }}</td>
-                <td><strong>UBICACIÓN:</strong> {{ equipo.ubicacion or 'N/A' }}</td>
+                <td colspan="4" style="padding-top: 12px; border-top: 1px dashed #CBD5E1; margin-top: 5px;">
+                    <strong>EQUIPOS CON MISMOS FILTROS:</strong> 
+                    <span style="color: #047857; font-weight: bold; font-size: 13px;">{{ compatibles }}</span>
+                </td>
             </tr>
         </table>
     </div>
 
-    <!-- TABLA DE FILTROS CON TODAS LAS ALTERNATIVAS -->
+    <!-- TABLA DE FILTROS LIMPIA -->
     <table class="filters-table">
         <thead>
             <tr>
-                <th style="width: 15%;">SISTEMA / TIPO</th>
+                <th style="width: 20%;">SISTEMA / TIPO</th>
                 <th style="width: 5%;">CANT</th>
-                <th style="width: 12%;">ORIGINALES</th>
-                <th style="width: 12%;">FLEETGUARD</th>
-                <th style="width: 12%;">BALDWIN</th>
-                <th style="width: 12%;">DONALDSON</th>
-                <th style="width: 12%;">OTRA ALT.</th>
-                <th style="width: 20%;">COMPATIBLE CON (OTROS EQUIPOS)</th>
+                <th style="width: 15%;">ORIGINALES</th>
+                <th style="width: 15%;">FLEETGUARD</th>
+                <th style="width: 15%;">BALDWIN</th>
+                <th style="width: 15%;">DONALDSON</th>
+                <th style="width: 15%;">OTRA ALTERNATIVA</th>
             </tr>
         </thead>
         <tbody>
@@ -129,29 +124,19 @@
                 <td>{{ f.baldwind }}</td>
                 <td>{{ f.donaldson }}</td>
                 <td>{{ f.otra_alternativa }}</td>
-                
-                <!-- LA MAGIA DE LA COMPATIBILIDAD -->
-                <td class="compatibles">
-                    {% if compatibles and compatibles[f.id] %}
-                        {{ compatibles[f.id] }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="8" style="padding: 20px;">No hay filtros registrados para este equipo en el Maestro.</td>
+                <td colspan="7" style="padding: 20px;">No hay filtros registrados para este equipo en el Maestro.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
     <div class="footer">
-        Generado por Sistema de Mantenimiento | Uso Exclusivo Interno
+        Generado por Demotron | Uso Exclusivo Interno de Mantenimiento
     </div>
     
-    <!-- Imprime automáticamente al abrir -->
     <script>
         window.onload = function() { 
             setTimeout(function() { window.print(); }, 500);
