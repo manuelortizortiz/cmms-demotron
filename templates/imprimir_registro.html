@@ -129,9 +129,9 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 15%;">Fecha</th>
+                <th style="width: 12%;">Fecha</th>
                 <th style="width: 15%;">N° Orden</th>
-                <th style="width: 55%;">Descripción del Repuesto / Servicio</th>
+                <th style="width: 58%;">Descripción del Repuesto / Servicio</th>
                 <th style="width: 15%; text-align: right;">Costo Invertido</th>
             </tr>
         </thead>
@@ -154,9 +154,9 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 15%;">Fecha / OT</th>
-                <th style="width: 45%;">Pauta Aplicada</th>
-                <th style="width: 25%;">Mecánico Responsable</th>
+                <th style="width: 12%;">Fecha / OT</th>
+                <th style="width: 40%;">Pauta Aplicada</th>
+                <th style="width: 33%;">Taller / Mecánico Ejecutor</th>
                 <th style="width: 15%; text-align: right;">Costo Mano Obra</th>
             </tr>
         </thead>
@@ -165,7 +165,7 @@
             <tr>
                 <td>{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }} <br><span style="color:#64748B; font-size: 9px;">{{ m.folio }}</span></td>
                 <td>{{ m.tipo_mantencion }}</td>
-                <td>{{ m.mecanico }}</td>
+                <td><strong style="color: #1E3A8A;">{{ m.mecanico or 'Taller Interno' }}</strong></td>
                 <td style="text-align: right;">{{ "$ {:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
             </tr>
             {% else %}
@@ -174,23 +174,28 @@
         </tbody>
     </table>
 
-    <!-- AVERÍAS / CORRECTIVAS -->
-    <div class="section-title">🚨 Registro de Averías y Correcciones (Historial de Fallas)</div>
+    <!-- AVERÍAS / CORRECTIVAS SIMPLIFICADAS -->
+    <div class="section-title">🚨 Averías y Correctivas (Simplificado)</div>
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 15%;">Fecha / OT</th>
-                <th style="width: 25%;">Sistema Afectado</th>
-                <th style="width: 45%;">Diagnóstico / Causa Raíz</th>
+                <th style="width: 12%;">Fecha / OT</th>
+                <th style="width: 40%;">Falla / Detalle de Avería</th>
+                <th style="width: 33%;">Taller / Lugar de Reparación</th>
                 <th style="width: 15%; text-align: right;">Costo Reparación</th>
             </tr>
         </thead>
         <tbody>
             {% for m in mants_corr %}
             <tr>
-                <td>{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</td>
-                <td style="color: #B91C1C; font-weight: bold;">{{ m.sistema_falla or m.tipo_mantencion }}</td>
-                <td>{{ m.causa_raiz or m.observacion }}</td>
+                <td>{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}<br><span style="color:#64748B; font-size: 9px;">{{ m.folio }}</span></td>
+                <td>
+                    <span style="color: #B91C1C; font-weight: bold;">{{ m.sistema_falla or m.tipo_mantencion }}</span>
+                    {% if m.causa_raiz or m.observacion %}
+                    <br><span style="color: #475569; font-size: 9px;">{{ m.causa_raiz or m.observacion }}</span>
+                    {% endif %}
+                </td>
+                <td><strong style="color: #1E3A8A;">{{ m.mecanico or 'No Especificado' }}</strong></td>
                 <td style="text-align: right;">{{ "$ {:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
             </tr>
             {% else %}
