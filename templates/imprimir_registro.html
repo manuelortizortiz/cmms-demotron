@@ -88,7 +88,95 @@
         </div>
     </div>
 
-    <div class="section-title">Historial de Compras y Repuestos Directos</div>
+    <!-- ESPECIFICACIÓN DE FILTROS (NUEVO) -->
+    <div class="section-title">1. Especificación de Filtros y Componentes</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 20%;">Sistema / Tipo</th>
+                <th style="width: 8%; text-align: center;">Cant</th>
+                <th style="width: 22%;">Originales / N° Parte</th>
+                <th style="width: 25%;">Fleetguard / Alternativo</th>
+                <th style="width: 25%;">Donaldson / Baldwin</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for f in filtros %}
+            <tr>
+                <td><strong>{{ f.sistema }}</strong></td>
+                <td style="text-align: center;">{{ f.cant }}</td>
+                <td style="font-family: monospace;">{{ f.originales }}</td>
+                <td>{{ f.fleetguard }} <br> <span style="font-size: 8px; color: #64748B;">{{ f.otra_alternativa }}</span></td>
+                <td>{{ f.donaldson }} <br> <span style="font-size: 8px; color: #64748B;">{{ f.baldwind }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="text-align: center; color: #94A3B8;">No existen filtros pre-configurados para este modelo en la Base de Datos.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- ESPECIFICACIÓN DE LUBRICANTES (EXCLUSIVO MD-93) -->
+    {% if equipo.codigo == 'MD-93' %}
+    <div class="section-title">2. Especificación de Líquidos, Fluidos y Lubricantes</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 25%;">Sistema de Maquinaria</th>
+                <th style="width: 10%; text-align: center;">Capacidad Exacta</th>
+                <th style="width: 25%;">Especificación Técnica Exigida</th>
+                <th style="width: 40%;">Gama Homologada Comercial (Mobil / Alternativas)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Tanque de Combustible</td>
+                <td style="text-align: center;">140.0 L</td>
+                <td>Diésel</td>
+                <td>-</td>
+            </tr>
+            <tr>
+                <td>Cárter de Motor</td>
+                <td style="text-align: center;">8.0 L</td>
+                <td>API CI-4 / CJ-4 / SAE 15W-40</td>
+                <td>Mobil Delvac MX 15W-40 / Total Rubia TIR 7400</td>
+            </tr>
+            <tr>
+                <td>Transmisión Power Shuttle</td>
+                <td style="text-align: center;">18.0 L</td>
+                <td>Normativa JDM J20C / UTTO 10W</td>
+                <td>Mobilfluid 424 / Total Dynatrans MPV</td>
+            </tr>
+            <tr>
+                <td>Sistema Hidráulico (Tanque)</td>
+                <td style="text-align: center;">120.0 L</td>
+                <td>ISO VG 46 / 68 (Antidesgaste HLP)</td>
+                <td>Mobil DTE 10 Excel 46 / Total Equivis ZS 46</td>
+            </tr>
+            <tr>
+                <td>Eje Delantero</td>
+                <td style="text-align: center;">7.9 L</td>
+                <td>API GL-5 / SAE 80W-90 o 85W-140</td>
+                <td>Mobilube HD Plus 85W-140 / Total Traxium Axle 7</td>
+            </tr>
+            <tr>
+                <td>Eje Trasero</td>
+                <td style="text-align: center;">18.0 L</td>
+                <td>API GL-5 / SAE 80W-90 o 85W-140</td>
+                <td>Mobilube HD Plus 85W-140 / Total Traxium Axle 7</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="section-title">2.2. Especificación Crítica de Fluido Refrigerante</div>
+    <div class="info-box" style="margin-bottom: 20px; padding: 12px; font-size: 11px; line-height: 1.5;">
+        <p style="margin: 0 0 8px 0;"><strong>Tipo de Fluido:</strong> Líquido Refrigerante Anticongelante OAT base glicol al 50/50. Queda estrictamente prohibida la mezcla de distintos refrigerantes y el uso de agua corriente para evitar cavitación en la bomba de agua.</p>
+        <p style="margin: 0 0 8px 0;"><strong>Equivalencias Comerciales Autorizadas:</strong> Mobil Delvac Extended Life Coolant / Prestone Cor-Guard / TotalEnergies Coolelf Auto Supra.</p>
+        <p style="margin: 0 0 8px 0;"><strong>Capacidad del Sistema (Radiador de agua):</strong> 20.0 Litros.</p>
+        <p style="margin: 0;"><strong>Intervalo de Recambio:</strong> Cada 2 años o 4.000 Hrs de operación, mandatorio purgar y lavar completamente el circuito en la intervención mayor.</p>
+    </div>
+    {% endif %}
+
+    <div class="section-title">3. Historial de Compras y Repuestos Directos</div>
     <table class="data-table">
         <thead>
             <tr>
@@ -112,7 +200,7 @@
         </tbody>
     </table>
 
-    <div class="section-title">Registro de Mantenciones Preventivas</div>
+    <div class="section-title">4. Registro de Mantenciones Preventivas</div>
     <table class="data-table">
         <thead>
             <tr>
@@ -136,7 +224,7 @@
         </tbody>
     </table>
 
-    <div class="section-title">Mantenciones Correctivas</div>
+    <div class="section-title">5. Mantenciones Correctivas</div>
     <table class="data-table">
         <thead>
             <tr>
