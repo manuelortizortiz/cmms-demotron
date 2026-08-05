@@ -14,59 +14,27 @@
             margin-left: auto;
             margin-right: auto;
         }
-        
-        /* ZONA NO IMPRIMIBLE (Solo Vista Previa) */
-        .no-print {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 15px;
-            background-color: #F8FAFC;
-            border: 1px solid #CBD5E1;
-            border-radius: 8px;
-        }
-        .btn-print {
-            padding: 10px 24px;
-            background-color: #1E3A8A;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 14px;
-            transition: 0.2s;
-        }
+        .no-print { text-align: center; margin-bottom: 20px; padding: 15px; background-color: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 8px; }
+        .btn-print { padding: 10px 24px; background-color: #1E3A8A; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.2s; }
         .btn-print:hover { background-color: #1D4ED8; }
-
-        /* CABECERA DOCUMENTO */
         .header { text-align: center; border-bottom: 3px solid #1E3A8A; padding-bottom: 10px; margin-bottom: 15px; }
         .header h1 { margin: 0; color: #1E3A8A; font-size: 18px; text-transform: uppercase; }
         .header p { margin: 5px 0 0 0; color: #64748B; font-size: 10px;}
-        
-        /* CAJAS DE INFORMACIÓN */
         .info-box { border: 1px solid #CBD5E1; padding: 10px; border-radius: 6px; margin-bottom: 15px; background-color: #F8FAFC; }
         .info-table { width: 100%; border-collapse: collapse; }
         .info-table td { padding: 4px; font-size: 11px; }
         .info-table strong { color: #1E3A8A; }
-        
-        /* CAJA DE COSTOS */
         .cost-box { display: flex; justify-content: space-between; background-color: #E0E7FF; padding: 12px; border-radius: 6px; border: 1px solid #BFDBFE; margin-bottom: 20px; }
         .cost-item { text-align: center; width: 33%; }
         .cost-title { font-size: 10px; color: #4338CA; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 4px;}
         .cost-value { font-size: 16px; color: #1E3A8A; font-weight: bold; }
-
-        /* TABLAS DE REGISTRO */
         .section-title { font-size: 12px; color: #1E3A8A; border-bottom: 2px solid #CBD5E1; padding-bottom: 4px; margin-top: 20px; margin-bottom: 10px; text-transform: uppercase; font-weight: bold;}
         .data-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
         .data-table th, .data-table td { border: 1px solid #CBD5E1; padding: 6px 4px; text-align: left; font-size: 10px; }
         .data-table th { background-color: #1E3A8A; color: white; }
-        
-        /* ALERTA PREDICTIVA */
         .alert-box { border-left: 4px solid #EF4444; background-color: #FEF2F2; padding: 10px; border-radius: 0 6px 6px 0; margin-top: 20px; }
         .alert-title { color: #B91C1C; font-weight: bold; font-size: 11px; margin-bottom: 8px; text-transform: uppercase; }
-
         .footer { margin-top: 40px; border-top: 1px dashed #CBD5E1; padding-top: 15px; text-align: center; font-size: 9px; color: #64748B; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;}
-
-        /* MODO IMPRESIÓN */
         @media print {
             .no-print { display: none !important; }
             @page { margin: 1cm; size: portrait; }
@@ -78,19 +46,16 @@
 </head>
 <body>
     
-    <!-- ZONA INTERACTIVA -->
     <div class="no-print">
         <p style="margin-top: 0; margin-bottom: 10px; color: #64748B; font-size: 13px;">Vista previa del Historial. Verifique los costos y averías antes de exportar.</p>
         <button onclick="window.print()" class="btn-print">Imprimir Historial de Equipo</button>
     </div>
 
-    <!-- CABECERA -->
     <div class="header">
         <h1>HISTORIAL DEL EQUIPO</h1>
         <p>Documento Oficial generado el {{ hoy.strftime('%d/%m/%Y a las %H:%M hrs') }}</p>
     </div>
 
-    <!-- DATOS DEL EQUIPO -->
     <div class="info-box">
         <table class="info-table">
             <tr>
@@ -108,7 +73,6 @@
         </table>
     </div>
 
-    <!-- RESUMEN DE COSTOS ACUMULADOS -->
     <div class="cost-box">
         <div class="cost-item">
             <span class="cost-title">Inversión Suministros/Compras</span>
@@ -124,7 +88,6 @@
         </div>
     </div>
 
-    <!-- COMPRAS ASOCIADAS AL EQUIPO -->
     <div class="section-title">Historial de Compras y Repuestos Directos</div>
     <table class="data-table">
         <thead>
@@ -149,7 +112,6 @@
         </tbody>
     </table>
 
-    <!-- MANTENCIONES PREVENTIVAS -->
     <div class="section-title">Registro de Mantenciones Preventivas</div>
     <table class="data-table">
         <thead>
@@ -163,9 +125,9 @@
         <tbody>
             {% for m in mants_prev %}
             <tr>
-                <td>{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }} <br><span style="color:#64748B; font-size: 9px;">{{ m.folio }}</span></td>
-                <td>{{ m.tipo_mantencion }}</td>
-                <td>{{ m.mecanico or 'No Especificado' }}</td>
+                <td>{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}<br><span style="color:#64748B; font-size: 9px;">{{ m.display_folio }}</span></td>
+                <td>{{ m.display_falla }}</td>
+                <td>{{ m.display_mecanico }}</td>
                 <td style="text-align: right; font-weight: bold;">{{ "$ {:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
             </tr>
             {% else %}
@@ -174,7 +136,6 @@
         </tbody>
     </table>
 
-    <!-- AVERÍAS / CORRECTIVAS SIMPLIFICADAS -->
     <div class="section-title">Mantenciones Correctivas</div>
     <table class="data-table">
         <thead>
@@ -188,14 +149,14 @@
         <tbody>
             {% for m in mants_corr %}
             <tr>
-                <td>{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}<br><span style="color:#64748B; font-size: 9px;">{{ m.folio }}</span></td>
+                <td>{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}<br><span style="color:#64748B; font-size: 9px;">{{ m.display_folio }}</span></td>
                 <td>
-                    <span style="color: #B91C1C; font-weight: bold;">{{ m.sistema_falla or m.tipo_mantencion }}</span>
-                    {% if m.causa_raiz or m.observacion %}
-                    <br><span style="color: #475569; font-size: 9px;">{{ m.causa_raiz or m.observacion }}</span>
+                    <span style="color: #B91C1C; font-weight: bold;">{{ m.display_falla }}</span>
+                    {% if m.display_detalle %}
+                    <br><span style="color: #475569; font-size: 9px;">{{ m.display_detalle }}</span>
                     {% endif %}
                 </td>
-                <td>{{ m.mecanico or 'No Especificado' }}</td>
+                <td>{{ m.display_mecanico }}</td>
                 <td style="text-align: right; font-weight: bold;">{{ "$ {:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
             </tr>
             {% else %}
@@ -204,7 +165,6 @@
         </tbody>
     </table>
 
-    <!-- INTELIGENCIA PREDICTIVA: AVERÍAS EN GEMELOS -->
     {% if averias_similares %}
     <div class="alert-box">
         <div class="alert-title">Mantenimiento Predictivo: Alertas en Flota Gemela</div>
@@ -230,9 +190,8 @@
     </div>
     {% endif %}
 
-    <!-- FIRMA OFICIAL DE DEMOTRON -->
     <div class="footer">
-        Generado por Demotron Maquinarias | Uso Exclusivo Interno de Mantenimiento y Taller | Manuel Ortiz Ortiz
+        Generado por Demotron Maquinarias | Uso Exclusivo Interno de Mantenimiento | Manuel Ortiz Ortiz
     </div>
 
 </body>
