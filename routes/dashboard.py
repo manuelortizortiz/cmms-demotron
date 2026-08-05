@@ -14,7 +14,6 @@ from models.personal import Personal, Mecanico
 from models.bodega import InventarioBodega
 from utils.formatters import format_num, format_clp, buscar_foto_por_tipo
 
-# AQUÍ ESTÁ LA LÍNEA QUE SE HABÍA BORRADO
 dashboard_bp = Blueprint('dashboard', __name__)
 
 @dashboard_bp.route('/', strict_slashes=False)
@@ -204,9 +203,7 @@ def dashboard():
                 'costo_str': format_clp(tot_cost), 'cpk_cph_str': format_clp(cpk)
             })
 
-        # ORDENAMIENTO INTELIGENTE: Manda los "Fuera de Servicio" al final de la tabla
         equipos_list.sort(key=lambda x: (1 if x['estado'] == 'Fuera de Servicio' else 0, x['codigo']))
-
         ubicaciones_dict = dict(sorted(ubicaciones_dict.items(), key=lambda item: (1 if item[0] == 'FUERA DE SERVICIO' else 0, item[0])))
 
         kanban = {'Pendiente': [], 'En Progreso': [], 'En Revisión': [], 'Finalizada': []}
@@ -306,7 +303,6 @@ def imprimir_ot(ot_id):
     except Exception as e:
         return f"Aviso del Sistema: No se pudo generar la vista del PDF corporativo ({str(e)})."
 
-# NUEVA VERSIÓN DE LA RUTA IMPRIMIR REGISTRO (CON COSTOS Y AVERÍAS GEMELAS)
 @dashboard_bp.route('/api/imprimir_registro/<codigo>', strict_slashes=False)
 @login_required
 def imprimir_registro(codigo):
@@ -318,6 +314,42 @@ def imprimir_registro(codigo):
         mants_prev = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Preventiva').order_by(OrdenTrabajo.fecha.desc()).all()
         mants_corr = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Correctiva').order_by(OrdenTrabajo.fecha.desc()).all()
         
+        # MAGIA ANTI-ERRORES DE IMPORTACIÓN EXCEL
+        # Limpia, busca y consolida datos ocultos en columnas mal mapeadas
+        for m in mants_prev + mants_corr:
+            fol = getattr(m, 'folio', '')
+            m.display_folio = str(fol) if str(fol).strip() not in ['None', 'nan', ''] else ''
+
+        for m in mants_prev:
+            mec = getattr(m, 'mecanico', None) or getattr(m, 'proveedor', None) or 'Taller Interno'
+            m.display_mecanico = mec if str(mec).strip() not in ['None', '', 'nan'] else 'Taller Interno'
+            
+            p_vals = [getattr(m, 'tipo_mantencion', None), getattr(m, 'observacion', None), getattr(m, 'descripcion', None)]
+            p_textos = [str(x).strip() for x in p_vals if x and str(x).strip() not in ['None', '', 'nan']]
+            m.display_falla = " | ".join(p_textos) if p_textos else 'Mantenimiento Preventivo'
+
+        for m in mants_corr:
+            mec = getattr(m, 'mecanico', None) or getattr(m, 'proveedor', None) or 'No Especificado'
+            m.display_mecanico = mec if str(mec).strip() not in ['None', '', 'nan'] else 'No Especificado'
+            
+            f_vals = [
+                getattr(m, 'sistema_falla', None), getattr(m, 'tipo_mantencion', None),
+                getattr(m, 'causa_raiz', None), getattr(m, 'observacion', None),
+                getattr(m, 'descripcion', None), getattr(m, 'falla', None), getattr(m, 'averia', None),
+                getattr(m, 'detalle', None)
+            ]
+            f_textos = [str(x).strip() for x in f_vals if x and str(x).strip() not in ['None', '', 'nan']]
+            
+            if len(f_textos) >= 2:
+                m.display_falla = f_textos[0]
+                m.display_detalle = " | ".join(list(dict.fromkeys(f_textos[1:])))
+            elif len(f_textos) == 1:
+                m.display_falla = f_textos[0]
+                m.display_detalle = ''
+            else:
+                m.display_falla = 'Sin descripción registrada'
+                m.display_detalle = ''
+
         compras = CompraRepuesto.query.filter_by(codigo_equipo=codigo).order_by(CompraRepuesto.fecha.desc()).all()
         
         gasto_mants = sum(float(o.costo_mantencion_clp or 0) for o in mants_prev + mants_corr)
@@ -329,19 +361,11 @@ def imprimir_registro(codigo):
         gasto_compras_str = format_clp(gasto_compras)
         gasto_total_str = format_clp(gasto_total)
 
-        equipos_similares = Equipo.query.filter(
-            Equipo.tipo_equipo == equipo.tipo_equipo,
-            Equipo.marca == equipo.marca,
-            Equipo.codigo != equipo.codigo
-        ).all()
-        
+        equipos_similares = Equipo.query.filter(Equipo.tipo_equipo == equipo.tipo_equipo, Equipo.marca == equipo.marca, Equipo.codigo != equipo.codigo).all()
         codigos_similares = [e.codigo for e in equipos_similares]
         averias_similares = []
         if codigos_similares:
-            averias_similares = OrdenTrabajo.query.filter(
-                OrdenTrabajo.codigo_equipo.in_(codigos_similares),
-                OrdenTrabajo.tipo_ot == 'Correctiva'
-            ).order_by(OrdenTrabajo.fecha.desc()).limit(15).all()
+            averias_similares = OrdenTrabajo.query.filter(OrdenTrabajo.codigo_equipo.in_(codigos_similares), OrdenTrabajo.tipo_ot == 'Correctiva').order_by(OrdenTrabajo.fecha.desc()).limit(15).all()
 
         return render_template('imprimir_registro.html', 
                                equipo=equipo, 
@@ -356,9 +380,6 @@ def imprimir_registro(codigo):
     except Exception as e:
         return f"Error al generar el historial clínico: {str(e)}"
 
-# =========================================================
-# RUTAS DE ACCIÓN RÁPIDA DE BODEGA (BLINDADAS ANTICHOQUE)
-# =========================================================
 @dashboard_bp.route('/api/bodega_movimiento', methods=['POST'])
 @login_required
 def bodega_movimiento():
@@ -366,7 +387,6 @@ def bodega_movimiento():
         tipo = request.form.get('tipo_movimiento')
         codigo_eq = request.form.get('codigo_equipo')
         if not codigo_eq: return redirect('/bodega_kpi?tab=kits')
-        
         codigo_eq = codigo_eq.upper().strip()
         
         if tipo == 'INGRESO':
@@ -375,7 +395,6 @@ def bodega_movimiento():
         elif tipo == 'SALIDA':
             nueva_ot = OrdenTrabajo(codigo_equipo=codigo_eq, fecha=datetime.now(), fecha_cierre=datetime.now(), estado='Finalizada', tipo_ot='Preventiva', tipo_mantencion="Retiro Manual Kit Bodega")
             db.session.add(nueva_ot)
-            
         db.session.commit()
         return redirect('/bodega_kpi?tab=kits')
     except Exception as e:
@@ -399,30 +418,18 @@ def bodega_suelta_mov():
         if item:
             try: actual = int(float(item.cantidad))
             except: actual = 0
-            
             nueva_cant = actual + cantidad if accion == 'INGRESO' else max(0, actual - cantidad)
             item.cantidad = int(nueva_cant)
         else:
             if accion == 'INGRESO':
-                nuevo = InventarioBodega(
-                    codigo_item=codigo, 
-                    nombre=f"FILTRO/REPUESTO {codigo}", 
-                    categoria="Filtros Sueltos", 
-                    cantidad=int(cantidad),
-                    ubicacion="BODEGA CENTRAL"
-                )
+                nuevo = InventarioBodega(codigo_item=codigo, nombre=f"FILTRO/REPUESTO {codigo}", categoria="Filtros Sueltos", cantidad=int(cantidad), ubicacion="BODEGA CENTRAL")
                 db.session.add(nuevo)
-                
         db.session.commit()
         return redirect('/bodega_kpi?tab=sueltos')
-        
     except Exception as e:
         db.session.rollback()
         return f"<div style='padding: 50px; font-family: sans-serif; color: red;'><h2>Error de Base de Datos (Bodega Suelta):</h2><p>Por favor, copia este error y envíaselo al desarrollador:</p><p style='padding:15px; background:#fee2e2; border-left:4px solid red; font-family:monospace;'><b>{str(e)}</b></p><br><a href='/bodega_kpi?tab=sueltos' style='padding: 10px; background: #1E3A8A; color: white; text-decoration: none; border-radius: 5px;'>Volver al Sistema</a></div>"
 
-# =========================================================
-# MÓDULO BODEGA: KARDEX ACORDEÓN Y FILTROS SUELTOS
-# =========================================================
 @dashboard_bp.route('/bodega_kpi', strict_slashes=False)
 @login_required
 def bodega_kpi():
@@ -432,7 +439,6 @@ def bodega_kpi():
         compras_db = CompraRepuesto.query.all()
         eqs_db = Equipo.query.all()
         
-        # 1. KPIs TALLER (KITS)
         tiempos_respuesta = []
         ots_abandonadas = []
         for ot in ots_db:
@@ -445,7 +451,6 @@ def bodega_kpi():
         ots_abandonadas.sort(key=lambda x: x['dias'], reverse=True)
         mttr_dias = round(sum(tiempos_respuesta) / max(1, len(tiempos_respuesta)), 1) if tiempos_respuesta else 0
 
-        # 2. MOTOR DE KARDEX (KITS)
         inventario_por_equipo = {}
         eventos_por_equipo = {}
         for c in compras_db:
@@ -484,12 +489,10 @@ def bodega_kpi():
 
         from utils.formatters import format_clp
         valor_bodega_str = format_clp(valor_total_bodega)
-
         con_stock = {k: v for k, v in inventario_por_equipo.items() if v['stock'] >= 2}
         bajo_stock = {k: v for k, v in inventario_por_equipo.items() if v['stock'] == 1}
         sin_stock = {k: v for k, v in inventario_por_equipo.items() if v['stock'] <= 0}
 
-        # 3. BASE DE DATOS FILTROS SUELTOS
         bodega_suelta_db = InventarioBodega.query.order_by(InventarioBodega.codigo_item).all()
         stock_suelto = {}
         for b in bodega_suelta_db:
@@ -509,11 +512,6 @@ def bodega_kpi():
             except: c = 1
             maestro_filtros[eq].append({'sistema': f.sistema, 'cant': c, 'marcas': marcas})
 
-        return render_template('bodega_kpi.html', 
-                               mttr_dias=mttr_dias, abandonadas=ots_abandonadas, 
-                               inventario=inventario_por_equipo, valor_bodega_str=valor_bodega_str, 
-                               con_stock=con_stock, bajo_stock=bajo_stock, sin_stock=sin_stock, 
-                               bodega_sueltos=bodega_suelta_db, stock_suelto=stock_suelto, 
-                               maestro_filtros=maestro_filtros, eqs_db=eqs_db, hoy=hoy)
+        return render_template('bodega_kpi.html', mttr_dias=mttr_dias, abandonadas=ots_abandonadas, inventario=inventario_por_equipo, valor_bodega_str=valor_bodega_str, con_stock=con_stock, bajo_stock=bajo_stock, sin_stock=sin_stock, bodega_sueltos=bodega_suelta_db, stock_suelto=stock_suelto, maestro_filtros=maestro_filtros, eqs_db=eqs_db, hoy=hoy)
     except Exception as e:
         return f"Error crítico en Módulo Bodega: {str(e)}"
