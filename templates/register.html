@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP DEMOTRON - Gestión de Usuarios</title>
+    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="flex h-screen bg-[#F8FAFC] font-['Inter'] overflow-hidden text-slate-800">
+    
+    <!-- MENU LATERAL BÁSICO -->
+    <aside class="w-64 bg-[#0F172A] border-r border-slate-800 flex flex-col shrink-0">
+        <div class="h-20 flex items-center px-6 border-b border-slate-800">
+            <span class='text-lg font-semibold text-white tracking-wide'>DEMOTRON ERP</span>
+        </div>
+        <nav class="flex-1 py-6 overflow-y-auto hide-scrollbar space-y-1">
+            <a href="/" class="block px-6 py-3 text-slate-400 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium">← Volver al Dashboard</a>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-screen overflow-y-auto">
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center px-8 shadow-sm shrink-0">
+            <h1 class="text-xl font-medium text-slate-800 tracking-wide">👥 Gestión de Usuarios y Permisos</h1>
+        </header>
+        
+        <div class="p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- FORMULARIO NUEVO USUARIO -->
+            <div class="lg:col-span-1 bg-white border border-slate-200 rounded-lg shadow-sm p-6 h-fit">
+                <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-6 border-b pb-2">Crear Nuevo Usuario</h2>
+                <form action="/register" method="POST" class="space-y-4">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-500 mb-1">Nombre de Usuario</label>
+                        <input type="text" name="username" class="w-full border border-slate-300 rounded p-2 text-sm focus:border-[#1E3A8A] outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-500 mb-1">Contraseña Segura</label>
+                        <input type="password" name="password" class="w-full border border-slate-300 rounded p-2 text-sm focus:border-[#1E3A8A] outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-500 mb-1">Rol / Atributo en Sistema</label>
+                        <select name="rol" class="w-full border border-slate-300 rounded p-2 text-sm focus:border-[#1E3A8A] outline-none" required>
+                            <option value="Administrador">Administrador Total</option>
+                            <option value="Mecánico">Mecánico de Taller</option>
+                            <option value="Operador">Operador de Flota</option>
+                            <option value="Consulta">Solo Lectura / Consulta</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full bg-[#1E3A8A] hover:bg-blue-800 text-white font-medium py-2 rounded transition-colors text-sm mt-4">Registrar Usuario</button>
+                </form>
+            </div>
+            
+            <!-- TABLA DE USUARIOS -->
+            <div class="lg:col-span-2 bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden flex flex-col h-[70vh]">
+                <div class="p-4 border-b border-slate-100 bg-slate-50">
+                    <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider">Usuarios Activos</h3>
+                </div>
+                <div class="overflow-y-auto flex-1 hide-scrollbar">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-slate-50 sticky top-0 border-b border-slate-200">
+                            <tr>
+                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase">ID</th>
+                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase">Usuario</th>
+                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase">Atributo</th>
+                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase text-right">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in usuarios %}
+                            <tr class="border-b border-slate-50 hover:bg-slate-50">
+                                <td class="px-6 py-4 text-slate-500">{{ u.id }}</td>
+                                <td class="px-6 py-4 font-bold text-[#1E3A8A]">{{ u.username }}</td>
+                                <td class="px-6 py-4"><span class="bg-blue-100 text-blue-900 border border-blue-200 text-[10px] font-bold px-2 py-1 rounded uppercase">{{ u.rol|default('Usuario', true) }}</span></td>
+                                <td class="px-6 py-4 text-right">
+                                    <form action="/delete_user/{{ u.id }}" method="POST" onsubmit="return confirm('ATENCIÓN: ¿Eliminar este usuario definitivamente del ERP?');">
+                                        <button type="submit" class="text-xs text-red-500 hover:text-red-700 font-bold border border-red-200 bg-red-50 px-3 py-1 rounded">Eliminar</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="px-6 py-8 text-center text-slate-400 text-xs">No se encontraron usuarios en la base de datos.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
