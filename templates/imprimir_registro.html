@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Historial Clínico - {{ equipo.codigo }}</title>
+    <title>Historial de Equipo - {{ equipo.codigo }}</title>
     <style>
         body { 
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
@@ -81,12 +81,12 @@
     <!-- ZONA INTERACTIVA -->
     <div class="no-print">
         <p style="margin-top: 0; margin-bottom: 10px; color: #64748B; font-size: 13px;">Vista previa del Historial. Verifique los costos y averías antes de exportar.</p>
-        <button onclick="window.print()" class="btn-print">🖨️ Imprimir Historial de Equipo</button>
+        <button onclick="window.print()" class="btn-print">Imprimir Historial de Equipo</button>
     </div>
 
     <!-- CABECERA -->
     <div class="header">
-        <h1>HISTORIAL CLÍNICO DE MANTENIMIENTO</h1>
+        <h1>HISTORIAL DEL EQUIPO</h1>
         <p>Documento Oficial generado el {{ hoy.strftime('%d/%m/%Y a las %H:%M hrs') }}</p>
     </div>
 
@@ -125,7 +125,7 @@
     </div>
 
     <!-- COMPRAS ASOCIADAS AL EQUIPO -->
-    <div class="section-title">📦 Historial de Compras y Repuestos Directos</div>
+    <div class="section-title">Historial de Compras y Repuestos Directos</div>
     <table class="data-table">
         <thead>
             <tr>
@@ -150,14 +150,14 @@
     </table>
 
     <!-- MANTENCIONES PREVENTIVAS -->
-    <div class="section-title">🛠️ Registro de Mantenciones Preventivas</div>
+    <div class="section-title">Registro de Mantenciones Preventivas</div>
     <table class="data-table">
         <thead>
             <tr>
                 <th style="width: 12%;">Fecha / OT</th>
-                <th style="width: 40%;">Pauta Aplicada</th>
-                <th style="width: 33%;">Taller / Mecánico Ejecutor</th>
-                <th style="width: 15%; text-align: right;">Costo Mano Obra</th>
+                <th style="width: 45%;">Pauta Aplicada</th>
+                <th style="width: 25%;">Mecánico Ejecutor</th>
+                <th style="width: 18%; text-align: right;">Valor de la Mantención</th>
             </tr>
         </thead>
         <tbody>
@@ -165,8 +165,8 @@
             <tr>
                 <td>{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }} <br><span style="color:#64748B; font-size: 9px;">{{ m.folio }}</span></td>
                 <td>{{ m.tipo_mantencion }}</td>
-                <td><strong style="color: #1E3A8A;">{{ m.mecanico or 'Taller Interno' }}</strong></td>
-                <td style="text-align: right;">{{ "$ {:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
+                <td>{{ m.mecanico or 'No Especificado' }}</td>
+                <td style="text-align: right; font-weight: bold;">{{ "$ {:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
             </tr>
             {% else %}
             <tr><td colspan="4" style="text-align: center; color: #94A3B8;">Sin mantenimientos preventivos registrados.</td></tr>
@@ -175,14 +175,14 @@
     </table>
 
     <!-- AVERÍAS / CORRECTIVAS SIMPLIFICADAS -->
-    <div class="section-title">🚨 Averías y Correctivas (Simplificado)</div>
+    <div class="section-title">Mantenciones Correctivas</div>
     <table class="data-table">
         <thead>
             <tr>
                 <th style="width: 12%;">Fecha / OT</th>
-                <th style="width: 40%;">Falla / Detalle de Avería</th>
-                <th style="width: 33%;">Taller / Lugar de Reparación</th>
-                <th style="width: 15%; text-align: right;">Costo Reparación</th>
+                <th style="width: 45%;">Falla / Detalle de Avería</th>
+                <th style="width: 25%;">Mecánico Ejecutor</th>
+                <th style="width: 18%; text-align: right;">Valor de la Mantención</th>
             </tr>
         </thead>
         <tbody>
@@ -195,8 +195,8 @@
                     <br><span style="color: #475569; font-size: 9px;">{{ m.causa_raiz or m.observacion }}</span>
                     {% endif %}
                 </td>
-                <td><strong style="color: #1E3A8A;">{{ m.mecanico or 'No Especificado' }}</strong></td>
-                <td style="text-align: right;">{{ "$ {:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
+                <td>{{ m.mecanico or 'No Especificado' }}</td>
+                <td style="text-align: right; font-weight: bold;">{{ "$ {:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
             </tr>
             {% else %}
             <tr><td colspan="4" style="text-align: center; color: #94A3B8;">El equipo no presenta fallas o correctivas en el sistema.</td></tr>
@@ -207,7 +207,7 @@
     <!-- INTELIGENCIA PREDICTIVA: AVERÍAS EN GEMELOS -->
     {% if averias_similares %}
     <div class="alert-box">
-        <div class="alert-title">🔍 Mantenimiento Predictivo: Alertas en Flota Gemela</div>
+        <div class="alert-title">Mantenimiento Predictivo: Alertas en Flota Gemela</div>
         <p style="font-size: 10px; margin: 0 0 8px 0; color: #7F1D1D;">El sistema detectó las siguientes averías en equipos de la misma marca y tipo. Considere inspeccionar estos sistemas en el equipo actual para prevenir detenciones:</p>
         <table class="data-table" style="margin-bottom: 0; background-color: white;">
             <thead>
@@ -232,7 +232,7 @@
 
     <!-- FIRMA OFICIAL DE DEMOTRON -->
     <div class="footer">
-        Generado por Demotron Maquinarias | Uso Exclusivo Interno de Mantenimiento | Manuel Ortiz Ortiz
+        Generado por Demotron Maquinarias | Uso Exclusivo Interno de Mantenimiento y Taller | Manuel Ortiz Ortiz
     </div>
 
 </body>
