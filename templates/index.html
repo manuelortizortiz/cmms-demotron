@@ -35,8 +35,6 @@
         .form-input:focus { border-color: #3B82F6; }
         .btn-primary { background-color: #1E3A8A; color: white; padding: 10px 24px; border-radius: 6px; font-weight: 500; cursor: pointer; border:none; font-size: 13px; transition: background 0.2s; }
         .btn-primary:hover { background-color: #1D4ED8; }
-        .btn-action { font-size: 11px; font-weight: 500; padding: 6px 12px; border-radius: 4px; border: 1px solid #CBD5E1; transition: all 0.2s; margin-right: 8px; display:inline-block; color: #475569; text-decoration: none; cursor: pointer; background: white;}
-        .btn-action:hover { background-color: #F1F5F9; color: #0F172A; }
         
         .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
@@ -94,7 +92,7 @@
             </div>
             
             <div class="relative w-full max-w-[280px] md:max-w-sm ml-4">
-                <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="🔍 Buscar equipo, patente..." 
+                <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="🔍 Buscar equipo, patente, mecánico..." 
                        class="w-full bg-white border-2 border-slate-300 shadow-md rounded-lg px-4 py-2 font-medium text-slate-800 placeholder-slate-500 focus:border-[#1E3A8A] focus:ring-2 focus:ring-[#1E3A8A] transition-all">
             </div>
         </header>
@@ -348,11 +346,10 @@
                 </div>
             </div>
 
-            <!-- ¡AQUÍ ESTÁN LOS BOTONES DE ELIMINAR CORREGIDOS! -->
             <div id="ot" class="seccion">
                 <div class="card-custom-nopad table-wrapper h-[80vh]">
                     <table class="table-custom table-searchable">
-                        <thead class="sticky top-0 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Intervención</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Doc</th></tr></thead>
+                        <thead class="sticky top-0 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Intervención</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead>
                         <tbody>{% for m in mants_prev %}<tr>
                             <td class="text-slate-500">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</td>
                             <td class="font-bold text-[#0F172A]">{{ m.codigo_equipo }}</td>
@@ -362,8 +359,9 @@
                             <td>{{ m.costo_str }}</td>
                             <td>{{ m.estado }}</td>
                             <td class="text-right whitespace-nowrap">
-                                <a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action">Ver PDF</a>
-                                <button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-[11px] text-red-500 hover:text-red-700 font-bold ml-2 border border-red-200 bg-red-50 px-2 py-1 rounded">Borrar</button>
+                                <a href="/imprimir_ot/{{m.id}}" target="_blank" class="text-[11px] font-semibold px-2 py-1 rounded border transition-all mr-1 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">PDF</a>
+                                <button onclick="abrirEditModal('ot', '{{m.id}}', 'Editar Preventiva', [{db: 'mecanico', label: 'Mecánico / Taller', val: '{{m.mecanico}}'}, {db: 'tipo_mantencion', label: 'Pauta Aplicada', val: '{{m.tipo_mantencion}}'}, {db: 'costo_mantencion_clp', label: 'Costo CLP', val: '{{m.costo_mantencion_clp}}'}])" class="text-[11px] font-semibold px-2 py-1 rounded border transition-all mr-1 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100">Editar</button>
+                                <button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-[11px] font-semibold px-2 py-1 rounded border transition-all bg-red-50 text-red-700 border-red-200 hover:bg-red-100">Borrar</button>
                             </td>
                         </tr>{% endfor %}</tbody>
                     </table>
@@ -373,7 +371,7 @@
             <div id="ot_corr" class="seccion">
                 <div class="card-custom-nopad table-wrapper h-[80vh]">
                     <table class="table-custom table-searchable">
-                        <thead class="sticky top-0 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Sistema</th><th>Causa Raíz</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Doc</th></tr></thead>
+                        <thead class="sticky top-0 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Sistema</th><th>Causa Raíz</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Acciones</th></tr></thead>
                         <tbody>{% for m in mants_corr %}<tr>
                             <td class="text-slate-500">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</td>
                             <td class="font-bold text-[#0F172A]">{{ m.codigo_equipo }}</td>
@@ -384,8 +382,9 @@
                             <td>{{ m.costo_str }}</td>
                             <td>{{ m.estado }}</td>
                             <td class="text-right whitespace-nowrap">
-                                <a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action">Ver PDF</a>
-                                <button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-[11px] text-red-500 hover:text-red-700 font-bold ml-2 border border-red-200 bg-red-50 px-2 py-1 rounded">Borrar</button>
+                                <a href="/imprimir_ot/{{m.id}}" target="_blank" class="text-[11px] font-semibold px-2 py-1 rounded border transition-all mr-1 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">PDF</a>
+                                <button onclick="abrirEditModal('ot', '{{m.id}}', 'Editar Correctiva', [{db: 'mecanico', label: 'Mecánico / Taller', val: '{{m.mecanico}}'}, {db: 'sistema_falla', label: 'Sistema Afectado', val: '{{m.sistema_falla}}'}, {db: 'causa_raiz', label: 'Causa Raíz / Detalle', val: '{{m.causa_raiz}}'}, {db: 'costo_mantencion_clp', label: 'Costo CLP', val: '{{m.costo_mantencion_clp}}'}])" class="text-[11px] font-semibold px-2 py-1 rounded border transition-all mr-1 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100">Editar</button>
+                                <button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-[11px] font-semibold px-2 py-1 rounded border transition-all bg-red-50 text-red-700 border-red-200 hover:bg-red-100">Borrar</button>
                             </td>
                         </tr>{% endfor %}</tbody>
                     </table>
@@ -484,30 +483,80 @@
     </div>
 
     <script>
+        // Funciones del Menú
         function toggleMenu() {
             const sidebar = document.getElementById('sidebar'); const backdrop = document.getElementById('sidebar-backdrop');
             if (sidebar.classList.contains('-translate-x-full')) { sidebar.classList.remove('-translate-x-full'); backdrop.classList.remove('hidden'); } 
             else { sidebar.classList.add('-translate-x-full'); backdrop.classList.add('hidden'); }
         }
 
+        // Sistema de Pestañas (Tabs)
         function switchTab(t, el) {
             document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active')); document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.getElementById(t).classList.add('active'); if(el) el.classList.add('active'); document.getElementById('title').innerText = el ? el.innerText.trim() : 'Dashboard';
+            
+            // Restablece el buscador al cambiar de pestaña
+            document.getElementById('buscador').value = '';
+            document.querySelectorAll('.table-searchable tbody tr').forEach(r => r.style.display = '');
+
             const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + t; window.history.replaceState({path:newUrl}, '', newUrl);
             if(window.innerWidth < 768) { document.getElementById('sidebar').classList.add('-translate-x-full'); document.getElementById('sidebar-backdrop').classList.add('hidden'); }
             if(t==='cal' && window.calendar) { setTimeout(() => window.calendar.render(), 200); }
         }
 
+        // 🚀 MEJORA 1: Buscador Ultra-Rápido (Anti-Congelamiento)
+        let searchTimeout;
         function filtrarTablas(q) { 
-            q = q.toLowerCase(); 
-            document.querySelector('.seccion.active').querySelectorAll('.table-searchable tbody tr').forEach(r => { 
-                r.style.display = r.innerText.toLowerCase().includes(q) || (r.querySelector('[data-search]') && r.querySelector('[data-search]').innerText.toLowerCase().includes(q)) ? '' : 'none'; 
-            }); 
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                q = q.toLowerCase(); 
+                const activeSec = document.querySelector('.seccion.active');
+                if(!activeSec) return;
+                
+                // Procesar la tabla activa
+                const tablas = activeSec.querySelectorAll('.table-searchable tbody');
+                tablas.forEach(tbody => {
+                    tbody.querySelectorAll('tr').forEach(r => { 
+                        const texto = r.innerText.toLowerCase();
+                        const extra = r.querySelector('[data-search]') ? r.querySelector('[data-search]').innerText.toLowerCase() : '';
+                        r.style.display = (texto.includes(q) || extra.includes(q)) ? '' : 'none'; 
+                    }); 
+                });
+            }, 300); // Espera 300 milisegundos después de soltar la tecla
         }
 
+        // 🚀 MEJORA 2: Borrado "Fantasma" (Sin recargar la página)
         function borrarRegistro(tabla, id) { 
+            const btn = window.event ? window.event.target : null; // Atrapa el botón que hizo clic
+            
             if(confirm('Aviso: ¿Confirma la eliminación permanente de este registro de la base de datos?')) {
-                fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' }).then(() => location.reload()); 
+                if (btn) {
+                    btn.innerText = 'Borrando...';
+                    btn.style.opacity = '0.5';
+                    btn.disabled = true;
+                }
+                
+                fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') {
+                        if (btn) {
+                            const fila = btn.closest('tr') || btn.closest('.bg-white.p-4'); // Fila de tabla o Tarjeta Kanban
+                            if (fila) {
+                                fila.style.transition = 'all 0.4s ease';
+                                fila.style.opacity = '0';
+                                fila.style.backgroundColor = '#fee2e2'; // Se pone rojo claro
+                                setTimeout(() => fila.remove(), 400); // Se esfuma sin recargar
+                                return; // Terminamos aquí, la página NUNCA se recarga
+                            }
+                        }
+                        location.reload(); // Solo recarga si no pudo hacer el truco visual
+                    } else {
+                        alert('No se pudo eliminar el registro.');
+                        if (btn) { btn.innerText = 'Borrar'; btn.style.opacity = '1'; btn.disabled = false; }
+                    }
+                })
+                .catch(e => location.reload()); // Fallback
             }
         }
 
@@ -521,7 +570,8 @@
                 if (c.db === 'estado_base') {
                     html += `<select name="${c.db}" class="form-input"><option value="Operativo" ${c.val==='Operativo'?'selected':''}>Operativo</option><option value="Taller" ${c.val==='Taller'?'selected':''}>Taller</option><option value="Fuera de Servicio" ${c.val==='Fuera de Servicio'?'selected':''}>Fuera de Servicio</option></select></div>`;
                 } else {
-                    html += `<input type="text" name="${c.db}" value="${c.val}" class="form-input uppercase"></div>`;
+                    let valLimpio = c.val !== 'None' ? c.val : '';
+                    html += `<input type="text" name="${c.db}" value="${valLimpio}" class="form-input uppercase"></div>`;
                 }
             });
             document.getElementById('edit-fields').innerHTML = html;
