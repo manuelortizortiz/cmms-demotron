@@ -24,10 +24,8 @@
         .card-custom { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0; padding: 24px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04); }
         .card-custom-nopad { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04); overflow: hidden; }
         
-        /* SOLUCIÓN CELULARES Y COLUMNAS AJUSTADAS */
         .table-wrapper { width: 100%; overflow-x: auto; overflow-y: auto; -webkit-overflow-scrolling: touch; }
         .table-custom { width: 100%; border-collapse: collapse; min-width: 1000px; } 
-        /* Padding reducido para que quepan más datos en pantalla */
         .table-custom th, .table-custom td { padding: 12px 16px; border-bottom: 1px solid #F1F5F9; white-space: nowrap; } 
         .table-custom th { font-size: 11px; color: #475569; text-align: left; font-weight: 600; text-transform: uppercase; background: #FFFFFF; }
         .table-custom td { color: #1E293B; font-size: 13px; font-weight: 400; }
@@ -80,7 +78,6 @@
             <a onclick="switchTab('reportes', this)" class="nav-link">Descargas y PDF</a>
             <a onclick="switchTab('powerbi', this)" class="nav-link">Enlace Power BI</a>
             
-            <!-- BOTONES DE SEGURIDAD Y ADMINISTRACIÓN RESTAURADOS -->
             <a href="/auditoria" class="nav-link">🛡️ Auditoría de Sistema</a>
             <a href="/register" class="nav-link">👥 Creación de Usuarios</a>
         </nav>
@@ -90,7 +87,6 @@
     </aside>
 
     <main class="flex-1 flex flex-col min-w-0 w-full">
-        <!-- BUSCADOR REPOTENCIADO Y DE ALTO CONTRASTE -->
         <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-10 shadow-sm">
             <div class="flex items-center gap-4">
                 <button onclick="toggleMenu()" class="md:hidden text-slate-800 text-2xl focus:outline-none">≡</button>
@@ -217,9 +213,6 @@
                 </div>
             </div>
 
-            <!-- ============================================================== -->
-            <!-- 2. EQUIPOS REGISTRADOS (COLUMNAS CONTROLADAS) -->
-            <!-- ============================================================== -->
             <div id="eq" class="seccion">
                 <div class="card-custom-nopad table-wrapper h-[75vh]">
                     <table class="table-custom table-searchable">
@@ -355,14 +348,23 @@
                 </div>
             </div>
 
+            <!-- ¡AQUÍ ESTÁN LOS BOTONES DE ELIMINAR CORREGIDOS! -->
             <div id="ot" class="seccion">
                 <div class="card-custom-nopad table-wrapper h-[80vh]">
                     <table class="table-custom table-searchable">
                         <thead class="sticky top-0 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Intervención</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Doc</th></tr></thead>
                         <tbody>{% for m in mants_prev %}<tr>
-                            <td class="text-slate-500">{{ m.fecha }}<br><span class="text-[10px]">{{ m.ot_generada }}</span></td>
-                            <td class="font-bold text-[#0F172A]">{{ m.codigo }}</td><td class="whitespace-normal min-w-[150px]">{{ m.tipo_mantencion }}</td><td>{{ m.mecanico }}</td><td>{{ m.lectura_str }}</td><td>{{ m.costo_str }}</td><td>{{ m.estado }}</td>
-                            <td class="text-right whitespace-nowrap"><a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action">Ver PDF</a></td>
+                            <td class="text-slate-500">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</td>
+                            <td class="font-bold text-[#0F172A]">{{ m.codigo_equipo }}</td>
+                            <td class="whitespace-normal min-w-[150px]">{{ m.tipo_mantencion }}</td>
+                            <td>{{ m.mecanico }}</td>
+                            <td>{{ m.lectura_str }}</td>
+                            <td>{{ m.costo_str }}</td>
+                            <td>{{ m.estado }}</td>
+                            <td class="text-right whitespace-nowrap">
+                                <a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action">Ver PDF</a>
+                                <button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-[11px] text-red-500 hover:text-red-700 font-bold ml-2 border border-red-200 bg-red-50 px-2 py-1 rounded">Borrar</button>
+                            </td>
                         </tr>{% endfor %}</tbody>
                     </table>
                 </div>
@@ -373,9 +375,18 @@
                     <table class="table-custom table-searchable">
                         <thead class="sticky top-0 shadow-sm z-10"><tr><th>Fecha / Folio</th><th>Equipo</th><th>Sistema</th><th>Causa Raíz</th><th>Mecánico</th><th>Odo/Hor.</th><th>Costo</th><th>Estado</th><th class="text-right">Doc</th></tr></thead>
                         <tbody>{% for m in mants_corr %}<tr>
-                            <td class="text-slate-500">{{ m.fecha }}<br><span class="text-[10px]">{{ m.ot_generada }}</span></td>
-                            <td class="font-bold text-[#0F172A]">{{ m.codigo }}</td><td class="whitespace-normal min-w-[120px]">{{ m.sistema_falla }}</td><td class="whitespace-normal min-w-[120px]">{{ m.causa_raiz }}</td><td>{{ m.mecanico }}</td><td>{{ m.lectura_str }}</td><td>{{ m.costo_str }}</td><td>{{ m.estado }}</td>
-                            <td class="text-right whitespace-nowrap"><a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action">Ver PDF</a></td>
+                            <td class="text-slate-500">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</td>
+                            <td class="font-bold text-[#0F172A]">{{ m.codigo_equipo }}</td>
+                            <td class="whitespace-normal min-w-[120px]">{{ m.sistema_falla }}</td>
+                            <td class="whitespace-normal min-w-[120px]">{{ m.causa_raiz }}</td>
+                            <td>{{ m.mecanico }}</td>
+                            <td>{{ m.lectura_str }}</td>
+                            <td>{{ m.costo_str }}</td>
+                            <td>{{ m.estado }}</td>
+                            <td class="text-right whitespace-nowrap">
+                                <a href="/imprimir_ot/{{m.id}}" target="_blank" class="btn-action">Ver PDF</a>
+                                <button onclick="borrarRegistro('ot', '{{m.id}}')" class="text-[11px] text-red-500 hover:text-red-700 font-bold ml-2 border border-red-200 bg-red-50 px-2 py-1 rounded">Borrar</button>
+                            </td>
                         </tr>{% endfor %}</tbody>
                     </table>
                 </div>
