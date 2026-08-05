@@ -315,28 +315,30 @@ def imprimir_registro(codigo):
         mants_corr = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Correctiva').order_by(OrdenTrabajo.fecha.desc()).all()
         
         # MAGIA ANTI-ERRORES DE IMPORTACIÓN EXCEL
-        # Limpia, busca y consolida datos ocultos en columnas mal mapeadas
         for m in mants_prev + mants_corr:
             fol = getattr(m, 'folio', '')
             m.display_folio = str(fol) if str(fol).strip() not in ['None', 'nan', ''] else ''
 
         for m in mants_prev:
-            mec = getattr(m, 'mecanico', None) or getattr(m, 'proveedor', None) or 'Taller Interno'
-            m.display_mecanico = mec if str(mec).strip() not in ['None', '', 'nan'] else 'Taller Interno'
+            # Ahora busca rigurosamente en Proveedor, Mecanico o Lugar
+            mec = getattr(m, 'proveedor', None) or getattr(m, 'mecanico', None) or getattr(m, 'lugar', None)
+            m.display_mecanico = str(mec).strip() if mec and str(mec).strip() not in ['None', '', 'nan'] else 'Sin Asignar'
             
             p_vals = [getattr(m, 'tipo_mantencion', None), getattr(m, 'observacion', None), getattr(m, 'descripcion', None)]
             p_textos = [str(x).strip() for x in p_vals if x and str(x).strip() not in ['None', '', 'nan']]
             m.display_falla = " | ".join(p_textos) if p_textos else 'Mantenimiento Preventivo'
 
         for m in mants_corr:
-            mec = getattr(m, 'mecanico', None) or getattr(m, 'proveedor', None) or 'No Especificado'
-            m.display_mecanico = mec if str(mec).strip() not in ['None', '', 'nan'] else 'No Especificado'
+            # Captura a Kaufmann o al mecánico
+            mec = getattr(m, 'proveedor', None) or getattr(m, 'mecanico', None) or getattr(m, 'lugar', None)
+            m.display_mecanico = str(mec).strip() if mec and str(mec).strip() not in ['None', '', 'nan'] else 'Sin Asignar'
             
+            # Busca exhaustivamente la columna de Fallas (incluso si tiene espacios extraños o guiones)
             f_vals = [
-                getattr(m, 'sistema_falla', None), getattr(m, 'tipo_mantencion', None),
-                getattr(m, 'causa_raiz', None), getattr(m, 'observacion', None),
-                getattr(m, 'descripcion', None), getattr(m, 'falla', None), getattr(m, 'averia', None),
-                getattr(m, 'detalle', None)
+                getattr(m, 'falla_averia', None), getattr(m, 'falla_avería', None), getattr(m, 'falla', None), 
+                getattr(m, 'averia', None), getattr(m, 'avería', None), getattr(m, 'sistema_falla', None), 
+                getattr(m, 'tipo_mantencion', None), getattr(m, 'causa_raiz', None), getattr(m, 'observacion', None),
+                getattr(m, 'descripcion', None), getattr(m, 'detalle', None)
             ]
             f_textos = [str(x).strip() for x in f_vals if x and str(x).strip() not in ['None', '', 'nan']]
             
@@ -446,7 +448,7 @@ def bodega_kpi():
                 dias = (ot.fecha_cierre - ot.fecha).days
                 if dias >= 0: tiempos_respuesta.append(dias)
             elif ot.estado != 'Finalizada' and ot.fecha:
-                dias_retraso = (hoy - ot.fecha).days
+                dias_retraso = (hoy - intern(ot.fecha)).days
                 if dias_retraso > 20: ots_abandonadas.append({'ot': ot, 'dias': dias_retraso})
         ots_abandonadas.sort(key=lambda x: x['dias'], reverse=True)
         mttr_dias = round(sum(tiempos_respuesta) / max(1, len(tiempos_respuesta)), 1) if tiempos_respuesta else 0
