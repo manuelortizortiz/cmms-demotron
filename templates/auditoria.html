@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP DEMOTRON - Auditoría</title>
+    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>.hide-scrollbar::-webkit-scrollbar { display: none; }</style>
+</head>
+<body class="flex h-screen bg-[#F8FAFC] font-['Inter'] overflow-hidden text-slate-800">
+    
+    <!-- MENU LATERAL BÁSICO -->
+    <aside class="w-64 bg-[#0F172A] border-r border-slate-800 flex flex-col shrink-0">
+        <div class="h-20 flex items-center px-6 border-b border-slate-800">
+            <span class='text-lg font-semibold text-white tracking-wide'>DEMOTRON ERP</span>
+        </div>
+        <nav class="flex-1 py-6 overflow-y-auto hide-scrollbar space-y-1">
+            <a href="/" class="block px-6 py-3 text-slate-400 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium">← Volver al Dashboard</a>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-screen overflow-hidden">
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm shrink-0">
+            <h1 class="text-xl font-medium text-slate-800 tracking-wide">🛡️ Auditoría y Log de Actividades</h1>
+        </header>
+        
+        <div class="p-8 flex-1 overflow-hidden flex flex-col">
+            <div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden flex flex-col h-full">
+                <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider">Historial de Transacciones</h3>
+                    <input type="text" placeholder="🔍 Buscar usuario, acción o detalle..." class="border border-slate-300 rounded px-3 py-1.5 text-xs outline-none focus:border-[#1E3A8A] w-64" onkeyup="filtrarAuditoria(this.value)">
+                </div>
+                <div class="overflow-y-auto flex-1 hide-scrollbar">
+                    <table class="w-full text-left text-sm whitespace-nowrap" id="tabla-auditoria">
+                        <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 z-10">
+                            <tr>
+                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase">Fecha y Hora</th>
+                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase">Usuario Modificador</th>
+                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase">Tipo de Acción</th>
+                                <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase">Detalles del Movimiento</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr class="border-b border-slate-50 hover:bg-slate-50">
+                                <td class="px-6 py-4 text-slate-500 font-mono text-[11px]">{{ log.fecha.strftime('%d/%m/%Y %H:%M:%S') if log.fecha else '-' }}</td>
+                                <td class="px-6 py-4 font-bold text-[#0F172A]">{{ log.usuario }}</td>
+                                <td class="px-6 py-4"><span class="bg-slate-100 border border-slate-200 px-2 py-1 rounded text-[10px] font-bold text-slate-700 uppercase">{{ log.accion }}</span></td>
+                                <td class="px-6 py-4 text-slate-600 whitespace-normal min-w-[300px] text-xs leading-snug">{{ log.detalles }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="px-6 py-8 text-center text-slate-400 text-xs">No hay registros de auditoría disponibles en la base de datos.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+        function filtrarAuditoria(q) {
+            q = q.toLowerCase();
+            document.querySelectorAll('#tabla-auditoria tbody tr').forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+            });
+        }
+    </script>
+</body>
+</html>
