@@ -106,32 +106,20 @@ def eliminar_usuario(id):
     except Exception: db.session.rollback()
     return redirect('/admin/usuarios')
 
-
 # =====================================================================
 # MOTOR DE IMPORTACIÓN MASIVA Y PURGA DE DUPLICADOS (PROTEGIDO POR TOKEN)
 # =====================================================================
 @admin_bp.route('/admin/cargar_sql_final', methods=['GET', 'POST'], strict_slashes=False)
 def cargar_sql_final():
-    # 1. BLOQUEO DE SEGURIDAD POR TOKEN ESTRICTO
     token_esperado = os.environ.get('ADMIN_TOKEN')
     token_recibido = request.args.get('token') or request.headers.get('X-Admin-Token')
-    
     if not token_esperado or token_recibido != token_esperado:
         return "ACCESO DENEGADO (403): Token de administración inválido o ausente.", 403
 
     reporte = {"equipos": 0, "lecturas": 0, "preventivas": 0, "correctivas": 0, "compras": 0, "filtros": 0, "mensajes": []}
-    estado_ubicaciones = "NO DETECTADO"
     
     try:
-        # PURGA DE CLONES FANTASMAS (Corrige el error de VD-90 y VD-100)
-        db.session.execute(text("""
-            DELETE FROM orden_trabajo 
-            WHERE id NOT IN (
-                SELECT MIN(id) 
-                FROM orden_trabajo 
-                GROUP BY codigo_equipo, tipo_ot, lectura
-            )
-        """))
+        db.session.execute(text("DELETE FROM orden_trabajo WHERE id NOT IN (SELECT MIN(id) FROM orden_trabajo GROUP BY codigo_equipo, tipo_ot, lectura)"))
         db.session.commit()
 
         try:
@@ -197,7 +185,7 @@ def cargar_sql_final():
                 reporte['lecturas'] += 1
         db.session.commit()
 
-        # --- PREVENTIVAS ---
+        # --- PREVENTIVAS (AQUÍ ESTABA EL ERROR DEL MECÁNICO EN DURO) ---
         df_man = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
         for idx, row in df_man.iterrows():
             cod = clean_string(str(row.get('Codigo', '') or '')).upper()
@@ -209,35 +197,58 @@ def cargar_sql_final():
             es_pm = clean_string(str(row.get('EsPM', 'No') or 'No')).lower()
             tipo_ot = 'Preventiva' if es_pm in ['sí','si','s','yes','1','true'] else 'Correctiva'
             lectura_val = safe_clean_int(row.get('Lectura'))
+            costo_val = safe_clean_float(row.get('Costo Mantencion CLP'))
+            
+            # MAGIA: Ahora lee la columna "Mecanico" o "Proveedor" del Excel y no lo fuerza a "Sin Asignar"
+            mecanico_val = clean_string(str(row.get('Mecanico', row.get('Proveedor', 'Sin Asignar'))))
+            if not mecanico_val or mecanico_val.lower() in ['nan', 'none', '']: mecanico_val = 'Sin Asignar'
 
             ot = OrdenTrabajo.query.filter_by(codigo_equipo=cod, tipo_ot=tipo_ot, lectura=lectura_val).first()
             if ot:
-                ot.tipo_mantencion, ot.costo_mantencion_clp = tipo, safe_clean_float(row.get('Costo Mantencion CLP'))
+                ot.tipo_mantencion, ot.costo_mantencion_clp = tipo, costo_val
+                ot.mecanico = mecanico_val
                 if fecha_dt: ot.fecha = fecha_dt
             else:
-                db.session.add(OrdenTrabajo(fecha=fecha_dt, codigo_equipo=cod, tipo_ot=tipo_ot, tipo_mantencion=tipo, lectura=lectura_val, folio=folio, costo_mantencion_clp=safe_clean_float(row.get('Costo Mantencion CLP')), estado='Finalizada', mecanico='Sin Asignar'))
+                db.session.add(OrdenTrabajo(fecha=fecha_dt, codigo_equipo=cod, tipo_ot=tipo_ot, tipo_mantencion=tipo, lectura=lectura_val, folio=folio, costo_mantencion_clp=costo_val, estado='Finalizada', mecanico=mecanico_val))
                 reporte['preventivas'] += 1
         db.session.commit()
 
-        # --- CORRECTIVAS ---
+        # --- CORRECTIVAS (AQUÍ ESTABA LA CEGUERA DE COLUMNAS) ---
         try:
             df_corr = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Correctivas", skiprows=2).replace({np.nan: None})
             for idx, row in df_corr.iterrows():
-                cod = clean_string(str(row.get('Codigo Equipo', '') or '')).upper()
+                cod = clean_string(str(row.get('Codigo Equipo', row.get('Codigo', '')) or '')).upper()
                 if not cod or cod.lower() in ['none', 'nan', '']: continue
                 fecha_dt = safe_parse_date(row.get('Fecha'))
-                falla = clean_string(str(row.get('Falla / Averia', '') or ''))  
-                lectura_val = safe_clean_int(row.iloc[4]) if len(row) > 4 else 0
                 
+                # MAGIA: Ahora busca la falla se llame como se llame en tu Excel
+                falla = clean_string(str(row.get('Causa Raiz', row.get('Falla / Averia', row.get('Falla', ''))) or ''))
+                
+                # MAGIA: Atrapa el costo
+                costo_val = safe_clean_float(row.get('Costo Mantencion CLP', row.get('Costo CLP', 0.0)))
+                
+                # MAGIA: Atrapa la lectura y al mecánico
+                lectura_val = safe_clean_int(row.get('Lectura', row.get('Lectura (Odo/Hor)', 0)))
+                if lectura_val == 0 and len(row) > 4:
+                    try: lectura_val = safe_clean_int(row.iloc[4])
+                    except: pass
+
+                mecanico_val = clean_string(str(row.get('Mecanico', row.get('Proveedor', 'Sin Asignar'))))
+                if not mecanico_val or mecanico_val.lower() in ['nan', 'none', '']: mecanico_val = 'Sin Asignar'
+
                 ot = OrdenTrabajo.query.filter_by(codigo_equipo=cod, tipo_ot='Correctiva', lectura=lectura_val).first()
                 if ot:
                     if fecha_dt: ot.fecha = fecha_dt
-                    ot.costo_mantencion_clp = safe_clean_float(row.get('Costo CLP', 0.0))
+                    ot.costo_mantencion_clp = costo_val
+                    ot.tipo_mantencion = falla
+                    ot.causa_raiz = falla
+                    ot.mecanico = mecanico_val
                 else:
-                    db.session.add(OrdenTrabajo(fecha=fecha_dt, codigo_equipo=cod, tipo_ot='Correctiva', tipo_mantencion=falla, lectura=lectura_val, costo_mantencion_clp=safe_clean_float(row.get('Costo CLP', 0.0)), estado='Finalizada', causa_raiz=falla))
+                    db.session.add(OrdenTrabajo(fecha=fecha_dt, codigo_equipo=cod, tipo_ot='Correctiva', tipo_mantencion=falla, lectura=lectura_val, costo_mantencion_clp=costo_val, estado='Finalizada', causa_raiz=falla, mecanico=mecanico_val))
                     reporte['correctivas'] += 1
             db.session.commit()
-        except: pass
+        except Exception as e: 
+            reporte['mensajes'].append(f"ADVERTENCIA EN CORRECTIVAS: {str(e)}")
 
         # --- COMPRAS PM ---
         try:
@@ -284,24 +295,6 @@ def cargar_sql_final():
                 db.session.commit()
             except Exception as e: reporte['mensajes'].append(f"ERROR FILTROS: {str(e)}")
 
-        # --- UBICACIONES ---
-        if archivo_ubicaciones:
-            try:
-                df_ubi = pd.read_excel(archivo_ubicaciones, engine='openpyxl') if archivo_ubicaciones.endswith('.xlsx') else pd.read_csv(archivo_ubicaciones)
-                df_ubi.columns = [str(c).strip().lower() for c in df_ubi.columns]
-                cod_col = next((c for c in df_ubi.columns if 'cod' in c or 'equipo' in c), None)
-                ubi_col = next((c for c in df_ubi.columns if 'ubic' in c or 'ciudad' in c or 'obra' in c), None)
-                if cod_col and ubi_col:
-                    for idx, row in df_ubi.iterrows():
-                        cod = str(row.get(cod_col, '')).strip().upper()
-                        ubi = clean_string(str(row.get(ubi_col, '')))
-                        if cod and ubi and ubi.lower() != 'none':
-                            eq = Equipo.query.filter_by(codigo=cod).first()
-                            if eq: eq.ubicacion = ubi
-                    db.session.commit()
-                    estado_ubicaciones = "ACTUALIZADO CON ÉXITO"
-            except Exception as e: estado_ubicaciones = f"ERROR: {str(e)}"
-
         # --- ACTUALIZAR MÁRGENES ---
         for eq in Equipo.query.all():
             u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
@@ -321,10 +314,9 @@ def cargar_sql_final():
             <h2 style="color: #16a34a; text-align: center; text-transform: uppercase; letter-spacing: 2px;">SISTEMA LIMPIADO Y ACTUALIZADO</h2>
             <ul style="list-style: none; padding: 0; font-size: 14px; color: #334155; text-transform: uppercase; font-weight: bold;">
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">EQUIPOS: <b style="float: right;">{reporte['equipos']}</b></li>
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">PREVENTIVAS: <b style="float: right;">{reporte['preventivas']}</b></li>
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">CORRECTIVAS (LIMPIAS): <b style="float: right;">{reporte['correctivas']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">PREVENTIVAS ACTUALIZADAS: <b style="float: right;">{reporte['preventivas']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">CORRECTIVAS ACTUALIZADAS: <b style="float: right;">{reporte['correctivas']}</b></li>
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">COMPRAS: <b style="float: right;">{reporte['compras']}</b></li>
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; background: #f0fdf4;">MAPAS / CERO LATENCIA: <span style="color: #16a34a; float: right;">ACTIVO</span></li>
             </ul>
             <div style='text-align: center; margin-top: 24px;'><a href='/' style='background: #1e293b; color: white; padding: 10px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; text-transform: uppercase;'>VOLVER AL DASHBOARD</a></div>
         </div>
