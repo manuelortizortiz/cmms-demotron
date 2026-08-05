@@ -32,14 +32,12 @@
         .data-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
         .data-table th, .data-table td { border: 1px solid #CBD5E1; padding: 6px 4px; text-align: left; font-size: 10px; }
         .data-table th { background-color: #1E3A8A; color: white; }
-        .alert-box { border-left: 4px solid #EF4444; background-color: #FEF2F2; padding: 10px; border-radius: 0 6px 6px 0; margin-top: 20px; }
-        .alert-title { color: #B91C1C; font-weight: bold; font-size: 11px; margin-bottom: 8px; text-transform: uppercase; }
         .footer { margin-top: 40px; border-top: 1px dashed #CBD5E1; padding-top: 15px; text-align: center; font-size: 9px; color: #64748B; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;}
         @media print {
             .no-print { display: none !important; }
             @page { margin: 1cm; size: portrait; }
             body { padding: 0; max-width: 100%; }
-            .info-box, .cost-box, .alert-box { -webkit-print-color-adjust: exact; }
+            .info-box, .cost-box { -webkit-print-color-adjust: exact; }
             .data-table th { background-color: #1E3A8A !important; color: white !important; -webkit-print-color-adjust: exact; }
         }
     </style>
@@ -88,7 +86,7 @@
         </div>
     </div>
 
-    <!-- ESPECIFICACIÓN DE FILTROS (NUEVO) -->
+    <!-- ESPECIFICACIÓN DE FILTROS -->
     <div class="section-title">1. Especificación de Filtros y Componentes</div>
     <table class="data-table">
         <thead>
@@ -252,31 +250,6 @@
             {% endfor %}
         </tbody>
     </table>
-
-    {% if averias_similares %}
-    <div class="alert-box">
-        <div class="alert-title">Mantenimiento Predictivo: Alertas en Flota Gemela</div>
-        <p style="font-size: 10px; margin: 0 0 8px 0; color: #7F1D1D;">El sistema detectó las siguientes averías en equipos de la misma marca y tipo. Considere inspeccionar estos sistemas en el equipo actual para prevenir detenciones:</p>
-        <table class="data-table" style="margin-bottom: 0; background-color: white;">
-            <thead>
-                <tr>
-                    <th style="width: 15%; background-color: #991B1B;">Equipo Gemelo</th>
-                    <th style="width: 20%; background-color: #991B1B;">Fecha Avería</th>
-                    <th style="width: 65%; background-color: #991B1B;">Falla Reportada / Causa</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for a in averias_similares %}
-                <tr>
-                    <td style="font-weight: bold;">{{ a.codigo_equipo }}</td>
-                    <td>{{ a.fecha.strftime('%d/%m/%Y') if a.fecha else '-' }}</td>
-                    <td><strong>{{ a.sistema_falla or a.tipo_mantencion }}:</strong> {{ a.causa_raiz or a.observacion }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% endif %}
 
     <div class="footer">
         Generado por Demotron Maquinarias | Uso Exclusivo Interno de Mantenimiento | Manuel Ortiz Ortiz
