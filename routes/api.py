@@ -48,13 +48,15 @@ def add_record():
             eq = Equipo.query.filter_by(codigo=codigo).first()
             tipo_ctrl = eq.control_base if eq else 'HORAS'
             
-            nueva_lec = HistorialLectura(codigo_equipo=codigo, tipo_equipo=eq.tipo_equipo if eq else 'S/I', horometro=valor if tipo_ctrl == 'HORAS' else None, kilometraje=valor if tipo_ctrl == 'KM' else None, responsable=responsable)
+            # MAGIA: Se eliminó el parámetro tipo_equipo que causaba el quiebre silencioso
+            nueva_lec = HistorialLectura(codigo_equipo=codigo, horometro=valor if tipo_ctrl == 'HORAS' else None, kilometraje=valor if tipo_ctrl == 'KM' else None, responsable=responsable)
             db.session.add(nueva_lec)
             if eq: eq.lectura_actual = valor
                 
         db.session.commit()
     except Exception as e:
         db.session.rollback()
+        print(f"Error al guardar: {str(e)}") # Esto dejará rastro en el servidor si ocurre otro error
         
     return redirect(referer)
 
