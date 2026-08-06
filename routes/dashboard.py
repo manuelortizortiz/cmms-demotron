@@ -303,85 +303,6 @@ def imprimir_ot(ot_id):
     except Exception as e:
         return f"Aviso del Sistema: No se pudo generar la vista del PDF corporativo ({str(e)})."
 
-@dashboard_bp.route('/api/imprimir_registro/<codigo>', strict_slashes=False)
-@login_required
-def imprimir_registro(codigo):
-    try:
-        equipo = Equipo.query.filter_by(codigo=codigo).first()
-        if not equipo:
-            return "Error: Equipo no encontrado en el sistema.", 404
-
-        mants_prev = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Preventiva').order_by(OrdenTrabajo.fecha.desc()).all()
-        mants_corr = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Correctiva').order_by(OrdenTrabajo.fecha.desc()).all()
-        
-        # MAGIA ANTI-ERRORES DE IMPORTACIÓN EXCEL
-        for m in mants_prev + mants_corr:
-            fol = getattr(m, 'folio', '')
-            m.display_folio = str(fol) if str(fol).strip() not in ['None', 'nan', ''] else ''
-
-        for m in mants_prev:
-            # Ahora busca rigurosamente en Proveedor, Mecanico o Lugar
-            mec = getattr(m, 'proveedor', None) or getattr(m, 'mecanico', None) or getattr(m, 'lugar', None)
-            m.display_mecanico = str(mec).strip() if mec and str(mec).strip() not in ['None', '', 'nan'] else 'Sin Asignar'
-            
-            p_vals = [getattr(m, 'tipo_mantencion', None), getattr(m, 'observacion', None), getattr(m, 'descripcion', None)]
-            p_textos = [str(x).strip() for x in p_vals if x and str(x).strip() not in ['None', '', 'nan']]
-            m.display_falla = " | ".join(p_textos) if p_textos else 'Mantenimiento Preventivo'
-
-        for m in mants_corr:
-            # Captura a Kaufmann o al mecánico
-            mec = getattr(m, 'proveedor', None) or getattr(m, 'mecanico', None) or getattr(m, 'lugar', None)
-            m.display_mecanico = str(mec).strip() if mec and str(mec).strip() not in ['None', '', 'nan'] else 'Sin Asignar'
-            
-            # Busca exhaustivamente la columna de Fallas (incluso si tiene espacios extraños o guiones)
-            f_vals = [
-                getattr(m, 'falla_averia', None), getattr(m, 'falla_avería', None), getattr(m, 'falla', None), 
-                getattr(m, 'averia', None), getattr(m, 'avería', None), getattr(m, 'sistema_falla', None), 
-                getattr(m, 'tipo_mantencion', None), getattr(m, 'causa_raiz', None), getattr(m, 'observacion', None),
-                getattr(m, 'descripcion', None), getattr(m, 'detalle', None)
-            ]
-            f_textos = [str(x).strip() for x in f_vals if x and str(x).strip() not in ['None', '', 'nan']]
-            
-            if len(f_textos) >= 2:
-                m.display_falla = f_textos[0]
-                m.display_detalle = " | ".join(list(dict.fromkeys(f_textos[1:])))
-            elif len(f_textos) == 1:
-                m.display_falla = f_textos[0]
-                m.display_detalle = ''
-            else:
-                m.display_falla = 'Sin descripción registrada'
-                m.display_detalle = ''
-
-        compras = CompraRepuesto.query.filter_by(codigo_equipo=codigo).order_by(CompraRepuesto.fecha.desc()).all()
-        
-        gasto_mants = sum(float(o.costo_mantencion_clp or 0) for o in mants_prev + mants_corr)
-        gasto_compras = sum(float(c.costo_pm_clp or 0) for c in compras)
-        gasto_total = gasto_mants + gasto_compras
-
-        from utils.formatters import format_clp
-        gasto_mants_str = format_clp(gasto_mants)
-        gasto_compras_str = format_clp(gasto_compras)
-        gasto_total_str = format_clp(gasto_total)
-
-        equipos_similares = Equipo.query.filter(Equipo.tipo_equipo == equipo.tipo_equipo, Equipo.marca == equipo.marca, Equipo.codigo != equipo.codigo).all()
-        codigos_similares = [e.codigo for e in equipos_similares]
-        averias_similares = []
-        if codigos_similares:
-            averias_similares = OrdenTrabajo.query.filter(OrdenTrabajo.codigo_equipo.in_(codigos_similares), OrdenTrabajo.tipo_ot == 'Correctiva').order_by(OrdenTrabajo.fecha.desc()).limit(15).all()
-
-        return render_template('imprimir_registro.html', 
-                               equipo=equipo, 
-                               mants_prev=mants_prev, 
-                               mants_corr=mants_corr, 
-                               compras=compras, 
-                               gasto_mants_str=gasto_mants_str,
-                               gasto_compras_str=gasto_compras_str,
-                               gasto_total_str=gasto_total_str,
-                               averias_similares=averias_similares,
-                               hoy=datetime.now())
-    except Exception as e:
-        return f"Error al generar el historial clínico: {str(e)}"
-
 @dashboard_bp.route('/api/bodega_movimiento', methods=['POST'])
 @login_required
 def bodega_movimiento():
@@ -448,7 +369,8 @@ def bodega_kpi():
                 dias = (ot.fecha_cierre - ot.fecha).days
                 if dias >= 0: tiempos_respuesta.append(dias)
             elif ot.estado != 'Finalizada' and ot.fecha:
-                dias_retraso = (hoy - intern(ot.fecha)).days
+                # SOLUCIÓN DEL ERROR "intern"
+                dias_retraso = (hoy - ot.fecha).days
                 if dias_retraso > 20: ots_abandonadas.append({'ot': ot, 'dias': dias_retraso})
         ots_abandonadas.sort(key=lambda x: x['dias'], reverse=True)
         mttr_dias = round(sum(tiempos_respuesta) / max(1, len(tiempos_respuesta)), 1) if tiempos_respuesta else 0
