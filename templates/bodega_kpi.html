@@ -77,7 +77,7 @@
                 <button onclick="switchTabWMS('wms-dash', this)" class="tab-btn active">Dashboard</button>
                 <button onclick="switchTabWMS('wms-cat', this)" class="tab-btn">Catálogo Global</button>
                 <button onclick="switchTabWMS('wms-kits', this)" class="tab-btn">Ensamblador Kits PM</button>
-                <button onclick="switchTabWMS('wms-movs', this)" class="tab-btn">Trazabilidad</button>
+                <button onclick="switchTabWMS('wms-movs', this)" class="tab-btn">Libro Mayor (Trazabilidad)</button>
             </div>
         </header>
 
@@ -102,9 +102,9 @@
                         <p class="text-xs font-semibold text-red-600 mt-2">Afecta OTs en progreso</p>
                     </div>
                     <div class="card-wms bg-slate-800 text-white border-none">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Solicitudes Taller</p>
-                        <p class="text-3xl font-black text-white">0</p>
-                        <p class="text-xs font-semibold text-blue-300 mt-2">Kits listos para entrega</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Movimientos Mensuales</p>
+                        <p class="text-3xl font-black text-white">{{ movimientos|length }}</p>
+                        <p class="text-xs font-semibold text-blue-300 mt-2">Transacciones Registradas</p>
                     </div>
                 </div>
 
@@ -124,10 +124,10 @@
             <div id="wms-cat" class="wms-tab">
                 <div class="card-wms-nopad h-[75vh] flex flex-col">
                     <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                        <input type="text" placeholder="🔍 Buscar repuesto..." class="w-80 border border-slate-300 rounded px-4 py-2 text-xs font-semibold outline-none focus:border-emerald-500">
+                        <input type="text" placeholder="🔍 Buscar repuesto por código o nombre..." class="w-80 border border-slate-300 rounded px-4 py-2 text-xs font-semibold outline-none focus:border-emerald-500" onkeyup="buscarRepuesto(this.value)">
                     </div>
                     <div class="overflow-y-auto flex-1">
-                        <table class="table-wms">
+                        <table class="table-wms" id="tabla-catalogo">
                             <thead>
                                 <tr>
                                     <th>Código OEM</th>
@@ -165,7 +165,7 @@
                 </div>
             </div>
 
-            <!-- TAB 3: ENSAMBLADOR DE KITS BOM -->
+            <!-- TAB 3: ENSAMBLADOR DE KITS BOM (AHORA CON MOTOR DE DESCUENTO) -->
             <div id="wms-kits" class="wms-tab">
                 <div class="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {% for modelo, kit in kits_por_modelo.items() %}
@@ -174,7 +174,7 @@
                             <div>
                                 <h3 class="font-black text-slate-800 text-lg uppercase">{{ modelo }}</h3>
                                 <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">
-                                    Pauta Asignada a: {{ kit.equipos_aplica[:3]|join(', ') }}{% if kit.equipos_aplica|length > 3 %} (+{{ kit.equipos_aplica|length - 3 }}){% endif %}
+                                    Aplica a: {{ kit.equipos_aplica[:3]|join(', ') }}{% if kit.equipos_aplica|length > 3 %} (+{{ kit.equipos_aplica|length - 3 }}){% endif %}
                                 </p>
                             </div>
                             {% if kit.armable %}
@@ -184,7 +184,7 @@
                             {% endif %}
                         </div>
                         <div class="bg-slate-50 rounded p-3 mb-4 flex-1 border border-slate-200">
-                            <p class="text-[9px] font-bold text-slate-600 uppercase border-b border-slate-200 pb-1 mb-2">Ingredientes del Kit (Receta BOM)</p>
+                            <p class="text-[9px] font-bold text-slate-600 uppercase border-b border-slate-200 pb-1 mb-2">Ingredientes del Kit</p>
                             <ul class="text-xs font-medium text-slate-700 space-y-2">
                                 {% for comp in kit.componentes %}
                                 <li class="flex justify-between items-center">
@@ -199,7 +199,7 @@
                             </ul>
                         </div>
                         {% if kit.armable %}
-                        <button class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded text-[10px] uppercase tracking-widest transition">Descontar Piezas</button>
+                        <button onclick='abrirModalDespacho("{{ modelo }}", {{ kit.equipos_aplica|tojson|safe }})' class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded text-[10px] uppercase tracking-widest transition shadow-md">Descontar Piezas</button>
                         {% else %}
                         <button class="w-full bg-white border border-slate-300 text-slate-400 font-bold py-2 rounded text-[10px] uppercase tracking-widest cursor-not-allowed" disabled>Comprar Faltantes</button>
                         {% endif %}
@@ -212,14 +212,55 @@
                 </div>
             </div>
 
-            <!-- TAB 4: MOVIMIENTOS -->
+            <!-- TAB 4: LIBRO MAYOR DE MOVIMIENTOS REAL -->
             <div id="wms-movs" class="wms-tab">
                 <div class="card-wms-nopad h-[75vh] flex flex-col">
                     <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                        <h3 class="font-black text-slate-700 uppercase tracking-widest text-xs">Libro Mayor de Movimientos</h3>
+                        <h3 class="font-black text-slate-700 uppercase tracking-widest text-xs">Libro de Auditoría y Trazabilidad</h3>
                     </div>
-                    <div class="overflow-y-auto flex-1 p-8 text-center text-slate-500 font-medium">
-                        Historial de trazabilidad en construcción...
+                    <div class="overflow-y-auto flex-1">
+                        <table class="table-wms">
+                            <thead>
+                                <tr>
+                                    <th>Fecha y Hora</th>
+                                    <th>Tipo Transacción</th>
+                                    <th>Componente Físico</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th>Documento / Destino</th>
+                                    <th>Auditor / Rsp.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mov in movimientos %}
+                                <tr class="hover:bg-slate-50">
+                                    <td class="font-mono text-slate-500">{{ mov.fecha.strftime('%d/%m/%Y %H:%M') if mov.fecha else '-' }}</td>
+                                    <td>
+                                        {% if 'SALIDA' in mov.tipo_movimiento %}
+                                            <span class="bg-red-50 text-red-700 border border-red-200 px-2 py-1 rounded text-[10px] font-black uppercase">{{ mov.tipo_movimiento }}</span>
+                                        {% else %}
+                                            <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 rounded text-[10px] font-black uppercase">{{ mov.tipo_movimiento }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="font-bold text-slate-700">
+                                        {% if mov.repuesto_id in rep_dict %}
+                                            <span class="truncate block max-w-xs">{{ rep_dict[mov.repuesto_id].nombre }}</span>
+                                            <span class="text-[9px] font-mono text-slate-400">{{ rep_dict[mov.repuesto_id].codigo_oem }}</span>
+                                        {% else %}
+                                            <span class="text-slate-400 italic">Repuesto Descatalogado</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center font-bold text-slate-800 text-sm">{{ "{:,.0f}".format(mov.cantidad).replace(',','.') }}</td>
+                                    <td class="font-mono font-bold text-[#1E3A8A]">
+                                        {{ mov.documento_ref or 'USO INTERNO' }} <br>
+                                        <span class="text-[9px] text-slate-500 font-sans uppercase">{{ mov.codigo_equipo or '-' }}</span>
+                                    </td>
+                                    <td class="text-[10px] uppercase text-slate-600 font-bold">{{ mov.usuario or 'Sistema' }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="6" class="px-6 py-8 text-center text-slate-400 text-xs font-bold">LA CAJA REGISTRADORA ESTÁ EN CERO. REALIZA TU PRIMER DESPACHO.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -227,12 +268,106 @@
         </div>
     </main>
 
+    <!-- MODAL DE DESPACHO DE KITS (LA CAJA REGISTRADORA) -->
+    <div id="modal-despacho" class="fixed inset-0 bg-slate-900/80 z-[500] hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-lg shadow-2xl overflow-hidden">
+            <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                <h3 class="font-black text-slate-800 uppercase text-xs tracking-wider">Despachar Inventario</h3>
+                <button onclick="document.getElementById('modal-despacho').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 font-bold text-lg">&times;</button>
+            </div>
+            <div class="p-6 flex flex-col gap-4">
+                <div class="bg-emerald-50 border border-emerald-200 p-3 rounded text-emerald-800 text-xs font-bold mb-2">
+                    📦 Entregar KIT para modelo: <span id="mdl-nombre-kit" class="font-black underline"></span>
+                </div>
+                
+                <input type="hidden" id="mdl-modelo-val">
+                
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Destino Físico (Equipo)</label>
+                    <select id="mdl-equipo" class="w-full border border-slate-300 p-2 rounded text-xs font-bold outline-none focus:border-emerald-500 bg-slate-50">
+                        <!-- Llenado por JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Documento de Referencia / Mecánico</label>
+                    <input type="text" id="mdl-referencia" class="w-full border border-slate-300 p-2 rounded text-xs font-bold outline-none focus:border-emerald-500" placeholder="Ej: OT-4589 o Juan Pérez">
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
+                <button onclick="document.getElementById('modal-despacho').classList.add('hidden')" class="px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100">Cancelar</button>
+                <button onclick="ejecutarDespacho()" id="btn-confirmar-despacho" class="px-6 py-2 text-xs font-bold text-white bg-emerald-600 rounded hover:bg-emerald-700 shadow-md">Confirmar y Rebajar Stock</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function switchTabWMS(tabId, btn) {
             document.querySelectorAll('.wms-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             btn.classList.add('active');
+        }
+        
+        function buscarRepuesto(q) {
+            q = q.toLowerCase();
+            const filas = document.querySelectorAll('#tabla-catalogo tbody tr');
+            filas.forEach(fila => {
+                const texto = fila.innerText.toLowerCase();
+                fila.style.display = texto.includes(q) ? '' : 'none';
+            });
+        }
+
+        // --- FUNCIONES DEL MODAL DE DESPACHO ---
+        function abrirModalDespacho(modelo, equipos) {
+            document.getElementById('mdl-nombre-kit').innerText = modelo;
+            document.getElementById('mdl-modelo-val').value = modelo;
+            
+            let select = document.getElementById('mdl-equipo');
+            select.innerHTML = '<option value="">Seleccione el equipo destino...</option>';
+            equipos.forEach(eq => {
+                select.innerHTML += `<option value="${eq}">${eq}</option>`;
+            });
+            
+            document.getElementById('modal-despacho').classList.remove('hidden');
+        }
+
+        function ejecutarDespacho() {
+            let modelo = document.getElementById('mdl-modelo-val').value;
+            let equipo = document.getElementById('mdl-equipo').value;
+            let ref = document.getElementById('mdl-referencia').value;
+            
+            if (!equipo) {
+                alert("⚠️ Por favor, seleccione un equipo de destino para la trazabilidad.");
+                return;
+            }
+
+            let btn = document.getElementById('btn-confirmar-despacho');
+            btn.innerText = "Procesando...";
+            btn.disabled = true;
+            btn.classList.replace('bg-emerald-600', 'bg-emerald-400');
+
+            fetch('/api/wms/descontar_kit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ modelo: modelo, equipo: equipo, referencia: ref })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert("✅ ¡ÉXITO! Se han descontado los repuestos físicos y la transacción ha sido registrada en el Libro Mayor.");
+                    location.reload(); // Recarga para actualizar tablas y gráficos
+                } else {
+                    alert("❌ ERROR: " + data.message);
+                    document.getElementById('modal-despacho').classList.add('hidden');
+                    btn.innerText = "Confirmar y Rebajar Stock";
+                    btn.disabled = false;
+                    btn.classList.replace('bg-emerald-400', 'bg-emerald-600');
+                }
+            })
+            .catch(err => {
+                alert("Error de conexión con el servidor.");
+                location.reload();
+            });
         }
 
         window.onload = function() {
