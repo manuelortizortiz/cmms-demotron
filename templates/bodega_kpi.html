@@ -3,395 +3,370 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demotron - WMS Bodega y Taller</title>
+    <title>Demotron WMS | Gestión de Inventario</title>
     <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; color: #1E293B; }
-        .sidebar-bg { background-color: #0F172A; border-right: 1px solid #1E293B; }
-        .nav-link { color: #94A3B8; display: block; padding: 12px 24px; text-decoration: none; font-weight: 500; font-size: 13px; transition: 0.2s; }
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; color: #1E293B; overflow: hidden; }
+        .sidebar-bg { background-color: #0F172A; }
+        .nav-link { color: #94A3B8; display: block; padding: 12px 24px; font-weight: 600; font-size: 12px; transition: 0.2s; text-transform: uppercase; letter-spacing: 0.05em;}
         .nav-link:hover { color: #FFFFFF; background-color: rgba(255,255,255,0.05); }
-        .nav-link.active { color: #FFFFFF; background-color: #1E3A8A; font-weight: 600; border-left: 4px solid #60A5FA; padding-left: 20px;}
+        .nav-link.active { color: #10B981; background-color: rgba(16, 185, 129, 0.1); border-left: 4px solid #10B981; padding-left: 20px;}
         
-        .card-custom { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .form-input { border: 1px solid #CBD5E1; padding: 10px 16px; border-radius: 6px; font-size: 13px; width: 100%; outline: none; }
-        .btn-primary { background-color: #1E3A8A; color: white; padding: 10px 24px; border-radius: 6px; font-weight: 500; cursor: pointer; border:none; font-size: 13px; transition: 0.2s; }
-        .btn-primary:hover { background-color: #1D4ED8; }
-        .btn-danger { background-color: #EF4444; color: white; padding: 10px 24px; border-radius: 6px; font-weight: 500; cursor: pointer; border:none; font-size: 13px; transition: 0.2s; }
-        .btn-danger:hover { background-color: #DC2626; }
+        .card-wms { background: #FFFFFF; border-radius: 12px; border: 1px solid #E2E8F0; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .card-wms-nopad { background: #FFFFFF; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; }
         
-        /* SCROLL ELEGANTE PARA TARJETAS REDUCIDAS */
-        .mini-scroll::-webkit-scrollbar { width: 4px; }
-        .mini-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
-        .mini-scroll:hover::-webkit-scrollbar-thumb { background: #94A3B8; }
+        /* Sistema de Pestañas WMS */
+        .wms-tab { display: none; }
+        .wms-tab.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .tab-btn { padding: 14px 20px; font-weight: 700; font-size: 12px; color: #64748B; border-bottom: 2px solid transparent; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 0.05em; }
+        .tab-btn:hover { color: #047857; }
+        .tab-btn.active { color: #047857; border-bottom-color: #047857; }
+
+        /* Tablas WMS */
+        .table-wms { width: 100%; border-collapse: collapse; }
+        .table-wms th { background-color: #F8FAFC; color: #475569; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; text-align: left; white-space: nowrap; position: sticky; top: 0; z-index: 10;}
+        .table-wms td { padding: 12px 16px; border-bottom: 1px solid #F1F5F9; font-size: 12px; font-weight: 500; color: #1E293B; }
+        .table-wms tr:hover { background-color: #F8FAFC; }
+
+        /* Badges de Inventario */
+        .badge-stock { display: inline-flex; align-items: center; justify-content: center; padding: 4px 8px; border-radius: 999px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;}
+        .stock-normal { background-color: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; }
+        .stock-bajo { background-color: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; }
+        .stock-critico { background-color: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
+
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        
-        /* PESTAÑAS INTERNAS */
-        .sub-tab { display: none; }
-        .sub-tab.active { display: block; }
-        .tab-btn { padding: 12px 24px; font-weight: 600; font-size: 13px; color: #64748B; border-bottom: 2px solid transparent; cursor: pointer; transition: 0.2s; }
-        .tab-btn:hover { color: #1E3A8A; }
-        .tab-btn.active { color: #1E3A8A; border-bottom-color: #1E3A8A; }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body class="flex h-screen">
     
-    <!-- MENÚ LATERAL -->
-    <aside class="w-64 sidebar-bg flex flex-col shrink-0">
+    <!-- MENÚ LATERAL WMS -->
+    <aside class="w-64 sidebar-bg flex flex-col shrink-0 z-20">
         <div class="h-20 flex items-center px-6 border-b border-slate-800">
-            <span class='text-lg font-semibold text-white tracking-wide'>DEMOTRON ERP</span>
+            <span class='text-xl font-black text-emerald-500 tracking-wider'>WMS<span class="text-white font-light"> DEMOTRON</span></span>
         </div>
         <nav class="flex-1 py-6 overflow-y-auto hide-scrollbar space-y-1">
-            <a href="/" class="nav-link">← Volver al Dashboard</a>
-            <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Logística y Almacén</p>
-            <a href="/bodega_kpi" class="nav-link active">Control Bodega y KPIs Taller</a>
+            <a href="/" class="block px-6 py-3 text-slate-400 hover:text-white transition-colors text-xs font-semibold uppercase mb-4">← Volver al ERP</a>
+            <p class="px-6 text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2 mt-4">Bodega y Logística</p>
+            <a href="/bodega_kpi" class="nav-link active">Control Inventario WMS</a>
+            <a href="/?tab=compras" class="nav-link">Gestión de Compras (OC)</a>
+            <a href="/?tab=proveedores" class="nav-link">Directorio Proveedores</a>
+            
+            <p class="px-6 text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2 mt-8">Reportes de Almacén</p>
+            <a href="#" class="nav-link">Rotación ABC / XYZ</a>
+            <a href="#" class="nav-link">Inventario Valorizado</a>
+            <a href="#" class="nav-link">Consumo por Equipo</a>
         </nav>
     </aside>
 
-    <main class="flex-1 flex flex-col min-w-0 overflow-y-auto w-full">
-        <!-- HEADER Y MENÚ DE PESTAÑAS WMS -->
-        <header class="bg-white border-b border-slate-200 shrink-0 shadow-sm flex flex-col justify-end px-8 pt-6">
+    <!-- ÁREA PRINCIPAL -->
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-50 relative h-screen">
+        
+        <!-- HEADER Y TABS -->
+        <header class="bg-white border-b border-slate-200 shrink-0 shadow-sm z-10 pt-6 px-8">
             <div class="flex justify-between items-center mb-6">
-                <h1 class="text-xl font-normal text-slate-800 tracking-wide">Analítica de Bodega y Gestión de Taller (WMS)</h1>
+                <div>
+                    <h1 class="text-2xl font-black text-slate-800 tracking-tight">Bodega de Repuestos y Logística</h1>
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-1">Warehouse Management System</p>
+                </div>
+                <div class="flex gap-3">
+                    <button class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded font-bold text-xs uppercase tracking-wider transition">Exportar Maestro</button>
+                    <button class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-emerald-600/30">+ Nuevo Repuesto</button>
+                </div>
             </div>
-            <div class="flex gap-4">
-                <button onclick="switchBodegaTab('tab-kits', this)" class="tab-btn active" id="btn-kits">📦 Gestión de Kits por Equipo (Kardex)</button>
-                <button onclick="switchBodegaTab('tab-sueltos', this)" class="tab-btn" id="btn-sueltos">🔧 Filtros Sueltos y Simulador Inteligente</button>
+            
+            <div class="flex gap-2 overflow-x-auto hide-scrollbar">
+                <button onclick="switchTabWMS('wms-dash', this)" class="tab-btn active">Dashboard</button>
+                <button onclick="switchTabWMS('wms-cat', this)" class="tab-btn">Catálogo Global</button>
+                <button onclick="switchTabWMS('wms-filtros', this)" class="tab-btn">Gestión Filtros</button>
+                <button onclick="switchTabWMS('wms-kits', this)" class="tab-btn">Kits PM</button>
+                <button onclick="switchTabWMS('wms-movs', this)" class="tab-btn">Trazabilidad (Movimientos)</button>
             </div>
         </header>
 
-        <div class="p-8">
+        <!-- CONTENEDOR DESPLAZABLE -->
+        <div class="flex-1 overflow-y-auto p-8 hide-scrollbar relative">
 
-            <!-- ========================================== -->
-            <!-- PESTAÑA 1: KITS Y KARDEX POR EQUIPO -->
-            <!-- ========================================== -->
-            <div id="tab-kits" class="sub-tab active space-y-8">
+            <!-- ============================================ -->
+            <!-- TAB 1: DASHBOARD WMS -->
+            <!-- ============================================ -->
+            <div id="wms-dash" class="wms-tab active">
                 
-                <!-- 1. KPIs PRINCIPALES -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="card-custom">
-                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Lead Time de Reparación</p>
-                        <p class="text-4xl font-normal text-[#1E3A8A]">{{ mttr_dias }} <span class="text-lg text-slate-400">Días</span></p>
-                        <p class="text-xs text-slate-500 mt-2">Promedio desde creación hasta finalización</p>
+                <!-- KPIs Top -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <div class="card-wms">
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Valorización de Inventario</p>
+                        <p class="text-3xl font-black text-emerald-600">$ 45.890.500</p>
+                        <p class="text-xs font-semibold text-emerald-500 mt-2">↑ 2.4% vs mes anterior</p>
                     </div>
-                    <div class="card-custom">
-                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">OTs Abandonadas / Olvidadas</p>
-                        <p class="text-4xl font-normal text-red-600">{{ abandonadas|length }}</p>
-                        <p class="text-xs text-slate-500 mt-2">Documentos abiertos sin ejecutar (>20 días)</p>
+                    <div class="card-wms border-l-4 border-l-amber-400">
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Repuestos Bajo Mínimo</p>
+                        <p class="text-3xl font-black text-amber-600">34</p>
+                        <p class="text-xs font-semibold text-amber-600 mt-2">Requieren reposición sugerida</p>
                     </div>
-                    <div class="card-custom bg-[#1E3A8A] text-white border-none">
-                        <p class="text-[11px] font-semibold text-blue-200 uppercase tracking-wider mb-2">Valor Actual en Bodega Activa</p>
-                        <p class="text-4xl font-normal">{{ valor_bodega_str }}</p>
-                        <p class="text-xs text-blue-300 mt-2">Capital inmovilizado (Kits sin usar)</p>
+                    <div class="card-wms border-l-4 border-l-red-500">
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Quiebre de Stock (Crítico)</p>
+                        <p class="text-3xl font-black text-red-600">12</p>
+                        <p class="text-xs font-semibold text-red-600 mt-2">Afecta OTs en progreso</p>
                     </div>
-                </div>
-
-                <!-- 2. RESUMEN SALUD DE STOCK (REDUCIDO A 1/4 CON SCROLL) -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                        <p class="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider mb-2">✅ Stock Seguro (>1 Kit)</p>
-                        <div class="flex flex-wrap gap-2 max-h-[90px] overflow-y-auto mini-scroll cursor-ns-resize">
-                            {% for eq in con_stock %}<span class="bg-white border border-emerald-200 text-emerald-700 text-xs px-2 py-1 rounded font-bold">{{ eq }}</span>
-                            {% else %}<span class="text-xs text-emerald-600">Ninguno en este nivel.</span>{% endfor %}
-                        </div>
-                    </div>
-                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                        <p class="text-[11px] font-semibold text-amber-800 uppercase tracking-wider mb-2">⚠️ Stock Crítico (1 Kit)</p>
-                        <div class="flex flex-wrap gap-2 max-h-[90px] overflow-y-auto mini-scroll cursor-ns-resize">
-                            {% for eq in bajo_stock %}<span class="bg-white border border-amber-200 text-amber-700 text-xs px-2 py-1 rounded font-bold">{{ eq }}</span>
-                            {% else %}<span class="text-xs text-amber-600">Ninguno en este nivel.</span>{% endfor %}
-                        </div>
-                    </div>
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <p class="text-[11px] font-semibold text-red-800 uppercase tracking-wider mb-2">❌ Sin Stock (0 Kits)</p>
-                        <div class="flex flex-wrap gap-2 max-h-[90px] overflow-y-auto mini-scroll cursor-ns-resize">
-                            {% for eq in sin_stock %}<span class="bg-white border border-red-200 text-red-700 text-xs px-2 py-1 rounded font-bold">{{ eq }}</span>
-                            {% else %}<span class="text-xs text-red-600">Todos tienen stock.</span>{% endfor %}
-                        </div>
+                    <div class="card-wms bg-slate-800 text-white border-none">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Solicitudes desde Taller</p>
+                        <p class="text-3xl font-black text-white">8</p>
+                        <p class="text-xs font-semibold text-blue-300 mt-2">Pendientes de entrega</p>
                     </div>
                 </div>
 
-                <!-- 3. CINTAS DE ACCIÓN RÁPIDA -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
-                        <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider mb-3">📥 Agregar Kit a Bodega (Ingreso)</h3>
-                        <form action="/api/bodega_movimiento" method="POST" class="flex gap-4">
-                            <input type="hidden" name="tipo_movimiento" value="INGRESO">
-                            <input type="text" name="codigo_equipo" placeholder="Ej: CD-102" class="form-input uppercase" required>
-                            <button type="submit" class="btn-primary whitespace-nowrap">Registrar Entrada</button>
-                        </form>
+                <!-- Gráficos -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <div class="card-wms lg:col-span-2 h-80 flex flex-col">
+                        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-widest mb-4">Evolución de Consumo vs Compras</h3>
+                        <div class="flex-1 w-full relative"><canvas id="chartConsumo"></canvas></div>
                     </div>
-                    <div class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
-                        <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider mb-3">📤 Sacar Kit de Bodega (Salida Taller)</h3>
-                        <form action="/api/bodega_movimiento" method="POST" class="flex gap-4">
-                            <input type="hidden" name="tipo_movimiento" value="SALIDA">
-                            <input type="text" name="codigo_equipo" placeholder="Ej: CD-102" class="form-input uppercase" required>
-                            <button type="submit" class="btn-danger whitespace-nowrap">Registrar Salida</button>
-                        </form>
+                    <div class="card-wms h-80 flex flex-col">
+                        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-widest mb-4">Capital por Categoría</h3>
+                        <div class="flex-1 w-full relative"><canvas id="chartCategorias"></canvas></div>
                     </div>
                 </div>
+            </div>
 
-                <!-- 4. KARDEX DESPLEGABLE -->
-                <div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden flex flex-col">
-                    <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                        <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider">Kardex Logístico (Clic en la fila para desplegar detalles de la historia)</h3>
+            <!-- ============================================ -->
+            <!-- TAB 2: CATÁLOGO GLOBAL DE REPUESTOS -->
+            <!-- ============================================ -->
+            <div id="wms-cat" class="wms-tab">
+                <div class="card-wms-nopad h-[75vh] flex flex-col">
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                        <div class="flex gap-4">
+                            <select class="border border-slate-300 rounded px-3 py-1.5 text-xs font-semibold outline-none focus:border-emerald-500">
+                                <option value="">Todas las Categorías</option>
+                                <option value="1">Rodamientos</option>
+                                <option value="2">Sistema Eléctrico</option>
+                                <option value="3">Frenos</option>
+                            </select>
+                        </div>
+                        <input type="text" placeholder="🔍 Buscar por código OEM, nombre o marca..." class="w-80 border border-slate-300 rounded px-4 py-2 text-xs font-semibold outline-none focus:border-emerald-500">
                     </div>
-                    <div class="overflow-y-auto hide-scrollbar" style="max-height: 400px;">
-                        <table class="w-full text-left text-sm whitespace-nowrap">
-                            <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 z-10">
+                    <div class="overflow-y-auto flex-1">
+                        <table class="table-wms">
+                            <thead>
                                 <tr>
-                                    <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider">Equipo</th>
-                                    <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-center">Compras</th>
-                                    <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-center">Salidas</th>
-                                    <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-right">Status Bodega</th>
+                                    <th>Cód. Interno</th>
+                                    <th>Código OEM</th>
+                                    <th>Descripción de Repuesto</th>
+                                    <th>Categoría / Familia</th>
+                                    <th>Ubicación Fís.</th>
+                                    <th class="text-center">Stock Actual</th>
+                                    <th class="text-right">Precio Prom.</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for eq, data in inventario.items() %}
-                                <tr class="border-b border-slate-100 bg-white cursor-pointer hover:bg-blue-50 transition-colors" onclick="document.getElementById('det-{{ loop.index }}').classList.toggle('hidden')">
-                                    <td class="px-6 py-4 font-bold text-[#1E3A8A] text-base flex items-center gap-3">
-                                        <span class="text-[10px] bg-slate-200 px-2 py-1 rounded text-slate-500">▼</span> {{ eq }}
-                                    </td>
-                                    <td class="px-6 py-4 text-center font-medium text-slate-600">{{ data.entradas }}</td>
-                                    <td class="px-6 py-4 text-center font-medium text-slate-600">{{ data.salidas }}</td>
-                                    <td class="px-6 py-4 text-right">
-                                        {% if data.stock > 0 %}
-                                            <span class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs">{{ data.stock }} KIT EN ESPERA</span>
-                                        {% else %}
-                                            <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full font-bold text-xs">SIN STOCK</span>
-                                        {% endif %}
-                                    </td>
+                                <tr>
+                                    <td class="font-mono text-slate-500">REP-1045</td>
+                                    <td class="font-black text-emerald-700">CAT-8T5642</td>
+                                    <td class="font-bold text-slate-800">Motor de Partida 24V Caterpillar</td>
+                                    <td><span class="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">Sistema Eléctrico</span></td>
+                                    <td class="font-mono text-xs">P02-E04-N2</td>
+                                    <td class="text-center"><span class="badge-stock stock-normal">4 UN</span></td>
+                                    <td class="text-right font-bold text-slate-700">$ 450.000</td>
                                 </tr>
-                                <tr id="det-{{ loop.index }}" class="hidden bg-slate-50/50 border-b border-slate-200">
-                                    <td colspan="4" class="px-6 pb-6 pt-4">
-                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                            {% for mov in data.movimientos %}
-                                            <div class="flex flex-col text-[10px] p-3 rounded {{ mov.color }} border shadow-sm">
-                                                <div class="flex justify-between items-center mb-2">
-                                                    <span class="font-bold tracking-wide">{{ mov.tipo }}</span>
-                                                    <span class="font-bold opacity-75">{{ mov.fecha_str }}</span>
-                                                </div>
-                                                <div class="flex justify-between items-center text-slate-700">
-                                                    <span class="truncate pr-2">{{ mov.detalle }}</span>
-                                                    <span class="font-mono text-slate-800 bg-white/50 px-1 rounded">{{ mov.doc }}</span>
-                                                </div>
-                                            </div>
-                                            {% else %}
-                                            <span class="text-xs text-slate-400">No hay movimientos registrados para este equipo.</span>
-                                            {% endfor %}
-                                        </div>
-                                    </td>
+                                <tr>
+                                    <td class="font-mono text-slate-500">REP-1088</td>
+                                    <td class="font-black text-emerald-700">VOL-1110022</td>
+                                    <td class="font-bold text-slate-800">Pastillas de Freno Eje Delantero</td>
+                                    <td><span class="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">Frenos</span></td>
+                                    <td class="font-mono text-xs">P01-E01-N1</td>
+                                    <td class="text-center"><span class="badge-stock stock-bajo">1 SET</span></td>
+                                    <td class="text-right font-bold text-slate-700">$ 85.500</td>
                                 </tr>
-                                {% endfor %}
+                                <tr>
+                                    <td class="font-mono text-slate-500">REP-1099</td>
+                                    <td class="font-black text-emerald-700">SNY-884922</td>
+                                    <td class="font-bold text-slate-800">Bomba Hidráulica Principal</td>
+                                    <td><span class="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">Hidráulica</span></td>
+                                    <td class="font-mono text-xs">P05-E02-N1</td>
+                                    <td class="text-center"><span class="badge-stock stock-critico">0 UN</span></td>
+                                    <td class="text-right font-bold text-slate-700">$ 1.250.000</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- ========================================== -->
-            <!-- PESTAÑA 2: FILTROS SUELTOS Y SIMULADOR -->
-            <!-- ========================================== -->
-            <div id="tab-sueltos" class="sub-tab space-y-8">
-                
-                <!-- SIMULADOR INTELIGENTE (AHORA CRUZA CON KITS DE OTROS EQUIPOS) -->
-                <div class="bg-white border border-slate-200 rounded-lg shadow-sm p-6">
-                    <h3 class="font-semibold text-[#1E3A8A] uppercase text-xs tracking-wider mb-2">🔍 Simulador Inteligente de Kits (Búsqueda en Sueltos y Canibalización de Kits)</h3>
-                    <p class="text-xs text-slate-500 mb-6">El sistema buscará en bodega si puedes armar un Kit. Si no hay repuestos sueltos, rastreará automáticamente en los Kits armados de otros equipos compatibles.</p>
-                    
-                    <div class="flex flex-col md:flex-row gap-6 items-start">
-                        <select id="sim_equipo" onchange="calcularFiltrosSueltos(this.value)" class="form-input md:w-1/3 text-[#1E3A8A] font-medium bg-blue-50/50">
-                            <option value="">-- Seleccione Equipo a Evaluar --</option>
-                            {% for eq in eqs_db %}
-                            <option value="{{ eq.codigo }}">{{ eq.codigo }}</option>
-                            {% endfor %}
-                        </select>
-                        
-                        <div id="sim_results" class="bg-slate-50 border border-slate-200 rounded p-5 flex-1 w-full min-h-[120px] text-sm">
-                            <span class="text-slate-400 font-medium">👈 Seleccione un equipo a la izquierda para ejecutar el escaneo cruzado de bodega.</span>
-                        </div>
+            <!-- ============================================ -->
+            <!-- TAB 3: MÓDULO DE FILTROS -->
+            <!-- ============================================ -->
+            <div id="wms-filtros" class="wms-tab">
+                <div class="card-wms-nopad h-[75vh] flex flex-col">
+                    <div class="p-4 bg-emerald-50 border-b border-emerald-100 flex justify-between items-center">
+                        <h3 class="font-black text-emerald-800 uppercase tracking-widest text-xs">Catálogo Especializado de Filtros</h3>
+                        <button class="bg-white border border-emerald-200 text-emerald-700 px-4 py-1.5 rounded font-bold text-xs uppercase shadow-sm">Buscar Equivalencias</button>
+                    </div>
+                    <div class="overflow-y-auto flex-1">
+                        <table class="table-wms">
+                            <thead>
+                                <tr>
+                                    <th>Aplicación / Sistema</th>
+                                    <th>N° Original (OEM)</th>
+                                    <th>Fleetguard</th>
+                                    <th>Donaldson / Baldwin</th>
+                                    <th>Compatibilidad de Flota</th>
+                                    <th class="text-center">Stock Físico</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="text-[10px] font-black uppercase text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200">Aceite Motor</span></td>
+                                    <td class="font-mono font-bold text-slate-700">1R-0716</td>
+                                    <td class="font-mono font-bold text-emerald-600">LF3000</td>
+                                    <td class="font-mono font-bold text-slate-600">P554005 / B99</td>
+                                    <td class="text-xs font-semibold text-slate-500">MD-36, MD-109, MD-110</td>
+                                    <td class="text-center"><span class="badge-stock stock-normal">15 UN</span></td>
+                                </tr>
+                                <tr>
+                                    <td><span class="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-200">Combustible Sep.</span></td>
+                                    <td class="font-mono font-bold text-slate-700">1R-0750</td>
+                                    <td class="font-mono font-bold text-emerald-600">FF5319</td>
+                                    <td class="font-mono font-bold text-slate-600">P551313 / BF7633</td>
+                                    <td class="text-xs font-semibold text-slate-500">MD-36, CD-108, CD-71</td>
+                                    <td class="text-center"><span class="badge-stock stock-bajo">2 UN</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-
-                <!-- GESTIÓN Y TABLA DE FILTROS SUELTOS -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- PANEL DE INGRESO -->
-                    <div class="lg:col-span-1 bg-white border border-slate-200 rounded-lg shadow-sm p-6 flex flex-col h-[450px]">
-                        <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider mb-4 border-b pb-2">📦 Ingresar o Retirar Filtro Suelto</h3>
-                        <form action="/api/bodega_suelta_mov" method="POST" class="flex flex-col gap-4 flex-1">
-                            <div>
-                                <label class="text-[10px] font-medium text-slate-500 block mb-1">Código de Marca / SKU</label>
-                                <input type="text" name="codigo_item" placeholder="Ej: LF3038" class="form-input uppercase" required>
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-medium text-slate-500 block mb-1">Cantidad a Mover</label>
-                                <input type="number" name="cantidad" step="1" placeholder="Ej: 20" class="form-input" required>
-                            </div>
-                            <div class="flex gap-3 mt-auto">
-                                <button type="submit" name="accion" value="INGRESO" class="btn-primary w-full whitespace-nowrap bg-emerald-600 hover:bg-emerald-700">+ Ingresar</button>
-                                <button type="submit" name="accion" value="SALIDA" class="btn-danger w-full whitespace-nowrap">- Retirar</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- TABLA GENERAL -->
-                    <div class="lg:col-span-2 bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden h-[450px] flex flex-col">
-                        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                            <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-wider">Inventario Físico de Filtros Sueltos</h3>
-                        </div>
-                        <div class="overflow-y-auto mini-scroll flex-1">
-                            <table class="w-full text-left text-sm whitespace-nowrap">
-                                <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 z-10">
-                                    <tr>
-                                        <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider">Código Filtro</th>
-                                        <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider">Categoría</th>
-                                        <th class="px-6 py-3 text-slate-500 font-medium text-[11px] uppercase tracking-wider text-right">Cant. Actual</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for f in bodega_sueltos %}
-                                    <tr class="border-b border-slate-50 hover:bg-slate-50">
-                                        <td class="px-6 py-3 font-bold text-slate-800">{{ f.codigo_item }}</td>
-                                        <td class="px-6 py-3 text-slate-500">{{ f.categoria }}</td>
-                                        <td class="px-6 py-3 text-right">
-                                            <span class="bg-[#1E3A8A] text-white px-3 py-1 rounded font-bold text-xs">{{ f.cantidad }}</span>
-                                        </td>
-                                    </tr>
-                                    {% else %}
-                                    <tr><td colspan="3" class="px-6 py-8 text-center text-slate-400 text-xs">No hay filtros sueltos registrados en bodega. Utilice el panel izquierdo.</td></tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
             </div>
+
+            <!-- ============================================ -->
+            <!-- TAB 4: KITS DE MANTENIMIENTO PM -->
+            <!-- ============================================ -->
+            <div id="wms-kits" class="wms-tab">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <div class="card-wms flex flex-col h-full border-t-4 border-t-emerald-500">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-black text-slate-800 text-lg">KIT PM2 - SANY SY215</h3>
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Aplica a: MD-100, MD-104, MD-99</p>
+                            </div>
+                            <span class="badge-stock stock-normal">Armable</span>
+                        </div>
+                        <div class="bg-slate-50 rounded p-3 mb-4 flex-1">
+                            <p class="text-[10px] font-bold text-slate-600 uppercase border-b border-slate-200 pb-1 mb-2">BOM de Componentes</p>
+                            <ul class="text-xs font-medium text-slate-700 space-y-2">
+                                <li class="flex justify-between"><span>1x Filtro Aceite (LF3000)</span><span class="text-emerald-600">OK</span></li>
+                                <li class="flex justify-between"><span>2x Filtro Combustible (FF5319)</span><span class="text-emerald-600">OK</span></li>
+                                <li class="flex justify-between"><span>1x Filtro Aire Pri. (AF25139M)</span><span class="text-emerald-600">OK</span></li>
+                                <li class="flex justify-between"><span>20L Aceite Motor 15W40</span><span class="text-emerald-600">OK</span></li>
+                            </ul>
+                        </div>
+                        <button class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded text-xs uppercase tracking-widest transition">Descontar Kit Completo</button>
+                    </div>
+
+                    <div class="card-wms flex flex-col h-full border-t-4 border-t-red-500">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="font-black text-slate-800 text-lg">KIT PM3 - MAN TGS</h3>
+                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Aplica a: CD-102 al CD-107</p>
+                            </div>
+                            <span class="badge-stock stock-critico">Faltantes</span>
+                        </div>
+                        <div class="bg-slate-50 rounded p-3 mb-4 flex-1">
+                            <p class="text-[10px] font-bold text-slate-600 uppercase border-b border-slate-200 pb-1 mb-2">BOM de Componentes</p>
+                            <ul class="text-xs font-medium text-slate-700 space-y-2">
+                                <li class="flex justify-between"><span>1x Filtro Aceite (HU12110X)</span><span class="text-emerald-600">OK</span></li>
+                                <li class="flex justify-between"><span>1x Filtro Combustible Separador</span><span class="text-red-600 font-bold">FALTA</span></li>
+                                <li class="flex justify-between"><span>1x Filtro Hidráulico</span><span class="text-emerald-600">OK</span></li>
+                            </ul>
+                        </div>
+                        <button class="w-full bg-white border border-slate-300 text-slate-400 font-bold py-2 rounded text-xs uppercase tracking-widest cursor-not-allowed">No se puede armar</button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ============================================ -->
+            <!-- TAB 5: TRAZABILIDAD Y MOVIMIENTOS -->
+            <!-- ============================================ -->
+            <div id="wms-movs" class="wms-tab">
+                <div class="card-wms-nopad h-[75vh] flex flex-col">
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                        <h3 class="font-black text-slate-700 uppercase tracking-widest text-xs">Libro Mayor de Movimientos</h3>
+                        <button class="text-[#1E3A8A] font-bold text-xs uppercase hover:underline">Descargar Auditoría (CSV)</button>
+                    </div>
+                    <div class="overflow-y-auto flex-1">
+                        <table class="table-wms">
+                            <thead>
+                                <tr>
+                                    <th>Fecha y Hora</th>
+                                    <th>Tipo</th>
+                                    <th>Repuesto / Kit</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th>Doc. Ref (OT/OC)</th>
+                                    <th>Usuario Rsp.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="font-mono text-slate-500">2026-05-06 14:30</td>
+                                    <td><span class="bg-red-50 text-red-700 border border-red-200 px-2 py-1 rounded text-[10px] font-black uppercase">Salida OT</span></td>
+                                    <td class="font-bold text-slate-700">KIT PM2 - SANY SY215</td>
+                                    <td class="text-center font-bold">1</td>
+                                    <td class="font-mono font-bold text-[#1E3A8A]">OT-4589 (MD-100)</td>
+                                    <td class="text-xs uppercase text-slate-600">M. Ortiz</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-mono text-slate-500">2026-05-06 10:15</td>
+                                    <td><span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 rounded text-[10px] font-black uppercase">Ingreso OC</span></td>
+                                    <td class="font-bold text-slate-700">Filtro Aceite LF3000</td>
+                                    <td class="text-center font-bold">20</td>
+                                    <td class="font-mono font-bold text-[#1E3A8A]">OC-8992</td>
+                                    <td class="text-xs uppercase text-slate-600">Bodega Central</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </main>
 
-    <!-- LOGICA DE PESTAÑAS Y SIMULADOR (AHORA CRUZA CON KITS COMPLETOS) -->
     <script>
-        function switchBodegaTab(tabId, btn) {
-            document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+        function switchTabWMS(tabId, btn) {
+            document.querySelectorAll('.wms-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             btn.classList.add('active');
-            
-            // Conservar en la URL para cuando recargue la página
-            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + tabId.replace('tab-',''); 
-            window.history.replaceState({path:newUrl}, '', newUrl);
         }
 
         window.onload = function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('tab') === 'sueltos') {
-                switchBodegaTab('tab-sueltos', document.getElementById('btn-sueltos'));
-            }
-        };
-
-        const maestroFiltros = {{ maestro_filtros | tojson }};
-        const stockSuelto = {{ stock_suelto | tojson }};
-        const inventarioKits = {{ inventario | tojson }};
-        
-        function calcularFiltrosSueltos(eq) {
-            if(!eq) {
-                document.getElementById('sim_results').innerHTML = "<span class='text-slate-400 font-medium'>👈 Seleccione un equipo a la izquierda para ejecutar el escaneo cruzado de bodega.</span>";
-                return;
-            }
+            Chart.defaults.font.family = "'Inter', sans-serif";
             
-            const reqs = maestroFiltros[eq];
-            if(!reqs || reqs.length === 0) {
-                document.getElementById('sim_results').innerHTML = `<span class='text-red-500'>El equipo <b class="font-bold">${eq}</b> no tiene filtros registrados en el Maestro.</span>`;
-                return;
-            }
-            
-            let html = "<ul class='space-y-3'>";
-            let foundSuelto = 0;
-            let foundPrestado = 0;
-            let missing = 0;
-            
-            reqs.forEach(req => {
-                let cantNecesaria = req.cant;
-                let marcaEncontrada = null;
-                let stockDisponible = 0;
-                
-                // 1. ESCANEO EN FILTROS SUELTOS
-                for(let marca of req.marcas) {
-                    if(stockSuelto[marca] && stockSuelto[marca] > 0) {
-                        marcaEncontrada = marca;
-                        stockDisponible = stockSuelto[marca];
-                        break; 
-                    }
-                }
-                
-                if(marcaEncontrada && stockDisponible >= cantNecesaria) {
-                    html += `<li class='text-emerald-800 flex items-center bg-emerald-50/80 px-4 py-2 rounded border border-emerald-200 shadow-sm'>
-                                <span class="mr-3 text-lg">✅</span> 
-                                <div><b>${req.sistema}</b> (Necesitas ${cantNecesaria}) <br> <span class="text-xs">Ubicado en Bodega: <b>${stockDisponible} unid. sueltas [${marcaEncontrada}]</b></span></div>
-                             </li>`;
-                    foundSuelto++;
-                } else if (marcaEncontrada && stockDisponible < cantNecesaria) {
-                    html += `<li class='text-amber-800 flex items-center bg-amber-50/80 px-4 py-2 rounded border border-amber-200 shadow-sm'>
-                                <span class="mr-3 text-lg">⚠️</span> 
-                                <div><b>${req.sistema}</b> (Necesitas ${cantNecesaria}) <br> <span class="text-xs">Faltante Crítico: Solo hay <b>${stockDisponible} unid. sueltas [${marcaEncontrada}]</b></span></div>
-                             </li>`;
-                    missing++;
-                } else {
-                    
-                    // 2. ESCANEO DE CANIBALIZACIÓN EN KITS DE OTROS EQUIPOS
-                    let equiposCompatiblesConStock = [];
-                    
-                    for(let otroEq in maestroFiltros) {
-                        if(otroEq === eq) continue; // No buscar en sí mismo
-                        
-                        // ¿Este otro equipo usa el mismo filtro?
-                        let usaMismoFiltro = maestroFiltros[otroEq].some(otroReq => 
-                            otroReq.marcas.some(m => req.marcas.includes(m))
-                        );
-                        
-                        if(usaMismoFiltro) {
-                            // ¿Este otro equipo tiene stock de kits guardados en bodega?
-                            if(inventarioKits[otroEq] && inventarioKits[otroEq].stock > 0) {
-                                equiposCompatiblesConStock.push(`<b>${otroEq}</b> (${inventarioKits[otroEq].stock} Kits armados)`);
-                            }
-                        }
-                    }
-                    
-                    if(equiposCompatiblesConStock.length > 0) {
-                        let eqList = equiposCompatiblesConStock.join(", ");
-                        html += `<li class='text-blue-800 flex items-center bg-blue-50/80 px-4 py-2 rounded border border-blue-200 shadow-sm'>
-                                    <span class="mr-3 text-lg">💡</span> 
-                                    <div><b>${req.sistema}</b> (Necesitas ${cantNecesaria}) <br> 
-                                    <span class="text-[11px]">Sin stock suelto, pero <span class="font-bold underline">puedes sacarlo del Kit guardado de:</span> ${eqList}</span></div>
-                                 </li>`;
-                        foundPrestado++;
-                    } else {
-                        // Si falla todo, se debe comprar
-                        let recomendados = req.marcas.slice(0,3).join(", ");
-                        html += `<li class='text-red-800 flex items-center bg-red-50/80 px-4 py-2 rounded border border-red-200 shadow-sm'>
-                                    <span class="mr-3 text-lg">❌</span> 
-                                    <div><b>${req.sistema}</b> (Necesitas ${cantNecesaria}) <br> <span class="text-[11px]">Sin stock suelto y sin kits compatibles para canibalizar. (Comprar: ${recomendados})</span></div>
-                                 </li>`;
-                        missing++;
-                    }
-                }
+            new Chart(document.getElementById('chartConsumo').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May'],
+                    datasets: [
+                        { label: 'Consumo Taller (Salidas)', data: [12.5, 15.2, 11.8, 18.5, 14.2], backgroundColor: '#EF4444', borderRadius: 4 },
+                        { label: 'Compras (Ingresos)', data: [10.0, 18.0, 8.5, 22.0, 10.5], backgroundColor: '#10B981', borderRadius: 4 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
             });
-            
-            html += "</ul>";
-            html += `<div class='mt-5 pt-4 border-t border-slate-200 font-bold text-[14px] leading-relaxed'>`;
-            if(missing === 0 && foundPrestado === 0) {
-                html += `<span class='text-emerald-700 bg-emerald-100 px-3 py-1 rounded inline-block'>¡ESTADO VERDE! Tienes todos los filtros sueltos para armar un Kit completo.</span>`;
-            } else if (missing === 0 && foundPrestado > 0) {
-                html += `<span class='text-blue-700 bg-blue-100 px-3 py-1 rounded inline-block'>¡ESTADO AZUL! Tienes los filtros, pero deberás "canibalizar" o desarmar kits asignados a otros equipos.</span>`;
-            } else {
-                html += `<span class='text-red-700 bg-red-100 px-3 py-1 rounded inline-block'>STATUS ROJO: Faltan ${missing} tipos de filtro para completar el equipo.</span>`;
-            }
-            html += `</div>`;
-            
-            document.getElementById('sim_results').innerHTML = html;
-        }
+
+            new Chart(document.getElementById('chartCategorias').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Filtros', 'Lubricantes', 'Rodamientos', 'Neumáticos', 'Otros'],
+                    datasets: [{ data: [35, 20, 15, 20, 10], backgroundColor: ['#1E3A8A', '#3B82F6', '#10B981', '#F59E0B', '#64748B'], borderWidth: 0 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom' } } }
+            });
+        };
     </script>
 </body>
 </html>
