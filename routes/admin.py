@@ -3,7 +3,6 @@ from flask_login import login_required, current_user
 import pandas as pd
 import numpy as np
 import os
-import random
 from datetime import datetime
 from sqlalchemy import text
 from werkzeug.security import generate_password_hash
@@ -13,6 +12,7 @@ from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
 from models.personal import Personal, RegistroUsoEquipo, Mecanico
 from models.chatter import RegistroChatter
+from models.bodega import InventarioBodega, Repuesto, MovimientoBodega, KitPM, ComponenteKit, RecetaModelo
 from utils.formatters import clean_string
 
 admin_bp = Blueprint('admin', __name__)
@@ -42,9 +42,6 @@ def safe_parse_date(val):
     try: return pd.to_datetime(val).to_pydatetime()
     except: return None
 
-# =====================================================================
-# GESTIÓN DE USUARIOS Y AUDITORÍA GLOBAL
-# =====================================================================
 @admin_bp.route('/admin/usuarios', methods=['GET', 'POST'])
 @login_required
 def gestionar_usuarios():
@@ -106,9 +103,6 @@ def eliminar_usuario(id):
     except Exception: db.session.rollback()
     return redirect('/admin/usuarios')
 
-# =====================================================================
-# MOTOR DE IMPORTACIÓN MASIVA Y PURGA DE DUPLICADOS (PROTEGIDO POR TOKEN)
-# =====================================================================
 @admin_bp.route('/admin/cargar_sql_final', methods=['GET', 'POST'], strict_slashes=False)
 def cargar_sql_final():
     token_esperado = os.environ.get('ADMIN_TOKEN')
@@ -116,7 +110,7 @@ def cargar_sql_final():
     if not token_esperado or token_recibido != token_esperado:
         return "ACCESO DENEGADO (403): Token de administración inválido o ausente.", 403
 
-    reporte = {"equipos": 0, "lecturas": 0, "preventivas": 0, "correctivas": 0, "compras": 0, "filtros": 0, "mensajes": []}
+    reporte = {"equipos": 0, "lecturas": 0, "preventivas": 0, "correctivas": 0, "compras": 0, "filtros": 0, "repuestos": 0, "mensajes": []}
     
     try:
         db.session.execute(text("DELETE FROM orden_trabajo WHERE id NOT IN (SELECT MIN(id) FROM orden_trabajo GROUP BY codigo_equipo, tipo_ot, lectura)"))
@@ -132,8 +126,6 @@ def cargar_sql_final():
 
         archivos = os.listdir('.')
         excel_principal = next((f for f in archivos if "CMMS" in f.upper() and f.endswith(('.xlsx', '.xls')) and not f.startswith('~$')), None)
-        archivo_filtros = next((f for f in archivos if "filtro" in f.lower() and f.endswith(('.xlsx', '.xls', '.csv')) and not f.startswith('~$')), None)
-        archivo_ubicaciones = next((f for f in archivos if "ubicacion" in f.lower() and f.endswith(('.xlsx', '.csv', '.xls')) and not f.startswith('~$')), None)
 
         if not excel_principal: return "ERROR: NO SE DETECTA ARCHIVO CMMS (.xlsx)."
 
@@ -185,7 +177,7 @@ def cargar_sql_final():
                 reporte['lecturas'] += 1
         db.session.commit()
 
-        # --- PREVENTIVAS (AQUÍ ESTABA EL ERROR DEL MECÁNICO EN DURO) ---
+        # --- PREVENTIVAS ---
         df_man = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
         for idx, row in df_man.iterrows():
             cod = clean_string(str(row.get('Codigo', '') or '')).upper()
@@ -199,7 +191,6 @@ def cargar_sql_final():
             lectura_val = safe_clean_int(row.get('Lectura'))
             costo_val = safe_clean_float(row.get('Costo Mantencion CLP'))
             
-            # MAGIA: Ahora lee la columna "Mecanico" o "Proveedor" del Excel y no lo fuerza a "Sin Asignar"
             mecanico_val = clean_string(str(row.get('Mecanico', row.get('Proveedor', 'Sin Asignar'))))
             if not mecanico_val or mecanico_val.lower() in ['nan', 'none', '']: mecanico_val = 'Sin Asignar'
 
@@ -213,21 +204,15 @@ def cargar_sql_final():
                 reporte['preventivas'] += 1
         db.session.commit()
 
-        # --- CORRECTIVAS (AQUÍ ESTABA LA CEGUERA DE COLUMNAS) ---
+        # --- CORRECTIVAS ---
         try:
             df_corr = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Correctivas", skiprows=2).replace({np.nan: None})
             for idx, row in df_corr.iterrows():
                 cod = clean_string(str(row.get('Codigo Equipo', row.get('Codigo', '')) or '')).upper()
                 if not cod or cod.lower() in ['none', 'nan', '']: continue
                 fecha_dt = safe_parse_date(row.get('Fecha'))
-                
-                # MAGIA: Ahora busca la falla se llame como se llame en tu Excel
                 falla = clean_string(str(row.get('Causa Raiz', row.get('Falla / Averia', row.get('Falla', ''))) or ''))
-                
-                # MAGIA: Atrapa el costo
                 costo_val = safe_clean_float(row.get('Costo Mantencion CLP', row.get('Costo CLP', 0.0)))
-                
-                # MAGIA: Atrapa la lectura y al mecánico
                 lectura_val = safe_clean_int(row.get('Lectura', row.get('Lectura (Odo/Hor)', 0)))
                 if lectura_val == 0 and len(row) > 4:
                     try: lectura_val = safe_clean_int(row.iloc[4])
@@ -247,8 +232,7 @@ def cargar_sql_final():
                     db.session.add(OrdenTrabajo(fecha=fecha_dt, codigo_equipo=cod, tipo_ot='Correctiva', tipo_mantencion=falla, lectura=lectura_val, costo_mantencion_clp=costo_val, estado='Finalizada', causa_raiz=falla, mecanico=mecanico_val))
                     reporte['correctivas'] += 1
             db.session.commit()
-        except Exception as e: 
-            reporte['mensajes'].append(f"ADVERTENCIA EN CORRECTIVAS: {str(e)}")
+        except Exception as e: pass
 
         # --- COMPRAS PM ---
         try:
@@ -267,33 +251,45 @@ def cargar_sql_final():
             db.session.commit()
         except: pass
 
-        # --- FILTROS ---
-        if archivo_filtros:
-            try:
-                db.session.query(FiltroEquipo).delete()
-                db.session.commit()
-                if archivo_filtros.endswith(('.xlsx', '.xls')): df_fil_raw = pd.read_excel(archivo_filtros, engine='openpyxl', header=None)
-                else: df_fil_raw = pd.read_csv(archivo_filtros, header=None, sep=None, engine='python')
+        # --- CATÁLOGO DE REPUESTOS (NUEVO WMS) ---
+        try:
+            df_rep = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Repuestos", skiprows=2).replace({np.nan: None})
+            db.session.query(Repuesto).delete()
+            for idx, row in df_rep.iterrows():
+                cod_oem = clean_string(str(row.iloc[0] if len(row.columns)>0 else '')).upper()
+                if not cod_oem or cod_oem in ['NONE', 'NAN', '']: continue
                 
-                header_idx = next((i for i, r in df_fil_raw.iterrows() if 'cod' in " ".join(str(val).lower() for val in r.values) or 'sistem' in " ".join(str(val).lower() for val in r.values)), 0)
-                df_fil = pd.read_excel(archivo_filtros, engine='openpyxl', skiprows=header_idx) if archivo_filtros.endswith(('.xlsx', '.xls')) else pd.read_csv(archivo_filtros, skiprows=header_idx, sep=None, engine='python')
+                nombre = clean_string(str(row.iloc[1] if len(row.columns)>1 else ''))
+                categoria = clean_string(str(row.iloc[2] if len(row.columns)>2 else 'General'))
+                stock = safe_clean_float(row.iloc[3] if len(row.columns)>3 else 0)
+                precio = safe_clean_float(row.iloc[4] if len(row.columns)>4 else 0)
+                ubicacion = clean_string(str(row.iloc[5] if len(row.columns)>5 else 'BODEGA CENTRAL'))
                 
-                df_fil.columns = df_fil.columns.astype(str).str.strip()
-                cols = df_fil.columns.tolist()
-                for idx, row in df_fil.iterrows():
-                    cod = clean_string(str(row.get(cols[0], ''))).upper() if len(cols)>0 else ''
-                    if not cod or cod.lower() in ['none', 'nan', '-', '']: continue
-                    eq = Equipo.query.filter_by(codigo=cod).first()
-                    if not eq:
-                        eq = Equipo(codigo=cod, estado_base='Operativo')
-                        db.session.add(eq)
-                        db.session.commit()
-                        reporte['equipos'] += 1
+                rep = Repuesto.query.filter_by(codigo_oem=cod_oem).first()
+                if rep:
+                    rep.nombre, rep.categoria, rep.stock_actual, rep.precio_promedio, rep.bodega = nombre, categoria, stock, precio, ubicacion
+                else:
+                    db.session.add(Repuesto(codigo_oem=cod_oem, nombre=nombre, categoria=categoria, stock_actual=stock, stock_minimo=1.0, precio_promedio=precio, bodega=ubicacion))
+                reporte['repuestos'] += 1
+            db.session.commit()
+        except Exception as e:
+            reporte['mensajes'].append(f"ADVERTENCIA EN REPUESTOS (WMS): {str(e)}")
 
-                    db.session.add(FiltroEquipo(codigo_equipo=eq.codigo, sistema=clean_string(str(row.get(cols[1], 'GENERAL'))) if len(cols)>1 else 'GENERAL', cant=safe_clean_int(row.get(cols[2]), 1) if len(cols)>2 else 1, fleetguard=clean_string(str(row.get(cols[3], '-'))) if len(cols)>3 else "-", baldwind=clean_string(str(row.get(cols[4], '-'))) if len(cols)>4 else "-", originales=clean_string(str(row.get(cols[5], '-'))) if len(cols)>5 else "-", donaldson=clean_string(str(row.get(cols[6], '-'))) if len(cols)>6 else "-", otra=clean_string(str(row.get(cols[7], '-'))) if len(cols)>7 else "-"))
-                    reporte['filtros'] += 1
-                db.session.commit()
-            except Exception as e: reporte['mensajes'].append(f"ERROR FILTROS: {str(e)}")
+        # --- RECETAS DE KITS (MOTOR BOM) ---
+        try:
+            df_recetas = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Recetas_Kits", skiprows=2).replace({np.nan: None})
+            db.session.query(RecetaModelo).delete() # Se purgan para cargar los nuevos
+            for idx, row in df_recetas.iterrows():
+                modelo = str(row.iloc[0] if len(row.columns)>0 else '').strip()
+                sku = clean_string(str(row.iloc[1] if len(row.columns)>1 else '')).upper()
+                cant = safe_clean_float(row.iloc[2] if len(row.columns)>2 else 1)
+                
+                if modelo and sku and modelo.lower() not in ['none', 'nan', ''] and sku.lower() not in ['none', 'nan', '']:
+                    db.session.add(RecetaModelo(modelo_equipo=modelo, sku_repuesto=sku, cantidad=cant))
+            db.session.commit()
+            reporte['mensajes'].append("✅ Recetas de Kits BOM sincronizadas.")
+        except Exception as e:
+            reporte['mensajes'].append("ADVERTENCIA: Aún no existe la pestaña 'Recetas_Kits' en el Excel.")
 
         # --- ACTUALIZAR MÁRGENES ---
         for eq in Equipo.query.all():
@@ -314,9 +310,10 @@ def cargar_sql_final():
             <h2 style="color: #16a34a; text-align: center; text-transform: uppercase; letter-spacing: 2px;">SISTEMA LIMPIADO Y ACTUALIZADO</h2>
             <ul style="list-style: none; padding: 0; font-size: 14px; color: #334155; text-transform: uppercase; font-weight: bold;">
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">EQUIPOS: <b style="float: right;">{reporte['equipos']}</b></li>
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">PREVENTIVAS ACTUALIZADAS: <b style="float: right;">{reporte['preventivas']}</b></li>
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">CORRECTIVAS ACTUALIZADAS: <b style="float: right;">{reporte['correctivas']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">PREVENTIVAS: <b style="float: right;">{reporte['preventivas']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">CORRECTIVAS: <b style="float: right;">{reporte['correctivas']}</b></li>
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">COMPRAS: <b style="float: right;">{reporte['compras']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: #047857;">CATÁLOGO REPUESTOS WMS: <b style="float: right;">{reporte['repuestos']}</b></li>
             </ul>
             <div style='text-align: center; margin-top: 24px;'><a href='/' style='background: #1e293b; color: white; padding: 10px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; text-transform: uppercase;'>VOLVER AL DASHBOARD</a></div>
         </div>
