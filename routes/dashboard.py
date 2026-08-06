@@ -308,7 +308,6 @@ def bodega_kpi():
         recetas_db = RecetaModelo.query.all()
         movimientos = MovimientoBodega.query.order_by(MovimientoBodega.fecha.desc()).limit(150).all()
         
-        # Diccionario para mapear rápido el nombre del repuesto en el historial
         rep_dict = {r.id: r for r in repuestos}
 
         # 1. KPIs Generales
@@ -328,38 +327,68 @@ def bodega_kpi():
             'data': list(cat_stats.values())
         }
 
-        # 3. MOTOR INTELIGENTE BOM (Generador de Kits)
+        # 3. MOTOR INTELIGENTE BOM (Generador de Kits por EQUIPO)
         repuestos_dict_sku = {r.codigo_oem: r for r in repuestos}
-        kits_por_modelo = {}
         
+        # Pre-agrupar las recetas por modelo para que la carga sea instantánea
+        recetas_por_modelo = {}
         for rec in recetas_db:
             m = str(rec.modelo_equipo).strip()
-            if m not in kits_por_modelo:
-                kits_por_modelo[m] = {'componentes': [], 'armable': True, 'equipos_aplica': []}
+            if m not in recetas_por_modelo:
+                recetas_por_modelo[m] = []
+            recetas_por_modelo[m].append(rec)
             
-            rep_obj = repuestos_dict_sku.get(rec.sku_repuesto)
-            stock_actual = rep_obj.stock_actual if rep_obj else 0
-            nombre_rep = rep_obj.nombre if rep_obj else 'Repuesto No Registrado'
-            
-            ok = stock_actual >= rec.cantidad
-            if not ok: kits_por_modelo[m]['armable'] = False
-            
-            kits_por_modelo[m]['componentes'].append({
-                'sku': rec.sku_repuesto,
-                'nombre': nombre_rep,
-                'cant_req': rec.cantidad,
-                'stock': stock_actual,
-                'ok': ok
-            })
-            
-        for m in kits_por_modelo.keys():
-            eqs_compatibles = [e.codigo for e in eqs_db if str(e.modelo).strip() == m]
-            kits_por_modelo[m]['equipos_aplica'] = eqs_compatibles
+        kits_por_equipo = {}
+        repuesto_compatibilidad = {} # Para inyectar los códigos al buscador global
+        
+        # Ordenamos los equipos alfabéticamente para que las tarjetas se vean ordenadas
+        eqs_sorted = sorted(eqs_db, key=lambda x: str(x.codigo))
+        
+        for e in eqs_sorted:
+            modelo_eq = str(e.modelo).strip()
+            if modelo_eq in recetas_por_modelo:
+                cod_eq = str(e.codigo).strip().upper()
+                marca_modelo = f"{e.marca} {e.modelo}".strip()
+                
+                kits_por_equipo[cod_eq] = {
+                    'componentes': [], 
+                    'armable': True, 
+                    'marca_modelo': marca_modelo, 
+                    'modelo': modelo_eq
+                }
+                
+                for rec in recetas_por_modelo[modelo_eq]:
+                    sku = str(rec.sku_repuesto).strip().upper()
+                    
+                    # Vinculamos el repuesto con el código del equipo para el catálogo global
+                    if sku not in repuesto_compatibilidad:
+                        repuesto_compatibilidad[sku] = set()
+                    repuesto_compatibilidad[sku].add(cod_eq)
+                    
+                    rep_obj = repuestos_dict_sku.get(sku)
+                    stock_actual = rep_obj.stock_actual if rep_obj else 0
+                    nombre_rep = rep_obj.nombre if rep_obj else 'Repuesto No Registrado'
+                    
+                    ok = stock_actual >= rec.cantidad
+                    if not ok: kits_por_equipo[cod_eq]['armable'] = False
+                    
+                    kits_por_equipo[cod_eq]['componentes'].append({
+                        'sku': sku,
+                        'nombre': nombre_rep,
+                        'cant_req': rec.cantidad,
+                        'stock': stock_actual,
+                        'ok': ok
+                    })
+                    
+        # Convertimos los Sets a un String separado por comas para enviarlo al HTML
+        for sku in repuesto_compatibilidad:
+            repuesto_compatibilidad[sku] = ", ".join(sorted(list(repuesto_compatibilidad[sku])))
 
         return render_template('bodega_kpi.html', 
                                repuestos=repuestos,
                                rep_dict=rep_dict,
-                               kits_por_modelo=kits_por_modelo,
+                               kits_por_equipo=kits_por_equipo,
+                               repuesto_compatibilidad=repuesto_compatibilidad,
                                movimientos=movimientos,
                                valor_total_str=format_clp(valor_total),
                                bajo_minimo_count=len(bajo_minimo),
@@ -412,7 +441,7 @@ def wms_descontar_kit():
                 documento_ref=referencia,
                 codigo_equipo=equipo,
                 usuario=usuario,
-                observaciones=f"Despacho automatizado BOM (Modelo: {modelo})"
+                observaciones=f"Despacho automatizado (Equipo: {equipo})"
             )
             db.session.add(mov)
             
