@@ -22,7 +22,6 @@ class InventarioBodega(db.Model):
         }
 
 # --- NUEVA ARQUITECTURA WMS (CLASE MUNDIAL) ---
-
 class Repuesto(db.Model):
     __tablename__ = 'repuestos'
     id = db.Column(db.Integer, primary_key=True)
@@ -31,22 +30,18 @@ class Repuesto(db.Model):
     nombre = db.Column(db.String(150), nullable=False)
     descripcion = db.Column(db.Text)
     
-    # Clasificación
-    categoria = db.Column(db.String(50)) # Filtros, Rodamientos, Lubricantes, etc.
+    categoria = db.Column(db.String(50))
     familia = db.Column(db.String(50))
     marca = db.Column(db.String(50))
     unidad_medida = db.Column(db.String(20), default='UN')
     
-    # KPIs de Inventario
     stock_actual = db.Column(db.Float, default=0.0)
     stock_minimo = db.Column(db.Float, default=0.0)
     stock_maximo = db.Column(db.Float, default=0.0)
     
-    # Costos
     precio_promedio = db.Column(db.Float, default=0.0)
     ultimo_precio = db.Column(db.Float, default=0.0)
     
-    # Logística Físca
     bodega = db.Column(db.String(50), default='BODEGA CENTRAL')
     pasillo = db.Column(db.String(20))
     estante = db.Column(db.String(20))
@@ -54,6 +49,14 @@ class Repuesto(db.Model):
     
     fecha_creacion = db.Column(db.DateTime, default=datetime.now)
     estado = db.Column(db.String(20), default='Activo')
+
+# --- EL TRADUCTOR INTELIGENTE DE KITS (BOM) ---
+class RecetaModelo(db.Model):
+    __tablename__ = 'recetas_modelo'
+    id = db.Column(db.Integer, primary_key=True)
+    modelo_equipo = db.Column(db.String(100), index=True)
+    sku_repuesto = db.Column(db.String(100))
+    cantidad = db.Column(db.Float, default=1.0)
 
 class KitPM(db.Model):
     __tablename__ = 'kits_pm'
@@ -81,9 +84,8 @@ class MovimientoBodega(db.Model):
     cantidad = db.Column(db.Float, nullable=False)
     costo_unitario = db.Column(db.Float, default=0.0)
     
-    # Trazabilidad
     documento_ref = db.Column(db.String(100)) # OC, Factura, Guía
-    ot_id = db.Column(db.Integer, nullable=True) # ID de la Orden de Trabajo
+    ot_id = db.Column(db.Integer, nullable=True)
     codigo_equipo = db.Column(db.String(50), nullable=True)
     
     usuario = db.Column(db.String(100))
