@@ -18,7 +18,6 @@
         .card-wms { background: #FFFFFF; border-radius: 12px; border: 1px solid #E2E8F0; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .card-wms-nopad { background: #FFFFFF; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; }
         
-        /* Sistema de Pestañas WMS */
         .wms-tab { display: none; }
         .wms-tab.active { display: block; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -27,13 +26,11 @@
         .tab-btn:hover { color: #047857; }
         .tab-btn.active { color: #047857; border-bottom-color: #047857; }
 
-        /* Tablas WMS */
         .table-wms { width: 100%; border-collapse: collapse; }
         .table-wms th { background-color: #F8FAFC; color: #475569; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; text-align: left; white-space: nowrap; position: sticky; top: 0; z-index: 10;}
         .table-wms td { padding: 12px 16px; border-bottom: 1px solid #F1F5F9; font-size: 12px; font-weight: 500; color: #1E293B; }
         .table-wms tr:hover { background-color: #F8FAFC; }
 
-        /* Badges de Inventario */
         .badge-stock { display: inline-flex; align-items: center; justify-content: center; padding: 4px 8px; border-radius: 999px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;}
         .stock-normal { background-color: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; }
         .stock-bajo { background-color: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; }
@@ -44,7 +41,6 @@
 </head>
 <body class="flex h-screen">
     
-    <!-- MENÚ LATERAL WMS -->
     <aside class="w-64 sidebar-bg flex flex-col shrink-0 z-20">
         <div class="h-20 flex items-center px-6 border-b border-slate-800">
             <span class='text-xl font-black text-emerald-500 tracking-wider'>WMS<span class="text-white font-light"> DEMOTRON</span></span>
@@ -63,10 +59,8 @@
         </nav>
     </aside>
 
-    <!-- ÁREA PRINCIPAL -->
     <main class="flex-1 flex flex-col min-w-0 bg-slate-50 relative h-screen">
         
-        <!-- HEADER Y TABS -->
         <header class="bg-white border-b border-slate-200 shrink-0 shadow-sm z-10 pt-6 px-8">
             <div class="flex justify-between items-center mb-6">
                 <div>
@@ -82,45 +76,38 @@
             <div class="flex gap-2 overflow-x-auto hide-scrollbar">
                 <button onclick="switchTabWMS('wms-dash', this)" class="tab-btn active">Dashboard</button>
                 <button onclick="switchTabWMS('wms-cat', this)" class="tab-btn">Catálogo Global</button>
-                <button onclick="switchTabWMS('wms-filtros', this)" class="tab-btn">Gestión Filtros</button>
-                <button onclick="switchTabWMS('wms-kits', this)" class="tab-btn">Kits PM</button>
-                <button onclick="switchTabWMS('wms-movs', this)" class="tab-btn">Trazabilidad (Movimientos)</button>
+                <button onclick="switchTabWMS('wms-kits', this)" class="tab-btn">Ensamblador Kits PM</button>
+                <button onclick="switchTabWMS('wms-movs', this)" class="tab-btn">Trazabilidad</button>
             </div>
         </header>
 
-        <!-- CONTENEDOR DESPLAZABLE -->
         <div class="flex-1 overflow-y-auto p-8 hide-scrollbar relative">
 
-            <!-- ============================================ -->
-            <!-- TAB 1: DASHBOARD WMS -->
-            <!-- ============================================ -->
+            <!-- TAB 1: DASHBOARD -->
             <div id="wms-dash" class="wms-tab active">
-                
-                <!-- KPIs Top -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                     <div class="card-wms">
                         <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Valorización de Inventario</p>
-                        <p class="text-3xl font-black text-emerald-600">$ 45.890.500</p>
-                        <p class="text-xs font-semibold text-emerald-500 mt-2">↑ 2.4% vs mes anterior</p>
+                        <p class="text-3xl font-black text-emerald-600">{{ valor_total_str }}</p>
+                        <p class="text-xs font-semibold text-emerald-500 mt-2">Capital inmovilizado</p>
                     </div>
                     <div class="card-wms border-l-4 border-l-amber-400">
                         <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Repuestos Bajo Mínimo</p>
-                        <p class="text-3xl font-black text-amber-600">34</p>
+                        <p class="text-3xl font-black text-amber-600">{{ bajo_minimo_count }}</p>
                         <p class="text-xs font-semibold text-amber-600 mt-2">Requieren reposición sugerida</p>
                     </div>
                     <div class="card-wms border-l-4 border-l-red-500">
                         <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Quiebre de Stock (Crítico)</p>
-                        <p class="text-3xl font-black text-red-600">12</p>
+                        <p class="text-3xl font-black text-red-600">{{ quiebre_stock_count }}</p>
                         <p class="text-xs font-semibold text-red-600 mt-2">Afecta OTs en progreso</p>
                     </div>
                     <div class="card-wms bg-slate-800 text-white border-none">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Solicitudes desde Taller</p>
-                        <p class="text-3xl font-black text-white">8</p>
-                        <p class="text-xs font-semibold text-blue-300 mt-2">Pendientes de entrega</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Solicitudes Taller</p>
+                        <p class="text-3xl font-black text-white">0</p>
+                        <p class="text-xs font-semibold text-blue-300 mt-2">Kits listos para entrega</p>
                     </div>
                 </div>
 
-                <!-- Gráficos -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                     <div class="card-wms lg:col-span-2 h-80 flex flex-col">
                         <h3 class="text-xs font-bold text-slate-700 uppercase tracking-widest mb-4">Evolución de Consumo vs Compras</h3>
@@ -133,27 +120,16 @@
                 </div>
             </div>
 
-            <!-- ============================================ -->
-            <!-- TAB 2: CATÁLOGO GLOBAL DE REPUESTOS -->
-            <!-- ============================================ -->
+            <!-- TAB 2: CATÁLOGO DE REPUESTOS -->
             <div id="wms-cat" class="wms-tab">
                 <div class="card-wms-nopad h-[75vh] flex flex-col">
                     <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                        <div class="flex gap-4">
-                            <select class="border border-slate-300 rounded px-3 py-1.5 text-xs font-semibold outline-none focus:border-emerald-500">
-                                <option value="">Todas las Categorías</option>
-                                <option value="1">Rodamientos</option>
-                                <option value="2">Sistema Eléctrico</option>
-                                <option value="3">Frenos</option>
-                            </select>
-                        </div>
-                        <input type="text" placeholder="🔍 Buscar por código OEM, nombre o marca..." class="w-80 border border-slate-300 rounded px-4 py-2 text-xs font-semibold outline-none focus:border-emerald-500">
+                        <input type="text" placeholder="🔍 Buscar repuesto..." class="w-80 border border-slate-300 rounded px-4 py-2 text-xs font-semibold outline-none focus:border-emerald-500">
                     </div>
                     <div class="overflow-y-auto flex-1">
                         <table class="table-wms">
                             <thead>
                                 <tr>
-                                    <th>Cód. Interno</th>
                                     <th>Código OEM</th>
                                     <th>Descripción de Repuesto</th>
                                     <th>Categoría / Familia</th>
@@ -163,171 +139,87 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td class="font-mono text-slate-500">REP-1045</td>
-                                    <td class="font-black text-emerald-700">CAT-8T5642</td>
-                                    <td class="font-bold text-slate-800">Motor de Partida 24V Caterpillar</td>
-                                    <td><span class="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">Sistema Eléctrico</span></td>
-                                    <td class="font-mono text-xs">P02-E04-N2</td>
-                                    <td class="text-center"><span class="badge-stock stock-normal">4 UN</span></td>
-                                    <td class="text-right font-bold text-slate-700">$ 450.000</td>
+                                {% for r in repuestos %}
+                                <tr class="border-b border-slate-50 hover:bg-slate-50">
+                                    <td class="font-black text-emerald-700">{{ r.codigo_oem }}</td>
+                                    <td class="font-bold text-slate-800">{{ r.nombre }}</td>
+                                    <td><span class="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">{{ r.categoria }}</span></td>
+                                    <td class="font-mono text-xs">{{ r.bodega }}</td>
+                                    <td class="text-center">
+                                        {% if r.stock_actual <= 0 %}
+                                            <span class="badge-stock stock-critico">{{ "{:,.0f}".format(r.stock_actual).replace(',','.') }} {{ r.unidad_medida }}</span>
+                                        {% elif r.stock_actual <= r.stock_minimo %}
+                                            <span class="badge-stock stock-bajo">{{ "{:,.0f}".format(r.stock_actual).replace(',','.') }} {{ r.unidad_medida }}</span>
+                                        {% else %}
+                                            <span class="badge-stock stock-normal">{{ "{:,.0f}".format(r.stock_actual).replace(',','.') }} {{ r.unidad_medida }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-right font-bold text-slate-700">${{ "{:,.0f}".format(r.precio_promedio).replace(',', '.') }}</td>
                                 </tr>
-                                <tr>
-                                    <td class="font-mono text-slate-500">REP-1088</td>
-                                    <td class="font-black text-emerald-700">VOL-1110022</td>
-                                    <td class="font-bold text-slate-800">Pastillas de Freno Eje Delantero</td>
-                                    <td><span class="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">Frenos</span></td>
-                                    <td class="font-mono text-xs">P01-E01-N1</td>
-                                    <td class="text-center"><span class="badge-stock stock-bajo">1 SET</span></td>
-                                    <td class="text-right font-bold text-slate-700">$ 85.500</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-mono text-slate-500">REP-1099</td>
-                                    <td class="font-black text-emerald-700">SNY-884922</td>
-                                    <td class="font-bold text-slate-800">Bomba Hidráulica Principal</td>
-                                    <td><span class="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">Hidráulica</span></td>
-                                    <td class="font-mono text-xs">P05-E02-N1</td>
-                                    <td class="text-center"><span class="badge-stock stock-critico">0 UN</span></td>
-                                    <td class="text-right font-bold text-slate-700">$ 1.250.000</td>
-                                </tr>
+                                {% else %}
+                                <tr><td colspan="6" class="px-6 py-8 text-center text-slate-400 text-xs font-bold">AÚN NO HAY REPUESTOS REGISTRADOS.</td></tr>
+                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- ============================================ -->
-            <!-- TAB 3: MÓDULO DE FILTROS -->
-            <!-- ============================================ -->
-            <div id="wms-filtros" class="wms-tab">
-                <div class="card-wms-nopad h-[75vh] flex flex-col">
-                    <div class="p-4 bg-emerald-50 border-b border-emerald-100 flex justify-between items-center">
-                        <h3 class="font-black text-emerald-800 uppercase tracking-widest text-xs">Catálogo Especializado de Filtros</h3>
-                        <button class="bg-white border border-emerald-200 text-emerald-700 px-4 py-1.5 rounded font-bold text-xs uppercase shadow-sm">Buscar Equivalencias</button>
-                    </div>
-                    <div class="overflow-y-auto flex-1">
-                        <table class="table-wms">
-                            <thead>
-                                <tr>
-                                    <th>Aplicación / Sistema</th>
-                                    <th>N° Original (OEM)</th>
-                                    <th>Fleetguard</th>
-                                    <th>Donaldson / Baldwin</th>
-                                    <th>Compatibilidad de Flota</th>
-                                    <th class="text-center">Stock Físico</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><span class="text-[10px] font-black uppercase text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200">Aceite Motor</span></td>
-                                    <td class="font-mono font-bold text-slate-700">1R-0716</td>
-                                    <td class="font-mono font-bold text-emerald-600">LF3000</td>
-                                    <td class="font-mono font-bold text-slate-600">P554005 / B99</td>
-                                    <td class="text-xs font-semibold text-slate-500">MD-36, MD-109, MD-110</td>
-                                    <td class="text-center"><span class="badge-stock stock-normal">15 UN</span></td>
-                                </tr>
-                                <tr>
-                                    <td><span class="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-200">Combustible Sep.</span></td>
-                                    <td class="font-mono font-bold text-slate-700">1R-0750</td>
-                                    <td class="font-mono font-bold text-emerald-600">FF5319</td>
-                                    <td class="font-mono font-bold text-slate-600">P551313 / BF7633</td>
-                                    <td class="text-xs font-semibold text-slate-500">MD-36, CD-108, CD-71</td>
-                                    <td class="text-center"><span class="badge-stock stock-bajo">2 UN</span></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ============================================ -->
-            <!-- TAB 4: KITS DE MANTENIMIENTO PM -->
-            <!-- ============================================ -->
+            <!-- TAB 3: ENSAMBLADOR DE KITS BOM -->
             <div id="wms-kits" class="wms-tab">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    
-                    <div class="card-wms flex flex-col h-full border-t-4 border-t-emerald-500">
+                <div class="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {% for modelo, kit in kits_por_modelo.items() %}
+                    <div class="card-wms flex flex-col h-full border-t-4 {% if kit.armable %}border-t-emerald-500{% else %}border-t-red-500{% endif %}">
                         <div class="flex justify-between items-start mb-4">
                             <div>
-                                <h3 class="font-black text-slate-800 text-lg">KIT PM2 - SANY SY215</h3>
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Aplica a: MD-100, MD-104, MD-99</p>
+                                <h3 class="font-black text-slate-800 text-lg uppercase">{{ modelo }}</h3>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                                    Pauta Asignada a: {{ kit.equipos_aplica[:3]|join(', ') }}{% if kit.equipos_aplica|length > 3 %} (+{{ kit.equipos_aplica|length - 3 }}){% endif %}
+                                </p>
                             </div>
-                            <span class="badge-stock stock-normal">Armable</span>
+                            {% if kit.armable %}
+                            <span class="badge-stock stock-normal">ARMABLE</span>
+                            {% else %}
+                            <span class="badge-stock stock-critico">FALTANTES</span>
+                            {% endif %}
                         </div>
-                        <div class="bg-slate-50 rounded p-3 mb-4 flex-1">
-                            <p class="text-[10px] font-bold text-slate-600 uppercase border-b border-slate-200 pb-1 mb-2">BOM de Componentes</p>
+                        <div class="bg-slate-50 rounded p-3 mb-4 flex-1 border border-slate-200">
+                            <p class="text-[9px] font-bold text-slate-600 uppercase border-b border-slate-200 pb-1 mb-2">Ingredientes del Kit (Receta BOM)</p>
                             <ul class="text-xs font-medium text-slate-700 space-y-2">
-                                <li class="flex justify-between"><span>1x Filtro Aceite (LF3000)</span><span class="text-emerald-600">OK</span></li>
-                                <li class="flex justify-between"><span>2x Filtro Combustible (FF5319)</span><span class="text-emerald-600">OK</span></li>
-                                <li class="flex justify-between"><span>1x Filtro Aire Pri. (AF25139M)</span><span class="text-emerald-600">OK</span></li>
-                                <li class="flex justify-between"><span>20L Aceite Motor 15W40</span><span class="text-emerald-600">OK</span></li>
+                                {% for comp in kit.componentes %}
+                                <li class="flex justify-between items-center">
+                                    <span class="truncate pr-2" title="{{ comp.nombre }}">{{ comp.cant_req|int }}x {{ comp.sku }}</span>
+                                    {% if comp.ok %}
+                                    <span class="text-emerald-600 font-black text-[10px]">OK ({{ comp.stock|int }})</span>
+                                    {% else %}
+                                    <span class="text-red-600 font-black text-[10px]">FALTA ({{ comp.stock|int }})</span>
+                                    {% endif %}
+                                </li>
+                                {% endfor %}
                             </ul>
                         </div>
-                        <button class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded text-xs uppercase tracking-widest transition">Descontar Kit Completo</button>
+                        {% if kit.armable %}
+                        <button class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded text-[10px] uppercase tracking-widest transition">Descontar Piezas</button>
+                        {% else %}
+                        <button class="w-full bg-white border border-slate-300 text-slate-400 font-bold py-2 rounded text-[10px] uppercase tracking-widest cursor-not-allowed" disabled>Comprar Faltantes</button>
+                        {% endif %}
                     </div>
-
-                    <div class="card-wms flex flex-col h-full border-t-4 border-t-red-500">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 class="font-black text-slate-800 text-lg">KIT PM3 - MAN TGS</h3>
-                                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Aplica a: CD-102 al CD-107</p>
-                            </div>
-                            <span class="badge-stock stock-critico">Faltantes</span>
-                        </div>
-                        <div class="bg-slate-50 rounded p-3 mb-4 flex-1">
-                            <p class="text-[10px] font-bold text-slate-600 uppercase border-b border-slate-200 pb-1 mb-2">BOM de Componentes</p>
-                            <ul class="text-xs font-medium text-slate-700 space-y-2">
-                                <li class="flex justify-between"><span>1x Filtro Aceite (HU12110X)</span><span class="text-emerald-600">OK</span></li>
-                                <li class="flex justify-between"><span>1x Filtro Combustible Separador</span><span class="text-red-600 font-bold">FALTA</span></li>
-                                <li class="flex justify-between"><span>1x Filtro Hidráulico</span><span class="text-emerald-600">OK</span></li>
-                            </ul>
-                        </div>
-                        <button class="w-full bg-white border border-slate-300 text-slate-400 font-bold py-2 rounded text-xs uppercase tracking-widest cursor-not-allowed">No se puede armar</button>
+                    {% else %}
+                    <div class="col-span-3 xl:col-span-4 text-center py-16 bg-white rounded-lg border border-slate-200">
+                        <p class="text-slate-500 font-medium text-sm">Aún no has sincronizado la pestaña <b>Recetas_Kits</b> en tu archivo Excel.</p>
                     </div>
-
+                    {% endfor %}
                 </div>
             </div>
 
-            <!-- ============================================ -->
-            <!-- TAB 5: TRAZABILIDAD Y MOVIMIENTOS -->
-            <!-- ============================================ -->
+            <!-- TAB 4: MOVIMIENTOS -->
             <div id="wms-movs" class="wms-tab">
                 <div class="card-wms-nopad h-[75vh] flex flex-col">
                     <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
                         <h3 class="font-black text-slate-700 uppercase tracking-widest text-xs">Libro Mayor de Movimientos</h3>
-                        <button class="text-[#1E3A8A] font-bold text-xs uppercase hover:underline">Descargar Auditoría (CSV)</button>
                     </div>
-                    <div class="overflow-y-auto flex-1">
-                        <table class="table-wms">
-                            <thead>
-                                <tr>
-                                    <th>Fecha y Hora</th>
-                                    <th>Tipo</th>
-                                    <th>Repuesto / Kit</th>
-                                    <th class="text-center">Cant.</th>
-                                    <th>Doc. Ref (OT/OC)</th>
-                                    <th>Usuario Rsp.</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="font-mono text-slate-500">2026-05-06 14:30</td>
-                                    <td><span class="bg-red-50 text-red-700 border border-red-200 px-2 py-1 rounded text-[10px] font-black uppercase">Salida OT</span></td>
-                                    <td class="font-bold text-slate-700">KIT PM2 - SANY SY215</td>
-                                    <td class="text-center font-bold">1</td>
-                                    <td class="font-mono font-bold text-[#1E3A8A]">OT-4589 (MD-100)</td>
-                                    <td class="text-xs uppercase text-slate-600">M. Ortiz</td>
-                                </tr>
-                                <tr>
-                                    <td class="font-mono text-slate-500">2026-05-06 10:15</td>
-                                    <td><span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 rounded text-[10px] font-black uppercase">Ingreso OC</span></td>
-                                    <td class="font-bold text-slate-700">Filtro Aceite LF3000</td>
-                                    <td class="text-center font-bold">20</td>
-                                    <td class="font-mono font-bold text-[#1E3A8A]">OC-8992</td>
-                                    <td class="text-xs uppercase text-slate-600">Bodega Central</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="overflow-y-auto flex-1 p-8 text-center text-slate-500 font-medium">
+                        Historial de trazabilidad en construcción...
                     </div>
                 </div>
             </div>
@@ -361,8 +253,8 @@
             new Chart(document.getElementById('chartCategorias').getContext('2d'), {
                 type: 'doughnut',
                 data: {
-                    labels: ['Filtros', 'Lubricantes', 'Rodamientos', 'Neumáticos', 'Otros'],
-                    datasets: [{ data: [35, 20, 15, 20, 10], backgroundColor: ['#1E3A8A', '#3B82F6', '#10B981', '#F59E0B', '#64748B'], borderWidth: 0 }]
+                    labels: {{ grafico_categorias.labels | tojson }},
+                    datasets: [{ data: {{ grafico_categorias.data | tojson }}, backgroundColor: ['#1E3A8A', '#3B82F6', '#10B981', '#F59E0B', '#64748B', '#DC2626'], borderWidth: 0 }]
                 },
                 options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom' } } }
             });
