@@ -1,9 +1,9 @@
 import os
 from werkzeug.utils import secure_filename
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify
 from datetime import datetime, timedelta
 from collections import Counter
-from flask_login import login_required
+from flask_login import login_required, current_user
 from sqlalchemy import func, case, text
 from extensions import db
 
@@ -294,6 +294,7 @@ def subir_documento(codigo):
 # ======================================================================
 # MOTOR WMS INTELIGENTE (WAREHOUSE MANAGEMENT SYSTEM)
 # ======================================================================
+
 @dashboard_bp.route('/bodega_kpi', strict_slashes=False)
 @login_required
 def bodega_kpi():
@@ -305,8 +306,11 @@ def bodega_kpi():
         eqs_db = Equipo.query.all()
         repuestos = Repuesto.query.all()
         recetas_db = RecetaModelo.query.all()
-        movimientos = MovimientoBodega.query.order_by(MovimientoBodega.fecha.desc()).limit(100).all()
+        movimientos = MovimientoBodega.query.order_by(MovimientoBodega.fecha.desc()).limit(150).all()
         
+        # Diccionario para mapear rápido el nombre del repuesto en el historial
+        rep_dict = {r.id: r for r in repuestos}
+
         # 1. KPIs Generales
         valor_total = sum((r.stock_actual or 0) * (r.precio_promedio or 0) for r in repuestos)
         bajo_minimo = [r for r in repuestos if 0 < (r.stock_actual or 0) <= (r.stock_minimo or 2)]
@@ -325,7 +329,7 @@ def bodega_kpi():
         }
 
         # 3. MOTOR INTELIGENTE BOM (Generador de Kits)
-        repuestos_dict = {r.codigo_oem: r for r in repuestos}
+        repuestos_dict_sku = {r.codigo_oem: r for r in repuestos}
         kits_por_modelo = {}
         
         for rec in recetas_db:
@@ -333,7 +337,7 @@ def bodega_kpi():
             if m not in kits_por_modelo:
                 kits_por_modelo[m] = {'componentes': [], 'armable': True, 'equipos_aplica': []}
             
-            rep_obj = repuestos_dict.get(rec.sku_repuesto)
+            rep_obj = repuestos_dict_sku.get(rec.sku_repuesto)
             stock_actual = rep_obj.stock_actual if rep_obj else 0
             nombre_rep = rep_obj.nombre if rep_obj else 'Repuesto No Registrado'
             
@@ -354,6 +358,7 @@ def bodega_kpi():
 
         return render_template('bodega_kpi.html', 
                                repuestos=repuestos,
+                               rep_dict=rep_dict,
                                kits_por_modelo=kits_por_modelo,
                                movimientos=movimientos,
                                valor_total_str=format_clp(valor_total),
@@ -364,3 +369,55 @@ def bodega_kpi():
                                hoy=hoy)
     except Exception as e:
         return f"Error crítico en Módulo Bodega WMS: {str(e)}"
+
+# === RUTA TRANSACCIONAL: DESCONTAR KIT ===
+@dashboard_bp.route('/api/wms/descontar_kit', methods=['POST'])
+@login_required
+def wms_descontar_kit():
+    try:
+        from models.bodega import Repuesto, RecetaModelo, MovimientoBodega
+        data = request.get_json()
+        modelo = data.get('modelo')
+        equipo = data.get('equipo')
+        referencia = data.get('referencia') or 'Uso Interno'
+        
+        # Obtener el nombre del bodeguero/usuario actual
+        try: usuario = current_user.username
+        except: 
+            try: usuario = current_user.nombre
+            except: usuario = 'Sistema'
+            
+        recetas = RecetaModelo.query.filter_by(modelo_equipo=modelo).all()
+        if not recetas:
+            return jsonify({"status": "error", "message": "No se encontraron componentes para este modelo."})
+            
+        # 1. DOBLE VALIDACIÓN (Asegurar que haya stock antes de descontar nada)
+        for rec in recetas:
+            rep = Repuesto.query.filter_by(codigo_oem=rec.sku_repuesto).first()
+            if not rep or (rep.stock_actual or 0) < rec.cantidad:
+                return jsonify({"status": "error", "message": f"Quiebre de stock en: {rec.sku_repuesto}. Despacho cancelado."})
+                
+        # 2. EJECUCIÓN DEL DESCUENTO Y AUDITORÍA
+        for rec in recetas:
+            rep = Repuesto.query.filter_by(codigo_oem=rec.sku_repuesto).first()
+            rep.stock_actual -= rec.cantidad
+            
+            mov = MovimientoBodega(
+                fecha=datetime.now(),
+                tipo_movimiento='SALIDA KIT PM',
+                motivo='Mantenimiento Flota',
+                repuesto_id=rep.id,
+                cantidad=rec.cantidad,
+                costo_unitario=rep.precio_promedio,
+                documento_ref=referencia,
+                codigo_equipo=equipo,
+                usuario=usuario,
+                observaciones=f"Despacho automatizado BOM (Modelo: {modelo})"
+            )
+            db.session.add(mov)
+            
+        db.session.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)})
