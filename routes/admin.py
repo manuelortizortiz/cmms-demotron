@@ -256,14 +256,16 @@ def cargar_sql_final():
             df_rep = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Repuestos", skiprows=2).replace({np.nan: None})
             db.session.query(Repuesto).delete()
             for idx, row in df_rep.iterrows():
-                cod_oem = clean_string(str(row.iloc[0] if len(row.columns)>0 else '')).upper()
+                # Corregido: Se eliminó .columns y se usan accesos seguros por índice
+                cod_oem = clean_string(str(row.iloc[0])).upper() if len(row) > 0 else ''
                 if not cod_oem or cod_oem in ['NONE', 'NAN', '']: continue
                 
-                nombre = clean_string(str(row.iloc[1] if len(row.columns)>1 else ''))
-                categoria = clean_string(str(row.iloc[2] if len(row.columns)>2 else 'General'))
-                stock = safe_clean_float(row.iloc[3] if len(row.columns)>3 else 0)
-                precio = safe_clean_float(row.iloc[4] if len(row.columns)>4 else 0)
-                ubicacion = clean_string(str(row.iloc[5] if len(row.columns)>5 else 'BODEGA CENTRAL'))
+                nombre = clean_string(str(row.iloc[1])) if len(row) > 1 else ''
+                categoria = clean_string(str(row.iloc[2])) if len(row) > 2 else 'General'
+                stock = safe_clean_float(row.iloc[3]) if len(row) > 3 else 0.0
+                precio = safe_clean_float(row.iloc[4]) if len(row) > 4 else 0.0
+                ubicacion = clean_string(str(row.iloc[5])) if len(row) > 5 else 'BODEGA CENTRAL'
+                if not ubicacion or ubicacion.upper() in ['NONE', 'NAN', '']: ubicacion = 'BODEGA CENTRAL'
                 
                 rep = Repuesto.query.filter_by(codigo_oem=cod_oem).first()
                 if rep:
@@ -280,16 +282,17 @@ def cargar_sql_final():
             df_recetas = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Recetas_Kits", skiprows=2).replace({np.nan: None})
             db.session.query(RecetaModelo).delete() # Se purgan para cargar los nuevos
             for idx, row in df_recetas.iterrows():
-                modelo = str(row.iloc[0] if len(row.columns)>0 else '').strip()
-                sku = clean_string(str(row.iloc[1] if len(row.columns)>1 else '')).upper()
-                cant = safe_clean_float(row.iloc[2] if len(row.columns)>2 else 1)
+                # Corregido: Se eliminó .columns y se usan accesos seguros
+                modelo = str(row.iloc[0]).strip() if len(row) > 0 else ''
+                sku = clean_string(str(row.iloc[1])).upper() if len(row) > 1 else ''
+                cant = safe_clean_float(row.iloc[2]) if len(row) > 2 else 1.0
                 
                 if modelo and sku and modelo.lower() not in ['none', 'nan', ''] and sku.lower() not in ['none', 'nan', '']:
                     db.session.add(RecetaModelo(modelo_equipo=modelo, sku_repuesto=sku, cantidad=cant))
             db.session.commit()
             reporte['mensajes'].append("✅ Recetas de Kits BOM sincronizadas.")
         except Exception as e:
-            reporte['mensajes'].append("ADVERTENCIA: Aún no existe la pestaña 'Recetas_Kits' en el Excel.")
+            reporte['mensajes'].append(f"ADVERTENCIA EN RECETAS KITS: {str(e)}")
 
         # --- ACTUALIZAR MÁRGENES ---
         for eq in Equipo.query.all():
