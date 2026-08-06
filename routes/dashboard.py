@@ -11,7 +11,7 @@ from models.equipo import Equipo, DocumentoEquipo, FiltroEquipo, HistorialUbicac
 from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
 from models.personal import Personal, Mecanico
-from models.bodega import InventarioBodega
+from models.bodega import InventarioBodega, Repuesto, MovimientoBodega, RecetaModelo
 from utils.formatters import format_num, format_clp, buscar_foto_por_tipo
 
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -291,151 +291,76 @@ def subir_documento(codigo):
     except Exception as e:
         return f"Error al subir documento: {str(e)}", 500
 
-@dashboard_bp.route('/imprimir_ot/<int:ot_id>', strict_slashes=False)
-@login_required
-def imprimir_ot(ot_id):
-    try:
-        ot = OrdenTrabajo.query.get(ot_id)
-        if not ot: return "Aviso: El documento PDF no existe o la Orden de Trabajo fue eliminada del sistema."
-        equipo = Equipo.query.filter_by(codigo=ot.codigo_equipo).first()
-        filtros = FiltroEquipo.query.filter_by(codigo_equipo=equipo.codigo).all() if equipo else []
-        return render_template('imprimir_ot.html', ot=ot, equipo=equipo, filtros=filtros, hoy=datetime.now())
-    except Exception as e:
-        return f"Aviso del Sistema: No se pudo generar la vista del PDF corporativo ({str(e)})."
-
-@dashboard_bp.route('/api/bodega_movimiento', methods=['POST'])
-@login_required
-def bodega_movimiento():
-    try:
-        tipo = request.form.get('tipo_movimiento')
-        codigo_eq = request.form.get('codigo_equipo')
-        if not codigo_eq: return redirect('/bodega_kpi?tab=kits')
-        codigo_eq = codigo_eq.upper().strip()
-        
-        if tipo == 'INGRESO':
-            nueva_compra = CompraRepuesto(codigo_equipo=codigo_eq, fecha=datetime.now(), descripcion="Ingreso Manual de Kit a Bodega", costo_pm_clp=0, oc="STOCK-MANUAL")
-            db.session.add(nueva_compra)
-        elif tipo == 'SALIDA':
-            nueva_ot = OrdenTrabajo(codigo_equipo=codigo_eq, fecha=datetime.now(), fecha_cierre=datetime.now(), estado='Finalizada', tipo_ot='Preventiva', tipo_mantencion="Retiro Manual Kit Bodega")
-            db.session.add(nueva_ot)
-        db.session.commit()
-        return redirect('/bodega_kpi?tab=kits')
-    except Exception as e:
-        db.session.rollback()
-        return f"<div style='padding: 50px; font-family: sans-serif; color: red;'><h2>Error al Mover Kit:</h2><p><b>{str(e)}</b></p><br><a href='/bodega_kpi?tab=kits' style='padding: 10px; background: #1E3A8A; color: white; text-decoration: none;'>Volver atrás</a></div>"
-
-@dashboard_bp.route('/api/bodega_suelta_mov', methods=['POST'])
-@login_required
-def bodega_suelta_mov():
-    try:
-        codigo = request.form.get('codigo_item')
-        if not codigo: return redirect('/bodega_kpi?tab=sueltos')
-        codigo = codigo.upper().strip()
-        
-        try: cantidad = int(float(request.form.get('cantidad', 0)))
-        except: cantidad = 0
-            
-        accion = request.form.get('accion') 
-        item = InventarioBodega.query.filter_by(codigo_item=codigo).first()
-        
-        if item:
-            try: actual = int(float(item.cantidad))
-            except: actual = 0
-            nueva_cant = actual + cantidad if accion == 'INGRESO' else max(0, actual - cantidad)
-            item.cantidad = int(nueva_cant)
-        else:
-            if accion == 'INGRESO':
-                nuevo = InventarioBodega(codigo_item=codigo, nombre=f"FILTRO/REPUESTO {codigo}", categoria="Filtros Sueltos", cantidad=int(cantidad), ubicacion="BODEGA CENTRAL")
-                db.session.add(nuevo)
-        db.session.commit()
-        return redirect('/bodega_kpi?tab=sueltos')
-    except Exception as e:
-        db.session.rollback()
-        return f"<div style='padding: 50px; font-family: sans-serif; color: red;'><h2>Error de Base de Datos (Bodega Suelta):</h2><p>Por favor, copia este error y envíaselo al desarrollador:</p><p style='padding:15px; background:#fee2e2; border-left:4px solid red; font-family:monospace;'><b>{str(e)}</b></p><br><a href='/bodega_kpi?tab=sueltos' style='padding: 10px; background: #1E3A8A; color: white; text-decoration: none; border-radius: 5px;'>Volver al Sistema</a></div>"
-
+# ======================================================================
+# MOTOR WMS INTELIGENTE (WAREHOUSE MANAGEMENT SYSTEM)
+# ======================================================================
 @dashboard_bp.route('/bodega_kpi', strict_slashes=False)
 @login_required
 def bodega_kpi():
     try:
-        hoy = datetime.now()
-        ots_db = OrdenTrabajo.query.all()
-        compras_db = CompraRepuesto.query.all()
-        eqs_db = Equipo.query.all()
-        
-        tiempos_respuesta = []
-        ots_abandonadas = []
-        for ot in ots_db:
-            if ot.estado == 'Finalizada' and ot.fecha_cierre and ot.fecha:
-                dias = (ot.fecha_cierre - ot.fecha).days
-                if dias >= 0: tiempos_respuesta.append(dias)
-            elif ot.estado != 'Finalizada' and ot.fecha:
-                # SOLUCIÓN DEL ERROR "intern"
-                dias_retraso = (hoy - ot.fecha).days
-                if dias_retraso > 20: ots_abandonadas.append({'ot': ot, 'dias': dias_retraso})
-        ots_abandonadas.sort(key=lambda x: x['dias'], reverse=True)
-        mttr_dias = round(sum(tiempos_respuesta) / max(1, len(tiempos_respuesta)), 1) if tiempos_respuesta else 0
-
-        inventario_por_equipo = {}
-        eventos_por_equipo = {}
-        for c in compras_db:
-            eq = c.codigo_equipo or 'STOCK GENERAL'
-            if eq not in eventos_por_equipo: eventos_por_equipo[eq] = []
-            eventos_por_equipo[eq].append({'tipo': 'COMPRA', 'fecha': c.fecha or datetime.min, 'costo': float(c.costo_pm_clp or 0), 'obj': c})
-            
-        for ot in ots_db:
-            if ot.estado == 'Finalizada':
-                eq = ot.codigo_equipo or 'STOCK GENERAL'
-                if eq not in eventos_por_equipo: eventos_por_equipo[eq] = []
-                eventos_por_equipo[eq].append({'tipo': 'OT', 'fecha': ot.fecha_cierre or ot.fecha or datetime.min, 'obj': ot})
-
-        valor_total_bodega = 0.0
-        for eq, eventos in eventos_por_equipo.items():
-            eventos.sort(key=lambda x: x['fecha'])
-            stock, entradas, salidas, movimientos = 0, 0, 0, []
-            costos_acumulados, cantidad_compras = 0.0, 0
-            compras_eq = [e['costo'] for e in eventos if e['tipo'] == 'COMPRA' and e['costo'] > 0]
-            precio_ref = sum(compras_eq)/len(compras_eq) if compras_eq else 0.0
-
-            for ev in eventos:
-                if ev['tipo'] == 'COMPRA':
-                    stock += 1; entradas += 1; costos_acumulados += ev['costo']; cantidad_compras += 1
-                    precio_ref = costos_acumulados / cantidad_compras
-                    movimientos.append({'fecha_str': ev['fecha'].strftime('%d/%m/%Y') if ev['fecha'] > datetime.min else 'S/F', 'tipo': 'INGRESO FACTURADO', 'doc': ev['obj'].oc or 'N/A', 'detalle': ev['obj'].descripcion or 'Compra de Repuestos', 'color': 'text-emerald-700 bg-emerald-50 border-emerald-200'})
-                elif ev['tipo'] == 'OT':
-                    if stock <= 0:
-                        stock += 1; entradas += 1
-                        movimientos.append({'fecha_str': 'PREVIO A OT', 'tipo': 'AJUSTE INICIAL', 'doc': 'AUTO-STOCK', 'detalle': 'Stock existente previo a facturas', 'color': 'text-blue-700 bg-blue-50 border-blue-200'})
-                    stock -= 1; salidas += 1
-                    movimientos.append({'fecha_str': ev['fecha'].strftime('%d/%m/%Y') if ev['fecha'] > datetime.min else 'S/F', 'tipo': 'SALIDA TALLER', 'doc': ev['obj'].folio or f"OT-{ev['obj'].id}", 'detalle': f"Aplicado en {ev['obj'].tipo_mantencion}", 'color': 'text-red-700 bg-red-50 border-red-200'})
-            
-            if stock > 0: valor_total_bodega += (stock * precio_ref)
-            inventario_por_equipo[eq] = {'entradas': entradas, 'salidas': salidas, 'stock': stock, 'movimientos': movimientos[::-1]}
-
+        from models.bodega import Repuesto, MovimientoBodega, RecetaModelo
         from utils.formatters import format_clp
-        valor_bodega_str = format_clp(valor_total_bodega)
-        con_stock = {k: v for k, v in inventario_por_equipo.items() if v['stock'] >= 2}
-        bajo_stock = {k: v for k, v in inventario_por_equipo.items() if v['stock'] == 1}
-        sin_stock = {k: v for k, v in inventario_por_equipo.items() if v['stock'] <= 0}
+        hoy = datetime.now()
+        
+        eqs_db = Equipo.query.all()
+        repuestos = Repuesto.query.all()
+        recetas_db = RecetaModelo.query.all()
+        movimientos = MovimientoBodega.query.order_by(MovimientoBodega.fecha.desc()).limit(100).all()
+        
+        # 1. KPIs Generales
+        valor_total = sum((r.stock_actual or 0) * (r.precio_promedio or 0) for r in repuestos)
+        bajo_minimo = [r for r in repuestos if 0 < (r.stock_actual or 0) <= (r.stock_minimo or 2)]
+        quiebre_stock = [r for r in repuestos if (r.stock_actual or 0) <= 0]
+        
+        # 2. Gráficos de Categoría
+        cat_stats = {}
+        for r in repuestos:
+            cat = r.categoria or 'Otros'
+            if cat not in cat_stats: cat_stats[cat] = 0
+            cat_stats[cat] += (r.stock_actual or 0) * (r.precio_promedio or 0)
+            
+        grafico_categorias = {
+            'labels': list(cat_stats.keys()),
+            'data': list(cat_stats.values())
+        }
 
-        bodega_suelta_db = InventarioBodega.query.order_by(InventarioBodega.codigo_item).all()
-        stock_suelto = {}
-        for b in bodega_suelta_db:
-            if b.codigo_item:
-                key = str(b.codigo_item).strip().upper()
-                try: qty = float(b.cantidad)
-                except: qty = 1.0
-                stock_suelto[key] = stock_suelto.get(key, 0) + qty
-                
-        filtros = FiltroEquipo.query.all()
-        maestro_filtros = {}
-        for f in filtros:
-            eq = f.codigo_equipo
-            if eq not in maestro_filtros: maestro_filtros[eq] = []
-            marcas = [str(x).strip().upper() for x in [f.originales, f.fleetguard, f.donaldson, f.baldwind, f.otra_alternativa] if x and str(x).strip() not in ['-', 'NAN', 'NONE', '']]
-            try: c = int(float(f.cant))
-            except: c = 1
-            maestro_filtros[eq].append({'sistema': f.sistema, 'cant': c, 'marcas': marcas})
+        # 3. MOTOR INTELIGENTE BOM (Generador de Kits)
+        repuestos_dict = {r.codigo_oem: r for r in repuestos}
+        kits_por_modelo = {}
+        
+        for rec in recetas_db:
+            m = str(rec.modelo_equipo).strip()
+            if m not in kits_por_modelo:
+                kits_por_modelo[m] = {'componentes': [], 'armable': True, 'equipos_aplica': []}
+            
+            rep_obj = repuestos_dict.get(rec.sku_repuesto)
+            stock_actual = rep_obj.stock_actual if rep_obj else 0
+            nombre_rep = rep_obj.nombre if rep_obj else 'Repuesto No Registrado'
+            
+            ok = stock_actual >= rec.cantidad
+            if not ok: kits_por_modelo[m]['armable'] = False
+            
+            kits_por_modelo[m]['componentes'].append({
+                'sku': rec.sku_repuesto,
+                'nombre': nombre_rep,
+                'cant_req': rec.cantidad,
+                'stock': stock_actual,
+                'ok': ok
+            })
+            
+        for m in kits_por_modelo.keys():
+            eqs_compatibles = [e.codigo for e in eqs_db if str(e.modelo).strip() == m]
+            kits_por_modelo[m]['equipos_aplica'] = eqs_compatibles
 
-        return render_template('bodega_kpi.html', mttr_dias=mttr_dias, abandonadas=ots_abandonadas, inventario=inventario_por_equipo, valor_bodega_str=valor_bodega_str, con_stock=con_stock, bajo_stock=bajo_stock, sin_stock=sin_stock, bodega_sueltos=bodega_suelta_db, stock_suelto=stock_suelto, maestro_filtros=maestro_filtros, eqs_db=eqs_db, hoy=hoy)
+        return render_template('bodega_kpi.html', 
+                               repuestos=repuestos,
+                               kits_por_modelo=kits_por_modelo,
+                               movimientos=movimientos,
+                               valor_total_str=format_clp(valor_total),
+                               bajo_minimo_count=len(bajo_minimo),
+                               quiebre_stock_count=len(quiebre_stock),
+                               grafico_categorias=grafico_categorias,
+                               eqs_db=eqs_db,
+                               hoy=hoy)
     except Exception as e:
-        return f"Error crítico en Módulo Bodega: {str(e)}"
+        return f"Error crítico en Módulo Bodega WMS: {str(e)}"
