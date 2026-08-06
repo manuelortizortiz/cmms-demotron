@@ -65,10 +65,11 @@
             <a onclick="switchTab('ot_corr', this)" class="nav-link">Averías y Correctivas</a>
             <a onclick="switchTab('lec', this)" class="nav-link">Ingreso Lecturas HR/KM</a>
             
-            <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Suministros</p>
-            <a href="/bodega_kpi" class="nav-link text-emerald-400">📊 Gestión Bodega y Taller</a>
-            <a onclick="switchTab('bodega', this)" class="nav-link">Inventario Físico</a>
+            <!-- EL NUEVO MENÚ DE BODEGA ESTÁ AQUÍ -->
+            <p class="px-6 text-[11px] font-black text-emerald-500 uppercase tracking-widest mb-2 mt-6">Bodega</p>
+            <a href="/bodega_kpi" class="nav-link">Gestión de Inventario WMS</a>
             <a onclick="switchTab('compras', this)" class="nav-link">Órdenes de Compra</a>
+            <a onclick="switchTab('proveedores', this)" class="nav-link">Directorio Proveedores</a>
             
             <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Directorio y Sistemas</p>
             <a onclick="switchTab('cond', this)" class="nav-link">Operadores</a>
@@ -419,18 +420,11 @@
                 </table></div>
             </div>
 
-            <div id="bodega" class="seccion">
-                <div class="card-custom-nopad table-wrapper h-[80vh]">
-                    <table class="table-custom table-searchable">
-                        <thead class="sticky top-0 shadow-sm z-10"><tr><th>Código SKU</th><th>Descripción de Artículo</th><th>Categoría</th><th>Stock Actual</th><th>Ubicación</th></tr></thead>
-                        <tbody>{% for b in bodega %}<tr>
-                            <td class="text-slate-500">{{ b.codigo_item or '-' }}</td>
-                            <td class="font-medium text-slate-800 whitespace-normal">{{ b.nombre }}</td>
-                            <td>{{ b.categoria }}</td>
-                            <td class="font-medium text-[#1E3A8A]">{{ b.cantidad }}</td>
-                            <td>{{ b.ubicacion }}</td>
-                        </tr>{% endfor %}</tbody>
-                    </table>
+            <!-- PROVEEDORES (NUEVO TAB) -->
+            <div id="proveedores" class="seccion">
+                <div class="card-custom text-center py-12">
+                    <h2 class="text-lg font-bold text-slate-700">Directorio de Proveedores</h2>
+                    <p class="text-slate-500 mt-2">Módulo en construcción. Aquí podrá gestionar contactos, cuentas y condiciones comerciales.</p>
                 </div>
             </div>
             
@@ -483,14 +477,12 @@
     </div>
 
     <script>
-        // Funciones del Menú
         function toggleMenu() {
             const sidebar = document.getElementById('sidebar'); const backdrop = document.getElementById('sidebar-backdrop');
             if (sidebar.classList.contains('-translate-x-full')) { sidebar.classList.remove('-translate-x-full'); backdrop.classList.remove('hidden'); } 
             else { sidebar.classList.add('-translate-x-full'); backdrop.classList.add('hidden'); }
         }
 
-        // Sistema de Pestañas (Tabs)
         function switchTab(t, el) {
             document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active')); document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.getElementById(t).classList.add('active'); if(el) el.classList.add('active'); document.getElementById('title').innerText = el ? el.innerText.trim() : 'Dashboard';
@@ -504,7 +496,7 @@
             if(t==='cal' && window.calendar) { setTimeout(() => window.calendar.render(), 200); }
         }
 
-        // 🚀 MEJORA 1: Buscador Ultra-Rápido (Anti-Congelamiento)
+        // Buscador Ultra-Rápido (Anti-Congelamiento)
         let searchTimeout;
         function filtrarTablas(q) { 
             clearTimeout(searchTimeout);
@@ -513,7 +505,6 @@
                 const activeSec = document.querySelector('.seccion.active');
                 if(!activeSec) return;
                 
-                // Procesar la tabla activa
                 const tablas = activeSec.querySelectorAll('.table-searchable tbody');
                 tablas.forEach(tbody => {
                     tbody.querySelectorAll('tr').forEach(r => { 
@@ -522,41 +513,36 @@
                         r.style.display = (texto.includes(q) || extra.includes(q)) ? '' : 'none'; 
                     }); 
                 });
-            }, 300); // Espera 300 milisegundos después de soltar la tecla
+            }, 300);
         }
 
-        // 🚀 MEJORA 2: Borrado "Fantasma" (Sin recargar la página)
+        // Borrado "Fantasma" (Sin recargar la página)
         function borrarRegistro(tabla, id) { 
-            const btn = window.event ? window.event.target : null; // Atrapa el botón que hizo clic
-            
+            const btn = window.event ? window.event.target : null; 
             if(confirm('Aviso: ¿Confirma la eliminación permanente de este registro de la base de datos?')) {
-                if (btn) {
-                    btn.innerText = 'Borrando...';
-                    btn.style.opacity = '0.5';
-                    btn.disabled = true;
-                }
+                if (btn) { btn.innerText = 'Borrando...'; btn.style.opacity = '0.5'; btn.disabled = true; }
                 
                 fetch('/api/delete_record/' + tabla + '/' + id, { method: 'POST' })
                 .then(res => res.json())
                 .then(data => {
                     if(data.status === 'success') {
                         if (btn) {
-                            const fila = btn.closest('tr') || btn.closest('.bg-white.p-4'); // Fila de tabla o Tarjeta Kanban
+                            const fila = btn.closest('tr') || btn.closest('.bg-white.p-4'); 
                             if (fila) {
                                 fila.style.transition = 'all 0.4s ease';
                                 fila.style.opacity = '0';
-                                fila.style.backgroundColor = '#fee2e2'; // Se pone rojo claro
-                                setTimeout(() => fila.remove(), 400); // Se esfuma sin recargar
-                                return; // Terminamos aquí, la página NUNCA se recarga
+                                fila.style.backgroundColor = '#fee2e2'; 
+                                setTimeout(() => fila.remove(), 400); 
+                                return; 
                             }
                         }
-                        location.reload(); // Solo recarga si no pudo hacer el truco visual
+                        location.reload(); 
                     } else {
                         alert('No se pudo eliminar el registro.');
                         if (btn) { btn.innerText = 'Borrar'; btn.style.opacity = '1'; btn.disabled = false; }
                     }
                 })
-                .catch(e => location.reload()); // Fallback
+                .catch(e => location.reload());
             }
         }
 
