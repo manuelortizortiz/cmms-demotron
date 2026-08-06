@@ -124,14 +124,14 @@
             <div id="wms-cat" class="wms-tab">
                 <div class="card-wms-nopad h-[75vh] flex flex-col">
                     <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                        <input type="text" placeholder="🔍 Buscar repuesto por código o nombre..." class="w-80 border border-slate-300 rounded px-4 py-2 text-xs font-semibold outline-none focus:border-emerald-500" onkeyup="buscarRepuesto(this.value)">
+                        <input type="text" placeholder="🔍 Buscar repuesto o escribir código del camión (Ej: CD-100)..." class="w-[450px] border border-slate-300 rounded px-4 py-2 text-xs font-semibold outline-none focus:border-emerald-500" onkeyup="buscarRepuesto(this.value)">
                     </div>
                     <div class="overflow-y-auto flex-1">
                         <table class="table-wms" id="tabla-catalogo">
                             <thead>
                                 <tr>
                                     <th>Código OEM</th>
-                                    <th>Descripción de Repuesto</th>
+                                    <th>Descripción de Repuesto / Compatibilidad</th>
                                     <th>Categoría / Familia</th>
                                     <th>Ubicación Fís.</th>
                                     <th class="text-center">Stock Actual</th>
@@ -140,9 +140,14 @@
                             </thead>
                             <tbody>
                                 {% for r in repuestos %}
-                                <tr class="border-b border-slate-50 hover:bg-slate-50">
+                                <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                                     <td class="font-black text-emerald-700">{{ r.codigo_oem }}</td>
-                                    <td class="font-bold text-slate-800">{{ r.nombre }}</td>
+                                    <td class="font-bold text-slate-800">
+                                        {{ r.nombre }}
+                                        {% if r.codigo_oem in repuesto_compatibilidad %}
+                                        <br><span class="text-[9px] font-bold text-slate-400 uppercase mt-1 block tracking-wider">Aplica a: {{ repuesto_compatibilidad[r.codigo_oem] }}</span>
+                                        {% endif %}
+                                    </td>
                                     <td><span class="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">{{ r.categoria }}</span></td>
                                     <td class="font-mono text-xs">{{ r.bodega }}</td>
                                     <td class="text-center">
@@ -165,16 +170,24 @@
                 </div>
             </div>
 
-            <!-- TAB 3: ENSAMBLADOR DE KITS BOM (AHORA CON MOTOR DE DESCUENTO) -->
+            <!-- TAB 3: ENSAMBLADOR DE KITS BOM POR EQUIPO -->
             <div id="wms-kits" class="wms-tab">
-                <div class="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {% for modelo, kit in kits_por_modelo.items() %}
-                    <div class="card-wms flex flex-col h-full border-t-4 {% if kit.armable %}border-t-emerald-500{% else %}border-t-red-500{% endif %}">
+                <!-- Buscador Rápido de Equipos -->
+                <div class="mb-6 flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+                    <div class="flex items-center gap-4 w-full">
+                        <span class="text-xl">🔍</span>
+                        <input type="text" id="buscador-kits" placeholder="Busca tu camión o máquina aquí (Ej: CD-100, VD-90)..." class="w-full max-w-lg border-b-2 border-slate-200 px-2 py-2 text-sm font-bold text-slate-700 outline-none focus:border-emerald-500 transition-colors" onkeyup="buscarKit(this.value)">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="contenedor-kits">
+                    {% for codigo, kit in kits_por_equipo.items() %}
+                    <div class="card-wms flex flex-col h-full border-t-4 {% if kit.armable %}border-t-emerald-500{% else %}border-t-red-500{% endif %} kit-card">
                         <div class="flex justify-between items-start mb-4">
                             <div>
-                                <h3 class="font-black text-slate-800 text-lg uppercase">{{ modelo }}</h3>
+                                <h3 class="font-black text-slate-800 text-xl uppercase kit-codigo">{{ codigo }}</h3>
                                 <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">
-                                    Aplica a: {{ kit.equipos_aplica[:3]|join(', ') }}{% if kit.equipos_aplica|length > 3 %} (+{{ kit.equipos_aplica|length - 3 }}){% endif %}
+                                    APLICA A: {{ kit.marca_modelo }}
                                 </p>
                             </div>
                             {% if kit.armable %}
@@ -184,7 +197,7 @@
                             {% endif %}
                         </div>
                         <div class="bg-slate-50 rounded p-3 mb-4 flex-1 border border-slate-200">
-                            <p class="text-[9px] font-bold text-slate-600 uppercase border-b border-slate-200 pb-1 mb-2">Ingredientes del Kit</p>
+                            <p class="text-[9px] font-bold text-slate-600 uppercase border-b border-slate-200 pb-1 mb-2">Repuestos del Kit</p>
                             <ul class="text-xs font-medium text-slate-700 space-y-2">
                                 {% for comp in kit.componentes %}
                                 <li class="flex justify-between items-center">
@@ -199,7 +212,7 @@
                             </ul>
                         </div>
                         {% if kit.armable %}
-                        <button onclick='abrirModalDespacho("{{ modelo }}", {{ kit.equipos_aplica|tojson|safe }})' class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded text-[10px] uppercase tracking-widest transition shadow-md">Descontar Piezas</button>
+                        <button onclick='abrirModalDespacho("{{ codigo }}", "{{ kit.modelo }}")' class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded text-[10px] uppercase tracking-widest transition shadow-md">Descontar Piezas</button>
                         {% else %}
                         <button class="w-full bg-white border border-slate-300 text-slate-400 font-bold py-2 rounded text-[10px] uppercase tracking-widest cursor-not-allowed" disabled>Comprar Faltantes</button>
                         {% endif %}
@@ -269,33 +282,29 @@
     </main>
 
     <!-- MODAL DE DESPACHO DE KITS (LA CAJA REGISTRADORA) -->
-    <div id="modal-despacho" class="fixed inset-0 bg-slate-900/80 z-[500] hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-lg shadow-2xl overflow-hidden">
+    <div id="modal-despacho" class="fixed inset-0 bg-slate-900/80 z-[500] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-lg shadow-2xl overflow-hidden border border-slate-200">
             <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-                <h3 class="font-black text-slate-800 uppercase text-xs tracking-wider">Despachar Inventario</h3>
+                <h3 class="font-black text-slate-800 uppercase text-xs tracking-wider">Despachar Inventario Físico</h3>
                 <button onclick="document.getElementById('modal-despacho').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 font-bold text-lg">&times;</button>
             </div>
             <div class="p-6 flex flex-col gap-4">
-                <div class="bg-emerald-50 border border-emerald-200 p-3 rounded text-emerald-800 text-xs font-bold mb-2">
-                    📦 Entregar KIT para modelo: <span id="mdl-nombre-kit" class="font-black underline"></span>
+                <div class="bg-emerald-50 border border-emerald-200 p-4 rounded text-emerald-800 text-sm font-bold text-center">
+                    📦 Rebajar Stock para el Equipo:<br>
+                    <span id="mdl-nombre-kit" class="font-black text-xl tracking-wide uppercase mt-1 block"></span>
                 </div>
                 
                 <input type="hidden" id="mdl-modelo-val">
+                <input type="hidden" id="mdl-equipo-val">
                 
                 <div>
-                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Destino Físico (Equipo)</label>
-                    <select id="mdl-equipo" class="w-full border border-slate-300 p-2 rounded text-xs font-bold outline-none focus:border-emerald-500 bg-slate-50">
-                        <!-- Llenado por JS -->
-                    </select>
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Documento de Referencia / Mecánico</label>
-                    <input type="text" id="mdl-referencia" class="w-full border border-slate-300 p-2 rounded text-xs font-bold outline-none focus:border-emerald-500" placeholder="Ej: OT-4589 o Juan Pérez">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Mecánico Retira / Número de OT</label>
+                    <input type="text" id="mdl-referencia" class="w-full border-2 border-slate-300 p-3 rounded text-sm font-bold outline-none focus:border-emerald-500 transition-colors" placeholder="Ej: Juan Pérez / OT-4589">
                 </div>
             </div>
             <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
                 <button onclick="document.getElementById('modal-despacho').classList.add('hidden')" class="px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100">Cancelar</button>
-                <button onclick="ejecutarDespacho()" id="btn-confirmar-despacho" class="px-6 py-2 text-xs font-bold text-white bg-emerald-600 rounded hover:bg-emerald-700 shadow-md">Confirmar y Rebajar Stock</button>
+                <button onclick="ejecutarDespacho()" id="btn-confirmar-despacho" class="px-6 py-2 text-xs font-bold text-white bg-emerald-600 rounded hover:bg-emerald-700 shadow-md">CONFIRMAR DESPACHO</button>
             </div>
         </div>
     </div>
@@ -306,6 +315,11 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             btn.classList.add('active');
+            
+            // Foco automático en el buscador si abres la pestaña
+            if (tabId === 'wms-kits') {
+                setTimeout(() => document.getElementById('buscador-kits').focus(), 100);
+            }
         }
         
         function buscarRepuesto(q) {
@@ -316,28 +330,36 @@
                 fila.style.display = texto.includes(q) ? '' : 'none';
             });
         }
+        
+        function buscarKit(q) {
+            q = q.toLowerCase();
+            document.querySelectorAll('.kit-card').forEach(card => {
+                const codigo = card.querySelector('.kit-codigo').innerText.toLowerCase();
+                card.style.display = codigo.includes(q) ? '' : 'none';
+            });
+        }
 
         // --- FUNCIONES DEL MODAL DE DESPACHO ---
-        function abrirModalDespacho(modelo, equipos) {
-            document.getElementById('mdl-nombre-kit').innerText = modelo;
+        function abrirModalDespacho(codigo_equipo, modelo) {
+            document.getElementById('mdl-nombre-kit').innerText = codigo_equipo;
+            document.getElementById('mdl-equipo-val').value = codigo_equipo;
             document.getElementById('mdl-modelo-val').value = modelo;
             
-            let select = document.getElementById('mdl-equipo');
-            select.innerHTML = '<option value="">Seleccione el equipo destino...</option>';
-            equipos.forEach(eq => {
-                select.innerHTML += `<option value="${eq}">${eq}</option>`;
-            });
+            // Limpia el input de referencia para la próxima OT
+            document.getElementById('mdl-referencia').value = "";
             
             document.getElementById('modal-despacho').classList.remove('hidden');
+            setTimeout(() => document.getElementById('mdl-referencia').focus(), 100);
         }
 
         function ejecutarDespacho() {
             let modelo = document.getElementById('mdl-modelo-val').value;
-            let equipo = document.getElementById('mdl-equipo').value;
+            let equipo = document.getElementById('mdl-equipo-val').value;
             let ref = document.getElementById('mdl-referencia').value;
             
-            if (!equipo) {
-                alert("⚠️ Por favor, seleccione un equipo de destino para la trazabilidad.");
+            if (!ref.trim()) {
+                alert("⚠️ Por favor, ingrese un número de OT o el nombre de quien retira.");
+                document.getElementById('mdl-referencia').focus();
                 return;
             }
 
@@ -354,12 +376,12 @@
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    alert("✅ ¡ÉXITO! Se han descontado los repuestos físicos y la transacción ha sido registrada en el Libro Mayor.");
-                    location.reload(); // Recarga para actualizar tablas y gráficos
+                    // Recargar pantalla suavemente para actualizar los contadores
+                    location.reload(); 
                 } else {
                     alert("❌ ERROR: " + data.message);
                     document.getElementById('modal-despacho').classList.add('hidden');
-                    btn.innerText = "Confirmar y Rebajar Stock";
+                    btn.innerText = "CONFIRMAR DESPACHO";
                     btn.disabled = false;
                     btn.classList.replace('bg-emerald-400', 'bg-emerald-600');
                 }
