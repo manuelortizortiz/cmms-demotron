@@ -215,40 +215,46 @@ def dashboard():
 
         return render_template('index.html', kpis=kpis, cinta2=cinta2, cinta3=cinta3, atrasados_top=atrasados_top, proximos_top=proximos_top, taller_top=taller_list, eqs=equipos_list, finanzas_flota=finanzas_flota, bodega=bodega_db, lecturas=lecturas_db, operadores=personal_db, mecanicos=mecanicos_db, mants_prev=preventivas, mants_corr=correctivas, compras=compras_db, kanban=kanban, eventos_calendario=eventos_calendario, ubicaciones_dict=ubicaciones_dict)
     except Exception as e:
-        return f"Error crítico en Dashboard Corporativo: {str(e)}"
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error Crítico en Dashboard:</b> {str(e)}</div>"
 
 @dashboard_bp.route('/mover_ubicacion_kanban', methods=['POST'])
 @login_required
 def mover_ubicacion_kanban():
-    data = request.get_json()
-    codigo = data.get('codigo')
-    nueva_ub = data.get('nueva_ubicacion').upper().strip()
-    
-    eq = Equipo.query.filter_by(codigo=codigo).first()
-    if eq:
-        ant = eq.ubicacion or 'SIN ASIGNAR'
-        if ant.upper() != nueva_ub:
-            eq.ubicacion = nueva_ub
-            db.session.add(HistorialUbicacion(codigo_equipo=codigo, ubicacion_anterior=ant, ubicacion_nueva=nueva_ub))
-            db.session.commit()
-        return {"status": "success"}
-    return {"status": "error"}
+    try:
+        data = request.get_json()
+        codigo = data.get('codigo')
+        nueva_ub = data.get('nueva_ubicacion').upper().strip()
+        
+        eq = Equipo.query.filter_by(codigo=codigo).first()
+        if eq:
+            ant = eq.ubicacion or 'SIN ASIGNAR'
+            if ant.upper() != nueva_ub:
+                eq.ubicacion = nueva_ub
+                db.session.add(HistorialUbicacion(codigo_equipo=codigo, ubicacion_anterior=ant, ubicacion_nueva=nueva_ub))
+                db.session.commit()
+            return {"status": "success"}
+        return {"status": "error"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @dashboard_bp.route('/guardar_ubicaciones_masivo', methods=['POST'])
 @login_required
 def guardar_ubicaciones_masivo():
-    data = request.get_json()
-    cambios = data.get('cambios', [])
-    for c in cambios:
-        eq = Equipo.query.filter_by(codigo=c['codigo']).first()
-        if eq:
-            ant = eq.ubicacion or 'SIN ASIGNAR'
-            nue = c['ubicacion'].upper().strip()
-            if ant.upper() != nue:
-                eq.ubicacion = nue
-                db.session.add(HistorialUbicacion(codigo_equipo=eq.codigo, ubicacion_anterior=ant, ubicacion_nueva=nue))
-    db.session.commit()
-    return {"status": "success"}
+    try:
+        data = request.get_json()
+        cambios = data.get('cambios', [])
+        for c in cambios:
+            eq = Equipo.query.filter_by(codigo=c['codigo']).first()
+            if eq:
+                ant = eq.ubicacion or 'SIN ASIGNAR'
+                nue = c['ubicacion'].upper().strip()
+                if ant.upper() != nue:
+                    eq.ubicacion = nue
+                    db.session.add(HistorialUbicacion(codigo_equipo=eq.codigo, ubicacion_anterior=ant, ubicacion_nueva=nue))
+        db.session.commit()
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @dashboard_bp.route('/equipo/<codigo>', strict_slashes=False)
 @login_required
@@ -257,7 +263,6 @@ def detalle_equipo(codigo):
         equipo = Equipo.query.filter_by(codigo=codigo).first()
         if not equipo: return "Equipo no encontrado en la base de datos.", 404
         
-        # BUSCADOR INTELIGENTE: Cruza el código (Ej: CD-100) y también el modelo (Ej: VOLKSWAGEN)
         todos_filtros = FiltroEquipo.query.all()
         filtros = []
         for f in todos_filtros:
@@ -287,7 +292,7 @@ def detalle_equipo(codigo):
                                foto_url=foto_url, 
                                hoy=datetime.now())
     except Exception as e:
-        return f"Error al cargar la ficha del equipo: {str(e)}"
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error del Servidor al cargar la Ficha del Equipo:</b> {str(e)}</div>"
 
 @dashboard_bp.route('/equipo/<codigo>/subir_documento', methods=['POST'])
 @login_required
@@ -312,10 +317,6 @@ def subir_documento(codigo):
     except Exception as e:
         return f"Error al subir documento: {str(e)}", 500
 
-# ======================================================================
-# MOTOR WMS INTELIGENTE (WAREHOUSE MANAGEMENT SYSTEM)
-# ======================================================================
-
 @dashboard_bp.route('/bodega_kpi', strict_slashes=False)
 @login_required
 def bodega_kpi():
@@ -331,12 +332,10 @@ def bodega_kpi():
         
         rep_dict = {r.id: r for r in repuestos}
 
-        # 1. KPIs Generales
         valor_total = sum((r.stock_actual or 0) * (r.precio_promedio or 0) for r in repuestos)
         bajo_minimo = [r for r in repuestos if 0 < (r.stock_actual or 0) <= (r.stock_minimo or 2)]
         quiebre_stock = [r for r in repuestos if (r.stock_actual or 0) <= 0]
         
-        # 2. Gráficos de Categoría
         cat_stats = {}
         for r in repuestos:
             cat = r.categoria or 'Otros'
@@ -348,7 +347,6 @@ def bodega_kpi():
             'data': list(cat_stats.values())
         }
 
-        # 3. MOTOR INTELIGENTE BOM (Generador de Kits por EQUIPO)
         repuestos_dict_sku = {r.codigo_oem: r for r in repuestos}
         recetas_por_modelo = {}
         for rec in recetas_db:
@@ -400,7 +398,6 @@ def bodega_kpi():
         for sku in repuesto_compatibilidad:
             repuesto_compatibilidad[sku] = ", ".join(sorted(list(repuesto_compatibilidad[sku])))
 
-        # 4. MAESTRO DE FILTROS ANTIGUO (EQUIVALENCIAS)
         filtros_db = FiltroEquipo.query.all()
         maestro_filtros = {}
         for f in filtros_db:
@@ -425,9 +422,8 @@ def bodega_kpi():
                                eqs_db=eqs_db,
                                hoy=hoy)
     except Exception as e:
-        return f"Error crítico en Módulo Bodega WMS: {str(e)}"
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error Crítico en Bodega WMS:</b> {str(e)}</div>"
 
-# === RUTA TRANSACCIONAL: DESCONTAR KIT ===
 @dashboard_bp.route('/api/wms/descontar_kit', methods=['POST'])
 @login_required
 def wms_descontar_kit():
@@ -438,7 +434,6 @@ def wms_descontar_kit():
         equipo = data.get('equipo')
         referencia = data.get('referencia') or 'Uso Interno'
         
-        # Obtener el nombre del bodeguero/usuario actual
         try: usuario = current_user.username
         except: 
             try: usuario = current_user.nombre
@@ -448,13 +443,11 @@ def wms_descontar_kit():
         if not recetas:
             return jsonify({"status": "error", "message": "No se encontraron componentes para este modelo."})
             
-        # 1. DOBLE VALIDACIÓN (Asegurar que haya stock antes de descontar nada)
         for rec in recetas:
             rep = Repuesto.query.filter_by(codigo_oem=rec.sku_repuesto).first()
             if not rep or (rep.stock_actual or 0) < rec.cantidad:
                 return jsonify({"status": "error", "message": f"Quiebre de stock en: {rec.sku_repuesto}. Despacho cancelado."})
                 
-        # 2. EJECUCIÓN DEL DESCUENTO Y AUDITORÍA
         for rec in recetas:
             rep = Repuesto.query.filter_by(codigo_oem=rec.sku_repuesto).first()
             rep.stock_actual -= rec.cantidad
