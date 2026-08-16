@@ -135,6 +135,12 @@ def cargar_sql_final():
             db.session.commit()
         except: db.session.rollback()
 
+        # SOLUCIÓN AL CHOQUE DE VERSIONES: Convertimos la columna a Texto
+        try:
+            db.session.execute(text("ALTER TABLE filtro_equipo ALTER COLUMN cant TYPE VARCHAR(100) USING cant::VARCHAR"))
+            db.session.commit()
+        except: db.session.rollback()
+
         db.create_all()
 
         excel_principal = "https://raw.githubusercontent.com/manuelortizortiz/cmms-demotron/main/CMMS%20DEMOTRON%20MANU%20ORTIZ.xlsx"
@@ -178,7 +184,7 @@ def cargar_sql_final():
         except Exception as e:
             reporte['mensajes'].append(f"Error en Equipos: {str(e)}")
 
-        # --- LECTURAS, PREVENTIVAS, CORRECTIVAS, COMPRAS, REPUESTOS, KITS (Sin cambios) ---
+        # --- LECTURAS, PREVENTIVAS, CORRECTIVAS, COMPRAS, REPUESTOS, KITS ---
         try:
             df_lec = pd.read_excel(xls_prin, sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
             for idx, row in df_lec.iterrows():
@@ -280,7 +286,7 @@ def cargar_sql_final():
         except: pass
 
         # =========================================================
-        # 🚀 MAESTRO DE FILTROS BLINDADO Y CORREGIDO 🚀
+        # 🚀 MAESTRO DE FILTROS TOTALMENTE BLINDADO 🚀
         # =========================================================
         try:
             req_filtros = urllib.request.Request(archivo_filtros, headers={'User-Agent': 'Mozilla/5.0'})
@@ -298,9 +304,10 @@ def cargar_sql_final():
                     continue
                     
                 c_sist = get_col(row, 1, '-')
-                # --- SOLUCIÓN DEL ERROR DE TIPO ---
-                # Pasamos la cadena de texto a número entero asegurándonos de que si falla, por defecto sea 1
-                c_cant = safe_clean_int(get_col(row, 2, '1'), 1) 
+                
+                # LA SOLUCIÓN: Lo pasamos a Texto para que no choque con la BD PostgreSQL
+                c_cant = str(get_col(row, 2, '1')).strip() 
+                
                 c_fleet = get_col(row, 3, '-')
                 c_bald = get_col(row, 4, '-')
                 c_orig = get_col(row, 5, '-')
@@ -310,7 +317,7 @@ def cargar_sql_final():
                 db.session.add(FiltroEquipo(
                     codigo_equipo=c_eq, 
                     sistema=c_sist, 
-                    cant=c_cant, # Ahora sí es un entero válido
+                    cant=c_cant, 
                     originales=c_orig, 
                     fleetguard=c_fleet, 
                     donaldson=c_don, 
@@ -339,7 +346,6 @@ def cargar_sql_final():
         db.session.add(log)
         db.session.commit()
 
-        # Generar lista de mensajes para diagnóstico
         mensajes_html = "".join([f"<li>{m}</li>" for m in reporte['mensajes']])
 
         html_report = f"""
