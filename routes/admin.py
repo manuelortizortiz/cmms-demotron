@@ -9,7 +9,6 @@ from datetime import datetime
 from sqlalchemy import text
 from werkzeug.security import generate_password_hash
 from extensions import db
-
 from models.equipo import Equipo, FiltroEquipo
 from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
@@ -47,7 +46,6 @@ def safe_parse_date(val):
     except: return None
 
 def get_col(row, idx, default='-'):
-    """ Función anti-errores para leer celdas de Excel vacías o inexistentes """
     try:
         if idx < len(row):
             val = str(row.iloc[idx]).strip()
@@ -119,7 +117,7 @@ def eliminar_usuario(id):
     return redirect('/admin/usuarios')
 
 # ==========================================
-# RUTAS DE AUDITORÍA GLOBAL COMBINADA
+# RUTAS DE AUDITORÍA GLOBAL COMBINADA (CON DIAGNÓSTICO)
 # ==========================================
 @admin_bp.route('/auditoria', strict_slashes=False)
 @login_required
@@ -127,17 +125,20 @@ def ver_auditoria():
     try:
         logs_formateados = []
         
-        # 1. Extraer navegación, clics y kanban (RegistroChatter)
-        logs_chatter = RegistroChatter.query.order_by(RegistroChatter.fecha.desc()).limit(200).all()
-        for l in logs_chatter:
-            logs_formateados.append({
-                'fecha': l.fecha,
-                'usuario': l.autor or 'Sistema',
-                'accion': str(l.accion).replace('_', ' ').upper() if l.accion else 'SISTEMA',
-                'detalles': l.mensaje or 'Sin detalles adicionales.'
-            })
+        # 1. Intentar leer navegación y kanban
+        try:
+            logs_chatter = RegistroChatter.query.order_by(RegistroChatter.fecha.desc()).limit(200).all()
+            for l in logs_chatter:
+                logs_formateados.append({
+                    'fecha': l.fecha,
+                    'usuario': l.autor or 'Sistema',
+                    'accion': str(l.accion).replace('_', ' ').upper() if l.accion else 'SISTEMA',
+                    'detalles': l.mensaje or 'Sin detalles.'
+                })
+        except Exception as e:
+            logs_formateados.append({'fecha': datetime.now(), 'usuario': 'DIAGNÓSTICO', 'accion': 'ERROR CHATTER', 'detalles': f"Falla en Base de Datos: {str(e)}"})
             
-        # 2. Extraer cambios directos en Base de Datos (LogCambios)
+        # 2. Intentar leer LogCambios profundo
         try:
             logs_auto = LogCambios.query.order_by(LogCambios.timestamp.desc()).limit(150).all()
             for l in logs_auto:
@@ -147,15 +148,24 @@ def ver_auditoria():
                     'accion': f"BD {l.accion}",
                     'detalles': f"Tabla: {l.tabla} (ID: {l.registro_id}) | Cambios: {l.cambios}"
                 })
-        except:
-            pass # Si la tabla LogCambios aún está vacía, no crashea la pantalla
+        except Exception as e:
+            logs_formateados.append({'fecha': datetime.now(), 'usuario': 'DIAGNÓSTICO', 'accion': 'ERROR LOG', 'detalles': f"Falla en Base de Datos: {str(e)}"})
             
-        # 3. Mezclar y ordenar todo del más reciente al más antiguo
+        # Ordenar cronológicamente
         logs_formateados.sort(key=lambda x: (x['fecha'] is None, x['fecha']), reverse=True)
         
+        # Si las tablas existen pero no hay datos, lanzamos una alerta de Info.
+        if len(logs_formateados) == 0:
+            logs_formateados.append({
+                'fecha': datetime.now(),
+                'usuario': 'SISTEMA',
+                'accion': 'INFO',
+                'detalles': 'La tabla de auditoría está 100% vacía. Significa que ningún movimiento se ha guardado con éxito aún.'
+            })
+            
         return render_template('auditoria.html', logs=logs_formateados)
     except Exception as e:
-        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error al cargar Auditoría:</b> {str(e)}</div>"
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error Fatal en Auditoría:</b> {str(e)}</div>"
 
 # ==========================================
 # RUTAS DE CARGA DE EXCEL / MIGRACIÓN SQL
@@ -167,7 +177,7 @@ def cargar_sql_final():
     if not token_esperado or token_recibido != token_esperado:
         return "ACCESO DENEGADO (403): Token de administración inválido o ausente.", 403
 
-    reporte = {"equipos": 0, "lecturas": 0, "preventivas": 0, "correctivas": 0, "compras": 0, "filtros": 0, "repuestos": 0, "mensajes": []}
+    reporte = {"equipos": 0, "filtros": 0, "mensajes": []}
     
     try:
         db.session.execute(text("DELETE FROM orden_trabajo WHERE id NOT IN (SELECT MIN(id) FROM orden_trabajo GROUP BY codigo_equipo, tipo_ot, lectura)"))
@@ -179,7 +189,6 @@ def cargar_sql_final():
             db.session.commit()
         except: db.session.rollback()
 
-        # SOLUCIÓN AL CHOQUE DE VERSIONES: Convertimos la columna cant a VARCHAR de forma segura
         try:
             db.session.execute(text("ALTER TABLE filtro_equipo ALTER COLUMN cant TYPE VARCHAR(100) USING cant::VARCHAR"))
             db.session.commit()
@@ -228,7 +237,6 @@ def cargar_sql_final():
         except Exception as e:
             reporte['mensajes'].append(f"Error en Equipos: {str(e)}")
 
-        # --- LECTURAS, PREVENTIVAS, CORRECTIVAS, COMPRAS, REPUESTOS, KITS ---
         for sheet, name in [("Lecturas", "lecturas"), ("Mantenciones", "preventivas"), ("Correctivas", "correctivas"), ("Compras PM", "compras"), ("Repuestos", "repuestos"), ("Recetas_Kits", "kits")]:
             try: pd.read_excel(xls_prin, sheet_name=sheet, skiprows=2)
             except: pass
@@ -333,21 +341,16 @@ def cargar_sql_final():
             db.session.commit()
         except: pass
 
-        # =========================================================
-        # 🚀 MAESTRO DE FILTROS TOTALMENTE BLINDADO 🚀
-        # =========================================================
         try:
             req_filtros = urllib.request.Request(archivo_filtros, headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req_filtros) as response:
                 df_filtros = pd.read_excel(io.BytesIO(response.read()), engine='openpyxl').replace({np.nan: None})
                 
             db.session.query(FiltroEquipo).delete() 
-            
             df_filtros.columns = df_filtros.columns.astype(str).str.strip().str.lower()
             
             for idx, row in df_filtros.iterrows():
                 c_eq = get_col(row, 0, '').upper()
-                
                 if not c_eq or c_eq in ['EQUIPO', 'CODIGO EQUIPO', 'CÓDIGO EQUIPO', 'MODELO', 'MAESTRO', 'NONE', 'NAN'] or len(c_eq) < 2:
                     continue
                     
@@ -377,7 +380,6 @@ def cargar_sql_final():
             db.session.rollback()
             reporte['mensajes'].append(f"ERROR CRÍTICO LEYENDO FILTROS: {str(e)}")
 
-        # --- ACTUALIZAR MÁRGENES ---
         for eq in Equipo.query.all():
             u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
             if u_lec: eq.lectura_actual = u_lec.horometro if eq.control_base == 'HORAS' else u_lec.kilometraje
@@ -386,7 +388,6 @@ def cargar_sql_final():
             else: eq.proxima_pm = (eq.lectura_actual or 0) + eq.frecuencia_base
         db.session.commit()
 
-        # --- LOG AUDITORIA ---
         log = RegistroChatter(modelo_ref='sistema', registro_id='0', autor='Sistema(Token)', accion='auditoria', mensaje="Sincronización Maestra desde GitHub.")
         db.session.add(log)
         db.session.commit()
@@ -399,14 +400,10 @@ def cargar_sql_final():
             <ul style="list-style: none; padding: 0; font-size: 14px; font-weight: bold;">
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: #2563EB;">MAESTRO DE FILTROS IMPORTADOS: <b style="float: right;">{reporte['filtros']}</b></li>
             </ul>
-            
             <div style="margin-top: 20px; padding: 15px; background: #fef2f2; border: 1px solid #f87171; border-radius: 8px;">
                 <h4 style="margin:0 0 10px 0; color: #991b1b;">Diagnóstico del Robot:</h4>
-                <ul style="margin:0; padding-left: 20px; color: #7f1d1d; font-size: 12px;">
-                    {mensajes_html}
-                </ul>
+                <ul style="margin:0; padding-left: 20px; color: #7f1d1d; font-size: 12px;">{mensajes_html}</ul>
             </div>
-            
             <div style='text-align: center; margin-top: 24px;'><a href='/' style='background: #1e293b; color: white; padding: 10px 24px; text-decoration: none; border-radius: 4px;'>VOLVER AL DASHBOARD</a></div>
         </div>
         """
