@@ -4,30 +4,92 @@
     <meta charset="UTF-8">
     <title>Ficha Técnica | {{ equipo.codigo }}</title>
     <style>
-        body { font-family: 'Arial', sans-serif; font-size: 12px; color: #333; margin: 20px; }
-        .header { border-bottom: 2px solid #16a34a; padding-bottom: 10px; margin-bottom: 20px; }
-        h1 { color: #1e293b; margin-bottom: 5px; font-size: 20px; text-transform: uppercase;}
-        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        th { background-color: #f1f5f9; padding: 10px; border: 1px solid #cbd5e1; text-align: left; color: #1e293b; font-size: 11px; text-transform: uppercase;}
-        td { padding: 8px 10px; border: 1px solid #cbd5e1; }
+        body { font-family: 'Arial', sans-serif; font-size: 11px; color: #1e293b; margin: 20px; line-height: 1.4; }
+        .header { border-bottom: 2px solid #16a34a; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        h1 { color: #16a34a; margin: 0 0 5px 0; font-size: 18px; text-transform: uppercase; }
+        h2 { color: #1e293b; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px; margin-top: 20px; margin-bottom: 8px; background: #f8fafc; padding-left: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 10px; }
+        th { background-color: #f1f5f9; padding: 6px 8px; border: 1px solid #cbd5e1; text-align: left; color: #475569; text-transform: uppercase; }
+        td { padding: 5px 8px; border: 1px solid #cbd5e1; }
+        .grid-info { display: table; width: 100%; margin-bottom: 10px; }
+        .grid-row { display: table-row; }
+        .grid-col { display: table-cell; width: 33.33%; padding: 4px 6px; border: 1px solid #e2e8f0; background: #fafafa; }
+        .badge { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 9px; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Ficha Técnica de Equipo: {{ equipo.codigo }}</h1>
-        <p><b>Marca:</b> {{ equipo.marca }} &nbsp;|&nbsp; <b>Modelo:</b> {{ equipo.modelo }} &nbsp;|&nbsp; <b>Ubicación:</b> {{ equipo.ubicacion }}</p>
+        <div>
+            <h1>Ficha Técnica del Equipo: {{ equipo.codigo }}</h1>
+            <p style="margin: 0; font-size: 11px; color: #64748B;">Sistema de Gestión de Mantenimiento Demotron &nbsp;|&nbsp; Emitido: {{ hoy.strftime('%d/%m/%Y %H:%M') }}</p>
+        </div>
     </div>
     
-    <h2>1. Filtros y Equivalencias</h2>
+    <!-- ESPECIFICACIONES TÉCNICAS Y DATOS CLAVE -->
+    <h2>1. Especificaciones Técnicas y Datos Generales</h2>
+    <div class="grid-info">
+        <div class="grid-row">
+            <div class="grid-col"><b>Tipo de Equipo:</b> {{ equipo.tipo_equipo or 'S/I' }}</div>
+            <div class="grid-col"><b>Marca:</b> {{ equipo.marca or 'S/I' }}</div>
+            <div class="grid-col"><b>Modelo:</b> {{ equipo.modelo or 'S/I' }}</div>
+        </div>
+        <div class="grid-row">
+            <div class="grid-col"><b>Patente / PPU:</b> {{ equipo.patente or 'S/I' }}</div>
+            <div class="grid-col"><b>Número VIN:</b> {{ equipo.vin or 'S/I' }}</div>
+            <div class="grid-col"><b>Número de Motor:</b> {{ equipo.n_motor or equipo.motor or 'S/I' }}</div>
+        </div>
+        <div class="grid-row">
+            <div class="grid-col"><b>Ubicación Actual:</b> <span style="color: #1e3a8a; font-weight: bold;">{{ equipo.ubicacion or 'Sin Asignar' }}</span></div>
+            <div class="grid-col"><b>Conductor / Operador:</b> {{ operador.nombre if operador else (equipo.responsable or 'Sin Asignar') }}</div>
+            <div class="grid-col"><b>Estado Base:</b> <span class="badge">{{ equipo.estado_base or 'Operativo' }}</span></div>
+        </div>
+    </div>
+
+    <!-- EQUIPOS HERMANOS (DEL MISMO MODELO) -->
+    <h2>2. Equipos Hermanos (Mismo Modelo: {{ equipo.modelo }})</h2>
+    <p style="font-size: 10px; color: #64748B; margin-top: 2px; margin-bottom: 6px;">Unidades asociadas con idéntica configuración de componentes y pautas:</p>
     <table>
         <thead>
             <tr>
-                <th>Sistema</th>
+                <th>Código Equipo</th>
+                <th>Tipo</th>
+                <th>Marca / Modelo</th>
+                <th>Ubicación</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set hermanos = namespace(encontrados=false) %}
+            {% for e in equipo.query.filter_by(modelo=equipo.modelo).all() %}
+                {% if e.codigo != equipo.codigo %}
+                    {% set hermanos.encontrados = true %}
+                    <tr>
+                        <td><b>{{ e.codigo }}</b></td>
+                        <td>{{ e.tipo_equipo }}</td>
+                        <td>{{ e.marca }} {{ e.modelo }}</td>
+                        <td>{{ e.ubicacion or 'S/I' }}</td>
+                        <td>{{ e.estado_base }}</td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+            {% if not hermanos.encontrados %}
+            <tr><td colspan="5" style="text-align: center; color: #94a3b8;">No se encontraron otros equipos registrados con este mismo modelo.</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <!-- FILTROS Y EQUIVALENCIAS -->
+    <h2>3. Catálogo de Filtros y Equivalencias</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Sistema / Aplicación</th>
                 <th style="text-align: center;">Cant.</th>
-                <th>Original</th>
+                <th>OEM Original</th>
                 <th>Fleetguard</th>
                 <th>Donaldson</th>
                 <th>Baldwin</th>
+                <th>Alternativa</th>
             </tr>
         </thead>
         <tbody>
@@ -39,27 +101,66 @@
                 <td style="font-family: monospace;">{{ f.fleetguard }}</td>
                 <td style="font-family: monospace;">{{ f.donaldson }}</td>
                 <td style="font-family: monospace;">{{ f.baldwind }}</td>
+                <td style="font-family: monospace;">{{ f.otra_alternativa }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="6" style="text-align: center;">No hay filtros registrados.</td></tr>
+            <tr><td colspan="7" style="text-align: center; color: #94a3b8;">No hay filtros registrados para este equipo.</td></tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <h2>2. Últimas Mantenciones Preventivas</h2>
+    <!-- MANTENIMIENTO PREVENTIVO -->
+    <h2>4. Historial de Mantenimiento Preventivo (PM)</h2>
     <table>
         <thead>
-            <tr><th>Fecha</th><th>Pauta / Mantención</th><th>Mecánico / Proveedor</th></tr>
+            <tr>
+                <th>Fecha</th>
+                <th>Folio / OT</th>
+                <th>Pauta Preventiva</th>
+                <th style="text-align: center;">Lectura</th>
+                <th>Mecánico / Proveedor</th>
+                <th style="text-align: right;">Costo (CLP)</th>
+            </tr>
         </thead>
         <tbody>
             {% for m in mants_prev %}
             <tr>
                 <td>{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</td>
-                <td>{{ m.tipo_mantencion }}</td>
+                <td>{{ m.folio or 'S/F' }}</td>
+                <td><b>{{ m.tipo_mantencion }}</b></td>
+                <td style="text-align: center;">{{"{:,.0f}".format(m.lectura or 0).replace(',','.')}}</td>
                 <td>{{ m.mecanico }}</td>
+                <td style="text-align: right;">${{ "{:,.0f}".format(m.costo_mantencion_clp or 0).replace(',','.') }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="3" style="text-align: center;">Sin historial preventivo reciente.</td></tr>
+            <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Sin registros de mantenimiento preventivo.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- MANTENIMIENTO CORRECTIVO -->
+    <h2>5. Historial de Mantenimiento Correctivo y Averías</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Causa Raíz / Falla</th>
+                <th style="text-align: center;">Lectura</th>
+                <th>Mecánico / Proveedor</th>
+                <th style="text-align: right;">Costo (CLP)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in mants_corr %}
+            <tr>
+                <td>{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</td>
+                <td><b>{{ m.causa_raiz or m.tipo_mantencion }}</b></td>
+                <td style="text-align: center;">{{"{:,.0f}".format(m.lectura or 0).replace(',','.')}}</td>
+                <td>{{ m.mecanico }}</td>
+                <td style="text-align: right;">${{ "{:,.0f}".format(m.costo_mantencion_clp or 0).replace(',','.') }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="text-align: center; color: #94a3b8;">Sin averías o mantenimientos correctivos registrados.</td></tr>
             {% endfor %}
         </tbody>
     </table>
