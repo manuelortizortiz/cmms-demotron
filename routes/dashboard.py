@@ -256,6 +256,10 @@ def detalle_equipo(codigo):
     try:
         equipo = Equipo.query.filter_by(codigo=codigo).first()
         if not equipo: return "Equipo no encontrado en la base de datos.", 404
+        
+        # --- AQUÍ ESTÁ LA LÍNEA RESTAURADA PARA TRAER LOS FILTROS ---
+        filtros = FiltroEquipo.query.filter_by(codigo_equipo=codigo).all()
+        
         mants_prev = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Preventiva').order_by(OrdenTrabajo.fecha.desc()).all()
         mants_corr = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Correctiva').order_by(OrdenTrabajo.fecha.desc()).all()
         lecturas = HistorialLectura.query.filter_by(codigo_equipo=codigo).order_by(HistorialLectura.fecha.desc()).all()
@@ -264,7 +268,19 @@ def detalle_equipo(codigo):
         historial_ub = HistorialUbicacion.query.filter_by(codigo_equipo=codigo).order_by(HistorialUbicacion.fecha.desc()).all()
         operador = Personal.query.filter_by(equipo_asignado=codigo).first()
         foto_url = buscar_foto_por_tipo(equipo.tipo_equipo, equipo.marca)
-        return render_template('equipo.html', equipo=equipo, mants_prev=mants_prev, mants_corr=mants_corr, lecturas=lecturas, compras=compras, documentos=documentos, historial_ub=historial_ub, operador=operador, foto_url=foto_url, hoy=datetime.now())
+        
+        return render_template('equipo.html', 
+                               equipo=equipo, 
+                               filtros=filtros, 
+                               mants_prev=mants_prev, 
+                               mants_corr=mants_corr, 
+                               lecturas=lecturas, 
+                               compras=compras, 
+                               documentos=documentos, 
+                               historial_ub=historial_ub, 
+                               operador=operador, 
+                               foto_url=foto_url, 
+                               hoy=datetime.now())
     except Exception as e:
         return f"Error al cargar la ficha del equipo: {str(e)}"
 
@@ -329,8 +345,6 @@ def bodega_kpi():
 
         # 3. MOTOR INTELIGENTE BOM (Generador de Kits por EQUIPO)
         repuestos_dict_sku = {r.codigo_oem: r for r in repuestos}
-        
-        # Pre-agrupar las recetas por modelo para que la carga sea instantánea
         recetas_por_modelo = {}
         for rec in recetas_db:
             m = str(rec.modelo_equipo).strip()
@@ -339,9 +353,8 @@ def bodega_kpi():
             recetas_por_modelo[m].append(rec)
             
         kits_por_equipo = {}
-        repuesto_compatibilidad = {} # Para inyectar los códigos al buscador global
+        repuesto_compatibilidad = {} 
         
-        # Ordenamos los equipos alfabéticamente para que las tarjetas se vean ordenadas
         eqs_sorted = sorted(eqs_db, key=lambda x: str(x.codigo))
         
         for e in eqs_sorted:
@@ -360,7 +373,6 @@ def bodega_kpi():
                 for rec in recetas_por_modelo[modelo_eq]:
                     sku = str(rec.sku_repuesto).strip().upper()
                     
-                    # Vinculamos el repuesto con el código del equipo para el catálogo global
                     if sku not in repuesto_compatibilidad:
                         repuesto_compatibilidad[sku] = set()
                     repuesto_compatibilidad[sku].add(cod_eq)
@@ -380,15 +392,26 @@ def bodega_kpi():
                         'ok': ok
                     })
                     
-        # Convertimos los Sets a un String separado por comas para enviarlo al HTML
         for sku in repuesto_compatibilidad:
             repuesto_compatibilidad[sku] = ", ".join(sorted(list(repuesto_compatibilidad[sku])))
+
+        # 4. MAESTRO DE FILTROS ANTIGUO (EQUIVALENCIAS)
+        filtros_db = FiltroEquipo.query.all()
+        maestro_filtros = {}
+        for f in filtros_db:
+            eq = f.codigo_equipo
+            if eq not in maestro_filtros: maestro_filtros[eq] = []
+            marcas = [str(x).strip().upper() for x in [f.originales, f.fleetguard, f.donaldson, f.baldwind, f.otra_alternativa] if x and str(x).strip() not in ['-', 'NAN', 'NONE', '']]
+            try: c = int(float(f.cant))
+            except: c = 1
+            maestro_filtros[eq].append({'sistema': f.sistema, 'cant': c, 'marcas': marcas})
 
         return render_template('bodega_kpi.html', 
                                repuestos=repuestos,
                                rep_dict=rep_dict,
                                kits_por_equipo=kits_por_equipo,
                                repuesto_compatibilidad=repuesto_compatibilidad,
+                               maestro_filtros=maestro_filtros,
                                movimientos=movimientos,
                                valor_total_str=format_clp(valor_total),
                                bajo_minimo_count=len(bajo_minimo),
