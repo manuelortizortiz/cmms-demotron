@@ -1,360 +1,45 @@
-import io
-import pandas as pd
-from flask import Blueprint, request, jsonify, redirect, send_file, render_template
-from datetime import datetime
+from flask import Blueprint, render_template, abort
 from flask_login import login_required
-from extensions import db
-from sqlalchemy import text 
-
-# Importación de Modelos
 from models.equipo import Equipo, FiltroEquipo
 from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
-from models.bodega import InventarioBodega
-from models.personal import Personal, Mecanico
+from datetime import datetime
 
-api_bp = Blueprint('api', __name__, url_prefix='/api')
+api_bp = Blueprint('api', __name__)
 
-# =========================================================
-# RUTAS DE INGRESO DE DATOS (FORMULARIOS)
-# =========================================================
-@api_bp.route('/add_record', methods=['POST'])
-@login_required
-def add_record():
-    tabla = request.form.get('tabla')
-    referer = request.form.get('referer') or '/'
-    
-    try:
-        if tabla == 'ot' or tabla == 'ot_corr':
-            codigo = request.form.get('codigo').upper().strip()
-            folio = request.form.get('folio')
-            lectura = request.form.get('lectura', type=float) or 0.0
-            costo = request.form.get('costo', type=float) or 0.0
-            
-            if tabla == 'ot':
-                tipo = request.form.get('tipo')
-                nueva_ot = OrdenTrabajo(codigo_equipo=codigo, tipo_ot='Preventiva', tipo_mantencion=tipo, folio=folio, lectura=lectura, costo_mantencion_clp=costo, estado='Pendiente')
-            else:
-                sistema_falla = request.form.get('sistema_falla')
-                causa_raiz = request.form.get('causa_raiz')
-                nueva_ot = OrdenTrabajo(codigo_equipo=codigo, tipo_ot='Correctiva', sistema_falla=sistema_falla, causa_raiz=causa_raiz, folio=folio, lectura=lectura, costo_mantencion_clp=costo, estado='Pendiente')
-            db.session.add(nueva_ot)
-            
-        elif tabla == 'lectura':
-            codigo = request.form.get('codigo').upper().strip()
-            valor = request.form.get('valor', type=float)
-            responsable = request.form.get('responsable')
-            
-            eq = Equipo.query.filter_by(codigo=codigo).first()
-            tipo_ctrl = eq.control_base if eq else 'HORAS'
-            
-            # MAGIA: Se eliminó el parámetro tipo_equipo que causaba el quiebre silencioso
-            nueva_lec = HistorialLectura(codigo_equipo=codigo, horometro=valor if tipo_ctrl == 'HORAS' else None, kilometraje=valor if tipo_ctrl == 'KM' else None, responsable=responsable)
-            db.session.add(nueva_lec)
-            if eq: eq.lectura_actual = valor
-                
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error al guardar: {str(e)}") # Esto dejará rastro en el servidor si ocurre otro error
-        
-    return redirect(referer)
-
-# =========================================================
-# EDICIÓN RÁPIDA Y ELIMINACIÓN
-# =========================================================
-@api_bp.route('/edit_record', methods=['POST'])
-@login_required
-def edit_record():
-    tabla = request.form.get('tabla')
-    obj_id = request.form.get('id')
-    referer = request.form.get('referer') or '/'
-    
-    try:
-        if tabla == 'equipo':
-            eq = Equipo.query.filter_by(codigo=obj_id).first()
-            if eq:
-                eq.marca = request.form.get('marca', eq.marca).upper()
-                eq.modelo = request.form.get('modelo', eq.modelo).upper()
-                eq.patente = request.form.get('patente', eq.patente).upper()
-                eq.estado_base = request.form.get('estado_base', eq.estado_base)
-                db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        
-    return redirect(referer)
-
-@api_bp.route('/delete_record/<tabla>/<int:id>', methods=['POST'])
-@login_required
-def delete_record(tabla, id):
-    try:
-        obj = None
-        if tabla == 'ot' or tabla == 'ot_corr': obj = OrdenTrabajo.query.get(id)
-        elif tabla == 'lectura': obj = HistorialLectura.query.get(id)
-        elif tabla == 'bodega': obj = InventarioBodega.query.get(id)
-        elif tabla == 'compra': obj = CompraRepuesto.query.get(id)
-        elif tabla == 'personal': obj = Personal.query.get(id)
-        elif tabla == 'mecanico': obj = Mecanico.query.get(id)
-            
-        if obj:
-            db.session.delete(obj)
-            db.session.commit()
-            return jsonify({'status': 'success'})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-    return jsonify({'status': 'not_found'}), 404
-
-# =========================================================
-# KANBAN (DRAG & DROP)
-# =========================================================
-@api_bp.route('/cambiar_estado_ot/<int:id>', methods=['POST'])
-@login_required
-def cambiar_estado_ot(id):
-    try:
-        data = request.get_json()
-        nuevo_estado = data.get('estado')
-        ot = OrdenTrabajo.query.get(id)
-        if ot and nuevo_estado:
-            ot.estado = nuevo_estado
-            if nuevo_estado == 'Finalizada': ot.fecha_cierre = datetime.now()
-            db.session.commit()
-            return jsonify({'status': 'success'})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-    return jsonify({'status': 'error'}), 400
-
-# =========================================================
-# EXPORTACIÓN EXCEL
-# =========================================================
-@api_bp.route('/exportar/excel_maestro', methods=['GET'])
-@login_required
-def exportar_excel():
-    try:
-        equipos = Equipo.query.all()
-        data = [{'Código': e.codigo, 'Marca': e.marca, 'Modelo': e.modelo, 'Patente': e.patente, 'Estado': e.estado_base, 'Ubicación': e.ubicacion, 'Lectura': e.lectura_actual} for e in equipos]
-        df = pd.DataFrame(data)
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            df.to_excel(writer, sheet_name='Equipos', index=False)
-        output.seek(0)
-        return send_file(output, download_name=f"Maestro_Equipos_{datetime.now().strftime('%Y%m%d')}.xlsx", as_attachment=True)
-    except Exception as e:
-        return f"Error al generar Excel: {str(e)}"
-
-# =========================================================
-# RUTAS DE IMPRESIÓN PDF
-# =========================================================
-@api_bp.route('/imprimir_registro/<codigo>', strict_slashes=False)
+@api_bp.route('/api/imprimir_registro/<codigo>', strict_slashes=False)
 @login_required
 def imprimir_registro(codigo):
-    try:
-        equipo = Equipo.query.filter_by(codigo=codigo).first()
-        if not equipo: return "Equipo no encontrado en la Base de Datos", 404
-        mants_prev = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Preventiva').order_by(OrdenTrabajo.fecha.desc()).all()
-        mants_corr = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Correctiva').order_by(OrdenTrabajo.fecha.desc()).all()
-        
-        # MAGIA ANTI-ERRORES DE IMPORTACIÓN EXCEL
-        for m in mants_prev + mants_corr:
-            fol = getattr(m, 'folio', '')
-            m.display_folio = str(fol) if str(fol).strip() not in ['None', 'nan', ''] else ''
-
-        for m in mants_prev:
-            mec = getattr(m, 'proveedor', None) or getattr(m, 'mecanico', None) or getattr(m, 'lugar', None)
-            m.display_mecanico = str(mec).strip() if mec and str(mec).strip() not in ['None', '', 'nan'] else 'Sin Asignar'
+    equipo = Equipo.query.filter_by(codigo=codigo).first()
+    if not equipo: abort(404)
+    
+    mants_prev = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Preventiva').order_by(OrdenTrabajo.fecha.desc()).all()
+    mants_corr = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Correctiva').order_by(OrdenTrabajo.fecha.desc()).all()
+    lecturas = HistorialLectura.query.filter_by(codigo_equipo=codigo).order_by(HistorialLectura.fecha.desc()).all()
+    compras = CompraRepuesto.query.filter_by(codigo_equipo=codigo).order_by(CompraRepuesto.fecha.desc()).all()
+    
+    # Busca equivalencias por código y por modelo
+    todos_filtros = FiltroEquipo.query.all()
+    filtros = []
+    for f in todos_filtros:
+        f_eq = str(f.codigo_equipo).strip().upper()
+        if f_eq == str(equipo.codigo).strip().upper() or f_eq == str(equipo.modelo).strip().upper():
+            filtros.append(f)
             
-            p_vals = [getattr(m, 'tipo_mantencion', None), getattr(m, 'observacion', None), getattr(m, 'descripcion', None)]
-            p_textos = [str(x).strip() for x in p_vals if x and str(x).strip() not in ['None', '', 'nan']]
-            m.display_falla = " | ".join(p_textos) if p_textos else 'Mantenimiento Preventivo'
+    return render_template('print_ficha.html', equipo=equipo, mants_prev=mants_prev, mants_corr=mants_corr, lecturas=lecturas, compras=compras, filtros=filtros, hoy=datetime.now())
 
-        for m in mants_corr:
-            mec = getattr(m, 'proveedor', None) or getattr(m, 'mecanico', None) or getattr(m, 'lugar', None)
-            m.display_mecanico = str(mec).strip() if mec and str(mec).strip() not in ['None', '', 'nan'] else 'Sin Asignar'
-            
-            f_vals = [
-                getattr(m, 'falla_averia', None), getattr(m, 'falla_avería', None), getattr(m, 'falla', None), 
-                getattr(m, 'averia', None), getattr(m, 'avería', None), getattr(m, 'sistema_falla', None), 
-                getattr(m, 'tipo_mantencion', None), getattr(m, 'causa_raiz', None), getattr(m, 'observacion', None),
-                getattr(m, 'descripcion', None), getattr(m, 'detalle', None)
-            ]
-            f_textos = [str(x).strip() for x in f_vals if x and str(x).strip() not in ['None', '', 'nan']]
-            
-            if len(f_textos) >= 2:
-                m.display_falla = f_textos[0]
-                m.display_detalle = " | ".join(list(dict.fromkeys(f_textos[1:])))
-            elif len(f_textos) == 1:
-                m.display_falla = f_textos[0]
-                m.display_detalle = ''
-            else:
-                m.display_falla = 'Sin descripción registrada'
-                m.display_detalle = ''
-
-        compras = CompraRepuesto.query.filter_by(codigo_equipo=codigo).order_by(CompraRepuesto.fecha.desc()).all()
-        filtros = FiltroEquipo.query.filter_by(codigo_equipo=codigo).all() # SE AGREGAN LOS FILTROS
-        
-        gasto_mants = sum(float(o.costo_mantencion_clp or 0) for o in mants_prev + mants_corr)
-        gasto_compras = sum(float(c.costo_pm_clp or 0) for c in compras)
-        gasto_total = gasto_mants + gasto_compras
-
-        from utils.formatters import format_clp
-        gasto_mants_str = format_clp(gasto_mants)
-        gasto_compras_str = format_clp(gasto_compras)
-        gasto_total_str = format_clp(gasto_total)
-
-        equipos_similares = Equipo.query.filter(Equipo.tipo_equipo == equipo.tipo_equipo, Equipo.marca == equipo.marca, Equipo.codigo != equipo.codigo).all()
-        codigos_similares = [e.codigo for e in equipos_similares]
-        averias_similares = []
-        if codigos_similares:
-            averias_similares = OrdenTrabajo.query.filter(OrdenTrabajo.codigo_equipo.in_(codigos_similares), OrdenTrabajo.tipo_ot == 'Correctiva').order_by(OrdenTrabajo.fecha.desc()).limit(15).all()
-
-        return render_template('imprimir_registro.html', 
-                               equipo=equipo, 
-                               mants_prev=mants_prev, 
-                               mants_corr=mants_corr, 
-                               compras=compras, 
-                               filtros=filtros,
-                               gasto_mants_str=gasto_mants_str,
-                               gasto_compras_str=gasto_compras_str,
-                               gasto_total_str=gasto_total_str,
-                               averias_similares=averias_similares,
-                               hoy=datetime.now())
-    except Exception as e:
-        return f"Error al generar el historial clínico: {str(e)}"
-
-@api_bp.route('/imprimir_filtros/<codigo>', strict_slashes=False)
+@api_bp.route('/api/imprimir_filtros/<codigo>', strict_slashes=False)
 @login_required
 def imprimir_filtros(codigo):
-    try:
-        equipo = Equipo.query.filter_by(codigo=codigo).first()
-        if not equipo: return "Equipo no encontrado en la Base de Datos", 404
-            
-        filtros = FiltroEquipo.query.filter_by(codigo_equipo=codigo).all()
-        
-        # MAGIA: Rastrear toda la flota buscando equipos con los mismos repuestos
-        equipos_hermanos = set()
-        for f in filtros:
-            if f.originales and str(f.originales).strip() not in ['-', 'NAN', '', 'nan']:
-                otros = FiltroEquipo.query.filter(
-                    FiltroEquipo.originales == f.originales, 
-                    FiltroEquipo.codigo_equipo != codigo
-                ).all()
-                for o in otros:
-                    equipos_hermanos.add(o.codigo_equipo)
-        
-        compatibles_str = ", ".join(sorted(list(equipos_hermanos))) if equipos_hermanos else "Ningún otro equipo de la flota usa estos filtros."
-                
-        return render_template('imprimir_filtros.html', equipo=equipo, filtros=filtros, compatibles=compatibles_str, hoy=datetime.now())
-    except Exception as e:
-        return f"Aviso del Sistema: No se pudo generar la hoja de filtros PDF ({str(e)})."
-
-# =========================================================
-# HERRAMIENTA DE SINCRONIZACIÓN DE BASE DE DATOS
-# =========================================================
-@api_bp.route('/sincronizar_bd')
-def sincronizar_bd():
-    mensajes = []
+    equipo = Equipo.query.filter_by(codigo=codigo).first()
+    if not equipo: abort(404)
     
-    # 1. Reparar tabla Equipo (numero_motor)
-    try:
-        db.session.execute(text("ALTER TABLE equipo ADD COLUMN numero_motor VARCHAR(100);"))
-        db.session.commit()
-        mensajes.append("✅ Columna 'numero_motor' inyectada exitosamente a los Equipos.")
-    except Exception:
-        db.session.rollback()
-        mensajes.append("✔️ La columna 'numero_motor' ya estaba sincronizada.")
-
-    # 2. Reparar tabla Filtros (otra_alternativa)
-    try:
-        db.session.execute(text("ALTER TABLE filtro_equipo ADD COLUMN otra_alternativa VARCHAR(150);"))
-        db.session.commit()
-        mensajes.append("✅ Columna 'otra_alternativa' inyectada exitosamente a los Filtros.")
-    except Exception:
-        db.session.rollback()
-        mensajes.append("✔️ La columna 'otra_alternativa' ya estaba sincronizada.")
-
-    html = "<br><br>".join(mensajes)
-    return f"<div style='font-family: sans-serif; padding: 40px; text-align: center; max-width: 600px; margin: auto;'><h2>Sincronización Completada</h2><p style='font-size: 16px;'>{html}</p><br><br><a href='/' style='padding: 12px 25px; background: #1E3A8A; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;'>Volver al Sistema</a></div>"
-
-# =========================================================
-# CARGA MASIVA DEL EXCEL "MAESTRO DE FILTROS"
-# =========================================================
-@api_bp.route('/cargar_maestro_filtros', methods=['GET', 'POST'])
-def cargar_maestro_filtros():
-    token = request.args.get('token')
-    if token != 'DemotronFiltros2026': return "Acceso denegado.", 403
-
-    if request.method == 'GET':
-        return '''
-        <div style="font-family: sans-serif; padding: 40px; text-align: center; max-width: 600px; margin: auto;">
-            <h2 style="color: #1E3A8A;">Subir Maestro de Filtros (Excel)</h2>
-            <form method="POST" enctype="multipart/form-data" style="margin-top: 30px; padding: 20px; border: 2px dashed #CBD5E1; border-radius: 10px; background: #F8FAFC;">
-                <input type="file" name="file" accept=".xlsx, .xls" required style="margin-bottom: 20px; width: 100%; font-size: 16px;"><br>
-                <button type="submit" style="padding: 12px 25px; background: #1E3A8A; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%;">Subir e Importar</button>
-            </form>
-        </div>
-        '''
-    
-    if 'file' not in request.files or request.files['file'].filename == '': return "Error de archivo.", 400
-        
-    try:
-        file = request.files['file']
-        df = pd.read_excel(file)
-        df.columns = df.columns.astype(str).str.strip().str.lower()
-        
-        db.session.execute(text("DELETE FROM filtro_equipo"))
-        registros_agregados = 0
-        
-        sql_insert = text("""
-            INSERT INTO filtro_equipo 
-            (codigo_equipo, sistema, cant, originales, fleetguard, donaldson, baldwind, otra_alternativa) 
-            VALUES (:eq, :sist, :cant, :orig, :fleet, :don, :bald, :otra)
-        """)
-        
-        for index, row in df.iterrows():
-            c_eq = row.get('equipo') or row.get('codigo equipo') or row.get('código equipo')
-            if c_eq is None and len(df.columns) > 0: c_eq = row.iloc[0]
-            c_eq = str(c_eq).strip() if pd.notna(c_eq) else ''
-            if not c_eq or c_eq.lower() in ['nan', 'none', '']: continue
-                
-            c_sist = row.get('sistema / tipo de filtro') or row.get('filtro') or row.get('sistema')
-            if c_sist is None and len(df.columns) > 1: c_sist = row.iloc[1]
-            c_sist = str(c_sist).strip() if pd.notna(c_sist) else '-'
+    # Busca equivalencias por código y por modelo
+    todos_filtros = FiltroEquipo.query.all()
+    filtros = []
+    for f in todos_filtros:
+        f_eq = str(f.codigo_equipo).strip().upper()
+        if f_eq == str(equipo.codigo).strip().upper() or f_eq == str(equipo.modelo).strip().upper():
+            filtros.append(f)
             
-            c_cant = row.get('cant') or row.get('cantidad')
-            if c_cant is None and len(df.columns) > 2: c_cant = row.iloc[2]
-            c_cant = str(c_cant).strip() if pd.notna(c_cant) else '1'
-            
-            c_fleet = row.get('fleetguard')
-            if c_fleet is None and len(df.columns) > 3: c_fleet = row.iloc[3]
-            c_fleet = str(c_fleet).strip() if pd.notna(c_fleet) and str(c_fleet).strip().lower() != 'nan' else '-'
-            
-            c_bald = row.get('baldwind') or row.get('baldwin')
-            if c_bald is None and len(df.columns) > 4: c_bald = row.iloc[4]
-            c_bald = str(c_bald).strip() if pd.notna(c_bald) and str(c_bald).strip().lower() != 'nan' else '-'
-            
-            c_orig = row.get('originales') or row.get('codigo')
-            if c_orig is None and len(df.columns) > 5: c_orig = row.iloc[5]
-            c_orig = str(c_orig).strip() if pd.notna(c_orig) and str(c_orig).strip().lower() != 'nan' else '-'
-            
-            c_don = row.get('donaldson')
-            if c_don is None and len(df.columns) > 6: c_don = row.iloc[6]
-            c_don = str(c_don).strip() if pd.notna(c_don) and str(c_don).strip().lower() != 'nan' else '-'
-            
-            c_otra = row.get('otra alternativa') or row.get('otra')
-            if c_otra is None and len(df.columns) > 7: c_otra = row.iloc[7]
-            c_otra = str(c_otra).strip() if pd.notna(c_otra) and str(c_otra).strip().lower() != 'nan' else '-'
-            
-            db.session.execute(sql_insert, {
-                "eq": c_eq, "sist": c_sist, "cant": c_cant, 
-                "orig": c_orig, "fleet": c_fleet, "bald": c_bald, 
-                "don": c_don, "otra": c_otra
-            })
-            registros_agregados += 1
-            
-        db.session.commit()
-        return f"<div style='padding: 40px; text-align: center; color: green;'><h2>¡Éxito!</h2><p>Se importaron {registros_agregados} filtros correctamente.</p><a href='/'>Volver al Inicio</a></div>"
-        
-    except Exception as e:
-        db.session.rollback()
-        return f"Error: {str(e)}"
+    return render_template('print_filtros.html', equipo=equipo, filtros=filtros, hoy=datetime.now())
