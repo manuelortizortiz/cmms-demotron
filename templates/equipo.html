@@ -3,310 +3,218 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ficha Activo | {{ equipo.codigo }}</title>
-    <!-- Favicon -->
+    <title>Ficha Técnica | {{ equipo.codigo }}</title>
     <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; color: #1E293B; }
-        .card-custom { background: white; border-radius: 8px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden; padding: 24px;}
-        .card-custom-nopad { background: white; border-radius: 8px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden;}
-        table { width: 100%; border-collapse: collapse; }
-        th { font-size: 11px; color: #475569; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; text-align: left; font-weight: 600; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em; background: #FFFFFF; }
-        td { padding: 12px 16px; border-bottom: 1px solid #F1F5F9; color: #1E293B; font-size: 12px; font-weight: 400; }
-        .btn-action { font-size: 11px; font-weight: 500; padding: 6px 12px; border-radius: 4px; border: 1px solid #CBD5E1; transition: all 0.2s; margin-right: 8px; display:inline-block; color: #475569; text-decoration: none; cursor: pointer; background: white;}
-        .btn-action:hover { background-color: #F1F5F9; color: #0F172A; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .tab-btn { padding: 12px 20px; font-weight: 700; font-size: 12px; color: #64748B; border-bottom: 2px solid transparent; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; transition: 0.2s; }
+        .tab-btn:hover { color: #1E3A8A; }
+        .tab-btn.active { color: #1E3A8A; border-bottom-color: #1E3A8A; }
+        
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="p-4 md:p-8 max-w-7xl mx-auto">
+<body class="h-screen flex flex-col overflow-hidden">
 
-    <!-- ENCABEZADO Y BOTÓN DE REGRESO -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div>
-            <h1 class="text-2xl font-semibold uppercase tracking-wide text-slate-800">Ficha Técnica Activo: <span class="text-[#1E3A8A] font-bold">{{ equipo.codigo }}</span></h1>
-            <p class="text-[11px] font-semibold uppercase tracking-widest text-slate-500 mt-1">Expediente de Mantenimiento y Rendimiento</p>
-        </div>
-        <a href="/" class="bg-[#1E3A8A] hover:bg-[#1D4ED8] text-white px-6 py-2.5 rounded font-medium uppercase text-xs transition shadow-sm">Volver al Dashboard</a>
-    </div>
-
-    <!-- SECCIÓN 1: PERFIL DEL EQUIPO Y OPERADOR -->
-    <div class="card-custom mb-6 flex flex-col lg:flex-row gap-8 items-center">
-        <!-- Foto -->
-        <div class="w-full lg:w-1/4 flex justify-center items-center bg-slate-50 rounded border border-slate-200 p-4 h-48">
-            {% if foto_url %}
-                <img src="{{ foto_url }}" alt="Foto Equipo" class="max-h-full object-contain">
-            {% else %}
-                <span class="text-sm font-medium text-slate-400 uppercase tracking-widest">Sin Imagen</span>
-            {% endif %}
-        </div>
-        
-        <!-- Especificaciones -->
-        <div class="w-full lg:w-2/4 grid grid-cols-2 gap-6">
-            <div>
-                <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Marca Oficial</p>
-                <p class="text-lg font-medium text-slate-800">{{ equipo.marca or 'S/I' }}</p>
-            </div>
-            <div>
-                <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Modelo</p>
-                <p class="text-lg font-medium text-slate-800">{{ equipo.modelo or 'S/I' }}</p>
-            </div>
-            <div>
-                <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Patente</p>
-                <p class="text-base font-medium text-[#1E3A8A]">{{ equipo.patente or 'S/I' }}</p>
-            </div>
-            <div>
-                <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">VIN / Chasis</p>
-                <p class="text-xs font-medium font-mono text-slate-600">{{ equipo.vin or 'S/I' }}</p>
-            </div>
-        </div>
-        
-        <!-- Operador Asignado -->
-        <div class="w-full lg:w-1/4 bg-slate-50 border border-slate-200 rounded-lg p-6 flex flex-col justify-center text-center h-48">
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Operador Titular</p>
-            {% if operador %}
-                <p class="text-base font-medium text-slate-800">{{ operador.nombre }}</p>
-                <p class="text-[10px] font-medium text-slate-500 uppercase mt-1">{{ operador.cargo }}</p>
-                <div class="mt-3">
-                    <span class="inline-block px-2 py-1 bg-white text-slate-600 text-[9px] font-medium uppercase tracking-widest rounded border border-slate-200">{{ operador.estado }}</span>
+    <!-- Header Principal -->
+    <header class="bg-white border-b border-slate-200 shrink-0 shadow-sm z-10 pt-6 px-8">
+        <div class="flex justify-between items-start mb-6">
+            <div class="flex gap-6 items-center">
+                <div class="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200 overflow-hidden shadow-sm">
+                    {% if foto_url %}
+                        <img src="{{ foto_url }}" alt="Foto Equipo" class="w-full h-full object-cover">
+                    {% else %}
+                        <span class="text-3xl">🚜</span>
+                    {% endif %}
                 </div>
-            {% else %}
-                <p class="text-xs font-medium text-slate-400 uppercase mt-2">Sin Asignación</p>
-            {% endif %}
+                <div>
+                    <div class="flex items-center gap-3 mb-1">
+                        <h1 class="text-3xl font-black text-slate-800 tracking-tight">{{ equipo.codigo }}</h1>
+                        {% if equipo.estado_base == 'Operativo' %}
+                            <span class="bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">Operativo</span>
+                        {% elif equipo.estado_base == 'Taller' %}
+                            <span class="bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">En Taller</span>
+                        {% else %}
+                            <span class="bg-red-100 text-red-800 border border-red-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">Fuera de Servicio</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">{{ equipo.marca }} {{ equipo.modelo }} <span class="text-slate-300 mx-2">|</span> {{ equipo.tipo_equipo }}</p>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <a href="/" class="bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 px-4 py-2 rounded font-bold text-xs uppercase tracking-wider transition">← Volver al Dashboard</a>
+                <a href="/api/imprimir_registro/{{ equipo.codigo }}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold text-xs uppercase tracking-wider transition shadow-md shadow-blue-600/30">Imprimir Ficha PDF</a>
+            </div>
         </div>
-    </div>
+        
+        <div class="flex gap-2 overflow-x-auto hide-scrollbar">
+            <button onclick="switchTabEq('tab-resumen', this)" class="tab-btn active">Resumen General</button>
+            <button onclick="switchTabEq('tab-filtros', this)" class="tab-btn text-emerald-600">Filtros y Equivalencias</button>
+            <button onclick="switchTabEq('tab-ots', this)" class="tab-btn">Historial Mantenimiento</button>
+            <button onclick="switchTabEq('tab-docs', this)" class="tab-btn">Documentos</button>
+        </div>
+    </header>
 
-    <!-- MATEMÁTICA INTERNA PARA COSTO TOTAL -->
-    {% set stats = namespace(total=0) %}
-    {% for m in mants_prev %}{% set stats.total = stats.total + (m.costo_mantencion_clp or 0) %}{% endfor %}
-    {% for m in mants_corr %}{% set stats.total = stats.total + (m.costo_mantencion_clp or 0) %}{% endfor %}
-    {% for c in compras %}{% set stats.total = stats.total + (c.costo_pm_clp or 0) %}{% endfor %}
+    <div class="flex-1 overflow-y-auto p-8 bg-slate-50">
+        
+        <!-- PESTAÑA 1: RESUMEN GENERAL -->
+        <div id="tab-resumen" class="tab-content active">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm md:col-span-2">
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">Datos Técnicos</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-4">
+                        <div><p class="text-[10px] font-bold text-slate-400 uppercase">Patente / PPU</p><p class="text-sm font-bold text-slate-800">{{ equipo.patente or 'S/I' }}</p></div>
+                        <div><p class="text-[10px] font-bold text-slate-400 uppercase">VIN / Chasis</p><p class="text-sm font-bold text-slate-800">{{ equipo.vin or 'S/I' }}</p></div>
+                        <div><p class="text-[10px] font-bold text-slate-400 uppercase">Año Fabricación</p><p class="text-sm font-bold text-slate-800">{{ equipo.ano or 'S/I' }}</p></div>
+                        <div><p class="text-[10px] font-bold text-slate-400 uppercase">Ubicación Actual</p><p class="text-sm font-bold text-[#1E3A8A]">{{ equipo.ubicacion or 'Sin Asignar' }}</p></div>
+                        <div><p class="text-[10px] font-bold text-slate-400 uppercase">Responsable / Operador</p><p class="text-sm font-bold text-slate-800">{{ operador.nombre if operador else (equipo.responsable or 'Sin Asignar') }}</p></div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">Métricas de Vida</h3>
+                    <div class="mb-4">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">Lectura Actual ({{ equipo.control_base }})</p>
+                        <p class="text-3xl font-black text-slate-800">{{ "{:,.0f}".format(equipo.lectura_actual or 0).replace(',','.') }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">Próxima Mantención (PM)</p>
+                        <p class="text-2xl font-black text-emerald-600">{{ "{:,.0f}".format(equipo.proxima_pm or 0).replace(',','.') }}</p>
+                        {% set margen = (equipo.proxima_pm or 0) - (equipo.lectura_actual or 0) %}
+                        <p class="text-xs font-bold mt-1 {% if margen < 0 %}text-red-600{% else %}text-slate-500{% endif %}">
+                            Margen: {{ "{:,.0f}".format(margen).replace(',','.') }} {{ equipo.control_base }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <!-- SECCIÓN 2: KPIs EN TIEMPO REAL -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div class="card-custom text-center">
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Estado Actual</p>
-            <p class="text-2xl font-normal mt-2 uppercase text-[#1E3A8A]">{{ equipo.estado_base }}</p>
-        </div>
-        <div class="card-custom text-center">
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Lectura / Uso</p>
-            <p class="text-2xl font-normal mt-2 text-slate-800">{{ "{:,.0f}".format(equipo.lectura_actual or 0).replace(',', '.') }} <span class="text-xs text-slate-400">{{ equipo.control_base }}</span></p>
-        </div>
-        <div class="card-custom text-center">
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Margen Mantenimiento</p>
-            <p class="text-2xl font-normal mt-2 {% if equipo.margen < 0 %}text-red-500{% elif equipo.margen <= 150 %}text-amber-500{% else %}text-[#1E3A8A]{% endif %}">{{ "{:,.0f}".format(equipo.margen or 0).replace(',', '.') }} <span class="text-xs text-slate-400">{{ equipo.control_base }}</span></p>
-        </div>
-        <div class="card-custom text-center bg-slate-50">
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Inversión Acumulada</p>
-            <p class="text-2xl font-normal mt-2 text-slate-800">${{ "{:,.0f}".format(stats.total).replace(',', '.') }}</p>
-        </div>
-    </div>
-
-    <!-- SECCIÓN: DOCUMENTOS LEGALES Y REVISIONES -->
-    <div class="card-custom-nopad mb-6">
-        <div class="p-4 bg-slate-50 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-widest">Documentación Legal y Revisiones</h3>
-            <button onclick="document.getElementById('modal-doc').classList.remove('hidden')" class="btn-action shadow-sm mb-0">Subir Archivo PDF</button>
-        </div>
-        <div class="overflow-x-auto max-h-64">
-            <table class="w-full text-left">
-                <thead class="sticky top-0 shadow-sm">
-                    <tr><th>Tipo de Documento</th><th>Vencimiento</th><th>Estado</th><th class="text-right">Acciones</th></tr>
-                </thead>
-                <tbody>
-                    {% for doc in documentos %}
-                    <tr class="hover:bg-slate-50 transition border-b border-slate-50">
-                        <td class="font-medium text-slate-800 uppercase">{{ doc.tipo_documento }}</td>
-                        <td class="font-mono font-medium text-slate-500">{{ doc.fecha_vencimiento.strftime('%d/%m/%Y') if doc.fecha_vencimiento else 'Indefinido' }}</td>
-                        <td>
-                            {% if doc.fecha_vencimiento %}
-                                {% if doc.fecha_vencimiento < hoy.date() %}
-                                    <span class="px-2 py-0.5 bg-red-50 text-red-600 border border-red-200 rounded text-[9px] font-medium uppercase">Vencido</span>
-                                {% else %}
-                                    <span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded text-[9px] font-medium uppercase">Vigente</span>
-                                {% endif %}
+        <!-- PESTAÑA 2: FILTROS Y EQUIVALENCIAS (¡AQUÍ APARECEN!) -->
+        <div id="tab-filtros" class="tab-content">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+                <div class="p-4 border-b border-slate-200 bg-emerald-50 flex justify-between items-center">
+                    <h3 class="font-black text-emerald-800 uppercase tracking-widest text-xs">Catálogo de Filtros del Equipo</h3>
+                    <a href="/api/imprimir_filtros/{{ equipo.codigo }}" target="_blank" class="text-[10px] font-bold bg-white border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded uppercase hover:bg-emerald-100 transition shadow-sm">Imprimir Tabla PDF</a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                                <th class="p-4">Sistema / Aplicación</th>
+                                <th class="p-4 text-center">Cant.</th>
+                                <th class="p-4">OEM Original</th>
+                                <th class="p-4">Fleetguard</th>
+                                <th class="p-4">Donaldson</th>
+                                <th class="p-4">Baldwind</th>
+                                <th class="p-4">Otra Alternativa</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-xs font-medium text-slate-700">
+                            {% for f in filtros %}
+                            <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                <td class="p-4 font-black text-slate-800"><span class="bg-slate-100 px-2 py-1 rounded border border-slate-200">{{ f.sistema }}</span></td>
+                                <td class="p-4 text-center font-black text-lg text-[#1E3A8A]">{{ f.cant }}</td>
+                                <td class="p-4 font-mono">{{ f.originales }}</td>
+                                <td class="p-4 font-mono">{{ f.fleetguard }}</td>
+                                <td class="p-4 font-mono">{{ f.donaldson }}</td>
+                                <td class="p-4 font-mono">{{ f.baldwind }}</td>
+                                <td class="p-4 font-mono">{{ f.otra_alternativa }}</td>
+                            </tr>
                             {% else %}
-                                <span class="px-2 py-0.5 bg-slate-100 text-slate-500 border border-slate-200 rounded text-[9px] font-medium uppercase">N/A</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-right">
-                            <a href="{{ doc.archivo_url }}" target="_blank" class="text-[10px] text-[#2563EB] hover:underline font-medium">Ver Archivo</a>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="4" class="text-center font-medium py-6 text-slate-400 uppercase text-xs">Sin documentos registrados.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- SECCIÓN: TRAZABILIDAD LOGÍSTICA (NUEVO) -->
-    <div class="card-custom-nopad mb-6">
-        <div class="p-4 bg-slate-50 border-b border-slate-100">
-            <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-widest">Trazabilidad Logística (Historial de Traslados)</h3>
-        </div>
-        <div class="overflow-x-auto max-h-48">
-            <table class="w-full text-left">
-                <thead class="sticky top-0 shadow-sm">
-                    <tr><th>Fecha de Movimiento</th><th>Origen (Base Anterior)</th><th>Destino (Base Actual)</th></tr>
-                </thead>
-                <tbody>
-                    {% for h in historial_ub %}
-                    <tr class="hover:bg-slate-50 transition border-b border-slate-50">
-                        <td class="font-medium text-slate-500 text-[11px]">{{ h.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
-                        <td class="font-medium text-slate-500">{{ h.ubicacion_anterior or 'SIN ASIGNAR' }}</td>
-                        <td class="font-medium text-[#1E3A8A]">{{ h.ubicacion_nueva }}</td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="3" class="text-center font-medium py-6 text-slate-400 uppercase text-xs">Sin movimientos logísticos registrados.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- SECCIÓN HISTÓRICA (Grid 2 Columnas) -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <!-- Mantenciones Preventivas -->
-        <div class="card-custom-nopad">
-            <div class="p-4 bg-slate-50 border-b border-slate-100">
-                <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-widest">Historial Preventivo (PM)</h3>
-            </div>
-            <div class="overflow-x-auto max-h-64">
-                <table class="w-full text-left">
-                    <thead class="sticky top-0 shadow-sm">
-                        <tr><th>Fecha/Folio</th><th>Pauta</th><th>Odo/Hor</th><th>Inversión</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for m in mants_prev %}
-                        <tr class="hover:bg-slate-50 transition border-b border-slate-50">
-                            <td class="text-slate-500 text-[11px]">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '' }}<br><span class="text-[9px]">{{ m.folio }}</span></td>
-                            <td class="font-medium text-slate-800">{{ m.tipo_mantencion }}</td>
-                            <td class="text-slate-600">{{ "{:,.0f}".format(m.lectura or 0).replace(',', '.') }}</td>
-                            <td class="font-medium text-slate-800">${{ "{:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="4" class="text-center font-medium py-6 text-slate-400 uppercase text-xs">Sin registros preventivos.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Averías y Correctivas -->
-        <div class="card-custom-nopad">
-            <div class="p-4 bg-slate-50 border-b border-slate-100">
-                <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-widest">Historial de Averías</h3>
-            </div>
-            <div class="overflow-x-auto max-h-64">
-                <table class="w-full text-left">
-                    <thead class="sticky top-0 shadow-sm">
-                        <tr><th>Fecha/Folio</th><th>Sistema Afectado</th><th>Diagnóstico</th><th>Inversión</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for m in mants_corr %}
-                        <tr class="hover:bg-slate-50 transition border-b border-slate-50">
-                            <td class="text-slate-500 text-[11px]">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '' }}<br><span class="text-[9px]">{{ m.folio }}</span></td>
-                            <td class="font-medium text-[#1E3A8A]">{{ m.sistema_falla }}</td>
-                            <td class="text-slate-600 text-[11px]">{{ m.causa_raiz }}</td>
-                            <td class="font-medium text-slate-800">${{ "{:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="4" class="text-center font-medium py-6 text-slate-400 uppercase text-xs">Sin registros de averías.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- SECCIÓN COMPRAS Y LECTURAS (Grid Dividido) -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
-        <!-- Compras -->
-        <div class="card-custom-nopad">
-            <div class="p-4 bg-slate-50 border-b border-slate-100">
-                <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-widest">Repuestos Asociados (OC)</h3>
-            </div>
-            <div class="overflow-x-auto max-h-64">
-                <table class="w-full text-left">
-                    <thead class="sticky top-0 shadow-sm">
-                        <tr><th>Fecha/N° OC</th><th>Detalle de Compra</th><th>Inversión</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for c in compras %}
-                        <tr class="hover:bg-slate-50 transition border-b border-slate-50">
-                            <td class="text-slate-500 text-[11px]">{{ c.fecha.strftime('%d/%m/%Y') if c.fecha else '' }}<br><span class="text-[9px]">{{ c.oc }}</span></td>
-                            <td class="font-medium text-slate-800">{{ c.descripcion }}</td>
-                            <td class="font-medium text-slate-800">${{ "{:,.0f}".format(c.costo_pm_clp or 0).replace(',', '.') }}</td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="3" class="text-center font-medium py-6 text-slate-400 uppercase text-xs">Sin compras registradas.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Lecturas -->
-        <div class="card-custom-nopad">
-            <div class="p-4 bg-slate-50 border-b border-slate-100">
-                <h3 class="font-semibold text-slate-700 uppercase text-[11px] tracking-widest">Bitácora de Lecturas</h3>
-            </div>
-            <div class="overflow-x-auto max-h-64">
-                <table class="w-full text-left">
-                    <thead class="sticky top-0 shadow-sm">
-                        <tr><th>Fecha Captura</th><th>Valor Registrado</th><th>Responsable</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for l in lecturas %}
-                        <tr class="hover:bg-slate-50 transition border-b border-slate-50">
-                            <td class="text-slate-500 text-[11px]">{{ l.fecha.strftime('%d/%m/%Y %H:%M') if l.fecha else '' }}</td>
-                            <td class="font-medium text-slate-800">{{ "{:,.0f}".format(l.horometro or l.kilometraje or 0).replace(',', '.') }}</td>
-                            <td class="text-slate-600 text-[11px] uppercase">{{ l.responsable or 'Sistema' }}</td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="3" class="text-center font-medium py-6 text-slate-400 uppercase text-xs">Sin lecturas históricas.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL DE SUBIDA DE DOCUMENTOS -->
-    <div id="modal-doc" class="fixed inset-0 bg-slate-900/80 z-[700] hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded shadow-lg flex flex-col overflow-hidden">
-            <div class="p-4 bg-slate-50 flex justify-between items-center border-b border-slate-200">
-                <h3 class="font-semibold text-slate-800 uppercase text-xs tracking-wider">Subir Documento Legal</h3>
-                <button onclick="document.getElementById('modal-doc').classList.add('hidden')" class="text-slate-500 hover:text-slate-800 text-xl">&times;</button>
-            </div>
-            <form action="/equipo/{{ equipo.codigo }}/subir_documento" method="POST" enctype="multipart/form-data" class="p-6 flex flex-col gap-4">
-                <div>
-                    <label class="text-[10px] font-medium uppercase text-slate-500 mb-1 block">Tipo de Documento</label>
-                    <select name="tipo_documento" class="form-input" required>
-                        <option value="Revisión Técnica">Revisión Técnica</option>
-                        <option value="Permiso de Circulación">Permiso de Circulación</option>
-                        <option value="Seguro Obligatorio (SOAP)">Seguro Obligatorio (SOAP)</option>
-                        <option value="Padrón / Registro MOP">Padrón / Registro MOP</option>
-                        <option value="Certificado de Emisiones">Certificado de Emisiones</option>
-                        <option value="Otro / Adicional">Otro / Adicional</option>
-                    </select>
+                            <tr>
+                                <td colspan="7" class="p-8 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">Aún no hay filtros registrados para el {{ equipo.codigo }}.<br><span class="font-normal normal-case mt-2 block">Asegúrese de haberlos subido en el archivo "Plantilla_Maestro_Filtros_Demotron.xlsx" y luego sincronizar.</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-                <div>
-                    <label class="text-[10px] font-medium uppercase text-slate-500 mb-1 block">Fecha de Vencimiento (Opcional)</label>
-                    <input type="date" name="fecha_vencimiento" class="form-input">
-                </div>
-                <div>
-                    <label class="text-[10px] font-medium uppercase text-slate-500 mb-1 block">Archivo (PDF o Imagen)</label>
-                    <input type="file" name="archivo" accept=".pdf,image/*" class="w-full border border-slate-200 p-2 rounded text-xs text-slate-700 cursor-pointer" required>
-                </div>
-                <button type="submit" class="bg-[#1E3A8A] hover:bg-[#1D4ED8] text-white px-6 py-2.5 rounded mt-2 text-xs uppercase font-medium w-full transition">Guardar Documento</button>
-            </form>
+            </div>
         </div>
+
+        <!-- PESTAÑA 3: HISTORIAL DE MANTENIMIENTO -->
+        <div id="tab-ots" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- PREVENTIVAS -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-slate-200 bg-blue-50">
+                        <h3 class="font-black text-blue-800 uppercase tracking-widest text-xs">Pautas Preventivas (PM)</h3>
+                    </div>
+                    <div class="overflow-y-auto max-h-96">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200 sticky top-0">
+                                <tr><th class="p-3">Fecha</th><th class="p-3">Pauta</th><th class="p-3">Lectura</th><th class="p-3">Mecánico</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for m in mants_prev %}
+                                <tr class="border-b border-slate-50 hover:bg-slate-50">
+                                    <td class="p-3 font-medium text-slate-500">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</td>
+                                    <td class="p-3 font-bold text-slate-800">{{ m.tipo_mantencion }}</td>
+                                    <td class="p-3 text-slate-600">{{ "{:,.0f}".format(m.lectura).replace(',','.') if m.lectura else '-' }}</td>
+                                    <td class="p-3 text-slate-600">{{ m.mecanico }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="4" class="p-4 text-center text-slate-400 text-xs">Sin historial preventivo</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- CORRECTIVAS -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-slate-200 bg-red-50">
+                        <h3 class="font-black text-red-800 uppercase tracking-widest text-xs">Averías y Correctivas</h3>
+                    </div>
+                    <div class="overflow-y-auto max-h-96">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200 sticky top-0">
+                                <tr><th class="p-3">Fecha</th><th class="p-3">Causa Raíz / Falla</th><th class="p-3">Lectura</th><th class="p-3">Mecánico</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for m in mants_corr %}
+                                <tr class="border-b border-slate-50 hover:bg-slate-50">
+                                    <td class="p-3 font-medium text-slate-500">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</td>
+                                    <td class="p-3 font-bold text-slate-800">{{ m.causa_raiz or m.tipo_mantencion }}</td>
+                                    <td class="p-3 text-slate-600">{{ "{:,.0f}".format(m.lectura).replace(',','.') if m.lectura else '-' }}</td>
+                                    <td class="p-3 text-slate-600">{{ m.mecanico }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="4" class="p-4 text-center text-slate-400 text-xs">Sin historial correctivo</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 4: DOCUMENTOS -->
+        <div id="tab-docs" class="tab-content">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">Gestión Documental (Permisos de Circulación, Rev. Técnica)</h3>
+                <p class="text-sm text-slate-500">Módulo en construcción o habilitado para subir PDFs.</p>
+            </div>
+        </div>
+
     </div>
 
+    <script>
+        function switchTabEq(tabId, btn) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active', 'text-emerald-600'));
+            
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+            
+            // Efecto de color si es la pestaña de filtros
+            if(tabId === 'tab-filtros') btn.classList.add('text-emerald-600');
+        }
+    </script>
 </body>
 </html>
