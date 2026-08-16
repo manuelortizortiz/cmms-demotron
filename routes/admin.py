@@ -16,6 +16,7 @@ from models.personal import Personal, RegistroUsoEquipo, Mecanico
 from models.chatter import RegistroChatter
 from models.bodega import InventarioBodega, Repuesto, MovimientoBodega, KitPM, ComponenteKit, RecetaModelo
 from utils.formatters import clean_string
+from models.auditoria import LogCambios
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -135,7 +136,7 @@ def cargar_sql_final():
             db.session.commit()
         except: db.session.rollback()
 
-        # SOLUCIÓN AL CHOQUE DE VERSIONES: Convertimos la columna a Texto
+        # SOLUCIÓN AL CHOQUE DE VERSIONES: Convertimos la columna cant a VARCHAR de forma segura
         try:
             db.session.execute(text("ALTER TABLE filtro_equipo ALTER COLUMN cant TYPE VARCHAR(100) USING cant::VARCHAR"))
             db.session.commit()
@@ -304,10 +305,7 @@ def cargar_sql_final():
                     continue
                     
                 c_sist = get_col(row, 1, '-')
-                
-                # LA SOLUCIÓN: Lo pasamos a Texto para que no choque con la BD PostgreSQL
                 c_cant = str(get_col(row, 2, '1')).strip() 
-                
                 c_fleet = get_col(row, 3, '-')
                 c_bald = get_col(row, 4, '-')
                 c_orig = get_col(row, 5, '-')
@@ -331,6 +329,24 @@ def cargar_sql_final():
         except Exception as e:
             db.session.rollback()
             reporte['mensajes'].append(f"ERROR CRÍTICO LEYENDO FILTROS: {str(e)}")
+
+        # --- RUTA DE AUDITORÍA (VER LOGS) ---
+        @admin_bp.route('/auditoria', strict_slashes=False)
+        @login_required
+        def ver_auditoria():
+            try:
+                todos_logs = LogCambios.query.order_by(LogCambios.timestamp.desc()).limit(300).all()
+                logs_formateados = []
+                for l in todos_logs:
+                    logs_formateados.append({
+                        'fecha': l.timestamp,
+                        'usuario': l.usuario or 'Sistema',
+                        'accion': l.accion,
+                        'detalles': f"Tabla: <b>{l.tabla}</b> (ID/Cod: {l.registro_id}) — Cambios: {l.cambios}"
+                    })
+                return render_template('auditoria.html', logs=logs_formateados)
+            except Exception as e:
+                return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error al cargar Auditoría:</b> {str(e)}</div>"
 
         # --- ACTUALIZAR MÁRGENES ---
         for eq in Equipo.query.all():
