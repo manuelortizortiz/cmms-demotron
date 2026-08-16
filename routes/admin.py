@@ -44,6 +44,17 @@ def safe_parse_date(val):
     try: return pd.to_datetime(val).to_pydatetime()
     except: return None
 
+def get_col(row, idx, default='-'):
+    """ Función anti-errores para leer celdas de Excel vacías o inexistentes """
+    try:
+        if idx < len(row):
+            val = str(row.iloc[idx]).strip()
+            if not val or val.upper() in ['NONE', 'NAN', '']: return default
+            return val
+        return default
+    except:
+        return default
+
 @admin_bp.route('/admin/usuarios', methods=['GET', 'POST'])
 @login_required
 def gestionar_usuarios():
@@ -163,9 +174,11 @@ def cargar_sql_final():
             for op in operadores_set:
                 if not Personal.query.filter_by(nombre=op).first(): db.session.add(Personal(nombre=op, cargo="Operador", estado="Activo", equipo_asignado="Varios"))
             db.session.commit()
+            reporte['mensajes'].append(f"CMMS Equipos procesados: {reporte['equipos']}")
         except Exception as e:
-            pass
+            reporte['mensajes'].append(f"Error en Equipos: {str(e)}")
 
+        # --- LECTURAS, PREVENTIVAS, CORRECTIVAS, COMPRAS, REPUESTOS, KITS (Sin cambios) ---
         try:
             df_lec = pd.read_excel(xls_prin, sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
             for idx, row in df_lec.iterrows():
@@ -222,7 +235,7 @@ def cargar_sql_final():
                     ot.costo_mantencion_clp, ot.tipo_mantencion, ot.causa_raiz, ot.mecanico = costo_val, falla, falla, mecanico_val
                 else: db.session.add(OrdenTrabajo(fecha=fecha_dt, codigo_equipo=cod, tipo_ot='Correctiva', tipo_mantencion=falla, lectura=lectura_val, costo_mantencion_clp=costo_val, estado='Finalizada', causa_raiz=falla, mecanico=mecanico_val))
             db.session.commit()
-        except: pass
+        except Exception as e: pass
 
         try:
             df_com = pd.read_excel(xls_prin, sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
@@ -267,46 +280,30 @@ def cargar_sql_final():
         except: pass
 
         # =========================================================
-        # 🚀 MAESTRO DE FILTROS (CON INTELIGENCIA DE COLUMNAS) 🚀
+        # 🚀 MAESTRO DE FILTROS BLINDADO CON EXTRACCIÓN POSICIONAL 🚀
         # =========================================================
         try:
             req_filtros = urllib.request.Request(archivo_filtros, headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req_filtros) as response:
-                df_filtros = pd.read_excel(io.BytesIO(response.read())).replace({np.nan: None})
+                df_filtros = pd.read_excel(io.BytesIO(response.read()), engine='openpyxl').replace({np.nan: None})
                 
             db.session.query(FiltroEquipo).delete() 
             
-            # Normalizamos los nombres de las columnas para poder buscar sin equivocarnos
-            df_filtros.columns = df_filtros.columns.astype(str).str.strip().str.lower()
-            
             for idx, row in df_filtros.iterrows():
-                # Extracción por nombre exacto de la columna para evitar desfases
-                c_eq = row.get('equipo', row.get('codigo equipo', row.get('código equipo', row.iloc[0] if len(row) > 0 else '')))
-                c_eq = str(c_eq).strip().upper() if c_eq else ''
+                # Extracción con función get_col para evitar que colapse si faltan columnas
+                c_eq = get_col(row, 0, '').upper()
                 
-                if not c_eq or c_eq in ['NONE', 'NAN', 'EQUIPO', 'CÓDIGO', 'CODIGO'] or len(c_eq) < 2:
+                # Ignorar encabezados y filas vacías
+                if not c_eq or c_eq in ['EQUIPO', 'CODIGO EQUIPO', 'CÓDIGO EQUIPO', 'MODELO', 'MAESTRO', 'NONE', 'NAN'] or len(c_eq) < 2:
                     continue
                     
-                c_sist = row.get('sistema / tipo de filtro', row.get('filtro', row.get('sistema', row.iloc[1] if len(row) > 1 else '-')))
-                c_sist = str(c_sist).strip() if c_sist and str(c_sist).upper() != 'NONE' else '-'
-                
-                c_cant = row.get('cant', row.get('cantidad', row.iloc[2] if len(row) > 2 else '1'))
-                c_cant = str(c_cant).strip() if c_cant and str(c_cant).upper() != 'NONE' else '1'
-                
-                c_fleet = row.get('fleetguard', row.iloc[3] if len(row) > 3 else '-')
-                c_fleet = str(c_fleet).strip() if c_fleet and str(c_fleet).upper() != 'NONE' else '-'
-                
-                c_bald = row.get('baldwind', row.get('baldwin', row.iloc[4] if len(row) > 4 else '-'))
-                c_bald = str(c_bald).strip() if c_bald and str(c_bald).upper() != 'NONE' else '-'
-                
-                c_orig = row.get('originales', row.get('codigo', row.iloc[5] if len(row) > 5 else '-'))
-                c_orig = str(c_orig).strip() if c_orig and str(c_orig).upper() != 'NONE' else '-'
-                
-                c_don = row.get('donaldson', row.iloc[6] if len(row) > 6 else '-')
-                c_don = str(c_don).strip() if c_don and str(c_don).upper() != 'NONE' else '-'
-                
-                c_otra = row.get('otra alternativa', row.get('otra', row.iloc[7] if len(row) > 7 else '-'))
-                c_otra = str(c_otra).strip() if c_otra and str(c_otra).upper() != 'NONE' else '-'
+                c_sist = get_col(row, 1, '-')
+                c_cant = get_col(row, 2, '1')
+                c_fleet = get_col(row, 3, '-')
+                c_bald = get_col(row, 4, '-')
+                c_orig = get_col(row, 5, '-')
+                c_don = get_col(row, 6, '-')
+                c_otra = get_col(row, 7, '-')
                 
                 db.session.add(FiltroEquipo(
                     codigo_equipo=c_eq, sistema=c_sist, cant=c_cant, 
@@ -316,8 +313,10 @@ def cargar_sql_final():
                 reporte['filtros'] += 1
                 
             db.session.commit()
+            reporte['mensajes'].append(f"ÉXITO: Maestro de Filtros importado con {reporte['filtros']} registros reales.")
         except Exception as e:
             db.session.rollback()
+            reporte['mensajes'].append(f"ERROR CRÍTICO LEYENDO FILTROS: {str(e)}")
 
         # --- ACTUALIZAR MÁRGENES ---
         for eq in Equipo.query.all():
@@ -333,12 +332,23 @@ def cargar_sql_final():
         db.session.add(log)
         db.session.commit()
 
+        # Generar lista de mensajes para diagnóstico
+        mensajes_html = "".join([f"<li>{m}</li>" for m in reporte['mensajes']])
+
         html_report = f"""
         <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 40px auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px;">
             <h2 style="color: #16a34a; text-align: center;">ACTUALIZADO CON ÉXITO</h2>
             <ul style="list-style: none; padding: 0; font-size: 14px; font-weight: bold;">
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: #2563EB;">MAESTRO DE FILTROS CREADOS CON ÉXITO: <b style="float: right;">{reporte['filtros']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: #2563EB;">MAESTRO DE FILTROS IMPORTADOS: <b style="float: right;">{reporte['filtros']}</b></li>
             </ul>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #fef2f2; border: 1px solid #f87171; border-radius: 8px;">
+                <h4 style="margin:0 0 10px 0; color: #991b1b;">Diagnóstico del Robot:</h4>
+                <ul style="margin:0; padding-left: 20px; color: #7f1d1d; font-size: 12px;">
+                    {mensajes_html}
+                </ul>
+            </div>
+            
             <div style='text-align: center; margin-top: 24px;'><a href='/' style='background: #1e293b; color: white; padding: 10px 24px; text-decoration: none; border-radius: 4px;'>VOLVER AL DASHBOARD</a></div>
         </div>
         """
@@ -346,4 +356,4 @@ def cargar_sql_final():
 
     except Exception as e:
         db.session.rollback()
-        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>FALLO TÉCNICO:</b> {str(e)}</div>"
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>FALLO TÉCNICO AL ACTUALIZAR:</b> {str(e)}</div>"
