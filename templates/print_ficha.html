@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ficha Técnica | {{ equipo.codigo }}</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; font-size: 12px; color: #333; margin: 20px; }
+        .header { border-bottom: 2px solid #16a34a; padding-bottom: 10px; margin-bottom: 20px; }
+        h1 { color: #1e293b; margin-bottom: 5px; font-size: 20px; text-transform: uppercase;}
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th { background-color: #f1f5f9; padding: 10px; border: 1px solid #cbd5e1; text-align: left; color: #1e293b; font-size: 11px; text-transform: uppercase;}
+        td { padding: 8px 10px; border: 1px solid #cbd5e1; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Ficha Técnica de Equipo: {{ equipo.codigo }}</h1>
+        <p><b>Marca:</b> {{ equipo.marca }} &nbsp;|&nbsp; <b>Modelo:</b> {{ equipo.modelo }} &nbsp;|&nbsp; <b>Ubicación:</b> {{ equipo.ubicacion }}</p>
+    </div>
+    
+    <h2>1. Filtros y Equivalencias</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Sistema</th>
+                <th style="text-align: center;">Cant.</th>
+                <th>Original</th>
+                <th>Fleetguard</th>
+                <th>Donaldson</th>
+                <th>Baldwin</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for f in filtros %}
+            <tr>
+                <td><b>{{ f.sistema }}</b></td>
+                <td style="text-align: center;">{{ f.cant }}</td>
+                <td style="font-family: monospace;">{{ f.originales }}</td>
+                <td style="font-family: monospace;">{{ f.fleetguard }}</td>
+                <td style="font-family: monospace;">{{ f.donaldson }}</td>
+                <td style="font-family: monospace;">{{ f.baldwind }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="text-align: center;">No hay filtros registrados.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>2. Últimas Mantenciones Preventivas</h2>
+    <table>
+        <thead>
+            <tr><th>Fecha</th><th>Pauta / Mantención</th><th>Mecánico / Proveedor</th></tr>
+        </thead>
+        <tbody>
+            {% for m in mants_prev %}
+            <tr>
+                <td>{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</td>
+                <td>{{ m.tipo_mantencion }}</td>
+                <td>{{ m.mecanico }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" style="text-align: center;">Sin historial preventivo reciente.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
