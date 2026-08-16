@@ -1,7 +1,7 @@
 import os
 from datetime import timedelta
-from flask import Flask, jsonify
-from flask_login import LoginManager
+from flask import Flask, jsonify, request
+from flask_login import LoginManager, current_user
 from flask_migrate import Migrate
 from flask_apscheduler import APScheduler
 from sqlalchemy import text
@@ -9,6 +9,8 @@ from extensions import db
 
 # Importar Modelos
 from models.usuario import Usuario
+from models.chatter import RegistroChatter
+from datetime import datetime
 
 # Importar Listener de Auditoría para que se active silenciosamente
 import models.auditoria
@@ -88,7 +90,36 @@ def create_app():
     app.register_blueprint(mobile_bp)
 
     # ==========================================
-    # 6. ENDPOINT DE OBSERVABILIDAD
+    # 6. AUDITORÍA Y REGISTRO AUTOMÁTICO DE ACCESOS
+    # ==========================================
+    @app.before_request
+    def registrar_actividad_usuario():
+        # Ignorar archivos estáticos o peticiones técnicas para no saturar la BD
+        if request.path.startswith('/static') or request.path.startswith('/favicon.ico') or request.path == '/health':
+            return
+
+        # Registrar accesos de navegación de usuarios autenticados
+        if current_user.is_authenticated and request.method == 'GET':
+            try:
+                rutas_excluidas = ['/api/', '/mover_ubicacion_kanban']
+                if not any(request.path.startswith(exc) for exc in rutas_excluidas):
+                    usuario_nombre = getattr(current_user, 'username', getattr(current_user, 'nombre', 'Usuario'))
+                    
+                    log = RegistroChatter(
+                        fecha=datetime.now(),
+                        modelo_ref='navegacion',
+                        registro_id='0',
+                        autor=usuario_nombre,
+                        accion='acceso_pagina',
+                        mensaje=f"Accedió a: {request.path}"
+                    )
+                    db.session.add(log)
+                    db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+    # ==========================================
+    # 7. ENDPOINT DE OBSERVABILIDAD
     # ==========================================
     @app.route('/health')
     def health_check():
@@ -99,7 +130,7 @@ def create_app():
             return jsonify({"status": "error", "details": str(e)}), 503
 
     # ==========================================
-    # 7. WORKFLOW & NOTIFICACIONES (CRON JOBS)
+    # 8. WORKFLOW & NOTIFICACIONES (CRON JOBS)
     # ==========================================
     scheduler.init_app(app)
     scheduler.start()
@@ -115,7 +146,7 @@ def create_app():
                 print(f"SISTEMA: {len(equipos_alerta)} equipos próximos a vencer. Hook de WhatsApp / Email preparado.")
 
     # ==========================================
-    # 8. INICIALIZACIÓN DE TABLAS Y ADMIN
+    # 9. INICIALIZACIÓN DE TABLAS Y ADMIN
     # ==========================================
     with app.app_context():
         db.create_all()
