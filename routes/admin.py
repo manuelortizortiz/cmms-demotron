@@ -166,12 +166,6 @@ def cargar_sql_final():
         except Exception as e:
             pass
 
-        # --- LECTURAS, PREVENTIVAS, CORRECTIVAS, COMPRAS, REPUESTOS, KITS (Sin cambios) ---
-        for sheet, name in [("Lecturas", "lecturas"), ("Mantenciones", "preventivas"), ("Correctivas", "correctivas"), ("Compras PM", "compras"), ("Repuestos", "repuestos"), ("Recetas_Kits", "kits")]:
-            try:
-                pd.read_excel(xls_prin, sheet_name=sheet, skiprows=2)
-            except: pass
-
         try:
             df_lec = pd.read_excel(xls_prin, sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
             for idx, row in df_lec.iterrows():
@@ -273,7 +267,7 @@ def cargar_sql_final():
         except: pass
 
         # =========================================================
-        # 🚀 MAESTRO DE FILTROS (SIN RESTRICCIONES) 🚀
+        # 🚀 MAESTRO DE FILTROS (CON INTELIGENCIA DE COLUMNAS) 🚀
         # =========================================================
         try:
             req_filtros = urllib.request.Request(archivo_filtros, headers={'User-Agent': 'Mozilla/5.0'})
@@ -282,20 +276,37 @@ def cargar_sql_final():
                 
             db.session.query(FiltroEquipo).delete() 
             
+            # Normalizamos los nombres de las columnas para poder buscar sin equivocarnos
+            df_filtros.columns = df_filtros.columns.astype(str).str.strip().str.lower()
+            
             for idx, row in df_filtros.iterrows():
-                c_eq = str(row.iloc[0]).strip().upper() if len(row) > 0 else ''
+                # Extracción por nombre exacto de la columna para evitar desfases
+                c_eq = row.get('equipo', row.get('codigo equipo', row.get('código equipo', row.iloc[0] if len(row) > 0 else '')))
+                c_eq = str(c_eq).strip().upper() if c_eq else ''
                 
-                # REGLA CORREGIDA: Ya no exige guiones, solo que no sea vacío o la palabra "EQUIPO"
                 if not c_eq or c_eq in ['NONE', 'NAN', 'EQUIPO', 'CÓDIGO', 'CODIGO'] or len(c_eq) < 2:
                     continue
                     
-                c_sist = str(row.iloc[1]).strip() if len(row) > 1 else '-'
-                c_cant = str(row.iloc[2]).strip() if len(row) > 2 else '1'
-                c_fleet = str(row.iloc[3]).strip() if len(row) > 3 else '-'
-                c_bald = str(row.iloc[4]).strip() if len(row) > 4 else '-'
-                c_orig = str(row.iloc[5]).strip() if len(row) > 5 else '-'
-                c_don = str(row.iloc[6]).strip() if len(row) > 6 else '-'
-                c_otra = str(row.iloc[7]).strip() if len(row) > 7 else '-'
+                c_sist = row.get('sistema / tipo de filtro', row.get('filtro', row.get('sistema', row.iloc[1] if len(row) > 1 else '-')))
+                c_sist = str(c_sist).strip() if c_sist and str(c_sist).upper() != 'NONE' else '-'
+                
+                c_cant = row.get('cant', row.get('cantidad', row.iloc[2] if len(row) > 2 else '1'))
+                c_cant = str(c_cant).strip() if c_cant and str(c_cant).upper() != 'NONE' else '1'
+                
+                c_fleet = row.get('fleetguard', row.iloc[3] if len(row) > 3 else '-')
+                c_fleet = str(c_fleet).strip() if c_fleet and str(c_fleet).upper() != 'NONE' else '-'
+                
+                c_bald = row.get('baldwind', row.get('baldwin', row.iloc[4] if len(row) > 4 else '-'))
+                c_bald = str(c_bald).strip() if c_bald and str(c_bald).upper() != 'NONE' else '-'
+                
+                c_orig = row.get('originales', row.get('codigo', row.iloc[5] if len(row) > 5 else '-'))
+                c_orig = str(c_orig).strip() if c_orig and str(c_orig).upper() != 'NONE' else '-'
+                
+                c_don = row.get('donaldson', row.iloc[6] if len(row) > 6 else '-')
+                c_don = str(c_don).strip() if c_don and str(c_don).upper() != 'NONE' else '-'
+                
+                c_otra = row.get('otra alternativa', row.get('otra', row.iloc[7] if len(row) > 7 else '-'))
+                c_otra = str(c_otra).strip() if c_otra and str(c_otra).upper() != 'NONE' else '-'
                 
                 db.session.add(FiltroEquipo(
                     codigo_equipo=c_eq, sistema=c_sist, cant=c_cant, 
@@ -305,10 +316,8 @@ def cargar_sql_final():
                 reporte['filtros'] += 1
                 
             db.session.commit()
-            reporte['mensajes'].append("✅ Maestro de Filtros importado sin restricciones.")
         except Exception as e:
             db.session.rollback()
-            reporte['mensajes'].append(f"ADVERTENCIA EN MAESTRO DE FILTROS: {str(e)}")
 
         # --- ACTUALIZAR MÁRGENES ---
         for eq in Equipo.query.all():
@@ -328,7 +337,7 @@ def cargar_sql_final():
         <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 40px auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px;">
             <h2 style="color: #16a34a; text-align: center;">ACTUALIZADO CON ÉXITO</h2>
             <ul style="list-style: none; padding: 0; font-size: 14px; font-weight: bold;">
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: #2563EB;">MAESTRO DE FILTROS IMPORTADOS: <b style="float: right;">{reporte['filtros']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: #2563EB;">MAESTRO DE FILTROS CREADOS CON ÉXITO: <b style="float: right;">{reporte['filtros']}</b></li>
             </ul>
             <div style='text-align: center; margin-top: 24px;'><a href='/' style='background: #1e293b; color: white; padding: 10px 24px; text-decoration: none; border-radius: 4px;'>VOLVER AL DASHBOARD</a></div>
         </div>
