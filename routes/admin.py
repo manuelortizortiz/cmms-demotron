@@ -3,6 +3,8 @@ from flask_login import login_required, current_user
 import pandas as pd
 import numpy as np
 import os
+import urllib.request
+import io
 from datetime import datetime
 from sqlalchemy import text
 from werkzeug.security import generate_password_hash
@@ -125,14 +127,21 @@ def cargar_sql_final():
         db.create_all()
 
         # =========================================================
-        # 🔗 CONEXIÓN DIRECTA A GITHUB (URLs Nativas RAW)
+        # 🔗 CONEXIÓN BLINDADA A GITHUB (Evita bloqueos de seguridad)
         # =========================================================
-        excel_principal = "https://raw.githubusercontent.com/manuelortizortiz/cmms-demotron/main/CMMS%20DEMOTRON%20MANU%20ORTIZ.xlsx"
-        archivo_filtros = "https://raw.githubusercontent.com/manuelortizortiz/cmms-demotron/main/Plantilla_Maestro_Filtros_Demotron.xlsx"
+        excel_principal = "https://github.com/manuelortizortiz/cmms-demotron/raw/refs/heads/main/CMMS%20DEMOTRON%20MANU%20ORTIZ.xlsx"
+        archivo_filtros = "https://github.com/manuelortizortiz/cmms-demotron/raw/refs/heads/main/Plantilla_Maestro_Filtros_Demotron.xlsx"
+
+        try:
+            req_cmms = urllib.request.Request(excel_principal, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req_cmms) as response:
+                xls_prin = pd.ExcelFile(io.BytesIO(response.read()), engine='openpyxl')
+        except Exception as e:
+            return f"<div style='padding:20px; font-family:Arial;'><h3 style='color:red;'>ERROR: No se pudo conectar a GitHub para leer el CMMS.</h3><p>{str(e)}</p></div>"
 
         # --- EQUIPOS ---
         try:
-            df_eq = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Equipos", skiprows=2).replace({np.nan: None})
+            df_eq = pd.read_excel(xls_prin, sheet_name="Equipos", skiprows=2).replace({np.nan: None})
             operadores_set = set()
             for idx, row in df_eq.iterrows():
                 raw_cod = str(row.get('Codigo', '') or '')
@@ -162,7 +171,7 @@ def cargar_sql_final():
 
         # --- LECTURAS ---
         try:
-            df_lec = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
+            df_lec = pd.read_excel(xls_prin, sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
             for idx, row in df_lec.iterrows():
                 if len(row) < 4: continue
                 cod = clean_string(str(row.iloc[1] or '')).upper()
@@ -185,7 +194,7 @@ def cargar_sql_final():
 
         # --- PREVENTIVAS ---
         try:
-            df_man = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
+            df_man = pd.read_excel(xls_prin, sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
             for idx, row in df_man.iterrows():
                 cod = clean_string(str(row.get('Codigo', '') or '')).upper()
                 if not cod or cod.lower() in ['none', 'nan', '']: continue
@@ -214,7 +223,7 @@ def cargar_sql_final():
 
         # --- CORRECTIVAS ---
         try:
-            df_corr = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Correctivas", skiprows=2).replace({np.nan: None})
+            df_corr = pd.read_excel(xls_prin, sheet_name="Correctivas", skiprows=2).replace({np.nan: None})
             for idx, row in df_corr.iterrows():
                 cod = clean_string(str(row.get('Codigo Equipo', row.get('Codigo', '')) or '')).upper()
                 if not cod or cod.lower() in ['none', 'nan', '']: continue
@@ -244,7 +253,7 @@ def cargar_sql_final():
 
         # --- COMPRAS PM ---
         try:
-            df_com = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
+            df_com = pd.read_excel(xls_prin, sheet_name="Compras PM", skiprows=2).replace({np.nan: None})
             ocs = [clean_string(str(r.get('OC', ''))) for _, r in df_com.iterrows() if str(r.get('OC', '')).lower() not in ['none', 'nan', '']]
             if ocs:
                 CompraRepuesto.query.filter(CompraRepuesto.oc.in_(set(ocs))).delete(synchronize_session=False)
@@ -261,7 +270,7 @@ def cargar_sql_final():
 
         # --- CATÁLOGO DE REPUESTOS (WMS) ---
         try:
-            df_rep = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Repuestos", skiprows=2).replace({np.nan: None})
+            df_rep = pd.read_excel(xls_prin, sheet_name="Repuestos", skiprows=2).replace({np.nan: None})
             db.session.query(Repuesto).delete()
             for idx, row in df_rep.iterrows():
                 cod_oem = clean_string(str(row.iloc[0])).upper() if len(row) > 0 else ''
@@ -282,7 +291,7 @@ def cargar_sql_final():
 
         # --- RECETAS DE KITS (WMS) ---
         try:
-            df_recetas = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Recetas_Kits", skiprows=2).replace({np.nan: None})
+            df_recetas = pd.read_excel(xls_prin, sheet_name="Recetas_Kits", skiprows=2).replace({np.nan: None})
             db.session.query(RecetaModelo).delete()
             for idx, row in df_recetas.iterrows():
                 modelo = str(row.iloc[0]).strip() if len(row) > 0 else ''
@@ -297,28 +306,45 @@ def cargar_sql_final():
             reporte['mensajes'].append(f"ADVERTENCIA EN RECETAS KITS: {str(e)}")
 
         # =========================================================
-        # 🚀 MOTOR INTELIGENTE PARA EL MAESTRO DE FILTROS 🚀
+        # 🚀 MAESTRO DE FILTROS (BLINDADO CON URLLIB) 🚀
         # =========================================================
         try:
-            df_filtros = pd.read_excel(archivo_filtros).replace({np.nan: None})
+            req_filtros = urllib.request.Request(archivo_filtros, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req_filtros) as response:
+                df_filtros = pd.read_excel(io.BytesIO(response.read())).replace({np.nan: None})
+                
             db.session.query(FiltroEquipo).delete() 
+            df_filtros.columns = df_filtros.columns.astype(str).str.strip().str.lower()
             
             for idx, row in df_filtros.iterrows():
-                # Extraer la primera columna, limpiarla y ponerla en mayúsculas
-                c_eq = str(row.iloc[0]).strip().upper() if len(row) > 0 else ''
+                # Extracción robusta por nombre de columna sin importar el orden
+                c_eq = row.get('equipo', row.get('codigo equipo', row.get('código equipo', row.iloc[0] if len(row) > 0 else '')))
+                c_eq = str(c_eq).strip().upper() if c_eq else ''
                 
-                # INTELIGENCIA ANTI-ERRORES: Solo procesar filas que realmente sean códigos de equipo válidos 
-                # (es decir, que contengan un guión como CD-100, VD-90, MD-105, etc.)
-                if not c_eq or '-' not in c_eq or c_eq == 'EQUIPO' or len(c_eq) < 3:
+                # Regla de seguridad: Si no tiene guión (como CD-100), ignorarlo (así evitamos leer celdas vacías o subtítulos)
+                if not c_eq or '-' not in c_eq or c_eq == 'NONE':
                     continue
                     
-                c_sist = str(row.iloc[1]).strip() if len(row) > 1 else '-'
-                c_cant = str(row.iloc[2]).strip() if len(row) > 2 else '1'
-                c_fleet = str(row.iloc[3]).strip() if len(row) > 3 else '-'
-                c_bald = str(row.iloc[4]).strip() if len(row) > 4 else '-'
-                c_orig = str(row.iloc[5]).strip() if len(row) > 5 else '-'
-                c_don = str(row.iloc[6]).strip() if len(row) > 6 else '-'
-                c_otra = str(row.iloc[7]).strip() if len(row) > 7 else '-'
+                c_sist = row.get('sistema / tipo de filtro', row.get('filtro', row.get('sistema', row.iloc[1] if len(row) > 1 else '-')))
+                c_sist = str(c_sist).strip() if c_sist and str(c_sist).upper() != 'NONE' else '-'
+                
+                c_cant = row.get('cant', row.get('cantidad', row.iloc[2] if len(row) > 2 else '1'))
+                c_cant = str(c_cant).strip() if c_cant and str(c_cant).upper() != 'NONE' else '1'
+                
+                c_fleet = row.get('fleetguard', row.iloc[3] if len(row) > 3 else '-')
+                c_fleet = str(c_fleet).strip() if c_fleet and str(c_fleet).upper() != 'NONE' else '-'
+                
+                c_bald = row.get('baldwind', row.get('baldwin', row.iloc[4] if len(row) > 4 else '-'))
+                c_bald = str(c_bald).strip() if c_bald and str(c_bald).upper() != 'NONE' else '-'
+                
+                c_orig = row.get('originales', row.get('codigo', row.iloc[5] if len(row) > 5 else '-'))
+                c_orig = str(c_orig).strip() if c_orig and str(c_orig).upper() != 'NONE' else '-'
+                
+                c_don = row.get('donaldson', row.iloc[6] if len(row) > 6 else '-')
+                c_don = str(c_don).strip() if c_don and str(c_don).upper() != 'NONE' else '-'
+                
+                c_otra = row.get('otra alternativa', row.get('otra', row.iloc[7] if len(row) > 7 else '-'))
+                c_otra = str(c_otra).strip() if c_otra and str(c_otra).upper() != 'NONE' else '-'
                 
                 db.session.add(FiltroEquipo(
                     codigo_equipo=c_eq, sistema=c_sist, cant=c_cant, 
@@ -365,4 +391,4 @@ def cargar_sql_final():
 
     except Exception as e:
         db.session.rollback()
-        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>FALLO TÉCNICO:</b> {str(e)}</div>"
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>FALLO TÉCNICO AL ACTUALIZAR:</b> {str(e)}</div>"
