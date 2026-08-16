@@ -280,7 +280,7 @@ def cargar_sql_final():
         except: pass
 
         # =========================================================
-        # 🚀 MAESTRO DE FILTROS BLINDADO CON EXTRACCIÓN POSICIONAL 🚀
+        # 🚀 MAESTRO DE FILTROS BLINDADO Y CORREGIDO 🚀
         # =========================================================
         try:
             req_filtros = urllib.request.Request(archivo_filtros, headers={'User-Agent': 'Mozilla/5.0'})
@@ -289,16 +289,18 @@ def cargar_sql_final():
                 
             db.session.query(FiltroEquipo).delete() 
             
+            df_filtros.columns = df_filtros.columns.astype(str).str.strip().str.lower()
+            
             for idx, row in df_filtros.iterrows():
-                # Extracción con función get_col para evitar que colapse si faltan columnas
                 c_eq = get_col(row, 0, '').upper()
                 
-                # Ignorar encabezados y filas vacías
                 if not c_eq or c_eq in ['EQUIPO', 'CODIGO EQUIPO', 'CÓDIGO EQUIPO', 'MODELO', 'MAESTRO', 'NONE', 'NAN'] or len(c_eq) < 2:
                     continue
                     
                 c_sist = get_col(row, 1, '-')
-                c_cant = get_col(row, 2, '1')
+                # --- SOLUCIÓN DEL ERROR DE TIPO ---
+                # Pasamos la cadena de texto a número entero asegurándonos de que si falla, por defecto sea 1
+                c_cant = safe_clean_int(get_col(row, 2, '1'), 1) 
                 c_fleet = get_col(row, 3, '-')
                 c_bald = get_col(row, 4, '-')
                 c_orig = get_col(row, 5, '-')
@@ -306,9 +308,14 @@ def cargar_sql_final():
                 c_otra = get_col(row, 7, '-')
                 
                 db.session.add(FiltroEquipo(
-                    codigo_equipo=c_eq, sistema=c_sist, cant=c_cant, 
-                    originales=c_orig, fleetguard=c_fleet, donaldson=c_don, 
-                    baldwind=c_bald, otra_alternativa=c_otra
+                    codigo_equipo=c_eq, 
+                    sistema=c_sist, 
+                    cant=c_cant, # Ahora sí es un entero válido
+                    originales=c_orig, 
+                    fleetguard=c_fleet, 
+                    donaldson=c_don, 
+                    baldwind=c_bald, 
+                    otra_alternativa=c_otra
                 ))
                 reporte['filtros'] += 1
                 
