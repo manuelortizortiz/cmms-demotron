@@ -13,6 +13,7 @@ from models.historial import HistorialLectura, CompraRepuesto
 from models.personal import Personal, Mecanico
 from models.bodega import InventarioBodega, Repuesto, MovimientoBodega, RecetaModelo
 from utils.formatters import format_num, format_clp, buscar_foto_por_tipo
+from models.chatter import RegistroChatter
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -231,6 +232,21 @@ def mover_ubicacion_kanban():
             if ant.upper() != nueva_ub:
                 eq.ubicacion = nueva_ub
                 db.session.add(HistorialUbicacion(codigo_equipo=codigo, ubicacion_anterior=ant, ubicacion_nueva=nueva_ub))
+                
+                # --- AUDITORÍA AUTOMÁTICA ---
+                try:
+                    autor_nombre = getattr(current_user, 'username', getattr(current_user, 'nombre', 'Usuario'))
+                    db.session.add(RegistroChatter(
+                        fecha=datetime.now(),
+                        modelo_ref='equipos',
+                        registro_id=str(codigo),
+                        autor=str(autor_nombre),
+                        accion='cambio_ubicacion',
+                        mensaje=f"Movió el equipo {codigo} desde '{ant}' hacia '{nueva_ub}'."
+                    ))
+                except:
+                    pass
+
                 db.session.commit()
             return {"status": "success"}
         return {"status": "error"}
@@ -251,6 +267,21 @@ def guardar_ubicaciones_masivo():
                 if ant.upper() != nue:
                     eq.ubicacion = nue
                     db.session.add(HistorialUbicacion(codigo_equipo=eq.codigo, ubicacion_anterior=ant, ubicacion_nueva=nue))
+        
+        # Auditoría masiva
+        try:
+            autor_nombre = getattr(current_user, 'username', getattr(current_user, 'nombre', 'Usuario'))
+            db.session.add(RegistroChatter(
+                fecha=datetime.now(),
+                modelo_ref='equipos',
+                registro_id='masivo',
+                autor=str(autor_nombre),
+                accion='cambio_ubicacion_masivo',
+                mensaje=f"Actualizó ubicaciones de manera masiva para {len(cambios)} equipos."
+            ))
+        except:
+            pass
+
         db.session.commit()
         return {"status": "success"}
     except Exception as e:
