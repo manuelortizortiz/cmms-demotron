@@ -1,5 +1,6 @@
 import os
-from datetime import timedelta
+import time
+from datetime import timedelta, datetime
 from flask import Flask, jsonify, request
 from flask_login import LoginManager, current_user
 from flask_migrate import Migrate
@@ -7,10 +8,18 @@ from flask_apscheduler import APScheduler
 from sqlalchemy import text
 from extensions import db
 
+# ==========================================
+# FIJAR ZONA HORARIA A CHILE PARA TODO EL ERP
+# ==========================================
+os.environ['TZ'] = 'America/Santiago'
+try:
+    time.tzset()
+except AttributeError:
+    pass # Para compatibilidad cruzada en Windows
+
 # Importar Modelos
 from models.usuario import Usuario
 from models.chatter import RegistroChatter
-from datetime import datetime
 
 # Importar Listener de Auditoría para que se active silenciosamente
 import models.auditoria
@@ -90,7 +99,7 @@ def create_app():
     app.register_blueprint(mobile_bp)
 
     # ==========================================
-    # 6. AUDITORÍA Y REGISTRO AUTOMÁTICO DE ACCESOS
+    # 6. AUDITORÍA GLOBAL DE ACCESOS Y NAVEGACIÓN
     # ==========================================
     @app.before_request
     def registrar_actividad_usuario():
@@ -135,12 +144,11 @@ def create_app():
     scheduler.init_app(app)
     scheduler.start()
 
-    # Se ejecutará todos los días a las 08:00 AM
+    # Se ejecutará todos los días a las 08:00 AM (Hora de Chile)
     @scheduler.task('cron', id='check_alertas', hour=8, minute=0)
     def job_notificaciones():
         with app.app_context():
             from models.equipo import Equipo
-            # CORRECCIÓN: Filtrar por resta directa en SQL
             equipos_alerta = Equipo.query.filter((Equipo.proxima_pm - Equipo.lectura_actual) <= 150).all()
             if equipos_alerta:
                 print(f"SISTEMA: {len(equipos_alerta)} equipos próximos a vencer. Hook de WhatsApp / Email preparado.")
