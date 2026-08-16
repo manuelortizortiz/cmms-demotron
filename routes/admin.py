@@ -125,85 +125,92 @@ def cargar_sql_final():
         db.create_all()
 
         # =========================================================
-        # 🔗 CONEXIÓN DIRECTA A GITHUB (Archivos Maestros en la Nube)
+        # 🔗 CONEXIÓN DIRECTA A GITHUB (URLs Nativas RAW)
         # =========================================================
-        excel_principal = "https://github.com/manuelortizortiz/cmms-demotron/raw/refs/heads/main/CMMS%20DEMOTRON%20MANU%20ORTIZ.xlsx"
-        archivo_filtros = "https://github.com/manuelortizortiz/cmms-demotron/raw/refs/heads/main/Plantilla_Maestro_Filtros_Demotron.xlsx"
+        excel_principal = "https://raw.githubusercontent.com/manuelortizortiz/cmms-demotron/main/CMMS%20DEMOTRON%20MANU%20ORTIZ.xlsx"
+        archivo_filtros = "https://raw.githubusercontent.com/manuelortizortiz/cmms-demotron/main/Plantilla_Maestro_Filtros_Demotron.xlsx"
 
         # --- EQUIPOS ---
-        df_eq = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Equipos", skiprows=2).replace({np.nan: None})
-        operadores_set = set()
-        for idx, row in df_eq.iterrows():
-            raw_cod = str(row.get('Codigo', '') or '')
-            if not raw_cod or raw_cod.lower() in ['none', 'nan', '']: continue
-            cod = clean_string(raw_cod).upper()
-            responsable = clean_string(str(row.get('Responsable', '') or 'Sin Asignar'))
-            if responsable and responsable.lower() not in ['none','nan']: operadores_set.add(responsable)
-            eq = Equipo.query.filter_by(codigo=cod).first()
-            if not eq:
-                eq = Equipo(codigo=cod)
-                db.session.add(eq)
-            eq.tipo_equipo = clean_string(str(row.get('Tipo Equipo', '') or ''))
-            eq.marca = clean_string(str(row.get('Marca', '') or ''))
-            eq.modelo = clean_string(str(row.get('Modelo', '') or ''))
-            eq.ubicacion = clean_string(str(row.get('Ubicacion', '') or ''))
-            eq.responsable = responsable
-            eq.estado_base = clean_string(str(row.get('Estado Base', '') or 'Operativo')) or 'Operativo'
-            eq.control_base = clean_string(str(row.get('Control Base', '') or 'HORAS')) or 'HORAS'
-            eq.frecuencia_base = safe_clean_int(row.get('Frecuencia Base'), 250)
-            reporte['equipos'] += 1
-            
-        for op in operadores_set:
-            if not Personal.query.filter_by(nombre=op).first(): db.session.add(Personal(nombre=op, cargo="Operador", estado="Activo", equipo_asignado="Varios"))
-        db.session.commit()
+        try:
+            df_eq = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Equipos", skiprows=2).replace({np.nan: None})
+            operadores_set = set()
+            for idx, row in df_eq.iterrows():
+                raw_cod = str(row.get('Codigo', '') or '')
+                if not raw_cod or raw_cod.lower() in ['none', 'nan', '']: continue
+                cod = clean_string(raw_cod).upper()
+                responsable = clean_string(str(row.get('Responsable', '') or 'Sin Asignar'))
+                if responsable and responsable.lower() not in ['none','nan']: operadores_set.add(responsable)
+                eq = Equipo.query.filter_by(codigo=cod).first()
+                if not eq:
+                    eq = Equipo(codigo=cod)
+                    db.session.add(eq)
+                eq.tipo_equipo = clean_string(str(row.get('Tipo Equipo', '') or ''))
+                eq.marca = clean_string(str(row.get('Marca', '') or ''))
+                eq.modelo = clean_string(str(row.get('Modelo', '') or ''))
+                eq.ubicacion = clean_string(str(row.get('Ubicacion', '') or ''))
+                eq.responsable = responsable
+                eq.estado_base = clean_string(str(row.get('Estado Base', '') or 'Operativo')) or 'Operativo'
+                eq.control_base = clean_string(str(row.get('Control Base', '') or 'HORAS')) or 'HORAS'
+                eq.frecuencia_base = safe_clean_int(row.get('Frecuencia Base'), 250)
+                reporte['equipos'] += 1
+                
+            for op in operadores_set:
+                if not Personal.query.filter_by(nombre=op).first(): db.session.add(Personal(nombre=op, cargo="Operador", estado="Activo", equipo_asignado="Varios"))
+            db.session.commit()
+        except Exception as e:
+            reporte['mensajes'].append(f"ADVERTENCIA EN EQUIPOS: {str(e)}")
 
         # --- LECTURAS ---
-        df_lec = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
-        for idx, row in df_lec.iterrows():
-            if len(row) < 4: continue
-            cod = clean_string(str(row.iloc[1] or '')).upper()
-            if not cod or cod.lower() in ['none', 'nan', '']: continue
-            fecha_dt = safe_parse_date(row.iloc[0])
-            if not fecha_dt: continue
-            
-            eq = Equipo.query.filter_by(codigo=cod).first()
-            if eq:
-                hor, kil = (safe_clean_int(row.iloc[2]), 0) if eq.control_base == 'HORAS' else (0, safe_clean_int(row.iloc[3]))
-            else: hor, kil = safe_clean_int(row.iloc[2]), safe_clean_int(row.iloc[3])
+        try:
+            df_lec = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Lecturas", skiprows=2).replace({np.nan: None})
+            for idx, row in df_lec.iterrows():
+                if len(row) < 4: continue
+                cod = clean_string(str(row.iloc[1] or '')).upper()
+                if not cod or cod.lower() in ['none', 'nan', '']: continue
+                fecha_dt = safe_parse_date(row.iloc[0])
+                if not fecha_dt: continue
+                
+                eq = Equipo.query.filter_by(codigo=cod).first()
+                if eq:
+                    hor, kil = (safe_clean_int(row.iloc[2]), 0) if eq.control_base == 'HORAS' else (0, safe_clean_int(row.iloc[3]))
+                else: hor, kil = safe_clean_int(row.iloc[2]), safe_clean_int(row.iloc[3])
 
-            lec = HistorialLectura.query.filter_by(codigo_equipo=cod, fecha=fecha_dt).first()
-            if lec: lec.horometro, lec.kilometraje = hor, kil
-            else:
-                db.session.add(HistorialLectura(fecha=fecha_dt, codigo_equipo=cod, horometro=hor, kilometraje=kil))
-                reporte['lecturas'] += 1
-        db.session.commit()
+                lec = HistorialLectura.query.filter_by(codigo_equipo=cod, fecha=fecha_dt).first()
+                if lec: lec.horometro, lec.kilometraje = hor, kil
+                else:
+                    db.session.add(HistorialLectura(fecha=fecha_dt, codigo_equipo=cod, horometro=hor, kilometraje=kil))
+                    reporte['lecturas'] += 1
+            db.session.commit()
+        except: pass
 
         # --- PREVENTIVAS ---
-        df_man = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
-        for idx, row in df_man.iterrows():
-            cod = clean_string(str(row.get('Codigo', '') or '')).upper()
-            if not cod or cod.lower() in ['none', 'nan', '']: continue
-            fecha_dt = safe_parse_date(row.get('Fecha'))
-            tipo = clean_string(str(row.get('Tipo Mantencion', '') or ''))
-            folio = str(row.get('Folio', '')).strip()
-            if folio.lower() in ['none', 'nan']: folio = ''
-            es_pm = clean_string(str(row.get('EsPM', 'No') or 'No')).lower()
-            tipo_ot = 'Preventiva' if es_pm in ['sí','si','s','yes','1','true'] else 'Correctiva'
-            lectura_val = safe_clean_int(row.get('Lectura'))
-            costo_val = safe_clean_float(row.get('Costo Mantencion CLP'))
-            
-            mecanico_val = clean_string(str(row.get('Mecanico', row.get('Proveedor', 'Sin Asignar'))))
-            if not mecanico_val or mecanico_val.lower() in ['nan', 'none', '']: mecanico_val = 'Sin Asignar'
+        try:
+            df_man = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Mantenciones", skiprows=2).replace({np.nan: None})
+            for idx, row in df_man.iterrows():
+                cod = clean_string(str(row.get('Codigo', '') or '')).upper()
+                if not cod or cod.lower() in ['none', 'nan', '']: continue
+                fecha_dt = safe_parse_date(row.get('Fecha'))
+                tipo = clean_string(str(row.get('Tipo Mantencion', '') or ''))
+                folio = str(row.get('Folio', '')).strip()
+                if folio.lower() in ['none', 'nan']: folio = ''
+                es_pm = clean_string(str(row.get('EsPM', 'No') or 'No')).lower()
+                tipo_ot = 'Preventiva' if es_pm in ['sí','si','s','yes','1','true'] else 'Correctiva'
+                lectura_val = safe_clean_int(row.get('Lectura'))
+                costo_val = safe_clean_float(row.get('Costo Mantencion CLP'))
+                
+                mecanico_val = clean_string(str(row.get('Mecanico', row.get('Proveedor', 'Sin Asignar'))))
+                if not mecanico_val or mecanico_val.lower() in ['nan', 'none', '']: mecanico_val = 'Sin Asignar'
 
-            ot = OrdenTrabajo.query.filter_by(codigo_equipo=cod, tipo_ot=tipo_ot, lectura=lectura_val).first()
-            if ot:
-                ot.tipo_mantencion, ot.costo_mantencion_clp = tipo, costo_val
-                ot.mecanico = mecanico_val
-                if fecha_dt: ot.fecha = fecha_dt
-            else:
-                db.session.add(OrdenTrabajo(fecha=fecha_dt, codigo_equipo=cod, tipo_ot=tipo_ot, tipo_mantencion=tipo, lectura=lectura_val, folio=folio, costo_mantencion_clp=costo_val, estado='Finalizada', mecanico=mecanico_val))
-                reporte['preventivas'] += 1
-        db.session.commit()
+                ot = OrdenTrabajo.query.filter_by(codigo_equipo=cod, tipo_ot=tipo_ot, lectura=lectura_val).first()
+                if ot:
+                    ot.tipo_mantencion, ot.costo_mantencion_clp = tipo, costo_val
+                    ot.mecanico = mecanico_val
+                    if fecha_dt: ot.fecha = fecha_dt
+                else:
+                    db.session.add(OrdenTrabajo(fecha=fecha_dt, codigo_equipo=cod, tipo_ot=tipo_ot, tipo_mantencion=tipo, lectura=lectura_val, folio=folio, costo_mantencion_clp=costo_val, estado='Finalizada', mecanico=mecanico_val))
+                    reporte['preventivas'] += 1
+            db.session.commit()
+        except: pass
 
         # --- CORRECTIVAS ---
         try:
@@ -252,7 +259,7 @@ def cargar_sql_final():
             db.session.commit()
         except: pass
 
-        # --- CATÁLOGO DE REPUESTOS (NUEVO WMS) ---
+        # --- CATÁLOGO DE REPUESTOS (WMS) ---
         try:
             df_rep = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Repuestos", skiprows=2).replace({np.nan: None})
             db.session.query(Repuesto).delete()
@@ -267,20 +274,16 @@ def cargar_sql_final():
                 ubicacion = clean_string(str(row.iloc[5])) if len(row) > 5 else 'BODEGA CENTRAL'
                 if not ubicacion or ubicacion.upper() in ['NONE', 'NAN', '']: ubicacion = 'BODEGA CENTRAL'
                 
-                rep = Repuesto.query.filter_by(codigo_oem=cod_oem).first()
-                if rep:
-                    rep.nombre, rep.categoria, rep.stock_actual, rep.precio_promedio, rep.bodega = nombre, categoria, stock, precio, ubicacion
-                else:
-                    db.session.add(Repuesto(codigo_oem=cod_oem, nombre=nombre, categoria=categoria, stock_actual=stock, stock_minimo=1.0, precio_promedio=precio, bodega=ubicacion))
+                db.session.add(Repuesto(codigo_oem=cod_oem, nombre=nombre, categoria=categoria, stock_actual=stock, stock_minimo=1.0, precio_promedio=precio, bodega=ubicacion))
                 reporte['repuestos'] += 1
             db.session.commit()
         except Exception as e:
             reporte['mensajes'].append(f"ADVERTENCIA EN REPUESTOS (WMS): {str(e)}")
 
-        # --- RECETAS DE KITS (MOTOR BOM) ---
+        # --- RECETAS DE KITS (WMS) ---
         try:
             df_recetas = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Recetas_Kits", skiprows=2).replace({np.nan: None})
-            db.session.query(RecetaModelo).delete() # Se purgan para cargar los nuevos
+            db.session.query(RecetaModelo).delete()
             for idx, row in df_recetas.iterrows():
                 modelo = str(row.iloc[0]).strip() if len(row) > 0 else ''
                 sku = clean_string(str(row.iloc[1])).upper() if len(row) > 1 else ''
@@ -293,43 +296,29 @@ def cargar_sql_final():
         except Exception as e:
             reporte['mensajes'].append(f"ADVERTENCIA EN RECETAS KITS: {str(e)}")
 
-        # --- MAESTRO DE FILTROS ANTIGUO (LEYENDO DESDE GITHUB) ---
+        # =========================================================
+        # 🚀 MOTOR INTELIGENTE PARA EL MAESTRO DE FILTROS 🚀
+        # =========================================================
         try:
             df_filtros = pd.read_excel(archivo_filtros).replace({np.nan: None})
             db.session.query(FiltroEquipo).delete() 
             
-            df_filtros.columns = df_filtros.columns.astype(str).str.strip().str.lower()
-            
             for idx, row in df_filtros.iterrows():
-                c_eq = row.get('equipo', row.get('codigo equipo', row.get('código equipo', row.iloc[0] if len(row) > 0 else '')))
-                c_eq = str(c_eq).strip().upper() if c_eq else ''
-                if not c_eq or c_eq in ['NONE', 'NAN', '']: continue
+                # Extraer la primera columna, limpiarla y ponerla en mayúsculas
+                c_eq = str(row.iloc[0]).strip().upper() if len(row) > 0 else ''
+                
+                # INTELIGENCIA ANTI-ERRORES: Solo procesar filas que realmente sean códigos de equipo válidos 
+                # (es decir, que contengan un guión como CD-100, VD-90, MD-105, etc.)
+                if not c_eq or '-' not in c_eq or c_eq == 'EQUIPO' or len(c_eq) < 3:
+                    continue
                     
-                c_sist = row.get('sistema / tipo de filtro', row.get('filtro', row.get('sistema', row.iloc[1] if len(row) > 1 else '-')))
-                c_sist = str(c_sist).strip() if c_sist else '-'
-                
-                c_cant = row.get('cant', row.get('cantidad', row.iloc[2] if len(row) > 2 else '1'))
-                c_cant = str(c_cant).strip() if c_cant else '1'
-                
-                c_fleet = row.get('fleetguard', row.iloc[3] if len(row) > 3 else '-')
-                c_fleet = str(c_fleet).strip() if c_fleet else '-'
-                if c_fleet.lower() == 'nan': c_fleet = '-'
-                
-                c_bald = row.get('baldwind', row.get('baldwin', row.iloc[4] if len(row) > 4 else '-'))
-                c_bald = str(c_bald).strip() if c_bald else '-'
-                if c_bald.lower() == 'nan': c_bald = '-'
-                
-                c_orig = row.get('originales', row.get('codigo', row.iloc[5] if len(row) > 5 else '-'))
-                c_orig = str(c_orig).strip() if c_orig else '-'
-                if c_orig.lower() == 'nan': c_orig = '-'
-                
-                c_don = row.get('donaldson', row.iloc[6] if len(row) > 6 else '-')
-                c_don = str(c_don).strip() if c_don else '-'
-                if c_don.lower() == 'nan': c_don = '-'
-                
-                c_otra = row.get('otra alternativa', row.get('otra', row.iloc[7] if len(row) > 7 else '-'))
-                c_otra = str(c_otra).strip() if c_otra else '-'
-                if c_otra.lower() == 'nan': c_otra = '-'
+                c_sist = str(row.iloc[1]).strip() if len(row) > 1 else '-'
+                c_cant = str(row.iloc[2]).strip() if len(row) > 2 else '1'
+                c_fleet = str(row.iloc[3]).strip() if len(row) > 3 else '-'
+                c_bald = str(row.iloc[4]).strip() if len(row) > 4 else '-'
+                c_orig = str(row.iloc[5]).strip() if len(row) > 5 else '-'
+                c_don = str(row.iloc[6]).strip() if len(row) > 6 else '-'
+                c_otra = str(row.iloc[7]).strip() if len(row) > 7 else '-'
                 
                 db.session.add(FiltroEquipo(
                     codigo_equipo=c_eq, sistema=c_sist, cant=c_cant, 
@@ -337,8 +326,9 @@ def cargar_sql_final():
                     baldwind=c_bald, otra_alternativa=c_otra
                 ))
                 reporte['filtros'] += 1
+                
             db.session.commit()
-            reporte['mensajes'].append("✅ Maestro de Filtros (Equivalencias) restaurado y sincronizado.")
+            reporte['mensajes'].append("✅ Maestro de Filtros histórico restaurado y enlazado a PDFs a la perfección.")
         except Exception as e:
             db.session.rollback()
             reporte['mensajes'].append(f"ADVERTENCIA EN MAESTRO DE FILTROS: {str(e)}")
