@@ -124,10 +124,11 @@ def cargar_sql_final():
 
         db.create_all()
 
-        archivos = os.listdir('.')
-        excel_principal = next((f for f in archivos if "CMMS" in f.upper() and f.endswith(('.xlsx', '.xls')) and not f.startswith('~$')), None)
-
-        if not excel_principal: return "ERROR: NO SE DETECTA ARCHIVO CMMS (.xlsx)."
+        # =========================================================
+        # 🔗 CONEXIÓN DIRECTA A GITHUB (Archivos Maestros en la Nube)
+        # =========================================================
+        excel_principal = "https://github.com/manuelortizortiz/cmms-demotron/raw/refs/heads/main/CMMS%20DEMOTRON%20MANU%20ORTIZ.xlsx"
+        archivo_filtros = "https://github.com/manuelortizortiz/cmms-demotron/raw/refs/heads/main/Plantilla_Maestro_Filtros_Demotron.xlsx"
 
         # --- EQUIPOS ---
         df_eq = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Equipos", skiprows=2).replace({np.nan: None})
@@ -256,7 +257,6 @@ def cargar_sql_final():
             df_rep = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Repuestos", skiprows=2).replace({np.nan: None})
             db.session.query(Repuesto).delete()
             for idx, row in df_rep.iterrows():
-                # Corregido: Se eliminó .columns y se usan accesos seguros por índice
                 cod_oem = clean_string(str(row.iloc[0])).upper() if len(row) > 0 else ''
                 if not cod_oem or cod_oem in ['NONE', 'NAN', '']: continue
                 
@@ -282,7 +282,6 @@ def cargar_sql_final():
             df_recetas = pd.read_excel(excel_principal, engine='openpyxl', sheet_name="Recetas_Kits", skiprows=2).replace({np.nan: None})
             db.session.query(RecetaModelo).delete() # Se purgan para cargar los nuevos
             for idx, row in df_recetas.iterrows():
-                # Corregido: Se eliminó .columns y se usan accesos seguros
                 modelo = str(row.iloc[0]).strip() if len(row) > 0 else ''
                 sku = clean_string(str(row.iloc[1])).upper() if len(row) > 1 else ''
                 cant = safe_clean_float(row.iloc[2]) if len(row) > 2 else 1.0
@@ -294,6 +293,56 @@ def cargar_sql_final():
         except Exception as e:
             reporte['mensajes'].append(f"ADVERTENCIA EN RECETAS KITS: {str(e)}")
 
+        # --- MAESTRO DE FILTROS ANTIGUO (LEYENDO DESDE GITHUB) ---
+        try:
+            df_filtros = pd.read_excel(archivo_filtros).replace({np.nan: None})
+            db.session.query(FiltroEquipo).delete() 
+            
+            df_filtros.columns = df_filtros.columns.astype(str).str.strip().str.lower()
+            
+            for idx, row in df_filtros.iterrows():
+                c_eq = row.get('equipo', row.get('codigo equipo', row.get('código equipo', row.iloc[0] if len(row) > 0 else '')))
+                c_eq = str(c_eq).strip().upper() if c_eq else ''
+                if not c_eq or c_eq in ['NONE', 'NAN', '']: continue
+                    
+                c_sist = row.get('sistema / tipo de filtro', row.get('filtro', row.get('sistema', row.iloc[1] if len(row) > 1 else '-')))
+                c_sist = str(c_sist).strip() if c_sist else '-'
+                
+                c_cant = row.get('cant', row.get('cantidad', row.iloc[2] if len(row) > 2 else '1'))
+                c_cant = str(c_cant).strip() if c_cant else '1'
+                
+                c_fleet = row.get('fleetguard', row.iloc[3] if len(row) > 3 else '-')
+                c_fleet = str(c_fleet).strip() if c_fleet else '-'
+                if c_fleet.lower() == 'nan': c_fleet = '-'
+                
+                c_bald = row.get('baldwind', row.get('baldwin', row.iloc[4] if len(row) > 4 else '-'))
+                c_bald = str(c_bald).strip() if c_bald else '-'
+                if c_bald.lower() == 'nan': c_bald = '-'
+                
+                c_orig = row.get('originales', row.get('codigo', row.iloc[5] if len(row) > 5 else '-'))
+                c_orig = str(c_orig).strip() if c_orig else '-'
+                if c_orig.lower() == 'nan': c_orig = '-'
+                
+                c_don = row.get('donaldson', row.iloc[6] if len(row) > 6 else '-')
+                c_don = str(c_don).strip() if c_don else '-'
+                if c_don.lower() == 'nan': c_don = '-'
+                
+                c_otra = row.get('otra alternativa', row.get('otra', row.iloc[7] if len(row) > 7 else '-'))
+                c_otra = str(c_otra).strip() if c_otra else '-'
+                if c_otra.lower() == 'nan': c_otra = '-'
+                
+                db.session.add(FiltroEquipo(
+                    codigo_equipo=c_eq, sistema=c_sist, cant=c_cant, 
+                    originales=c_orig, fleetguard=c_fleet, donaldson=c_don, 
+                    baldwind=c_bald, otra_alternativa=c_otra
+                ))
+                reporte['filtros'] += 1
+            db.session.commit()
+            reporte['mensajes'].append("✅ Maestro de Filtros (Equivalencias) restaurado y sincronizado.")
+        except Exception as e:
+            db.session.rollback()
+            reporte['mensajes'].append(f"ADVERTENCIA EN MAESTRO DE FILTROS: {str(e)}")
+
         # --- ACTUALIZAR MÁRGENES ---
         for eq in Equipo.query.all():
             u_lec = HistorialLectura.query.filter_by(codigo_equipo=eq.codigo).order_by(HistorialLectura.fecha.desc(), HistorialLectura.id.desc()).first()
@@ -304,19 +353,20 @@ def cargar_sql_final():
         db.session.commit()
 
         # --- LOG AUDITORIA ---
-        log = RegistroChatter(modelo_ref='sistema', registro_id='0', autor='Sistema(Token)', accion='auditoria', mensaje="EJECUTÓ SINCRONIZACIÓN Y PURGA MAESTRA VÍA TOKEN DE SEGURIDAD.")
+        log = RegistroChatter(modelo_ref='sistema', registro_id='0', autor='Sistema(Token)', accion='auditoria', mensaje="EJECUTÓ SINCRONIZACIÓN Y PURGA MAESTRA VÍA TOKEN DE SEGURIDAD DESDE GITHUB.")
         db.session.add(log)
         db.session.commit()
 
         html_report = f"""
         <div style="font-family: Arial, sans-serif; max-w: 600px; margin: 40px auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px;">
-            <h2 style="color: #16a34a; text-align: center; text-transform: uppercase; letter-spacing: 2px;">SISTEMA LIMPIADO Y ACTUALIZADO</h2>
+            <h2 style="color: #16a34a; text-align: center; text-transform: uppercase; letter-spacing: 2px;">SISTEMA LIMPIADO Y ACTUALIZADO DESDE GITHUB</h2>
             <ul style="list-style: none; padding: 0; font-size: 14px; color: #334155; text-transform: uppercase; font-weight: bold;">
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">EQUIPOS: <b style="float: right;">{reporte['equipos']}</b></li>
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">PREVENTIVAS: <b style="float: right;">{reporte['preventivas']}</b></li>
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">CORRECTIVAS: <b style="float: right;">{reporte['correctivas']}</b></li>
                 <li style="padding: 10px; border-bottom: 1px solid #e2e8f0;">COMPRAS: <b style="float: right;">{reporte['compras']}</b></li>
-                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: #047857;">CATÁLOGO REPUESTOS WMS: <b style="float: right;">{reporte['repuestos']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: #047857;">CATÁLOGO WMS: <b style="float: right;">{reporte['repuestos']}</b></li>
+                <li style="padding: 10px; border-bottom: 1px solid #e2e8f0; color: #2563EB;">MAESTRO DE FILTROS: <b style="float: right;">{reporte['filtros']}</b></li>
             </ul>
             <div style='text-align: center; margin-top: 24px;'><a href='/' style='background: #1e293b; color: white; padding: 10px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; text-transform: uppercase;'>VOLVER AL DASHBOARD</a></div>
         </div>
