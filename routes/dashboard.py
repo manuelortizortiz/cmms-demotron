@@ -257,8 +257,13 @@ def detalle_equipo(codigo):
         equipo = Equipo.query.filter_by(codigo=codigo).first()
         if not equipo: return "Equipo no encontrado en la base de datos.", 404
         
-        # --- AQUÍ ESTÁ LA LÍNEA RESTAURADA PARA TRAER LOS FILTROS ---
-        filtros = FiltroEquipo.query.filter_by(codigo_equipo=codigo).all()
+        # BUSCADOR INTELIGENTE: Cruza el código (Ej: CD-100) y también el modelo (Ej: VOLKSWAGEN)
+        todos_filtros = FiltroEquipo.query.all()
+        filtros = []
+        for f in todos_filtros:
+            f_eq = str(f.codigo_equipo).strip().upper()
+            if f_eq == str(equipo.codigo).strip().upper() or f_eq == str(equipo.modelo).strip().upper():
+                filtros.append(f)
         
         mants_prev = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Preventiva').order_by(OrdenTrabajo.fecha.desc()).all()
         mants_corr = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Correctiva').order_by(OrdenTrabajo.fecha.desc()).all()
