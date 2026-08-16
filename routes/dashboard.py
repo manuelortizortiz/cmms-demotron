@@ -268,7 +268,6 @@ def guardar_ubicaciones_masivo():
                     eq.ubicacion = nue
                     db.session.add(HistorialUbicacion(codigo_equipo=eq.codigo, ubicacion_anterior=ant, ubicacion_nueva=nue))
         
-        # Auditoría masiva
         try:
             autor_nombre = getattr(current_user, 'username', getattr(current_user, 'nombre', 'Usuario'))
             db.session.add(RegistroChatter(
@@ -286,6 +285,42 @@ def guardar_ubicaciones_masivo():
         return {"status": "success"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+@dashboard_bp.route('/api/cambiar_estado_ot/<int:ot_id>', methods=['POST'])
+@login_required
+def cambiar_estado_ot(ot_id):
+    try:
+        data = request.get_json()
+        nuevo_estado = data.get('estado')
+        
+        ot = OrdenTrabajo.query.get_or_404(ot_id)
+        estado_anterior = ot.estado
+        
+        if estado_anterior != nuevo_estado:
+            ot.estado = nuevo_estado
+            if nuevo_estado == 'Finalizada' and not ot.fecha_cierre:
+                ot.fecha_cierre = datetime.now()
+                
+            # Registrar en Auditoría Automática
+            try:
+                autor_nombre = getattr(current_user, 'username', getattr(current_user, 'nombre', 'Usuario'))
+                db.session.add(RegistroChatter(
+                    fecha=datetime.now(),
+                    modelo_ref='orden_trabajo',
+                    registro_id=str(ot.id),
+                    autor=str(autor_nombre),
+                    accion='cambio_estado_ot',
+                    mensaje=f"Cambió la Orden de Trabajo #{ot.id} (Equipo: {ot.codigo_equipo}) de '{estado_anterior}' a '{nuevo_estado}'."
+                ))
+            except:
+                pass
+                
+            db.session.commit()
+            
+        return jsonify({"status": "success"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @dashboard_bp.route('/equipo/<codigo>', strict_slashes=False)
 @login_required
