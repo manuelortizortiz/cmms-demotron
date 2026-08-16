@@ -24,7 +24,6 @@
         </div>
     </div>
     
-    <!-- DATOS RÁPIDOS DEL EQUIPO -->
     <div class="grid-info">
         <div class="grid-row">
             <div class="grid-col"><b>Equipo:</b> {{ equipo.codigo }}</div>
@@ -34,8 +33,7 @@
         </div>
     </div>
 
-    <!-- TABLA PRINCIPAL DE FILTROS Y EQUIVALENCIAS -->
-    <h2>1. Pauta de Filtros y Códigos de Equivalencia</h2>
+    <h2>Pauta de Filtros y Códigos de Equivalencia</h2>
     <table>
         <thead>
             <tr>
@@ -62,50 +60,6 @@
             {% else %}
             <tr><td colspan="7" style="text-align: center; color: #94a3b8;">No hay filtros registrados para este equipo en el Maestro.</td></tr>
             {% endfor %}
-        </tbody>
-    </table>
-
-    <!-- SECCIÓN DE COMPATIBILIDAD CON OTROS EQUIPOS -->
-    <h2>2. Compatibilidad en Flota (¿Qué otros equipos usan estos filtros?)</h2>
-    <p style="font-size: 10px; color: #64748B; margin-top: 2px; margin-bottom: 6px;">Unidades de la flota que comparten números de pieza o componentes con este modelo:</p>
-    <table>
-        <thead>
-            <tr>
-                <th>Sistema del Filtro</th>
-                <th>Código OEM / Referencia</th>
-                <th>Otros Equipos de la Flota que lo Utilizan</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% set compatibilidades_encontradas = namespace(val=false) %}
-            {% for f in filtros %}
-                {% if f.originales and f.originales != '-' %}
-                    {% set compatibilidades_encontradas.val = true %}
-                    <tr>
-                        <td><b>{{ f.sistema }}</b></td>
-                        <td style="font-family: monospace; font-weight: bold; color: #1e3a8a;">{{ f.originales }}</td>
-                        <td>
-                            {% set current_orig = f.originales.strip().upper() %}
-                            {% set match_equipos = [] %}
-                            {% for otro_f in f.query.all() %}
-                                {% if otro_f.originales and otro_f.originales.strip().upper() == current_orig and otro_f.codigo_equipo != equipo.codigo %}
-                                    {% if otro_f.codigo_equipo not in match_equipos %}
-                                        {{ _  = match_equipos.append(otro_f.codigo_equipo) }}
-                                    {% endif %}
-                                {% endif %}
-                            {% endfor %}
-                            {% if match_equipos %}
-                                <span style="color: #2563eb; font-weight: bold;">{{ match_equipos | join(', ') }}</span>
-                            {% else %}
-                                <span style="color: #94a3b8; font-style: italic;">Uso exclusivo o sin cruce en otros códigos de equipo.</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% endif %}
-            {% endfor %}
-            {% if not compatibilidades_encontradas.val %}
-            <tr><td colspan="3" style="text-align: center; color: #94a3b8;">No hay referencias OEM cruzadas disponibles.</td></tr>
-            {% endif %}
         </tbody>
     </table>
 </body>
