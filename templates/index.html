@@ -65,7 +65,6 @@
             <a onclick="switchTab('ot_corr', this)" class="nav-link">Averías y Correctivas</a>
             <a onclick="switchTab('lec', this)" class="nav-link">Ingreso Lecturas HR/KM</a>
             
-            <!-- EL NUEVO MENÚ WMS -->
             <p class="px-6 text-[11px] font-black text-emerald-500 uppercase tracking-widest mb-2 mt-6">Bodega</p>
             <a href="/bodega_kpi" class="nav-link">Gestión de Inventario WMS</a>
             <a onclick="switchTab('compras', this)" class="nav-link">Órdenes de Compra</a>
@@ -93,7 +92,7 @@
             </div>
             
             <div class="relative w-full max-w-[280px] md:max-w-sm ml-4">
-                <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="🔍 Buscar equipo, patente, mecánico..." 
+                <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="🔍 Buscar equipo, patente..." 
                        class="w-full bg-white border-2 border-slate-300 shadow-md rounded-lg px-4 py-2 font-medium text-slate-800 placeholder-slate-500 focus:border-[#1E3A8A] focus:ring-2 focus:ring-[#1E3A8A] transition-all">
             </div>
         </header>
@@ -156,15 +155,15 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="card-custom h-80 flex flex-col">
-                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">MTBF (Días Promedio sin Fallas por Marca)</p>
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">MTBF (Días Promedio sin Fallas)</p>
                         <div class="flex-1 relative w-full min-h-0"><canvas id="chartMTBF"></canvas></div>
                     </div>
                     <div class="card-custom h-80 flex flex-col">
-                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">MTTR (Horas de Reparación por Marca)</p>
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">MTTR (Horas de Reparación)</p>
                         <div class="flex-1 relative w-full min-h-0"><canvas id="chartMTTR"></canvas></div>
                     </div>
                     <div class="card-custom h-80 flex flex-col">
-                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Costo Promedio por Unidad (Mano de Obra + Repuestos)</p>
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Costo Promedio por Unidad</p>
                         <div class="flex-1 relative w-full min-h-0"><canvas id="chartCostoUnidad"></canvas></div>
                     </div>
                 </div>
@@ -276,14 +275,14 @@
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
                     <h2 class="text-lg font-normal text-slate-800 tracking-wide">Gestión Logística por Obra/Base</h2>
                     <div class="flex flex-wrap gap-2 md:gap-4">
-                        <button onclick="crearNuevaUbicacion()" class="btn-action shadow-sm">Añadir Nueva Base</button>
-                        <button onclick="document.getElementById('modal-ubicaciones').classList.remove('hidden')" class="btn-action shadow-sm">Edición Masiva (Tabla)</button>
+                        <button onclick="crearNuevaUbicacion()" class="btn-action shadow-sm bg-indigo-600 text-white px-4 py-2 rounded font-semibold text-xs">Añadir Nueva Base</button>
+                        <button onclick="document.getElementById('modal-ubicaciones').classList.remove('hidden')" class="btn-action shadow-sm bg-slate-600 text-white px-4 py-2 rounded font-semibold text-xs">Edición Masiva (Tabla)</button>
                     </div>
                 </div>
                 
-                <div class="flex gap-6 overflow-x-auto pb-8 items-start h-[75vh] hide-scrollbar" id="kanban-ubicaciones-container">
+                <div class="flex gap-6 overflow-x-auto pb-8 items-start h-[75vh] hide-scrollbar" id="kanban-ubicaciones-container" style="-webkit-overflow-scrolling: touch;">
                     {% for ub, equipos in ubicaciones_dict.items() %}
-                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 w-72 shrink-0 flex flex-col max-h-full shadow-sm">
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 min-w-[280px] w-[85vw] md:w-72 shrink-0 flex flex-col max-h-full shadow-sm snap-center">
                         <div class="flex justify-between items-center border-b border-slate-200 pb-3 mb-4 shrink-0">
                             <h3 class="font-semibold text-slate-700 text-xs uppercase">{{ ub }}</h3>
                             <span class="text-xs text-slate-500 font-medium">{{ equipos|length }}</span>
@@ -313,9 +312,11 @@
                         <button type="submit" class="btn-primary w-full md:w-auto mt-2 md:mt-0">Añadir Tarea</button>
                     </form>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                
+                <!-- KANBAN SCROLL HORIZONTAL NATIVO MÓVILES -->
+                <div class="flex overflow-x-auto snap-x gap-4 pb-6 hide-scrollbar md:grid md:grid-cols-2 xl:grid-cols-4 md:gap-6" style="-webkit-overflow-scrolling: touch;">
                     {% for estado, col_id in [('Pendiente','kb-pendiente'), ('En Progreso','kb-progreso'), ('En Revisión','kb-revision'), ('Finalizada','kb-completado')] %}
-                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 h-[65vh] flex flex-col shadow-sm">
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 h-[65vh] flex flex-col shadow-sm min-w-[280px] w-[85vw] md:w-auto md:min-w-0 shrink-0 snap-center">
                         <div class="flex justify-between items-center border-b border-slate-200 pb-3 mb-4 shrink-0">
                             <h3 class="font-semibold text-slate-700 text-xs uppercase">{{ estado }}</h3>
                             <span class="text-xs text-slate-500 font-medium">{{ kanban[estado]|length }}</span>
@@ -420,7 +421,7 @@
                 </table></div>
             </div>
 
-            <!-- PROVEEDORES (NUEVO TAB) -->
+            <!-- PROVEEDORES -->
             <div id="proveedores" class="seccion">
                 <div class="card-custom text-center py-12">
                     <h2 class="text-lg font-bold text-slate-700">Directorio de Proveedores</h2>
@@ -487,7 +488,6 @@
             document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active')); document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.getElementById(t).classList.add('active'); if(el) el.classList.add('active'); document.getElementById('title').innerText = el ? el.innerText.trim() : 'Dashboard';
             
-            // Restablece el buscador al cambiar de pestaña
             document.getElementById('buscador').value = '';
             document.querySelectorAll('.table-searchable tbody tr').forEach(r => r.style.display = '');
 
@@ -496,7 +496,7 @@
             if(t==='cal' && window.calendar) { setTimeout(() => window.calendar.render(), 200); }
         }
 
-        // Buscador Ultra-Rápido (Anti-Congelamiento)
+        // Buscador Ultra-Rápido
         let searchTimeout;
         function filtrarTablas(q) { 
             clearTimeout(searchTimeout);
@@ -516,7 +516,7 @@
             }, 300);
         }
 
-        // Borrado "Fantasma" (Sin recargar la página)
+        // Borrado Fantasma
         function borrarRegistro(tabla, id) { 
             const btn = window.event ? window.event.target : null; 
             if(confirm('Aviso: ¿Confirma la eliminación permanente de este registro de la base de datos?')) {
@@ -568,7 +568,7 @@
             let nombre = prompt("Ingrese el nombre de la nueva Base u Obra Logística:");
             if(nombre && nombre.trim() !== "") {
                 nombre = nombre.toUpperCase().trim();
-                let html = `<div class="bg-slate-50 border border-slate-200 rounded-lg p-4 w-72 shrink-0 flex flex-col max-h-full shadow-sm"><div class="flex justify-between items-center border-b border-slate-200 pb-3 mb-4 shrink-0"><h3 class="font-semibold text-slate-700 text-xs uppercase">${nombre}</h3><span class="text-xs text-slate-500 font-medium">0</span></div><div class="espacio-ubicacion space-y-3 overflow-y-auto flex-1 hide-scrollbar" data-ubicacion="${nombre}"></div></div>`;
+                let html = `<div class="bg-slate-50 border border-slate-200 rounded-lg p-4 min-w-[280px] w-[85vw] md:w-72 shrink-0 flex flex-col max-h-full shadow-sm snap-center"><div class="flex justify-between items-center border-b border-slate-200 pb-3 mb-4 shrink-0"><h3 class="font-semibold text-slate-700 text-xs uppercase">${nombre}</h3><span class="text-xs text-slate-500 font-medium">0</span></div><div class="espacio-ubicacion space-y-3 overflow-y-auto flex-1 hide-scrollbar" data-ubicacion="${nombre}"></div></div>`;
                 document.getElementById('kanban-ubicaciones-container').insertAdjacentHTML('beforeend', html);
                 
                 let nuevaCol = document.getElementById('kanban-ubicaciones-container').lastElementChild.querySelector('.espacio-ubicacion');
