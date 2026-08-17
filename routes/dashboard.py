@@ -552,3 +552,26 @@ def wms_descontar_kit():
     except Exception as e:
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)})
+
+# ==========================================
+# IMPRESIÓN DE ORDEN DE TRABAJO (PDF)
+# ==========================================
+@dashboard_bp.route('/imprimir_ot/<int:id>', strict_slashes=False)
+@login_required
+def imprimir_ot(id):
+    try:
+        # 1. Buscar la Orden de Trabajo por su ID
+        ot = OrdenTrabajo.query.get_or_404(id)
+        
+        # 2. Buscar el Equipo asociado a esa OT
+        equipo = Equipo.query.filter_by(codigo=ot.codigo_equipo).first()
+        
+        # 3. Buscar los Filtros asociados a ese equipo (para la tabla del HTML)
+        filtros = []
+        if equipo:
+            filtros = FiltroEquipo.query.filter_by(codigo_equipo=equipo.codigo).all()
+            
+        # 4. Enviar todo a tu plantilla imprimir_ot.html
+        return render_template('imprimir_ot.html', ot=ot, equipo=equipo, filtros=filtros, hoy=datetime.now())
+    except Exception as e:
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error al cargar la Orden de Trabajo:</b> {str(e)}</div>"
