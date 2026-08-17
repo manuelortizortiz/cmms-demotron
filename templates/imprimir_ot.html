@@ -5,159 +5,39 @@
     <title>OT - {{ ot.folio or ot.id }} | {{ equipo.codigo if equipo else 'N/A' }}</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            color: #1E293B;
-            margin: 0;
-            padding: 0;
-            background-color: #F8FAFC;
-        }
-        .a4-container {
-            width: 210mm;
-            min-height: 297mm;
-            margin: 20px auto;
-            padding: 20mm;
-            box-sizing: border-box;
-            background: white;
-            border: 1px solid #CBD5E1;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            border-bottom: 2px solid #1E3A8A;
-            padding-bottom: 15px;
-            margin-bottom: 25px;
-        }
-        .logo {
-            font-size: 28px;
-            font-weight: 700;
-            color: #1E3A8A;
-            letter-spacing: 1px;
-        }
-        .ot-title {
-            text-align: right;
-        }
-        .ot-title h1 {
-            margin: 0;
-            font-size: 18px;
-            text-transform: uppercase;
-            color: #0F172A;
-            letter-spacing: 0.5px;
-        }
-        .ot-title p {
-            margin: 6px 0 0 0;
-            font-size: 12px;
-            color: #475569;
-            font-weight: 500;
-        }
-        .section-title {
-            font-size: 11px;
-            font-weight: 700;
-            color: #1E3A8A;
-            text-transform: uppercase;
-            border-bottom: 1px solid #E2E8F0;
-            margin-bottom: 12px;
-            padding-bottom: 4px;
-            margin-top: 25px;
-            letter-spacing: 0.5px;
-        }
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        .info-box {
-            border: 1px solid #E2E8F0;
-            padding: 16px;
-            border-radius: 4px;
-            background-color: #F8FAFC;
-        }
-        .info-item {
-            margin-bottom: 10px;
-            font-size: 12px;
-        }
-        .info-item:last-child {
-            margin-bottom: 0;
-        }
-        .info-label {
-            font-weight: 600;
-            color: #64748B;
-            display: inline-block;
-            width: 130px;
-            text-transform: uppercase;
-            font-size: 10px;
-            letter-spacing: 0.5px;
-        }
-        .info-value {
-            font-weight: 600;
-            color: #0F172A;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            font-size: 11px;
-        }
-        th, td {
-            border: 1px solid #CBD5E1;
-            padding: 10px 12px;
-            text-align: left;
-        }
-        th {
-            background-color: #F1F5F9;
-            color: #475569;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 10px;
-            letter-spacing: 0.5px;
-        }
-        td {
-            font-weight: 500;
-            color: #1E293B;
-        }
-        .signature-section {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 80px;
-        }
-        .signature-box {
-            width: 35%;
-            text-align: center;
-            border-top: 1px solid #1E293B;
-            padding-top: 10px;
-        }
-        .signature-box p {
-            margin: 0;
-            font-size: 10px;
-            font-weight: 600;
-            color: #475569;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .btn-print {
-            display: block;
-            width: 250px;
-            margin: 20px auto;
-            text-align: center;
-            background-color: #1E3A8A;
-            color: white;
-            padding: 12px 15px;
-            border-radius: 6px;
-            border: none;
-            font-family: 'Inter', sans-serif;
-            font-weight: 600;
-            font-size: 12px;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: background 0.2s;
-        }
-        .btn-print:hover {
-            background-color: #1D4ED8;
-        }
-        /* Configuración especial para que se imprima perfecto y quite botones */
+        body { font-family: 'Inter', sans-serif; color: #1E293B; margin: 0; padding: 0; background-color: #F8FAFC; }
+        .a4-container { width: 210mm; min-height: 297mm; margin: 20px auto; padding: 15mm; box-sizing: border-box; background: white; border: 1px solid #CBD5E1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #1E3A8A; padding-bottom: 10px; margin-bottom: 15px; }
+        .logo { font-size: 24px; font-weight: 800; color: #1E3A8A; letter-spacing: 1px; }
+        .ot-title { text-align: right; }
+        .ot-title h1 { margin: 0; font-size: 16px; text-transform: uppercase; color: #0F172A; }
+        .ot-title p { margin: 4px 0 0 0; font-size: 11px; color: #475569; font-weight: 500; }
+        .section-title { font-size: 10px; font-weight: 800; color: #FFFFFF; background-color: #1E3A8A; text-transform: uppercase; margin-bottom: 8px; padding: 4px 8px; margin-top: 15px; letter-spacing: 0.5px; border-radius: 2px; }
+        .section-title-red { background-color: #DC2626; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .info-box { border: 1px solid #E2E8F0; padding: 10px; border-radius: 2px; background-color: #F8FAFC; font-size: 10px; }
+        .info-item { margin-bottom: 6px; }
+        .info-item:last-child { margin-bottom: 0; }
+        .info-label { font-weight: 700; color: #64748B; display: inline-block; width: 120px; text-transform: uppercase; font-size: 9px; }
+        .info-value { font-weight: 600; color: #0F172A; font-size: 11px;}
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 9px; }
+        th, td { border: 1px solid #CBD5E1; padding: 6px 8px; text-align: left; }
+        th { background-color: #F1F5F9; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 8px; }
+        td { font-weight: 500; color: #1E293B; }
+        .check-box { width: 12px; height: 12px; border: 1px solid #64748B; display: inline-block; vertical-align: middle; margin-right: 5px; }
+        .signature-section { display: flex; justify-content: space-between; margin-top: 40px; }
+        .signature-box { width: 30%; text-align: center; border-top: 1px solid #1E293B; padding-top: 5px; }
+        .signature-box p { margin: 0; font-size: 9px; font-weight: 700; color: #475569; text-transform: uppercase; }
+        .btn-print { display: block; width: 250px; margin: 20px auto; text-align: center; background-color: #1E3A8A; color: white; padding: 12px; border-radius: 6px; border: none; font-weight: 600; font-size: 12px; cursor: pointer; text-transform: uppercase; }
+        .btn-print:hover { background-color: #1D4ED8; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .bg-gray { background-color: #F8FAFC; }
+        
+        /* Evitar cortes feos al imprimir la segunda hoja */
+        .avoid-break { page-break-inside: avoid; }
+        
         @media print {
             body { background: white; }
             .a4-container { margin: 0; padding: 10mm; width: 100%; box-shadow: none; border: none; }
@@ -166,11 +46,9 @@
     </style>
 </head>
 <body>
-    
-    <!-- Barra superior solo visible en pantalla, se oculta al imprimir -->
-    <div class="no-print" style="background:#FFFFFF; padding: 15px 0; border-bottom:1px solid #CBD5E1; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-        <button onclick="window.print()" class="btn-print">IMPRIMIR ORDEN / GUARDAR PDF</button>
-        <p style="font-size: 11px; color: #64748B; margin-top: 10px;">Presione el botón para generar el PDF oficial. La hoja está formateada en tamaño A4.</p>
+    <div class="no-print" style="background:#FFFFFF; padding: 15px 0; border-bottom:1px solid #CBD5E1; text-align: center;">
+        <button onclick="window.print()" class="btn-print">IMPRIMIR ORDEN OFICIAL</button>
+        <p style="font-size: 11px; color: #64748B;">Documento técnico de mantenimiento clase mundial. Formato A4.</p>
     </div>
     
     <div class="a4-container">
@@ -178,94 +56,198 @@
         <div class="header">
             <div class="logo">DEMOTRON ERP</div>
             <div class="ot-title">
-                <h1>ORDEN DE TRABAJO - {{ ot.tipo_ot }}</h1>
-                <p>N° Folio Interno: <strong style="color: #1E3A8A; font-size: 14px;">{{ ot.folio or ot.id }}</strong></p>
-                <p>Fecha de Emisión: <strong>{{ ot.fecha.strftime('%d/%m/%Y') if ot.fecha else hoy.strftime('%d/%m/%Y') }}</strong></p>
+                <h1>ORDEN DE TRABAJO TÉCNICA - <span style="color: {% if ot.tipo_ot == 'Correctiva' %}#DC2626{% else %}#2563EB{% endif %};">{{ ot.tipo_ot }}</span></h1>
+                <p>N° Folio Sistema: <strong style="color: #1E3A8A; font-size: 14px;">{{ ot.folio or ot.id }}</strong></p>
+                <p>Emisión: <strong>{{ ot.fecha.strftime('%d/%m/%Y') if ot.fecha else hoy.strftime('%d/%m/%Y') }}</strong></p>
             </div>
         </div>
 
-        <!-- 1. IDENTIFICACIÓN DEL EQUIPO -->
-        <div class="section-title">1. Ficha de Identificación de Activo</div>
-        <div class="info-box">
-            <div class="grid-2">
-                <div>
-                    <div class="info-item"><span class="info-label">Código Activo:</span> <span class="info-value" style="color:#1E3A8A; font-size: 14px;">{{ equipo.codigo if equipo else 'S/I' }}</span></div>
-                    <div class="info-item"><span class="info-label">Marca / Modelo:</span> <span class="info-value">{{ equipo.marca if equipo else 'S/I' }} / {{ equipo.modelo if equipo else 'S/I' }}</span></div>
-                    <div class="info-item"><span class="info-label">Tipo de Equipo:</span> <span class="info-value">{{ equipo.tipo_equipo if equipo else 'S/I' }}</span></div>
+        <!-- 1. IDENTIFICACIÓN Y SEGURIDAD (ROW) -->
+        <div class="grid-2">
+            <div>
+                <div class="section-title">1. Ficha del Activo</div>
+                <div class="info-box">
+                    <div class="info-item"><span class="info-label">Código Activo:</span> <span class="info-value" style="color:#1E3A8A; font-size: 13px;">{{ equipo.codigo if equipo else 'S/I' }}</span></div>
+                    <div class="info-item"><span class="info-label">Marca/Modelo:</span> <span class="info-value">{{ equipo.marca if equipo else 'S/I' }} / {{ equipo.modelo if equipo else 'S/I' }}</span></div>
+                    <div class="info-item"><span class="info-label">Lectura Ingreso:</span> <span class="info-value">{{ "{:,.0f}".format(equipo.lectura_actual or ot.lectura or 0).replace(',', '.') if equipo else '0' }} {{ equipo.control_base if equipo else '' }}</span></div>
+                    <div class="info-item"><span class="info-label">Ubicación/Base:</span> <span class="info-value">{{ equipo.ubicacion if equipo else 'S/I' }}</span></div>
                 </div>
-                <div>
-                    <div class="info-item"><span class="info-label">Patente / VIN:</span> <span class="info-value" style="font-family: monospace;">{{ equipo.patente if equipo else 'S/I' }} / {{ equipo.vin if equipo else 'S/I' }}</span></div>
-                    <div class="info-item"><span class="info-label">Lectura Actual:</span> <span class="info-value">{{ "{:,.0f}".format(equipo.lectura_actual or 0).replace(',', '.') if equipo else '0' }} {{ equipo.control_base if equipo else '' }}</span></div>
-                    <div class="info-item"><span class="info-label">Estado actual:</span> <span class="info-value">{{ equipo.estado_base if equipo else 'S/I' }}</span></div>
+            </div>
+            <div>
+                <div class="section-title section-title-red">2. Protocolo de Seguridad (Pre-Start)</div>
+                <div class="info-box" style="border-color: #FCA5A5; background-color: #FEF2F2;">
+                    <div class="grid-2" style="font-size: 9px; font-weight: 600; color: #991B1B;">
+                        <div>
+                            <div style="margin-bottom:4px;"><span class="check-box"></span> Bloqueo Energías (LOTO)</div>
+                            <div style="margin-bottom:4px;"><span class="check-box"></span> Cuñas puestas en ruedas</div>
+                            <div style="margin-bottom:4px;"><span class="check-box"></span> Eval. Riesgos del Entorno</div>
+                        </div>
+                        <div>
+                            <div style="margin-bottom:4px;"><span class="check-box"></span> Lentes / Casco / Guantes</div>
+                            <div style="margin-bottom:4px;"><span class="check-box"></span> Extintor a mano</div>
+                            <div style="margin-bottom:4px;"><span class="check-box"></span> Kit anti-derrames</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- 2. DETALLE DE LA INTERVENCIÓN -->
-        <div class="section-title">2. Descripción de la Intervención</div>
+        <!-- 3. DESCRIPCIÓN DE LA INTERVENCIÓN -->
+        <div class="section-title">3. Alcance del Trabajo (Scope of Work)</div>
         <div class="info-box" style="background-color: #ffffff;">
-            <div class="info-item"><span class="info-label">Pauta / Tarea:</span> <span class="info-value">{{ ot.tipo_mantencion }}</span></div>
+            <div class="info-item"><span class="info-label">Pauta/Tarea Principal:</span> <span class="info-value">{{ ot.tipo_mantencion }}</span></div>
             {% if ot.tipo_ot == 'Correctiva' %}
-            <div class="info-item" style="margin-top:12px;"><span class="info-label">Sistema Afectado:</span> <span class="info-value">{{ ot.sistema_falla }}</span></div>
-            <div class="info-item" style="margin-top:12px;"><span class="info-label">Causa / Diagnóstico:</span> <span class="info-value">{{ ot.causa_raiz }}</span></div>
-            {% else %}
-            <div class="info-item" style="margin-top:12px;"><span class="info-label">Observaciones:</span> <span class="info-value">{{ ot|attr('observacion') | default('Mantenimiento preventivo programado según pauta vigente.', true) }}</span></div>
+            <div class="info-item"><span class="info-label">Sistema Afectado:</span> <span class="info-value">{{ ot.sistema_falla }}</span></div>
+            <div class="info-item"><span class="info-label">Causa/Diagnóstico:</span> <span class="info-value">{{ ot.causa_raiz }}</span></div>
             {% endif %}
-            <div class="info-item" style="margin-top:12px;"><span class="info-label">Técnico Asignado:</span> <span class="info-value">{{ ot.mecanico or 'Técnico no especificado' }}</span></div>
-            <div class="info-item" style="margin-top:12px;"><span class="info-label">Status OT:</span> <span class="info-value">{{ ot.estado }}</span></div>
+            <div class="info-item"><span class="info-label">Observaciones Ingreso:</span> <span class="info-value">{{ ot|attr('observacion') | default('Ejecutar pauta de mantenimiento estándar según kilometraje/horómetro.', true) }}</span></div>
+            <div class="info-item"><span class="info-label">Técnico Líder:</span> <span class="info-value">{{ ot.mecanico or 'No especificado' }}</span></div>
         </div>
 
-        <!-- 3. LISTADO DE REPUESTOS -->
-        <div class="section-title">3. Especificación de Filtros y Repuestos</div>
+        <!-- 4. FLUIDOS, LUBRICANTES Y ACEITES (NUEVO) -->
+        <div class="section-title avoid-break">4. Control de Lubricantes, Fluidos y Aceites</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Sistema / Componente</th>
+                    <th style="width: 25%;">Tipo/Viscosidad Requerida</th>
+                    <th style="width: 15%;" class="text-center">Capacidad (Est.)</th>
+                    <th style="width: 15%;" class="text-center">Cant. Aplicada</th>
+                    <th style="width: 20%;" class="text-center">Firma / OK</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Motor</td><td><input type="text" style="width:90%; border:none; border-bottom:1px dotted #ccc; background:transparent;"></td><td></td><td></td><td></td></tr>
+                <tr><td>Transmisión / Caja</td><td><input type="text" style="width:90%; border:none; border-bottom:1px dotted #ccc; background:transparent;"></td><td></td><td></td><td></td></tr>
+                <tr><td>Sistema Hidráulico</td><td><input type="text" style="width:90%; border:none; border-bottom:1px dotted #ccc; background:transparent;"></td><td></td><td></td><td></td></tr>
+                <tr><td>Diferencial / Mandos Finales</td><td><input type="text" style="width:90%; border:none; border-bottom:1px dotted #ccc; background:transparent;"></td><td></td><td></td><td></td></tr>
+                <tr><td>Refrigerante (Coolant)</td><td><input type="text" style="width:90%; border:none; border-bottom:1px dotted #ccc; background:transparent;"></td><td></td><td></td><td></td></tr>
+                <tr><td>Grasas (Puntos de Articulación)</td><td><input type="text" style="width:90%; border:none; border-bottom:1px dotted #ccc; background:transparent;"></td><td></td><td></td><td></td></tr>
+            </tbody>
+        </table>
+
+        <!-- 5. REPUESTOS PLANIFICADOS -->
+        <div class="section-title avoid-break">5. Repuestos Planificados (Kits y Filtros WMS)</div>
         {% if filtros %}
         <table>
             <thead>
                 <tr>
-                    <th>Sistema / Aplicación</th>
-                    <th>Código / N° de Parte (Principal)</th>
-                    <th style="width: 60px; text-align:center;">Cant.</th>
-                    <th style="width: 90px; text-align:center;">Verificado</th>
+                    <th style="width: 20%;">Sistema</th>
+                    <th style="width: 40%;">Código / N° Parte Original (OEM)</th>
+                    <th style="width: 10%;" class="text-center">Cant.</th>
+                    <th style="width: 30%;" class="text-center">Estado (Instalado / Pendiente)</th>
                 </tr>
             </thead>
             <tbody>
                 {% for f in filtros %}
                 <tr>
                     <td><strong>{{ f.sistema }}</strong></td>
-                    <td style="font-family: monospace; font-size:12px; font-weight: 600;">{{ f.codigo }}</td>
-                    <td style="text-align:center;">{{ f.cantidad }}</td>
-                    <td style="text-align:center;">[ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ]</td>
+                    <td style="font-family: monospace; font-size:10px; font-weight: 600;">{{ f.codigo }}</td>
+                    <td class="text-center">{{ f.cantidad }}</td>
+                    <td class="text-center"><span class="check-box"></span> INST  &nbsp;&nbsp; <span class="check-box"></span> PEND</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
         {% else %}
-        <div style="border: 1px dashed #CBD5E1; padding: 20px; text-align: center; border-radius: 4px; background: #F8FAFC;">
-            <p style="font-size: 11px; color: #64748B; margin: 0;">No existen filtros ni componentes pre-asignados en la Base de Datos para este modelo.</p>
-        </div>
+        <div style="border: 1px dashed #CBD5E1; padding: 10px; text-align: center; background: #F8FAFC; font-size: 9px; color: #64748B;">No existen filtros ni componentes pre-asignados en la Base de Datos para este modelo.</div>
         {% endif %}
 
-        <!-- 4. CHECKLIST -->
-        <div class="section-title">4. Checklist de Protocolo Estándar</div>
+        <!-- 6. REPUESTOS ADICIONALES (NO PLANIFICADOS) -->
+        <div class="section-title avoid-break">6. Componentes y Repuestos Adicionales Utilizados (No Planificados)</div>
         <table>
+            <thead>
+                <tr>
+                    <th style="width: 25%;">N° Parte / SKU</th>
+                    <th style="width: 50%;">Descripción del Repuesto o Consumible</th>
+                    <th style="width: 10%;" class="text-center">Cant.</th>
+                    <th style="width: 15%;" class="text-center">Aprobación (Bodega)</th>
+                </tr>
+            </thead>
             <tbody>
-                <tr><td style="width:30px; text-align:center; font-weight: bold;">[ &nbsp; ]</td><td>Revisión, rellenado y control de niveles de fluidos operativos (Refrigerante, Hidráulico, Motor).</td></tr>
-                <tr><td style="width:30px; text-align:center; font-weight: bold;">[ &nbsp; ]</td><td>Inspección visual minuciosa de fugas en mangueras, acoples y banco de válvulas.</td></tr>
-                <tr><td style="width:30px; text-align:center; font-weight: bold;">[ &nbsp; ]</td><td>Inspección de desgaste y presión en neumáticos / estado general del tren de rodaje.</td></tr>
-                <tr><td style="width:30px; text-align:center; font-weight: bold;">[ &nbsp; ]</td><td>Verificación en vacío: Arranque, sistema de frenos, iluminación y alarmas acústicas.</td></tr>
+                <tr><td><br></td><td></td><td></td><td></td></tr>
+                <tr><td><br></td><td></td><td></td><td></td></tr>
+                <tr><td><br></td><td></td><td></td><td></td></tr>
             </tbody>
         </table>
 
-        <!-- 5. COMENTARIOS DE CIERRE -->
-        <div class="section-title" style="margin-top:25px;">5. Observaciones Finales del Técnico</div>
-        <div style="border: 1px solid #CBD5E1; height: 100px; border-radius:4px; margin-top:10px; background-color: #F8FAFC;"></div>
+        <!-- 7. CHECKLIST DE INSPECCIÓN CLASE MUNDIAL -->
+        <div class="section-title avoid-break">7. Pauta Estricta de Inspección y Calidad (Checklist Multi-Sistema)</div>
+        <div class="grid-3">
+            <!-- Columna 1 -->
+            <div>
+                <table style="margin-top:0;">
+                    <thead><tr><th colspan="2">A. SISTEMA MOTRIZ & TRANSMISIÓN</th></tr></thead>
+                    <tbody>
+                        <tr><td style="width:20px;" class="text-center"><span class="check-box"></span></td><td>Inspección fugas aceite motor</td></tr>
+                        <tr><td class="text-center"><span class="check-box"></span></td><td>Tensión y estado de correas</td></tr>
+                        <tr><td class="text-center"><span class="check-box"></span></td><td>Ruidos anormales en ralentí/alta</td></tr>
+                        <tr><td class="text-center"><span class="check-box"></span></td><td>Soportes y tacos de motor</td></tr>
+                        <tr><td class="text-center"><span class="check-box"></span></td><td>Estado turbo y mangueras admisión</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Columna 2 -->
+            <div>
+                <table style="margin-top:0;">
+                    <thead><tr><th colspan="2">B. HIDRÁULICA, DIRECCIÓN & FRENOS</th></tr></thead>
+                    <tbody>
+                        <tr><td style="width:20px;" class="text-center"><span class="check-box"></span></td><td>Inspección fugas banco de válvulas</td></tr>
+                        <tr><td class="text-center"><span class="check-box"></span></td><td>Estado vástagos y sellos cilindros</td></tr>
+                        <tr><td class="text-center"><span class="check-box"></span></td><td>Regulación y desgaste de balatas/pastillas</td></tr>
+                        <tr><td class="text-center"><span class="check-box"></span></td><td>Holguras en sistema de dirección</td></tr>
+                        <tr><td class="text-center"><span class="check-box"></span></td><td>Inspección de líneas neumáticas/aire</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Columna 3 -->
+            <div>
+                <table style="margin-top:0;">
+                    <thead><tr><th colspan="2">C. ELÉCTRICO, CABINA & SEGURIDAD</th></tr></thead>
+                    <tbody>
+                        <tr><td style="width:20px;" class="text-center"><span class="check-box"></span></td><td>Escaneo OBD / Lectura códigos ECM</td></tr>
+                        <tr><td class="text-center"><span class="check-box"></span></td><td>Carga de baterías y terminales</td></tr>
+                        <tr><td class="text-center"><span class="check-box"></span></td><td>Luces faena, intermitentes y baliza</td></tr>
+                        <tr><td class="text-center"><span class="check-box"></span></td><td>Alarma de retroceso y claxon</td></tr>
+                        <tr><td class="text-center"><span class="check-box"></span></td><td>Estado cinturón de seguridad y extintor</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-        <!-- 6. FIRMAS -->
-        <div class="signature-section">
+        <!-- 8. HERRAMIENTAS Y OBSERVACIONES -->
+        <div class="grid-2 avoid-break" style="margin-top: 15px;">
+            <div>
+                <div class="section-title" style="margin-top:0;">8. Herramientas Especiales y Torques</div>
+                <div style="border: 1px solid #CBD5E1; height: 60px; padding: 5px; font-size: 9px; color:#64748B;">
+                    (Ej: Llave dinamométrica N°, Scanner, Torques específicos aplicados...)
+                </div>
+            </div>
+            <div>
+                <div class="section-title" style="margin-top:0;">9. Observaciones / Análisis de Causa Raíz</div>
+                <div style="border: 1px solid #CBD5E1; height: 60px; padding: 5px; font-size: 9px; color:#64748B;">
+                    (Detalle anomalías encontradas, recomendaciones para próxima OT...)
+                </div>
+            </div>
+        </div>
+
+        <!-- 10. FIRMAS DE LIBERACIÓN -->
+        <div class="section-title avoid-break">10. Liberación del Equipo y Control de Calidad</div>
+        <div class="signature-section avoid-break">
             <div class="signature-box">
-                <p>Firma Técnico Especialista</p>
+                <br><br>
+                <p>Firma Técnico / Responsable Ejecución</p>
+                <span style="font-size: 8px; color: #94A3B8;">Certifico ejecución según estándar</span>
             </div>
             <div class="signature-box">
-                <p>V°B° Jefatura de Mantenimiento</p>
+                <br><br>
+                <p>V°B° Supervisor Taller / Calidad</p>
+                <span style="font-size: 8px; color: #94A3B8;">Revisión de parámetros y cierre técnico</span>
+            </div>
+            <div class="signature-box">
+                <br><br>
+                <p>Firma Operador / Jefe Terreno</p>
+                <span style="font-size: 8px; color: #94A3B8;">Recepción de equipo operativo y limpio</span>
             </div>
         </div>
     </div>
