@@ -15,13 +15,27 @@ from models.bodega import InventarioBodega, Repuesto, MovimientoBodega, RecetaMo
 from utils.formatters import format_num, format_clp, buscar_foto_por_tipo
 from models.chatter import RegistroChatter
 
+# ==========================================
+# MOTOR DE TIEMPO CHILENO
+# ==========================================
+try:
+    import zoneinfo
+    ZONA_CHILE = zoneinfo.ZoneInfo("America/Santiago")
+except ImportError:
+    from datetime import timezone
+    ZONA_CHILE = timezone(timedelta(hours=-4)) # Fallback
+
+def obtener_hora_chile():
+    """ Devuelve siempre la hora exacta de Chile, ignorando el servidor de Coolify """
+    return datetime.now(ZONA_CHILE).replace(tzinfo=None)
+
 dashboard_bp = Blueprint('dashboard', __name__)
 
 @dashboard_bp.route('/', strict_slashes=False)
 @login_required
 def dashboard():
     try:
-        hoy = datetime.now()
+        hoy = obtener_hora_chile()
         
         eqs_db = Equipo.query.all()
         ots_db = OrdenTrabajo.query.all()
@@ -39,23 +53,24 @@ def dashboard():
         en_taller = [e for e in eqs_db if e.estado_base == 'Taller']
         fuera_servicio = [e for e in eqs_db if e.estado_base == 'Fuera de Servicio']
         
+        # CÁLCULO TRADICIONAL EXACTO (Sin proyecciones fantasmas)
         eqs_margen = []
         for e in eqs_db:
-            margen = (e.proxima_pm or 0) - (e.lectura_actual or 0)
+            margen_bruto = (e.proxima_pm or 0) - (e.lectura_actual or 0)
             divisor = 8 if e.control_base == 'HORAS' else 100
-            dias_margen = int(margen / divisor)
+            dias_margen = int(margen_bruto / divisor)
             eqs_margen.append({'eq': e, 'dias': dias_margen})
             
         atrasados_count = len([e for e in eqs_margen if e['dias'] < 0 and e['eq'].estado_base != 'Fuera de Servicio'])
 
         kpis = {
-            'op_pct': round((len(operativos) / max(1, total_eq)) * 100, 1),
+            'op_pct': round((len(operativos) / max(1, total_eq)) * 100, 1) if total_eq > 0 else 0,
             'op_count': len(operativos),
             'total_eq': total_eq,
-            'cumpl_pm_pct': round(((total_eq - atrasados_count) / max(1, total_eq)) * 100, 1),
+            'cumpl_pm_pct': round(((total_eq - atrasados_count) / max(1, total_eq)) * 100, 1) if total_eq > 0 else 0,
             'backlog_count': atrasados_count,
             'taller_fuera_count': len(en_taller) + len(fuera_servicio),
-            'disponibilidad_pct': round((len(operativos) / max(1, total_eq)) * 100, 1)
+            'disponibilidad_pct': round((len(operativos) / max(1, total_eq)) * 100, 1) if total_eq > 0 else 0
         }
 
         fecha_febrero = datetime(hoy.year, 2, 1)
@@ -102,7 +117,7 @@ def dashboard():
         for e in eqs_db:
             m = e.marca or 'Sin Marca'
             if m not in marcas_stats: 
-                marcas_stats[m] = {'count': 0, 'fallas': 0, 'horas_rep': 0, 'costo_total': 0.0}
+                marcas_stats[m] = {'count': 0, 'fallas': 0, 'costo_total': 0.0}
             marcas_stats[m]['count'] += 1
 
         for o in ots_db:
@@ -112,8 +127,6 @@ def dashboard():
                 marcas_stats[m]['costo_total'] += float(o.costo_mantencion_clp or 0)
                 if o.tipo_ot == 'Correctiva':
                     marcas_stats[m]['fallas'] += 1
-                    if o.estado == 'Finalizada' and o.fecha_cierre and o.fecha:
-                        marcas_stats[m]['horas_rep'] += (o.fecha_cierre - o.fecha).total_seconds() / 3600
 
         for c in compras_db:
             eq = next((e for e in eqs_db if e.codigo == c.codigo_equipo), None)
@@ -121,13 +134,13 @@ def dashboard():
                 m = eq.marca or 'Sin Marca'
                 marcas_stats[m]['costo_total'] += float(c.costo_pm_clp or 0)
 
-        cinta3 = {'labels': [], 'mtbf': [], 'mttr': [], 'costo_promedio': []}
+        # Se eliminó MTTR de aquí
+        cinta3 = {'labels': [], 'mtbf': [], 'costo_promedio': []}
         for m, st in marcas_stats.items():
             if st['count'] > 0:
                 cinta3['labels'].append(m)
                 dias_op = st['count'] * 365
                 cinta3['mtbf'].append(round(dias_op / max(1, st['fallas']), 1))
-                cinta3['mttr'].append(round(st['horas_rep'] / max(1, st['fallas']), 1))
                 cinta3['costo_promedio'].append(round(st['costo_total'] / st['count'], 0))
 
         atrasados_top = sorted([e for e in eqs_margen if e['dias'] < 0], key=lambda x: x['dias'])[:5]
@@ -167,16 +180,20 @@ def dashboard():
             op = next((p for p in personal_db if p.equipo_asignado == e.codigo), None)
             nom_op = op.nombre if op else 'Sin Asignar'
             
-            m = (e.proxima_pm or 0) - (e.lectura_actual or 0)
-            d_est = int(m / (8 if e.control_base == 'HORAS' else 100))
+            margen_bruto = (e.proxima_pm or 0) - (e.lectura_actual or 0)
+            divisor = 8 if e.control_base == 'HORAS' else 100
+            dias_restantes = int(margen_bruto / divisor)
             
-            if m >= 0 and e.estado_base != 'Fuera de Servicio' and d_est <= 45:
-                eventos_calendario.append({'title': f"PROY: {e.codigo}", 'start': (hoy + timedelta(days=max(1, d_est))).strftime('%Y-%m-%d'), 'backgroundColor': '#1E3A8A', 'textColor': '#FFFFFF', 'borderColor': 'transparent'})
+            if dias_restantes >= 0 and e.estado_base != 'Fuera de Servicio' and dias_restantes <= 45:
+                fecha_proy = hoy + timedelta(days=max(1, dias_restantes))
+                eventos_calendario.append({'title': f"PROY: {e.codigo}", 'start': fecha_proy.strftime('%Y-%m-%d'), 'backgroundColor': '#1E3A8A', 'textColor': '#FFFFFF', 'borderColor': 'transparent'})
 
+            txt_margen = f"{dias_restantes} días" if dias_restantes > 0 else f"{dias_restantes} (VENCIDO)"
+            
             equipos_list.append({
                 'codigo': e.codigo, 'tipo': e.tipo_equipo, 'marca': e.marca, 'modelo': e.modelo,
                 'patente': e.patente, 'ubicacion': e.ubicacion, 'lectura': format_num(e.lectura_actual),
-                'margen': m, 'margen_str': format_num(m), 'estado': e.estado_base, 'ctrl': e.control_base,
+                'margen': margen_bruto, 'margen_str': txt_margen, 'estado': e.estado_base, 'ctrl': e.control_base,
                 'operador': nom_op
             })
 
@@ -233,19 +250,17 @@ def mover_ubicacion_kanban():
                 eq.ubicacion = nueva_ub
                 db.session.add(HistorialUbicacion(codigo_equipo=codigo, ubicacion_anterior=ant, ubicacion_nueva=nueva_ub))
                 
-                # --- AUDITORÍA AUTOMÁTICA ---
                 try:
                     autor_nombre = getattr(current_user, 'username', getattr(current_user, 'nombre', 'Usuario'))
                     db.session.add(RegistroChatter(
-                        fecha=datetime.now(),
+                        fecha=obtener_hora_chile(),
                         modelo_ref='equipos',
                         registro_id=str(codigo),
                         autor=str(autor_nombre),
                         accion='cambio_ubicacion',
                         mensaje=f"Movió el equipo {codigo} desde '{ant}' hacia '{nueva_ub}'."
                     ))
-                except:
-                    pass
+                except: pass
 
                 db.session.commit()
             return {"status": "success"}
@@ -271,15 +286,14 @@ def guardar_ubicaciones_masivo():
         try:
             autor_nombre = getattr(current_user, 'username', getattr(current_user, 'nombre', 'Usuario'))
             db.session.add(RegistroChatter(
-                fecha=datetime.now(),
+                fecha=obtener_hora_chile(),
                 modelo_ref='equipos',
                 registro_id='masivo',
                 autor=str(autor_nombre),
                 accion='cambio_ubicacion_masivo',
                 mensaje=f"Actualizó ubicaciones de manera masiva para {len(cambios)} equipos."
             ))
-        except:
-            pass
+        except: pass
 
         db.session.commit()
         return {"status": "success"}
@@ -299,21 +313,19 @@ def cambiar_estado_ot(ot_id):
         if estado_anterior != nuevo_estado:
             ot.estado = nuevo_estado
             if nuevo_estado == 'Finalizada' and not ot.fecha_cierre:
-                ot.fecha_cierre = datetime.now()
+                ot.fecha_cierre = obtener_hora_chile()
                 
-            # Registrar en Auditoría Automática
             try:
                 autor_nombre = getattr(current_user, 'username', getattr(current_user, 'nombre', 'Usuario'))
                 db.session.add(RegistroChatter(
-                    fecha=datetime.now(),
+                    fecha=obtener_hora_chile(),
                     modelo_ref='orden_trabajo',
                     registro_id=str(ot.id),
                     autor=str(autor_nombre),
                     accion='cambio_estado_ot',
                     mensaje=f"Cambió la Orden de Trabajo #{ot.id} (Equipo: {ot.codigo_equipo}) de '{estado_anterior}' a '{nuevo_estado}'."
                 ))
-            except:
-                pass
+            except: pass
                 
             db.session.commit()
             
@@ -329,7 +341,6 @@ def detalle_equipo(codigo):
         equipo = Equipo.query.filter_by(codigo=codigo).first()
         if not equipo: return "Equipo no encontrado en la base de datos.", 404
         
-        # BUSCADOR INTELIGENTE BLINDADO (Busca por Código y por Modelo)
         e_cod = str(equipo.codigo).strip().upper()
         e_mod = str(equipo.modelo).strip().upper() if equipo.modelo else ""
         
@@ -338,18 +349,10 @@ def detalle_equipo(codigo):
         for f in todos_filtros:
             f_eq = str(f.codigo_equipo).strip().upper()
             match = False
-            
-            # Coincidencia por Código (CD-100)
-            if e_cod and (e_cod == f_eq or e_cod in f_eq or f_eq in e_cod):
-                match = True
-            
-            # Coincidencia por Modelo (VW 26220) si el código no funcionó
+            if e_cod and (e_cod == f_eq or e_cod in f_eq or f_eq in e_cod): match = True
             if not match and e_mod and e_mod not in ['NONE', 'NAN', '']:
-                if e_mod == f_eq or e_mod in f_eq or f_eq in e_mod:
-                    match = True
-                    
-            if match:
-                filtros.append(f)
+                if e_mod == f_eq or e_mod in f_eq or f_eq in e_mod: match = True
+            if match: filtros.append(f)
         
         mants_prev = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Preventiva').order_by(OrdenTrabajo.fecha.desc()).all()
         mants_corr = OrdenTrabajo.query.filter_by(codigo_equipo=codigo, tipo_ot='Correctiva').order_by(OrdenTrabajo.fecha.desc()).all()
@@ -361,19 +364,12 @@ def detalle_equipo(codigo):
         foto_url = buscar_foto_por_tipo(equipo.tipo_equipo, equipo.marca)
         
         return render_template('equipo.html', 
-                               equipo=equipo, 
-                               filtros=filtros, 
-                               mants_prev=mants_prev, 
-                               mants_corr=mants_corr, 
-                               lecturas=lecturas, 
-                               compras=compras, 
-                               documentos=documentos, 
-                               historial_ub=historial_ub, 
-                               operador=operador, 
-                               foto_url=foto_url, 
-                               hoy=datetime.now())
+                               equipo=equipo, filtros=filtros, mants_prev=mants_prev, 
+                               mants_corr=mants_corr, lecturas=lecturas, compras=compras, 
+                               documentos=documentos, historial_ub=historial_ub, operador=operador, 
+                               foto_url=foto_url, hoy=obtener_hora_chile())
     except Exception as e:
-        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error del Servidor al cargar la Ficha del Equipo:</b> {str(e)}</div>"
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error al cargar Ficha:</b> {str(e)}</div>"
 
 @dashboard_bp.route('/equipo/<codigo>/subir_documento', methods=['POST'])
 @login_required
@@ -387,7 +383,7 @@ def subir_documento(codigo):
         upload_folder = os.path.join('static', 'uploads', 'documentos')
         os.makedirs(upload_folder, exist_ok=True)
         ext = archivo.filename.rsplit('.', 1)[1].lower() if '.' in archivo.filename else 'pdf'
-        filename = secure_filename(f"{codigo}_{tipo_documento.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{ext}")
+        filename = secure_filename(f"{codigo}_{tipo_documento.replace(' ', '_')}_{obtener_hora_chile().strftime('%Y%m%d%H%M%S')}.{ext}")
         filepath = os.path.join(upload_folder, filename)
         archivo.save(filepath)
         
@@ -404,7 +400,7 @@ def bodega_kpi():
     try:
         from models.bodega import Repuesto, MovimientoBodega, RecetaModelo
         from utils.formatters import format_clp
-        hoy = datetime.now()
+        hoy = obtener_hora_chile()
         
         eqs_db = Equipo.query.all()
         repuestos = Repuesto.query.all()
@@ -432,8 +428,7 @@ def bodega_kpi():
         recetas_por_modelo = {}
         for rec in recetas_db:
             m = str(rec.modelo_equipo).strip()
-            if m not in recetas_por_modelo:
-                recetas_por_modelo[m] = []
+            if m not in recetas_por_modelo: recetas_por_modelo[m] = []
             recetas_por_modelo[m].append(rec)
             
         kits_por_equipo = {}
@@ -448,17 +443,12 @@ def bodega_kpi():
                 marca_modelo = f"{e.marca} {e.modelo}".strip()
                 
                 kits_por_equipo[cod_eq] = {
-                    'componentes': [], 
-                    'armable': True, 
-                    'marca_modelo': marca_modelo, 
-                    'modelo': modelo_eq
+                    'componentes': [], 'armable': True, 'marca_modelo': marca_modelo, 'modelo': modelo_eq
                 }
                 
                 for rec in recetas_por_modelo[modelo_eq]:
                     sku = str(rec.sku_repuesto).strip().upper()
-                    
-                    if sku not in repuesto_compatibilidad:
-                        repuesto_compatibilidad[sku] = set()
+                    if sku not in repuesto_compatibilidad: repuesto_compatibilidad[sku] = set()
                     repuesto_compatibilidad[sku].add(cod_eq)
                     
                     rep_obj = repuestos_dict_sku.get(sku)
@@ -469,11 +459,7 @@ def bodega_kpi():
                     if not ok: kits_por_equipo[cod_eq]['armable'] = False
                     
                     kits_por_equipo[cod_eq]['componentes'].append({
-                        'sku': sku,
-                        'nombre': nombre_rep,
-                        'cant_req': rec.cantidad,
-                        'stock': stock_actual,
-                        'ok': ok
+                        'sku': sku, 'nombre': nombre_rep, 'cant_req': rec.cantidad, 'stock': stock_actual, 'ok': ok
                     })
                     
         for sku in repuesto_compatibilidad:
@@ -490,18 +476,11 @@ def bodega_kpi():
             maestro_filtros[eq].append({'sistema': f.sistema, 'cant': c, 'marcas': marcas})
 
         return render_template('bodega_kpi.html', 
-                               repuestos=repuestos,
-                               rep_dict=rep_dict,
-                               kits_por_equipo=kits_por_equipo,
-                               repuesto_compatibilidad=repuesto_compatibilidad,
-                               maestro_filtros=maestro_filtros,
-                               movimientos=movimientos,
-                               valor_total_str=format_clp(valor_total),
-                               bajo_minimo_count=len(bajo_minimo),
-                               quiebre_stock_count=len(quiebre_stock),
-                               grafico_categorias=grafico_categorias,
-                               eqs_db=eqs_db,
-                               hoy=hoy)
+                               repuestos=repuestos, rep_dict=rep_dict, kits_por_equipo=kits_por_equipo,
+                               repuesto_compatibilidad=repuesto_compatibilidad, maestro_filtros=maestro_filtros,
+                               movimientos=movimientos, valor_total_str=format_clp(valor_total),
+                               bajo_minimo_count=len(bajo_minimo), quiebre_stock_count=len(quiebre_stock),
+                               grafico_categorias=grafico_categorias, eqs_db=eqs_db, hoy=hoy)
     except Exception as e:
         return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error Crítico en Bodega WMS:</b> {str(e)}</div>"
 
@@ -534,7 +513,7 @@ def wms_descontar_kit():
             rep.stock_actual -= rec.cantidad
             
             mov = MovimientoBodega(
-                fecha=datetime.now(),
+                fecha=obtener_hora_chile(),
                 tipo_movimiento='SALIDA KIT PM',
                 motivo='Mantenimiento Flota',
                 repuesto_id=rep.id,
@@ -553,25 +532,17 @@ def wms_descontar_kit():
         db.session.rollback()
         return jsonify({"status": "error", "message": str(e)})
 
-# ==========================================
-# IMPRESIÓN DE ORDEN DE TRABAJO (PDF)
-# ==========================================
 @dashboard_bp.route('/imprimir_ot/<int:id>', strict_slashes=False)
 @login_required
 def imprimir_ot(id):
     try:
-        # 1. Buscar la Orden de Trabajo por su ID
         ot = OrdenTrabajo.query.get_or_404(id)
-        
-        # 2. Buscar el Equipo asociado a esa OT
         equipo = Equipo.query.filter_by(codigo=ot.codigo_equipo).first()
         
-        # 3. Buscar los Filtros asociados a ese equipo (para la tabla del HTML)
         filtros = []
         if equipo:
             filtros = FiltroEquipo.query.filter_by(codigo_equipo=equipo.codigo).all()
             
-        # 4. Enviar todo a tu plantilla imprimir_ot.html
-        return render_template('imprimir_ot.html', ot=ot, equipo=equipo, filtros=filtros, hoy=datetime.now())
+        return render_template('imprimir_ot.html', ot=ot, equipo=equipo, filtros=filtros, hoy=obtener_hora_chile())
     except Exception as e:
         return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error al cargar la Orden de Trabajo:</b> {str(e)}</div>"
