@@ -72,7 +72,8 @@
             <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard</a>
             
             <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Logística de Flota</p>
-            <a onclick="switchTab('eq', this)" class="nav-link">Equipos</a>
+            <!-- AQUÍ CAMBIAMOS EL NOMBRE DEL MENÚ -->
+            <a onclick="switchTab('eq', this)" class="nav-link">Tabla de Equipos</a>
             <a onclick="switchTab('flota', this)" class="nav-link">Rendimiento (CPK)</a>
             <a onclick="switchTab('mapa', this)" class="nav-link">Geolocalización Logística</a>
             
@@ -171,7 +172,6 @@
                     </div>
                 </div>
 
-                <!-- GRÁFICOS A 2 COLUMNAS (Sin MTTR) -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div class="card-custom h-80 flex flex-col">
                         <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">MTBF (Días Promedio sin Fallas)</p>
@@ -226,6 +226,7 @@
                 </div>
             </div>
 
+            <!-- TABLA DE EQUIPOS -->
             <div id="eq" class="seccion">
                 <div class="card-custom-nopad table-wrapper h-[75vh]">
                     <table class="table-custom table-searchable">
@@ -246,7 +247,7 @@
                             {% for e in eqs %}
                             <tr>
                                 <span class="hidden" data-search>{{ e.tipo }} {{ e.operador }} {{ e.ubicacion }}</span>
-                                <td class="font-bold text-[#0F172A] text-sm cursor-pointer hover:underline" title="Ir al Dashboard del Equipo" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
+                                <td class="font-bold text-[#0F172A] text-sm cursor-pointer hover:underline" title="Ir a la Ficha Individual del Equipo" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
                                 <td>{{ e.marca }}</td>
                                 <td class="whitespace-normal min-w-[120px] max-w-[180px] leading-snug">{{ e.modelo }}</td>
                                 <td class="font-medium text-slate-600 whitespace-normal min-w-[140px] max-w-[180px] leading-snug">{{ e.tipo }}</td>
@@ -255,9 +256,8 @@
                                 <td>{{ e.margen_str }}</td>
                                 <td>{{ e.estado }}</td>
                                 <td class="text-right whitespace-nowrap">
-                                    <a href="/api/imprimir_registro/{{e.codigo}}" target="_blank" class="text-[11px] font-semibold px-3 py-1.5 rounded border transition-all mr-1 bg-blue-100 text-blue-900 border-blue-300 hover:bg-blue-200">Ficha PDF</a>
-                                    <a href="/api/imprimir_filtros/{{e.codigo}}" target="_blank" class="text-[11px] font-semibold px-3 py-1.5 rounded border transition-all mr-1 bg-cyan-100 text-cyan-900 border-cyan-300 hover:bg-cyan-200">Filtros PDF</a>
-                                    <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Editar Equipo {{e.codigo}}', [{db: 'marca', label: 'Marca', val: '{{e.marca}}'},{db: 'modelo', label: 'Modelo', val: '{{e.modelo}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'},{db: 'estado_base', label: 'Estado', val: '{{e.estado}}'}])" class="text-[11px] font-semibold px-3 py-1.5 rounded border transition-all bg-sky-100 text-sky-900 border-sky-300 hover:bg-sky-200">Editar</button>
+                                    <a href="/equipo/{{e.codigo}}" class="text-[11px] font-semibold px-3 py-1.5 rounded border transition-all mr-1 bg-indigo-50 text-indigo-800 border-indigo-200 hover:bg-indigo-100">Ficha Individual</a>
+                                    <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Editar Equipo {{e.codigo}}', [{db: 'marca', label: 'Marca', val: '{{e.marca}}'},{db: 'modelo', label: 'Modelo', val: '{{e.modelo}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'},{db: 'estado_base', label: 'Estado', val: '{{e.estado}}'}])" class="text-[11px] font-semibold px-3 py-1.5 rounded border transition-all bg-sky-100 text-sky-900 border-sky-300 hover:bg-sky-200">Editar Rápido</button>
                                 </td>
                             </tr>
                             {% endfor %}
