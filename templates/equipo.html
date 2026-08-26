@@ -2,219 +2,343 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ficha Técnica | {{ equipo.codigo }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ficha {{ equipo.codigo }} - DEMOTRON CMMS</title>
     <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        demoblue: { 900: '#172B4D', 800: '#1E3A8A', 500: '#3B82F6', 100: '#DBEAFE', 50: '#EFF6FF' },
+                        demogreen: '#16A34A',
+                        demoorange: '#F59E0B',
+                        demored: '#DC2626',
+                        demogray: '#F8FAFC'
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; color: #1E293B; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        body { font-family: 'Inter', sans-serif; font-size: 13px; background-color: #F8FAFC; color: #1E293B; margin: 0; }
+        .sidebar-bg { background-color: #0F172A; border-right: 1px solid #1E293B; }
+        .nav-link { color: #94A3B8; display: block; padding: 12px 24px; cursor: pointer; transition: all 0.2s; font-weight: 500; font-size: 13px; text-decoration: none;}
+        .nav-link:hover { color: #FFFFFF; background-color: rgba(255,255,255,0.05); }
+        .nav-link.active { color: #FFFFFF; background-color: #1E3A8A; font-weight: 600; border-left: 4px solid #60A5FA; padding-left: 20px;}
         
-        .tab-btn { padding: 12px 20px; font-weight: 700; font-size: 12px; color: #64748B; border-bottom: 2px solid transparent; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; transition: 0.2s; }
-        .tab-btn:hover { color: #1E3A8A; }
-        .tab-btn.active { color: #1E3A8A; border-bottom-color: #1E3A8A; }
+        .card { background: white; border: 1px solid #E2E8F0; border-radius: 4px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card-header { background-color: #172B4D; color: white; padding: 10px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
         
+        .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
+        th { background-color: #F8FAFC; color: #475569; font-weight: 700; text-transform: uppercase; padding: 10px 12px; border-bottom: 1px solid #E2E8F0; border-top: 1px solid #E2E8F0; white-space: nowrap; font-size: 10px;}
+        td { padding: 10px 12px; border-bottom: 1px solid #F1F5F9; color: #1E293B; font-weight: 500; white-space: nowrap; }
+        tr:hover { background-color: #F8FAFC; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden">
-
-    <!-- Header Principal -->
-    <header class="bg-white border-b border-slate-200 shrink-0 shadow-sm z-10 pt-6 px-8">
-        <div class="flex justify-between items-start mb-6">
-            <div class="flex gap-6 items-center">
-                <div class="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200 overflow-hidden shadow-sm">
-                    {% if foto_url %}
-                        <img src="{{ foto_url }}" alt="Foto Equipo" class="w-full h-full object-cover">
-                    {% else %}
-                        <span class="text-3xl">🚜</span>
-                    {% endif %}
-                </div>
-                <div>
-                    <div class="flex items-center gap-3 mb-1">
-                        <h1 class="text-3xl font-black text-slate-800 tracking-tight">{{ equipo.codigo }}</h1>
-                        {% if equipo.estado_base == 'Operativo' %}
-                            <span class="bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">Operativo</span>
-                        {% elif equipo.estado_base == 'Taller' %}
-                            <span class="bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">En Taller</span>
-                        {% else %}
-                            <span class="bg-red-100 text-red-800 border border-red-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">Fuera de Servicio</span>
-                        {% endif %}
-                    </div>
-                    <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">{{ equipo.marca }} {{ equipo.modelo }} <span class="text-slate-300 mx-2">|</span> {{ equipo.tipo_equipo }}</p>
-                </div>
-            </div>
-            <div class="flex gap-3">
-                <a href="/" class="bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 px-4 py-2 rounded font-bold text-xs uppercase tracking-wider transition">← Volver al Dashboard</a>
-                <a href="/api/imprimir_registro/{{ equipo.codigo }}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold text-xs uppercase tracking-wider transition shadow-md shadow-blue-600/30">Imprimir Ficha PDF</a>
-            </div>
+<body class="flex h-screen overflow-hidden">
+    
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="w-64 sidebar-bg flex flex-col z-40 shrink-0 hidden md:flex">
+        <div class="h-20 flex items-center px-6 border-b border-slate-800">
+            <span class='text-lg font-semibold text-white tracking-wide'>DEMOTRON ERP</span>
         </div>
-        
-        <div class="flex gap-2 overflow-x-auto hide-scrollbar">
-            <button onclick="switchTabEq('tab-resumen', this)" class="tab-btn active">Resumen General</button>
-            <button onclick="switchTabEq('tab-filtros', this)" class="tab-btn text-emerald-600">Filtros y Equivalencias</button>
-            <button onclick="switchTabEq('tab-ots', this)" class="tab-btn">Historial Mantenimiento</button>
-            <button onclick="switchTabEq('tab-docs', this)" class="tab-btn">Documentos</button>
-        </div>
-    </header>
+        <nav class="flex-1 py-6 overflow-y-auto hide-scrollbar space-y-1">
+            <a href="/" class="block px-6 py-3 text-slate-400 hover:text-white hover:bg-white/5 transition-colors text-sm font-medium">← Volver al Dashboard</a>
+            <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-4">FICHA DE EQUIPO</p>
+            <a href="#" class="nav-link active">{{ equipo.codigo }}</a>
+        </nav>
+    </aside>
 
-    <div class="flex-1 overflow-y-auto p-8 bg-slate-50">
-        
-        <!-- PESTAÑA 1: RESUMEN GENERAL -->
-        <div id="tab-resumen" class="tab-content active">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm md:col-span-2">
-                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">Datos Técnicos</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-4">
-                        <div><p class="text-[10px] font-bold text-slate-400 uppercase">Patente / PPU</p><p class="text-sm font-bold text-slate-800">{{ equipo.patente or 'S/I' }}</p></div>
-                        <div><p class="text-[10px] font-bold text-slate-400 uppercase">VIN / Chasis</p><p class="text-sm font-bold text-slate-800">{{ equipo.vin or 'S/I' }}</p></div>
-                        <div><p class="text-[10px] font-bold text-slate-400 uppercase">Año Fabricación</p><p class="text-sm font-bold text-slate-800">{{ equipo.ano or 'S/I' }}</p></div>
-                        <div><p class="text-[10px] font-bold text-slate-400 uppercase">Ubicación Actual</p><p class="text-sm font-bold text-[#1E3A8A]">{{ equipo.ubicacion or 'Sin Asignar' }}</p></div>
-                        <div><p class="text-[10px] font-bold text-slate-400 uppercase">Responsable / Operador</p><p class="text-sm font-bold text-slate-800">{{ operador.nombre if operador else (equipo.responsable or 'Sin Asignar') }}</p></div>
-                    </div>
-                </div>
-                
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">Métricas de Vida</h3>
-                    <div class="mb-4">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase">Lectura Actual ({{ equipo.control_base }})</p>
-                        <p class="text-3xl font-black text-slate-800">{{ "{:,.0f}".format(equipo.lectura_actual or 0).replace(',','.') }}</p>
-                    </div>
-                    <div>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase">Próxima Mantención (PM)</p>
-                        <p class="text-2xl font-black text-emerald-600">{{ "{:,.0f}".format(equipo.proxima_pm or 0).replace(',','.') }}</p>
-                        {% set margen = (equipo.proxima_pm or 0) - (equipo.lectura_actual or 0) %}
-                        <p class="text-xs font-bold mt-1 {% if margen < 0 %}text-red-600{% else %}text-slate-500{% endif %}">
-                            Margen: {{ "{:,.0f}".format(margen).replace(',','.') }} {{ equipo.control_base }}
-                        </p>
-                    </div>
-                </div>
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col min-w-0 w-full">
+        <!-- HEADER TOPBAR -->
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-10 shadow-sm">
+            <div class="flex items-center gap-4">
+                <a href="/" class="md:hidden text-slate-800 font-bold text-xl">←</a>
+                <h1 class="text-xl font-medium text-slate-800 tracking-wide">Ficha Individual</h1>
             </div>
-        </div>
+            <a href="/api/imprimir_registro/{{equipo.codigo}}" target="_blank" class="bg-demoblue-800 hover:bg-demoblue-900 text-white px-4 py-2 rounded font-semibold text-xs shadow transition">⬇ Descargar Ficha PDF</a>
+        </header>
 
-        <!-- PESTAÑA 2: FILTROS Y EQUIVALENCIAS (¡AQUÍ APARECEN!) -->
-        <div id="tab-filtros" class="tab-content">
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-6">
-                <div class="p-4 border-b border-slate-200 bg-emerald-50 flex justify-between items-center">
-                    <h3 class="font-black text-emerald-800 uppercase tracking-widest text-xs">Catálogo de Filtros del Equipo</h3>
-                    <a href="/api/imprimir_filtros/{{ equipo.codigo }}" target="_blank" class="text-[10px] font-bold bg-white border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded uppercase hover:bg-emerald-100 transition shadow-sm">Imprimir Tabla PDF</a>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-500 border-b border-slate-200">
-                                <th class="p-4">Sistema / Aplicación</th>
-                                <th class="p-4 text-center">Cant.</th>
-                                <th class="p-4">OEM Original</th>
-                                <th class="p-4">Fleetguard</th>
-                                <th class="p-4">Donaldson</th>
-                                <th class="p-4">Baldwind</th>
-                                <th class="p-4">Otra Alternativa</th>
-                            </tr>
-                        </thead>
-                        <tbody class="text-xs font-medium text-slate-700">
-                            {% for f in filtros %}
-                            <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                                <td class="p-4 font-black text-slate-800"><span class="bg-slate-100 px-2 py-1 rounded border border-slate-200">{{ f.sistema }}</span></td>
-                                <td class="p-4 text-center font-black text-lg text-[#1E3A8A]">{{ f.cant }}</td>
-                                <td class="p-4 font-mono">{{ f.originales }}</td>
-                                <td class="p-4 font-mono">{{ f.fleetguard }}</td>
-                                <td class="p-4 font-mono">{{ f.donaldson }}</td>
-                                <td class="p-4 font-mono">{{ f.baldwind }}</td>
-                                <td class="p-4 font-mono">{{ f.otra_alternativa }}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="7" class="p-8 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">Aún no hay filtros registrados para el {{ equipo.codigo }}.<br><span class="font-normal normal-case mt-2 block">Asegúrese de haberlos subido en el archivo "Plantilla_Maestro_Filtros_Demotron.xlsx" y luego sincronizar.</span></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        <!-- DASHBOARD EQUIPO (SCROLLABLE) -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+            <div class="max-w-[1400px] mx-auto space-y-6">
 
-        <!-- PESTAÑA 3: HISTORIAL DE MANTENIMIENTO -->
-        <div id="tab-ots" class="tab-content">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- PREVENTIVAS -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="p-4 border-b border-slate-200 bg-blue-50">
-                        <h3 class="font-black text-blue-800 uppercase tracking-widest text-xs">Pautas Preventivas (PM)</h3>
+                <!-- FILA 1: SELECTOR Y ENCABEZADO -->
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <!-- SELECTOR -->
+                    <div class="card w-full lg:w-1/4 flex-shrink-0">
+                        <div class="card-header">SELECCIONA UN EQUIPO</div>
+                        <div class="p-5">
+                            <select onchange="window.location.href='/equipo/' + this.value" class="w-full border border-slate-300 rounded p-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:border-demoblue-500 focus:ring-1 focus:ring-demoblue-500 bg-white">
+                                {% for eq in todos_equipos %}
+                                <option value="{{ eq.codigo }}" {% if eq.codigo == equipo.codigo %}selected{% endif %}>
+                                    {{ eq.codigo }} - {{ eq.marca }} {{ eq.modelo }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
-                    <div class="overflow-y-auto max-h-96">
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200 sticky top-0">
-                                <tr><th class="p-3">Fecha</th><th class="p-3">Pauta</th><th class="p-3">Lectura</th><th class="p-3">Mecánico</th></tr>
+
+                    <!-- ENCABEZADO -->
+                    <div class="card w-full lg:w-3/4">
+                        <div class="p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                            <div class="flex items-center gap-5">
+                                <div class="w-16 h-16 rounded-full border-2 border-demoblue-800 flex items-center justify-center bg-demoblue-50 text-demoblue-800 flex-shrink-0">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 17v2a2 2 0 01-2 2H7a2 2 0 01-2-2v-2M12 15v-6m0 0l-3 3m3-3l3 3M5 8h14M5 8a2 2 0 012-2h10a2 2 0 012 2M5 8v6a2 2 0 002 2h10a2 2 0 002-2V8"></path></svg>
+                                </div>
+                                <div>
+                                    <h2 class="text-lg font-bold text-demoblue-900 uppercase">{{ equipo.codigo }} - {{ equipo.tipo_equipo }} {{ equipo.marca }}</h2>
+                                    <div class="flex flex-wrap gap-x-8 gap-y-2 mt-3 text-xs">
+                                        <div><span class="text-slate-400 font-semibold block text-[10px] mb-0.5">MARCA</span><span class="font-bold text-slate-700">{{ equipo.marca or 'S/I' }}</span></div>
+                                        <div><span class="text-slate-400 font-semibold block text-[10px] mb-0.5">MODELO</span><span class="font-bold text-slate-700">{{ equipo.modelo or 'S/I' }}</span></div>
+                                        <div><span class="text-slate-400 font-semibold block text-[10px] mb-0.5">TIPO DE EQUIPO</span><span class="font-bold text-slate-700">{{ equipo.tipo_equipo or 'S/I' }}</span></div>
+                                        <div><span class="text-slate-400 font-semibold block text-[10px] mb-0.5">UBICACIÓN</span><span class="font-bold text-slate-700">{{ equipo.ubicacion or 'S/I' }}</span></div>
+                                        <div>
+                                            <span class="text-slate-400 font-semibold block text-[10px] mb-0.5">{% if equipo.control_base == 'HORAS' %}HORÓMETRO{% else %}KILOMETRAJE{% endif %}</span>
+                                            <span class="font-bold text-slate-700">{{ "{:,.0f}".format(equipo.lectura_actual or 0).replace(',', '.') }} {{ equipo.control_base }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-demogray border border-slate-200 rounded-lg p-3 text-center min-w-[140px]">
+                                <span class="text-demoblue-800 font-bold text-[10px] tracking-wider block mb-2">ESTADO ACTUAL</span>
+                                {% set bg_color = 'bg-demogreen' if equipo.estado_base == 'Operativo' else 'bg-demored' if equipo.estado_base == 'Fuera de Servicio' else 'bg-demoorange' if equipo.estado_base == 'Taller' else 'bg-slate-500' %}
+                                <div class="{{ bg_color }} text-white text-xs font-bold py-1.5 px-4 rounded-full flex items-center justify-center gap-2 uppercase">
+                                    <span>{{ equipo.estado_base }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FILA 2: INFO, PLAN Y FILTROS -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- INFO GENERAL -->
+                    <div class="card lg:col-span-3">
+                        <div class="card-header">INFORMACIÓN GENERAL</div>
+                        <div class="p-4 space-y-3">
+                            <div class="flex items-center gap-3"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg><span class="w-32 text-xs font-semibold text-slate-500">Código Interno:</span><span class="text-xs font-bold text-slate-800">{{ equipo.codigo }}</span></div>
+                            <div class="flex items-center gap-3"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg><span class="w-32 text-xs font-semibold text-slate-500">Tipo de Equipo:</span><span class="text-xs font-bold text-slate-800">{{ equipo.tipo_equipo or 'S/I' }}</span></div>
+                            <div class="flex items-center gap-3"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg><span class="w-32 text-xs font-semibold text-slate-500">Marca / Modelo:</span><span class="text-xs font-bold text-slate-800">{{ equipo.marca or 'S/I' }} / {{ equipo.modelo or 'S/I' }}</span></div>
+                            <div class="flex items-center gap-3"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg><span class="w-32 text-xs font-semibold text-slate-500">Ubicación Actual:</span><span class="text-xs font-bold text-slate-800">{{ equipo.ubicacion or 'S/I' }}</span></div>
+                            <div class="flex items-center gap-3"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span class="w-32 text-xs font-semibold text-slate-500">Lectura Actual:</span><span class="text-xs font-bold text-slate-800">{{ "{:,.0f}".format(equipo.lectura_actual or 0).replace(',', '.') }} {{ equipo.control_base }}</span></div>
+                            <div class="flex items-center gap-3"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg><span class="w-32 text-xs font-semibold text-slate-500">Operador:</span><span class="text-xs font-bold text-slate-800">{{ operador.nombre if operador else 'Sin Asignar' }}</span></div>
+                        </div>
+                    </div>
+
+                    <!-- PLAN DE MANTENCIÓN -->
+                    <div class="card lg:col-span-6 flex flex-col">
+                        <div class="card-header">PLAN DE MANTENCIÓN DEL EQUIPO</div>
+                        <div class="table-wrapper flex-1">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Tipo de Mantención</th>
+                                        <th>Frecuencia Base</th>
+                                        <th>Próxima PM Objetivo</th>
+                                        <th>Margen Restante</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% set lectura = equipo.lectura_actual or 0 %}
+                                    {% set proxima = equipo.proxima_pm or 0 %}
+                                    {% set margen = proxima - lectura %}
+                                    {% set divisor = 8 if equipo.control_base == 'HORAS' else 100 %}
+                                    {% set dias_restantes = (margen / divisor) | int %}
+                                    
+                                    <tr>
+                                        <td><div class="flex items-center gap-2"><svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0..."></path></svg> <b>Pauta {{ equipo.frecuencia_base }} {{ equipo.control_base }}</b></div></td>
+                                        <td>Cada {{ "{:,.0f}".format(equipo.frecuencia_base or 0).replace(',', '.') }} {{ equipo.control_base }}</td>
+                                        <td class="font-bold">{{ "{:,.0f}".format(proxima).replace(',', '.') }} {{ equipo.control_base }}</td>
+                                        <td class="font-bold">{{ "{:,.0f}".format(margen).replace(',', '.') }} {{ equipo.control_base }}</td>
+                                        <td class="font-bold {% if margen < 0 %}text-demored{% elif margen <= (equipo.frecuencia_base * 0.15) %}text-demoorange{% else %}text-demogreen{% endif %}">
+                                            {% if margen < 0 %}⚠️ ATRASADO{% elif margen <= (equipo.frecuencia_base * 0.15) %}PRÓXIMO{% else %}AL DÍA{% endif %}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="bg-demoblue-50 border-t border-demoblue-100 p-3 text-xs text-demoblue-800 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span>Días calendario proyectados para alcanzar la PM: <b>{{ dias_restantes if dias_restantes > 0 else 'Vencido' }}</b></span>
+                        </div>
+                    </div>
+
+                    <!-- RESUMEN DE FILTROS -->
+                    <div class="card lg:col-span-3 flex flex-col">
+                        <div class="card-header">RESUMEN DE FILTROS</div>
+                        <div class="p-4 flex-1 flex flex-col justify-center">
+                            <div class="flex items-center justify-between">
+                                <div class="relative w-24 h-24">
+                                    <canvas id="filtroChart"></canvas>
+                                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                        <span class="text-xl font-bold text-demoblue-900 leading-none">{{ filtros|length }}</span>
+                                        <span class="text-[9px] font-bold text-slate-500 uppercase">Filtros</span>
+                                    </div>
+                                </div>
+                                <div id="leyenda-filtros" class="flex-1 ml-4 space-y-2 text-[10px] font-semibold text-slate-600">
+                                    <!-- Llenado por JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FILA 3: DETALLE DE FILTROS -->
+                <div class="card">
+                    <div class="card-header flex justify-between items-center">
+                        <span>DETALLE DE FILTROS E INSUMOS (MAESTRO)</span>
+                        <a href="/api/imprimir_filtros/{{equipo.codigo}}" target="_blank" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded text-xs transition">Imprimir Maestro</a>
+                    </div>
+                    <div class="table-wrapper hide-scrollbar">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Sistema / Descripción</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th>N° Parte OEM</th>
+                                    <th>Fleetguard</th>
+                                    <th>Donaldson</th>
+                                    <th>Baldwin</th>
+                                    <th>Otra Alternativa</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for f in filtros %}
+                                <tr>
+                                    <td><b>{{ f.sistema }}</b></td>
+                                    <td class="text-center">{{ f.cant }}</td>
+                                    <td class="font-mono text-demoblue-800 font-bold">{{ f.originales }}</td>
+                                    <td class="font-mono text-slate-600">{{ f.fleetguard }}</td>
+                                    <td class="font-mono text-slate-600">{{ f.donaldson }}</td>
+                                    <td class="font-mono text-slate-600">{{ f.baldwind }}</td>
+                                    <td class="font-mono text-slate-600">{{ f.otra_alternativa }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="7" class="text-center py-6 text-slate-400">No hay filtros registrados en el Maestro.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- FILA 4: HISTORIAL PREVENTIVO -->
+                <div class="card">
+                    <div class="card-header bg-demoblue-800">HISTORIAL PREVENTIVO</div>
+                    <div class="table-wrapper hide-scrollbar">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Fecha / Folio</th>
+                                    <th>Pauta Aplicada</th>
+                                    <th>Lectura Ejecución</th>
+                                    <th>Mecánico Taller</th>
+                                    <th>Costo</th>
+                                    <th>Estado</th>
+                                    <th>Acción</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 {% for m in mants_prev %}
-                                <tr class="border-b border-slate-50 hover:bg-slate-50">
-                                    <td class="p-3 font-medium text-slate-500">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</td>
-                                    <td class="p-3 font-bold text-slate-800">{{ m.tipo_mantencion }}</td>
-                                    <td class="p-3 text-slate-600">{{ "{:,.0f}".format(m.lectura).replace(',','.') if m.lectura else '-' }}</td>
-                                    <td class="p-3 text-slate-600">{{ m.mecanico }}</td>
+                                <tr>
+                                    <td><span class="font-semibold">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</span><br><span class="text-[10px] text-slate-400">Folio: {{ m.folio or m.id }}</span></td>
+                                    <td><b>{{ m.tipo_mantencion }}</b></td>
+                                    <td>{{ "{:,.0f}".format(m.lectura or 0).replace(',', '.') }} {{ equipo.control_base }}</td>
+                                    <td>{{ m.mecanico or 'Sin Asignar' }}</td>
+                                    <td class="font-bold">{{ "$ {:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
+                                    <td><span class="bg-demogreen text-white text-[9px] px-2 py-1 rounded font-bold uppercase">{{ m.estado }}</span></td>
+                                    <td><a href="/imprimir_ot/{{ m.id }}" target="_blank" class="bg-slate-100 border border-slate-300 text-slate-600 px-3 py-1 rounded text-[10px] font-bold hover:bg-slate-200 transition">VER PDF</a></td>
                                 </tr>
                                 {% else %}
-                                <tr><td colspan="4" class="p-4 text-center text-slate-400 text-xs">Sin historial preventivo</td></tr>
+                                <tr><td colspan="7" class="text-center py-6 text-slate-400">Sin historial preventivo.</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- CORRECTIVAS -->
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="p-4 border-b border-slate-200 bg-red-50">
-                        <h3 class="font-black text-red-800 uppercase tracking-widest text-xs">Averías y Correctivas</h3>
-                    </div>
-                    <div class="overflow-y-auto max-h-96">
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase border-b border-slate-200 sticky top-0">
-                                <tr><th class="p-3">Fecha</th><th class="p-3">Causa Raíz / Falla</th><th class="p-3">Lectura</th><th class="p-3">Mecánico</th></tr>
+                <!-- FILA 5: HISTORIAL CORRECTIVO -->
+                <div class="card">
+                    <div class="card-header bg-demored">HISTORIAL DE AVERÍAS Y CORRECTIVAS</div>
+                    <div class="table-wrapper hide-scrollbar">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Fecha / Folio</th>
+                                    <th>Falla / Sistema</th>
+                                    <th>Diagnóstico / Trabajo Realizado</th>
+                                    <th>Lectura Falla</th>
+                                    <th>Mecánico</th>
+                                    <th>Costo</th>
+                                    <th>Estado</th>
+                                    <th>Acción</th>
+                                </tr>
                             </thead>
                             <tbody>
-                                {% for m in mants_corr %}
-                                <tr class="border-b border-slate-50 hover:bg-slate-50">
-                                    <td class="p-3 font-medium text-slate-500">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</td>
-                                    <td class="p-3 font-bold text-slate-800">{{ m.causa_raiz or m.tipo_mantencion }}</td>
-                                    <td class="p-3 text-slate-600">{{ "{:,.0f}".format(m.lectura).replace(',','.') if m.lectura else '-' }}</td>
-                                    <td class="p-3 text-slate-600">{{ m.mecanico }}</td>
+                                {% for c in mants_corr %}
+                                <tr>
+                                    <td><span class="font-semibold">{{ c.fecha.strftime('%d/%m/%Y') if c.fecha else '-' }}</span><br><span class="text-[10px] text-slate-400">Folio: {{ c.folio or c.id }}</span></td>
+                                    <td class="text-demored font-bold">{{ c.sistema_falla or 'General' }}</td>
+                                    <td class="whitespace-normal min-w-[200px]">{{ c.causa_raiz }}</td>
+                                    <td>{{ "{:,.0f}".format(c.lectura or 0).replace(',', '.') }} {{ equipo.control_base }}</td>
+                                    <td>{{ c.mecanico or 'Sin Asignar' }}</td>
+                                    <td class="font-bold">{{ "$ {:,.0f}".format(c.costo_mantencion_clp or 0).replace(',', '.') }}</td>
+                                    <td><span class="{% if c.estado == 'Finalizada' %}text-demogreen{% else %}text-demoorange{% endif %} font-bold text-[10px] uppercase border border-current px-2 py-0.5 rounded">{{ c.estado }}</span></td>
+                                    <td><a href="/imprimir_ot/{{ c.id }}" target="_blank" class="bg-slate-100 border border-slate-300 text-slate-600 px-3 py-1 rounded text-[10px] font-bold hover:bg-slate-200 transition">VER PDF</a></td>
                                 </tr>
                                 {% else %}
-                                <tr><td colspan="4" class="p-4 text-center text-slate-400 text-xs">Sin historial correctivo</td></tr>
+                                <tr><td colspan="8" class="text-center py-6 text-slate-400">Sin historial de averías registradas.</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 </div>
+
             </div>
         </div>
-
-        <!-- PESTAÑA 4: DOCUMENTOS -->
-        <div id="tab-docs" class="tab-content">
-            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-4">Gestión Documental (Permisos de Circulación, Rev. Técnica)</h3>
-                <p class="text-sm text-slate-500">Módulo en construcción o habilitado para subir PDFs.</p>
-            </div>
-        </div>
-
-    </div>
+    </main>
 
     <script>
-        function switchTabEq(tabId, btn) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active', 'text-emerald-600'));
-            
-            document.getElementById(tabId).classList.add('active');
-            btn.classList.add('active');
-            
-            // Efecto de color si es la pestaña de filtros
-            if(tabId === 'tab-filtros') btn.classList.add('text-emerald-600');
-        }
+        // Lógica para agrupar y pintar el gráfico de filtros usando Jinja2
+        const sistemasFiltros = [
+            {% for f in filtros %}"{{ f.sistema }}",{% endfor %}
+        ];
+        
+        const conteo = {};
+        sistemasFiltros.forEach(s => {
+            const sist = s && s !== '-' ? s.toUpperCase() : 'OTROS';
+            conteo[sist] = (conteo[sist] || 0) + 1;
+        });
+
+        const labels = Object.keys(conteo);
+        const dataVals = Object.values(conteo);
+        const colores = ['#1E3A8A', '#3B82F6', '#60A5FA', '#F59E0B', '#94A3B8', '#10B981', '#64748B'];
+
+        // Pintar leyenda
+        let leyendaHtml = '';
+        labels.forEach((lbl, i) => {
+            leyendaHtml += `<div class="flex justify-between items-center"><div><span class="inline-block w-2 h-2 rounded-full mr-2" style="background-color:${colores[i%colores.length]}"></span>${lbl}</div><span class="font-bold">${dataVals[i]}</span></div>`;
+        });
+        document.getElementById('leyenda-filtros').innerHTML = leyendaHtml;
+
+        // Renderizar Gráfico
+        const ctx = document.getElementById('filtroChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: { labels: labels, datasets: [{ data: dataVals, backgroundColor: colores, borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false }, tooltip: { enabled: true } } }
+        });
     </script>
 </body>
 </html>
