@@ -26,7 +26,7 @@ except ImportError:
     ZONA_CHILE = timezone(timedelta(hours=-4)) # Fallback
 
 def obtener_hora_chile():
-    """ Devuelve siempre la hora exacta de Chile, ignorando el servidor de Coolify """
+    """ Devuelve siempre la hora exacta de Chile, ignorando el servidor """
     return datetime.now(ZONA_CHILE).replace(tzinfo=None)
 
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -134,7 +134,6 @@ def dashboard():
                 m = eq.marca or 'Sin Marca'
                 marcas_stats[m]['costo_total'] += float(c.costo_pm_clp or 0)
 
-        # Se eliminó MTTR de aquí
         cinta3 = {'labels': [], 'mtbf': [], 'costo_promedio': []}
         for m, st in marcas_stats.items():
             if st['count'] > 0:
@@ -341,6 +340,9 @@ def detalle_equipo(codigo):
         equipo = Equipo.query.filter_by(codigo=codigo).first()
         if not equipo: return "Equipo no encontrado en la base de datos.", 404
         
+        # OBTENEMOS TODOS LOS EQUIPOS PARA EL SELECTOR HTML
+        todos_equipos = Equipo.query.order_by(Equipo.codigo).all()
+        
         e_cod = str(equipo.codigo).strip().upper()
         e_mod = str(equipo.modelo).strip().upper() if equipo.modelo else ""
         
@@ -364,10 +366,18 @@ def detalle_equipo(codigo):
         foto_url = buscar_foto_por_tipo(equipo.tipo_equipo, equipo.marca)
         
         return render_template('equipo.html', 
-                               equipo=equipo, filtros=filtros, mants_prev=mants_prev, 
-                               mants_corr=mants_corr, lecturas=lecturas, compras=compras, 
-                               documentos=documentos, historial_ub=historial_ub, operador=operador, 
-                               foto_url=foto_url, hoy=obtener_hora_chile())
+                               equipo=equipo, 
+                               todos_equipos=todos_equipos,
+                               filtros=filtros, 
+                               mants_prev=mants_prev, 
+                               mants_corr=mants_corr, 
+                               lecturas=lecturas, 
+                               compras=compras, 
+                               documentos=documentos, 
+                               historial_ub=historial_ub, 
+                               operador=operador, 
+                               foto_url=foto_url, 
+                               hoy=obtener_hora_chile())
     except Exception as e:
         return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error al cargar Ficha:</b> {str(e)}</div>"
 
