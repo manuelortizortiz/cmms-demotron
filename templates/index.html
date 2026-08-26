@@ -37,6 +37,24 @@
         .btn-primary:hover { background-color: #1D4ED8; }
         
         .hide-scrollbar::-webkit-scrollbar { display: none; }
+
+        /* CSS Exclusivo para forzar el scroll horizontal del Kanban en Celulares */
+        .kanban-mobile {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 1rem;
+            gap: 1rem;
+        }
+        .kanban-col {
+            flex: 0 0 85vw;
+            scroll-snap-align: center;
+        }
+        @media (min-width: 768px) {
+            .kanban-mobile { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow-x: visible; }
+            .kanban-col { flex: auto; max-width: none; }
+        }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -153,17 +171,14 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- GRÁFICOS A 2 COLUMNAS (Sin MTTR) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div class="card-custom h-80 flex flex-col">
                         <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">MTBF (Días Promedio sin Fallas)</p>
                         <div class="flex-1 relative w-full min-h-0"><canvas id="chartMTBF"></canvas></div>
                     </div>
                     <div class="card-custom h-80 flex flex-col">
-                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">MTTR (Horas de Reparación)</p>
-                        <div class="flex-1 relative w-full min-h-0"><canvas id="chartMTTR"></canvas></div>
-                    </div>
-                    <div class="card-custom h-80 flex flex-col">
-                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Costo Promedio por Unidad</p>
+                        <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">Costo Promedio por Unidad (Repuestos + OT)</p>
                         <div class="flex-1 relative w-full min-h-0"><canvas id="chartCostoUnidad"></canvas></div>
                     </div>
                 </div>
@@ -280,7 +295,7 @@
                     </div>
                 </div>
                 
-                <div class="flex gap-6 overflow-x-auto pb-8 items-start h-[75vh] hide-scrollbar" id="kanban-ubicaciones-container" style="-webkit-overflow-scrolling: touch;">
+                <div class="flex gap-6 overflow-x-auto snap-x pb-8 items-start h-[75vh] hide-scrollbar" id="kanban-ubicaciones-container" style="-webkit-overflow-scrolling: touch;">
                     {% for ub, equipos in ubicaciones_dict.items() %}
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 min-w-[280px] w-[85vw] md:w-72 shrink-0 flex flex-col max-h-full shadow-sm snap-center">
                         <div class="flex justify-between items-center border-b border-slate-200 pb-3 mb-4 shrink-0">
@@ -314,9 +329,9 @@
                 </div>
                 
                 <!-- KANBAN SCROLL HORIZONTAL NATIVO MÓVILES -->
-                <div class="flex overflow-x-auto snap-x gap-4 pb-6 hide-scrollbar md:grid md:grid-cols-2 xl:grid-cols-4 md:gap-6" style="-webkit-overflow-scrolling: touch;">
+                <div class="kanban-mobile hide-scrollbar">
                     {% for estado, col_id in [('Pendiente','kb-pendiente'), ('En Progreso','kb-progreso'), ('En Revisión','kb-revision'), ('Finalizada','kb-completado')] %}
-                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 h-[65vh] flex flex-col shadow-sm min-w-[280px] w-[85vw] md:w-auto md:min-w-0 shrink-0 snap-center">
+                    <div class="kanban-col bg-slate-50 border border-slate-200 rounded-lg p-4 h-[65vh] flex flex-col shadow-sm">
                         <div class="flex justify-between items-center border-b border-slate-200 pb-3 mb-4 shrink-0">
                             <h3 class="font-semibold text-slate-700 text-xs uppercase">{{ estado }}</h3>
                             <span class="text-xs text-slate-500 font-medium">{{ kanban[estado]|length }}</span>
@@ -656,12 +671,6 @@
                 if(document.getElementById('chartMTBF') && cinta3.labels.length > 0) {
                     new Chart(document.getElementById('chartMTBF').getContext('2d'), {
                         type: 'bar', data: { labels: cinta3.labels, datasets: [{ label: 'MTBF (Días)', data: cinta3.mtbf, backgroundColor: '#1E3A8A', borderRadius: 4 }] },
-                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, border: { dash: [4, 4] } } } }
-                    });
-                }
-                if(document.getElementById('chartMTTR') && cinta3.labels.length > 0) {
-                    new Chart(document.getElementById('chartMTTR').getContext('2d'), {
-                        type: 'bar', data: { labels: cinta3.labels, datasets: [{ label: 'MTTR (Horas)', data: cinta3.mttr, backgroundColor: '#60A5FA', borderRadius: 4 }] },
                         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, border: { dash: [4, 4] } } } }
                     });
                 }
