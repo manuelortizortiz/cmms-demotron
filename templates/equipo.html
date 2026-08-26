@@ -59,14 +59,21 @@
     </aside>
 
     <!-- MAIN CONTENT -->
-    <main class="flex-1 flex flex-col min-w-0 w-full">
-        <!-- HEADER TOPBAR -->
-        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-10 shadow-sm">
+    <main class="flex-1 flex flex-col min-w-0 w-full relative">
+        
+        <!-- HEADER TOPBAR CON BOTONES DE ACCIÓN -->
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 md:px-8 shrink-0 z-10 shadow-sm">
             <div class="flex items-center gap-4">
                 <a href="/" class="md:hidden text-slate-800 font-bold text-xl">←</a>
-                <h1 class="text-xl font-medium text-slate-800 tracking-wide">Ficha Individual</h1>
+                <h1 class="text-lg md:text-xl font-medium text-slate-800 tracking-wide">Ficha Individual</h1>
             </div>
-            <a href="/api/imprimir_registro/{{equipo.codigo}}" target="_blank" class="bg-demoblue-800 hover:bg-demoblue-900 text-white px-4 py-2 rounded font-semibold text-xs shadow transition">⬇ Descargar Ficha PDF</a>
+            
+            <!-- TUS BOTONES DE ACCIÓN (Idénticos a la imagen) -->
+            <div class="flex items-center gap-2">
+                <a href="/api/imprimir_registro/{{equipo.codigo}}" target="_blank" class="bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 px-3 py-1.5 md:px-4 md:py-2 rounded text-[11px] md:text-xs font-bold transition-all shadow-sm">Ficha PDF</a>
+                <a href="/api/imprimir_filtros/{{equipo.codigo}}" target="_blank" class="bg-cyan-50 text-cyan-800 border border-cyan-200 hover:bg-cyan-100 px-3 py-1.5 md:px-4 md:py-2 rounded text-[11px] md:text-xs font-bold transition-all shadow-sm">Filtros PDF</a>
+                <button onclick="abrirEditModal('equipo', '{{equipo.codigo}}', 'Editar Equipo {{equipo.codigo}}', [{db: 'marca', label: 'Marca', val: '{{equipo.marca}}'},{db: 'modelo', label: 'Modelo', val: '{{equipo.modelo}}'},{db: 'patente', label: 'Patente', val: '{{equipo.patente}}'},{db: 'estado_base', label: 'Estado', val: '{{equipo.estado_base}}'}])" class="bg-sky-50 text-sky-800 border border-sky-200 hover:bg-sky-100 px-3 py-1.5 md:px-4 md:py-2 rounded text-[11px] md:text-xs font-bold transition-all shadow-sm">Editar</button>
+            </div>
         </header>
 
         <!-- DASHBOARD EQUIPO (SCROLLABLE) -->
@@ -113,7 +120,7 @@
                             <div class="bg-demogray border border-slate-200 rounded-lg p-3 text-center min-w-[140px]">
                                 <span class="text-demoblue-800 font-bold text-[10px] tracking-wider block mb-2">ESTADO ACTUAL</span>
                                 {% set bg_color = 'bg-demogreen' if equipo.estado_base == 'Operativo' else 'bg-demored' if equipo.estado_base == 'Fuera de Servicio' else 'bg-demoorange' if equipo.estado_base == 'Taller' else 'bg-slate-500' %}
-                                <div class="{{ bg_color }} text-white text-xs font-bold py-1.5 px-4 rounded-full flex items-center justify-center gap-2 uppercase">
+                                <div class="{{ bg_color }} text-white text-xs font-bold py-1.5 px-4 rounded-full flex items-center justify-center gap-2 uppercase shadow-sm">
                                     <span>{{ equipo.estado_base }}</span>
                                 </div>
                             </div>
@@ -197,10 +204,7 @@
 
                 <!-- FILA 3: DETALLE DE FILTROS -->
                 <div class="card">
-                    <div class="card-header flex justify-between items-center">
-                        <span>DETALLE DE FILTROS E INSUMOS (MAESTRO)</span>
-                        <a href="/api/imprimir_filtros/{{equipo.codigo}}" target="_blank" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded text-xs transition">Imprimir Maestro</a>
-                    </div>
+                    <div class="card-header">DETALLE DE FILTROS E INSUMOS (MAESTRO)</div>
                     <div class="table-wrapper hide-scrollbar">
                         <table>
                             <thead>
@@ -258,7 +262,7 @@
                                     <td>{{ m.mecanico or 'Sin Asignar' }}</td>
                                     <td class="font-bold">{{ "$ {:,.0f}".format(m.costo_mantencion_clp or 0).replace(',', '.') }}</td>
                                     <td><span class="bg-demogreen text-white text-[9px] px-2 py-1 rounded font-bold uppercase">{{ m.estado }}</span></td>
-                                    <td><a href="/imprimir_ot/{{ m.id }}" target="_blank" class="bg-slate-100 border border-slate-300 text-slate-600 px-3 py-1 rounded text-[10px] font-bold hover:bg-slate-200 transition">VER PDF</a></td>
+                                    <td><a href="/imprimir_ot/{{ m.id }}" target="_blank" class="bg-slate-100 border border-slate-300 text-slate-600 px-3 py-1 rounded text-[10px] font-bold hover:bg-slate-200 transition shadow-sm">VER PDF</a></td>
                                 </tr>
                                 {% else %}
                                 <tr><td colspan="7" class="text-center py-6 text-slate-400">Sin historial preventivo.</td></tr>
@@ -295,7 +299,7 @@
                                     <td>{{ c.mecanico or 'Sin Asignar' }}</td>
                                     <td class="font-bold">{{ "$ {:,.0f}".format(c.costo_mantencion_clp or 0).replace(',', '.') }}</td>
                                     <td><span class="{% if c.estado == 'Finalizada' %}text-demogreen{% else %}text-demoorange{% endif %} font-bold text-[10px] uppercase border border-current px-2 py-0.5 rounded">{{ c.estado }}</span></td>
-                                    <td><a href="/imprimir_ot/{{ c.id }}" target="_blank" class="bg-slate-100 border border-slate-300 text-slate-600 px-3 py-1 rounded text-[10px] font-bold hover:bg-slate-200 transition">VER PDF</a></td>
+                                    <td><a href="/imprimir_ot/{{ c.id }}" target="_blank" class="bg-slate-100 border border-slate-300 text-slate-600 px-3 py-1 rounded text-[10px] font-bold hover:bg-slate-200 transition shadow-sm">VER PDF</a></td>
                                 </tr>
                                 {% else %}
                                 <tr><td colspan="8" class="text-center py-6 text-slate-400">Sin historial de averías registradas.</td></tr>
@@ -309,8 +313,25 @@
         </div>
     </main>
 
+    <!-- MODAL DE EDICIÓN DINÁMICO (INTEGRADO EN LA FICHA) -->
+    <div id="modal-edit" class="fixed inset-0 bg-slate-900/80 z-[600] hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded shadow-lg overflow-hidden">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 id="edit-title" class="font-semibold text-slate-800 uppercase text-xs tracking-wider">Editar Registro</h3>
+                <button onclick="document.getElementById('modal-edit').classList.add('hidden')" class="text-xl text-slate-500 hover:text-slate-800">&times;</button>
+            </div>
+            <form action="/api/edit_record" method="POST" class="p-6 flex flex-col gap-4">
+                <input type="hidden" name="tabla" id="edit-tabla">
+                <input type="hidden" name="id" id="edit-id">
+                <input type="hidden" name="referer" value="/equipo/{{ equipo.codigo }}">
+                <div id="edit-fields" class="flex flex-col gap-4"></div>
+                <button type="submit" class="bg-demoblue-800 text-white font-semibold py-2.5 rounded hover:bg-demoblue-900 transition mt-2 text-sm shadow">Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+
     <script>
-        // Lógica para agrupar y pintar el gráfico de filtros usando Jinja2
+        // Lógica para pintar el gráfico de filtros
         const sistemasFiltros = [
             {% for f in filtros %}"{{ f.sistema }}",{% endfor %}
         ];
@@ -325,20 +346,41 @@
         const dataVals = Object.values(conteo);
         const colores = ['#1E3A8A', '#3B82F6', '#60A5FA', '#F59E0B', '#94A3B8', '#10B981', '#64748B'];
 
-        // Pintar leyenda
         let leyendaHtml = '';
         labels.forEach((lbl, i) => {
             leyendaHtml += `<div class="flex justify-between items-center"><div><span class="inline-block w-2 h-2 rounded-full mr-2" style="background-color:${colores[i%colores.length]}"></span>${lbl}</div><span class="font-bold">${dataVals[i]}</span></div>`;
         });
         document.getElementById('leyenda-filtros').innerHTML = leyendaHtml;
 
-        // Renderizar Gráfico
         const ctx = document.getElementById('filtroChart').getContext('2d');
         new Chart(ctx, {
             type: 'doughnut',
             data: { labels: labels, datasets: [{ data: dataVals, backgroundColor: colores, borderWidth: 0 }] },
             options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false }, tooltip: { enabled: true } } }
         });
+
+        // Lógica del Modal de Edición (Funciona sin recargar el index)
+        function abrirEditModal(tabla, id, titulo, campos) {
+            document.getElementById('edit-tabla').value = tabla;
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-title').innerText = titulo;
+            let html = '';
+            campos.forEach(c => {
+                html += `<div><label class="text-[10px] font-bold uppercase text-slate-500 mb-1 block">${c.label}</label>`;
+                if (c.db === 'estado_base') {
+                    html += `<select name="${c.db}" class="w-full border border-slate-300 rounded p-2 text-sm text-slate-700 outline-none focus:border-demoblue-500 focus:ring-1 focus:ring-demoblue-500 bg-white">
+                                <option value="Operativo" ${c.val==='Operativo'?'selected':''}>Operativo</option>
+                                <option value="Taller" ${c.val==='Taller'?'selected':''}>Taller</option>
+                                <option value="Fuera de Servicio" ${c.val==='Fuera de Servicio'?'selected':''}>Fuera de Servicio</option>
+                             </select></div>`;
+                } else {
+                    let valLimpio = c.val !== 'None' ? c.val : '';
+                    html += `<input type="text" name="${c.db}" value="${valLimpio}" class="w-full border border-slate-300 rounded p-2 text-sm uppercase text-slate-700 outline-none focus:border-demoblue-500 focus:ring-1 focus:ring-demoblue-500"></div>`;
+                }
+            });
+            document.getElementById('edit-fields').innerHTML = html;
+            document.getElementById('modal-edit').classList.remove('hidden');
+        }
     </script>
 </body>
 </html>
