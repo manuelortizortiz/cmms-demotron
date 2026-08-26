@@ -72,8 +72,11 @@
             <a onclick="switchTab('dash', this)" class="nav-link active">Dashboard</a>
             
             <p class="px-6 text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-6">Logística de Flota</p>
-            <!-- AQUÍ CAMBIAMOS EL NOMBRE DEL MENÚ -->
+            
+            <!-- AQUÍ ESTÁN AMBOS MENÚS (Ficha y Tabla) -->
+            <a href="/equipo/{{ eqs[0].codigo if eqs else '' }}" class="nav-link">Equipos</a>
             <a onclick="switchTab('eq', this)" class="nav-link">Tabla de Equipos</a>
+            
             <a onclick="switchTab('flota', this)" class="nav-link">Rendimiento (CPK)</a>
             <a onclick="switchTab('mapa', this)" class="nav-link">Geolocalización Logística</a>
             
