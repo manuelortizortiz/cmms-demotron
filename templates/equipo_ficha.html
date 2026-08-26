@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha de Equipo - DEMOTRON CMMS</title>
+    <!-- Fuentes y Librerías -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Configuración exacta de colores DEMOTRON -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        demoblue: { 900: '#172B4D', 800: '#1E3A8A', 500: '#3B82F6', 100: '#DBEAFE', 50: '#EFF6FF' },
+                        demogreen: '#16A34A',
+                        demoorange: '#F59E0B',
+                        demored: '#DC2626',
+                        demogray: '#F8FAFC'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #F1F5F9; color: #1E293B; }
+        /* Tarjetas y Cabeceras */
+        .card { background: white; border: 1px solid #E2E8F0; border-radius: 4px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card-header { background-color: #172B4D; color: white; padding: 10px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        /* Tablas Corporativas */
+        .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
+        th { background-color: #F8FAFC; color: #475569; font-weight: 700; text-transform: uppercase; padding: 10px 12px; border-bottom: 1px solid #E2E8F0; border-top: 1px solid #E2E8F0; white-space: nowrap; font-size: 10px;}
+        td { padding: 10px 12px; border-bottom: 1px solid #F1F5F9; color: #1E293B; font-weight: 500; white-space: nowrap; }
+        tr:hover { background-color: #F8FAFC; }
+        
+        /* Scrollbar oculto para tablas móviles */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* Estados de texto */
+        .txt-verde { color: #16A34A; font-weight: 700; }
+        .txt-naranja { color: #F59E0B; font-weight: 700; }
+        .txt-rojo { color: #DC2626; font-weight: 700; }
+        .txt-gris { color: #64748B; font-weight: 700; }
+    </style>
+</head>
+<body class="p-4 md:p-6 lg:p-8">
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div class="max-w-[1400px] mx-auto space-y-6">
+
+        <!-- ==========================================
+             FILA 1: SELECTOR Y ENCABEZADO PRINCIPAL
+        =========================================== -->
+        <div class="flex flex-col lg:flex-row gap-6">
+            
+            <!-- TARJETA 1: SELECTOR -->
+            <div class="card w-full lg:w-1/4 flex-shrink-0">
+                <div class="card-header">SELECCIONA UN EQUIPO</div>
+                <div class="p-5">
+                    <select id="equipoSelector" onchange="cargarEquipo(this.value)" class="w-full border border-slate-300 rounded p-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:border-demoblue-500 focus:ring-1 focus:ring-demoblue-500 bg-white">
+                        <!-- Opciones cargadas por JS -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- TARJETA 2: ENCABEZADO DEL EQUIPO -->
+            <div class="card w-full lg:w-3/4">
+                <div class="p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    
+                    <!-- Lado Izquierdo: Icono + Título -->
+                    <div class="flex items-center gap-5">
+                        <div class="w-16 h-16 rounded-full border-2 border-demoblue-800 flex items-center justify-center bg-demoblue-50 text-demoblue-800 flex-shrink-0">
+                            <!-- Icono dinámico -->
+                            <svg id="icono-equipo" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.909.53l1.415 2.83A1 1 0 0119 11h2a1 1 0 011 1v3a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path></svg>
+                        </div>
+                        <div>
+                            <h2 id="enc-titulo" class="text-lg font-bold text-demoblue-900 uppercase">Cargando...</h2>
+                            <div class="flex flex-wrap gap-x-8 gap-y-2 mt-3 text-xs">
+                                <div><span class="text-slate-400 font-semibold block text-[10px] mb-0.5">MARCA</span><span id="enc-marca" class="font-bold text-slate-700">...</span></div>
+                                <div><span class="text-slate-400 font-semibold block text-[10px] mb-0.5">MODELO</span><span id="enc-modelo" class="font-bold text-slate-700">...</span></div>
+                                <div><span class="text-slate-400 font-semibold block text-[10px] mb-0.5">TIPO DE EQUIPO</span><span id="enc-tipo" class="font-bold text-slate-700">...</span></div>
+                                <div><span class="text-slate-400 font-semibold block text-[10px] mb-0.5">UBICACIÓN</span><span id="enc-ubicacion" class="font-bold text-slate-700">...</span></div>
+                                <div id="contenedor-lectura"><span id="enc-lbl-lectura" class="text-slate-400 font-semibold block text-[10px] mb-0.5">LECTURA</span><span id="enc-lectura" class="font-bold text-slate-700">...</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lado Derecho: Estado -->
+                    <div class="bg-demogray border border-slate-200 rounded-lg p-3 text-center min-w-[140px]">
+                        <span class="text-demoblue-800 font-bold text-[10px] tracking-wider block mb-2">ESTADO ACTUAL</span>
+                        <div id="enc-estado-badge" class="bg-demogreen text-white text-xs font-bold py-1.5 px-4 rounded-full flex items-center justify-center gap-2">
+                            <span id="enc-estado-txt">OPERATIVO</span>
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             FILA 2: INFO, PLAN Y FILTROS
+        =========================================== -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- INFO GENERAL -->
+            <div class="card lg:col-span-3">
+                <div class="card-header">INFORMACIÓN GENERAL</div>
+                <div class="p-4 space-y-3" id="info-general-lista">
+                    <!-- Rellenado por JS -->
+                </div>
+            </div>
+
+            <!-- PLAN DE MANTENCIÓN -->
+            <div class="card lg:col-span-6 flex flex-col">
+                <div class="card-header">PLAN DE MANTENCIÓN DEL EQUIPO</div>
+                <div class="table-wrapper flex-1">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tipo de Mantención</th>
+                                <th>Intervalo</th>
+                                <th>Última Mantención</th>
+                                <th>Próxima Mantención</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-plan">
+                            <!-- Rellenado por JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Banda Informativa -->
+                <div id="alerta-plan" class="bg-demoblue-50 border-t border-demoblue-100 p-3 text-xs text-demoblue-800 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span id="alerta-plan-txt">Cargando...</span>
+                </div>
+            </div>
+
+            <!-- RESUMEN DE FILTROS -->
+            <div class="card lg:col-span-3 flex flex-col">
+                <div class="card-header flex justify-between items-center">
+                    <span>RESUMEN DE FILTROS</span>
+                    <svg class="w-3 h-3 text-slate-300" fill="currentColor" viewBox="0 0 20 20"><path d="M3 3a1 1 0 000 2h11a1 1 0 100-2H3zM3 8a1 1 0 000 2h5a1 1 0 000-2H3zM3 13a1 1 0 100 2h7a1 1 0 100-2H3z"></path></svg>
+                </div>
+                <div class="p-4 flex-1 flex flex-col justify-center">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="relative w-24 h-24">
+                            <canvas id="filtroChart"></canvas>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span id="filtro-total-num" class="text-xl font-bold text-demoblue-900 leading-none">0</span>
+                                <span class="text-[9px] font-bold text-slate-500 uppercase">Filtros</span>
+                            </div>
+                        </div>
+                        <div id="filtro-leyenda" class="flex-1 ml-4 space-y-2 text-[10px] font-semibold text-slate-600">
+                            <!-- Rellenado por JS -->
+                        </div>
+                    </div>
+                </div>
+                <!-- Alerta Próximo Cambio -->
+                <div class="bg-demoblue-50 p-4 border-t border-demoblue-100">
+                    <p class="text-[10px] font-bold text-demoblue-800 uppercase mb-1">PRÓXIMO CAMBIO DE FILTRO</p>
+                    <p id="prox-filtro-nombre" class="text-xs font-bold text-slate-800">...</p>
+                    <p id="prox-filtro-fecha" class="text-[11px] text-slate-600 mt-0.5">...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             FILA 3: DETALLE DE FILTROS
+        =========================================== -->
+        <div class="card">
+            <div class="card-header">DETALLE DE FILTROS / INSUMOS DEL EQUIPO</div>
+            <div class="table-wrapper hide-scrollbar">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="w-10"></th>
+                            <th>Tipo de Filtro</th>
+                            <th>Descripción</th>
+                            <th>Código / Parte</th>
+                            <th>Marca</th>
+                            <th>Intervalo</th>
+                            <th>Último Cambio</th>
+                            <th>Próximo Cambio</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-detalle-filtros">
+                        <!-- Rellenado por JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             FILA 4: HISTORIAL COMPLETO
+        =========================================== -->
+        <div class="card">
+            <div class="card-header">HISTORIAL DE MANTENCIONES (GENERAL)</div>
+            <div class="table-wrapper hide-scrollbar">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>OT</th>
+                            <th>Tipo</th>
+                            <th>Pauta / PM</th>
+                            <th id="th-lectura-gral">Lectura</th>
+                            <th>Descripción</th>
+                            <th>Responsable</th>
+                            <th>Costo</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-historial-gral">
+                        <!-- Rellenado por JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             FILA 5: HISTORIAL PREVENTIVO
+        =========================================== -->
+        <div class="card">
+            <div class="card-header bg-demoblue-800">HISTORIAL PREVENTIVO</div>
+            <div class="table-wrapper hide-scrollbar">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>OT</th>
+                            <th>Tipo PM</th>
+                            <th id="th-lectura-prev">Lectura</th>
+                            <th>Mantención Realizada</th>
+                            <th>Técnico</th>
+                            <th>Costo</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-historial-prev">
+                        <!-- Rellenado por JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             FILA 6: HISTORIAL CORRECTIVO
+        =========================================== -->
+        <div class="card">
+            <div class="card-header bg-demored">HISTORIAL CORRECTIVO</div>
+            <div class="table-wrapper hide-scrollbar">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>OT</th>
+                            <th>Falla Reportada</th>
+                            <th>Diagnóstico / Trabajo Realizado</th>
+                            <th id="th-lectura-corr">Lectura</th>
+                            <th>Técnico</th>
+                            <th>Tiempo Rep.</th>
+                            <th>Costo</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-historial-corr">
+                        <!-- Rellenado por JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ==========================================
+         JAVASCRIPT: DATOS MOCK & LÓGICA DE INTERFAZ
+    =========================================== -->
+    <script>
+        // 13. ESTRUCTURA DE DATOS PREPARADA PARA API
+        const BD = {
+            equipos: [
+                {
+                    id: 1, codigo: "EXC-015", nombre: "Excavadora Komatsu PC 210 LC-8M0", tipo: "EXCAVADORA", familia: "Movimiento de Tierra",
+                    marca: "KOMATSU", modelo: "PC 210 LC-8M0", año: 2016, ubicacion: "FAENA DEMOTRON", horometro: "12.350 HRS",
+                    kilometraje: null, combustible: "DIÉSEL", estado: "OPERATIVO", fecha_alta: "15/03/2016", ultima_lectura: "28/05/2025"
+                },
+                {
+                    id: 2, codigo: "CAM-022", nombre: "Camioneta Toyota Hilux 2.4", tipo: "CAMIONETA", familia: "Vehículos Livianos",
+                    marca: "TOYOTA", modelo: "HILUX 2.4", año: 2021, ubicacion: "OFICINA CENTRAL", horometro: null,
+                    kilometraje: "125.430 KM", combustible: "DIÉSEL", estado: "EN MANTENIMIENTO", fecha_alta: "10/01/2021", ultima_lectura: "30/05/2025"
+                }
+            ],
+            plan_mantenimiento: [
+                // Planes Excavadora
+                { equipo_id: 1, tipo_mantenimiento: "Servicio 250 HRS", intervalo: "250 HRS", ultima_fecha: "15/05/2025", proxima_fecha: "05/08/2025", estado: "AL DÍA" },
+                { equipo_id: 1, tipo_mantenimiento: "Servicio 500 HRS", intervalo: "500 HRS", ultima_fecha: "15/05/2025", proxima_fecha: "05/11/2025", estado: "AL DÍA" },
+                { equipo_id: 1, tipo_mantenimiento: "Servicio 1000 HRS", intervalo: "1.000 HRS", ultima_fecha: "10/02/2025", proxima_fecha: "10/07/2025", estado: "PRÓXIMO" },
+                { equipo_id: 1, tipo_mantenimiento: "Servicio 2000 HRS", intervalo: "2.000 HRS", ultima_fecha: "15/01/2025", proxima_fecha: "15/07/2025", estado: "ATRASADO" },
+                { equipo_id: 1, tipo_mantenimiento: "Servicio 4000 HRS", intervalo: "4.000 HRS", ultima_fecha: "15/01/2025", proxima_fecha: "15/11/2025", estado: "AL DÍA" },
+                // Planes Camioneta
+                { equipo_id: 2, tipo_mantenimiento: "Mantención 10.000 KM", intervalo: "10.000 KM", ultima_fecha: "20/04/2025", proxima_fecha: "20/08/2025", estado: "AL DÍA" },
+                { equipo_id: 2, tipo_mantenimiento: "Mantención 50.000 KM", intervalo: "50.000 KM", ultima_fecha: "10/01/2024", proxima_fecha: "15/06/2025", estado: "PRÓXIMO" }
+            ],
+            filtros: [
+                // Filtros Excavadora
+                { equipo_id: 1, tipo: "AIRE", descripcion: "Filtro de Aire Primario", codigo_parte: "600-185-4100", marca: "KOMATSU", intervalo: "1.000 HRS", ultima_fecha: "10/02/2025", proxima_fecha: "10/07/2025", estado: "PRÓXIMO" },
+                { equipo_id: 1, tipo: "ACEITE", descripcion: "Filtro de Aceite Motor", codigo_parte: "600-211-1231", marca: "KOMATSU", intervalo: "500 HRS", ultima_fecha: "15/05/2025", proxima_fecha: "05/08/2025", estado: "PRÓXIMO" },
+                { equipo_id: 1, tipo: "ACEITE", descripcion: "Filtro de Aceite Hidráulico", codigo_parte: "07063-51100", marca: "KOMATSU", intervalo: "1.000 HRS", ultima_fecha: "10/02/2025", proxima_fecha: "10/07/2025", estado: "PRÓXIMO" },
+                { equipo_id: 1, tipo: "COMBUSTIBLE", descripcion: "Filtro de Combustible Primario", codigo_parte: "600-311-8220", marca: "KOMATSU", intervalo: "500 HRS", ultima_fecha: "15/05/2025", proxima_fecha: "05/08/2025", estado: "PRÓXIMO" },
+                { equipo_id: 1, tipo: "COMBUSTIBLE", descripcion: "Filtro de Combustible Secundario", codigo_parte: "600-311-8320", marca: "KOMATSU", intervalo: "1.000 HRS", ultima_fecha: "10/02/2025", proxima_fecha: "10/07/2025", estado: "PRÓXIMO" },
+                { equipo_id: 1, tipo: "HIDRÁULICO", descripcion: "Filtro Hidráulico", codigo_parte: "21T-60-35390", marca: "KOMATSU", intervalo: "2.000 HRS", ultima_fecha: "15/01/2025", proxima_fecha: "15/07/2025", estado: "ATRASADO" },
+                // Filtros Camioneta
+                { equipo_id: 2, tipo: "ACEITE", descripcion: "Filtro Aceite Motor", codigo_parte: "90915-YZZD2", marca: "TOYOTA", intervalo: "10.000 KM", ultima_fecha: "20/04/2025", proxima_fecha: "20/08/2025", estado: "AL DÍA" },
+                { equipo_id: 2, tipo: "AIRE", descripcion: "Filtro Aire Cabina", codigo_parte: "87139-YZZ08", marca: "TOYOTA", intervalo: "20.000 KM", ultima_fecha: "15/10/2024", proxima_fecha: "15/06/2025", estado: "PRÓXIMO" }
+            ],
+            mantenciones: [
+                { equipo_id: 1, fecha: "15/05/2025", ot: "OT-1254", tipo: "Preventiva", pm: "Servicio 500 HRS", lectura: "12.000 HRS", descripcion: "Cambio aceite y filtros primarios", responsable: "Juan Pérez", costo: "$450.000", estado: "COMPLETADA" },
+                { equipo_id: 1, fecha: "10/02/2025", ot: "OT-1102", tipo: "Preventiva", pm: "Servicio 1000 HRS", lectura: "11.000 HRS", descripcion: "Pauta completa 1000H", responsable: "Carlos Gómez", costo: "$850.000", estado: "COMPLETADA" },
+                { equipo_id: 1, fecha: "05/01/2025", ot: "OT-1045", tipo: "Correctiva", pm: "-", lectura: "10.850 HRS", descripcion: "Reparación manguera hidráulica", responsable: "Luis Silva", costo: "$120.000", estado: "COMPLETADA" },
+                
+                { equipo_id: 2, fecha: "20/04/2025", ot: "OT-1210", tipo: "Preventiva", pm: "10.000 KM", lectura: "120.000 KM", descripcion: "Cambio aceite motor y filtro", responsable: "Pedro Ruiz", costo: "$95.000", estado: "COMPLETADA" },
+                { equipo_id: 2, fecha: "30/05/2025", ot: "OT-1288", tipo: "Correctiva", pm: "-", lectura: "125.430 KM", descripcion: "Cambio pastillas freno", responsable: "Pedro Ruiz", costo: "$145.000", estado: "EN PROCESO" }
+            ],
+            correctivos: [
+                { equipo_id: 1, fecha: "05/01/2025", ot: "OT-1045", falla: "Fuga fluido hidráulico", diagnostico: "Manguera principal picada", trabajo_realizado: "Reemplazo de línea alta presión", responsable: "Luis Silva", tiempo_reparacion: "4 HRS", costo: "$120.000", estado: "CERRADO" },
+                { equipo_id: 2, fecha: "30/05/2025", ot: "OT-1288", falla: "Ruido al frenar", diagnostico: "Pastillas desgastadas al límite", trabajo_realizado: "Desmontaje y limpieza", responsable: "Pedro Ruiz", tiempo_reparacion: "Pendiente", costo: "-", estado: "EN PROCESO" }
+            ]
+        };
+
+        let myDonutChart = null;
+
+        // INICIALIZACIÓN
+        window.onload = () => {
+            const selector = document.getElementById('equipoSelector');
+            BD.equipos.forEach(eq => {
+                const opt = document.createElement('option');
+                opt.value = eq.id;
+                opt.text = `${eq.codigo} - ${eq.nombre}`;
+                selector.appendChild(opt);
+            });
+            cargarEquipo(BD.equipos[0].id); // Cargar el primero por defecto
+        };
+
+        // LÓGICA PRINCIPAL: ACTUALIZAR TODA LA PÁGINA
+        function cargarEquipo(id) {
+            const eq = BD.equipos.find(e => e.id == id);
+            if (!eq) return;
+
+            const esHrs = eq.horometro !== null;
+            const lecturaValor = esHrs ? eq.horometro : eq.kilometraje;
+            const lecturaLabel = esHrs ? "HORÓMETRO" : "KILOMETRAJE";
+
+            // 1. ENCABEZADO
+            document.getElementById('enc-titulo').innerText = `${eq.codigo} - ${eq.nombre}`;
+            document.getElementById('enc-marca').innerText = eq.marca;
+            document.getElementById('enc-modelo').innerText = eq.modelo;
+            document.getElementById('enc-tipo').innerText = eq.tipo;
+            document.getElementById('enc-ubicacion').innerText = eq.ubicacion;
+            document.getElementById('enc-lbl-lectura').innerText = lecturaLabel;
+            document.getElementById('enc-lectura').innerText = lecturaValor;
+
+            // Icono Dinámico (simple SVG)
+            const iconSvg = esHrs 
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 17v2a2 2 0 01-2 2H7a2 2 0 01-2-2v-2M12 15v-6m0 0l-3 3m3-3l3 3M5 8h14M5 8a2 2 0 012-2h10a2 2 0 012 2M5 8v6a2 2 0 002 2h10a2 2 0 002-2V8"></path>' 
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.909.53l1.415 2.83A1 1 0 0119 11h2a1 1 0 011 1v3a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path>';
+            document.getElementById('icono-equipo').innerHTML = iconSvg;
+
+            // Estado Badge
+            const badge = document.getElementById('enc-estado-badge');
+            const txtEstado = document.getElementById('enc-estado-txt');
+            txtEstado.innerText = eq.estado;
+            badge.className = `text-white text-xs font-bold py-1.5 px-4 rounded-full flex items-center justify-center gap-2 ${
+                eq.estado === 'OPERATIVO' ? 'bg-demogreen' : 
+                eq.estado === 'EN MANTENIMIENTO' ? 'bg-demoorange' : 
+                eq.estado === 'FUERA DE SERVICIO' ? 'bg-demored' : 'bg-slate-500'
+            }`;
+
+            // 2. INFORMACIÓN GENERAL (Ocultar dinámicamente)
+            const infoHtml = `
+                <div class="flex items-center gap-3"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg><span class="w-32 text-xs font-semibold text-slate-500">Código Interno:</span><span class="text-xs font-bold text-slate-800">${eq.codigo}</span></div>
+                <div class="flex items-center gap-3"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg><span class="w-32 text-xs font-semibold text-slate-500">Tipo de Equipo:</span><span class="text-xs font-bold text-slate-800">${eq.tipo}</span></div>
+                <div class="flex items-center gap-3"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg><span class="w-32 text-xs font-semibold text-slate-500">Marca / Modelo:</span><span class="text-xs font-bold text-slate-800">${eq.marca} / ${eq.modelo}</span></div>
+                <div class="flex items-center gap-3"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="w-32 text-xs font-semibold text-slate-500">Año Fabricación:</span><span class="text-xs font-bold text-slate-800">${eq.año}</span></div>
+                <div class="flex items-center gap-3"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg><span class="w-32 text-xs font-semibold text-slate-500">Ubicación Actual:</span><span class="text-xs font-bold text-slate-800">${eq.ubicacion}</span></div>
+                <div class="flex items-center gap-3"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><span class="w-32 text-xs font-semibold text-slate-500">${lecturaLabel} Actual:</span><span class="text-xs font-bold text-slate-800">${lecturaValor}</span></div>
+                <div class="flex items-center gap-3"><svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg><span class="w-32 text-xs font-semibold text-slate-500">Combustible:</span><span class="text-xs font-bold text-slate-800">${eq.combustible}</span></div>
+            `;
+            document.getElementById('info-general-lista').innerHTML = infoHtml;
+
+            // 3. PLAN DE MANTENCIÓN
+            const planes = BD.plan_mantenimiento.filter(p => p.equipo_id === eq.id);
+            let planHtml = '';
+            let proximoPlan = null;
+
+            planes.forEach(p => {
+                const colorCls = p.estado === 'AL DÍA' ? 'txt-verde' : p.estado === 'PRÓXIMO' ? 'txt-naranja' : 'txt-rojo';
+                planHtml += `
+                    <tr>
+                        <td><div class="flex items-center gap-2"><svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg> <b>${p.tipo_mantenimiento}</b></div></td>
+                        <td>${p.intervalo}</td>
+                        <td class="text-demogreen font-semibold">${p.ultima_fecha}</td>
+                        <td class="${colorCls}">${p.proxima_fecha}</td>
+                        <td class="${colorCls}">${p.estado === 'ATRASADO' ? '⚠️ ' : ''}${p.estado}</td>
+                    </tr>
+                `;
+                if (p.estado === 'PRÓXIMO' || p.estado === 'ATRASADO') proximoPlan = p;
+            });
+            document.getElementById('tabla-plan').innerHTML = planHtml;
+
+            if (proximoPlan) {
+                document.getElementById('alerta-plan-txt').innerHTML = `Próxima mantención programada: <b>${proximoPlan.proxima_fecha}</b> (Estado: ${proximoPlan.estado})`;
+            } else {
+                document.getElementById('alerta-plan-txt').innerHTML = "Todas las mantenciones están AL DÍA.";
+            }
+
+            // 4. FILTROS Y GRÁFICO
+            const filtros = BD.filtros.filter(f => f.equipo_id === eq.id);
+            const conteo = { AIRE: 0, ACEITE: 0, COMBUSTIBLE: 0, HIDRÁULICO: 0, OTROS: 0 };
+            let proximoFiltro = null;
+
+            let tablaFiltrosHtml = '';
+            filtros.forEach(f => {
+                if (conteo[f.tipo] !== undefined) conteo[f.tipo]++; else conteo['OTROS']++;
+                
+                const colorCls = f.estado === 'AL DÍA' ? 'txt-verde' : f.estado === 'PRÓXIMO' ? 'txt-naranja' : 'txt-rojo';
+                const iconSvg = `<svg class="w-3 h-3 text-slate-400 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>`;
+
+                tablaFiltrosHtml += `
+                    <tr>
+                        <td class="text-center">${iconSvg}</td>
+                        <td><b>${f.tipo}</b></td>
+                        <td>${f.descripcion}</td>
+                        <td class="font-mono text-demoblue-800 font-bold">${f.codigo_parte}</td>
+                        <td>${f.marca}</td>
+                        <td>${f.intervalo}</td>
+                        <td class="text-demogreen font-semibold">${f.ultima_fecha}</td>
+                        <td class="${colorCls}">${f.proxima_fecha}</td>
+                        <td class="${colorCls}">${f.estado === 'ATRASADO' ? '⚠️ ' : ''}${f.estado}</td>
+                    </tr>
+                `;
+
+                if (f.estado === 'PRÓXIMO' || f.estado === 'ATRASADO') {
+                    if (!proximoFiltro || f.estado === 'ATRASADO') proximoFiltro = f;
+                }
+            });
+            document.getElementById('tabla-detalle-filtros').innerHTML = tablaFiltrosHtml || '<tr><td colspan="9" class="text-center text-slate-400 py-4">No hay filtros registrados</td></tr>';
+
+            // Actualizar Tarjeta Resumen Filtros
+            document.getElementById('filtro-total-num').innerText = filtros.length;
+            
+            let leyendaHtml = '';
+            const colores = ['#1E3A8A', '#3B82F6', '#60A5FA', '#F59E0B', '#94A3B8'];
+            const labels = Object.keys(conteo);
+            const dataVals = Object.values(conteo);
+
+            labels.forEach((lbl, i) => {
+                if(dataVals[i] > 0) {
+                    leyendaHtml += `<div class="flex justify-between"><div><span class="inline-block w-2 h-2 rounded-full mr-2" style="background-color:${colores[i]}"></span>${lbl}</div><span class="font-bold">${dataVals[i]}</span></div>`;
+                }
+            });
+            document.getElementById('filtro-leyenda').innerHTML = leyendaHtml;
+
+            // Renderizar Gráfico
+            if (myDonutChart) myDonutChart.destroy();
+            const ctx = document.getElementById('filtroChart').getContext('2d');
+            myDonutChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: { labels: labels, datasets: [{ data: dataVals, backgroundColor: colores, borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+            });
+
+            // Tarjeta Próximo Filtro
+            if (proximoFiltro) {
+                document.getElementById('prox-filtro-nombre').innerText = proximoFiltro.descripcion;
+                document.getElementById('prox-filtro-fecha').innerHTML = `${proximoFiltro.proxima_fecha} <span class="${proximoFiltro.estado === 'ATRASADO' ? 'text-demored' : 'text-demoorange'} font-bold">(${proximoFiltro.estado})</span>`;
+            } else {
+                document.getElementById('prox-filtro-nombre').innerText = "Todo al día";
+                document.getElementById('prox-filtro-fecha').innerText = "-";
+            }
+
+            // 5. HISTORIAL DE MANTENCIONES
+            const headersLectura = [document.getElementById('th-lectura-gral'), document.getElementById('th-lectura-prev'), document.getElementById('th-lectura-corr')];
+            headersLectura.forEach(h => h.innerText = lecturaLabel);
+
+            const mantenciones = BD.mantenciones.filter(m => m.equipo_id === eq.id);
+            let histGralHtml = '', histPrevHtml = '';
+            
+            mantenciones.forEach(m => {
+                const isPrev = m.tipo === 'Preventiva';
+                const statusColor = m.estado === 'COMPLETADA' ? 'bg-demogreen text-white' : 'bg-demoorange text-white';
+                
+                const tr = `
+                    <tr>
+                        <td class="font-semibold">${m.fecha}</td>
+                        <td class="font-bold text-demoblue-800 underline cursor-pointer">${m.ot}</td>
+                        <td>${m.tipo}</td>
+                        <td>${m.pm}</td>
+                        <td>${m.lectura}</td>
+                        <td>${m.descripcion}</td>
+                        <td>${m.responsable}</td>
+                        <td class="font-bold">${m.costo}</td>
+                        <td><span class="text-[9px] px-2 py-1 rounded font-bold uppercase ${statusColor}">${m.estado}</span></td>
+                    </tr>
+                `;
+                histGralHtml += tr;
+
+                if(isPrev) {
+                    histPrevHtml += `
+                        <tr>
+                            <td class="font-semibold">${m.fecha}</td>
+                            <td class="font-bold text-demoblue-800 underline cursor-pointer">${m.ot}</td>
+                            <td><b>${m.pm}</b></td>
+                            <td>${m.lectura}</td>
+                            <td>${m.descripcion}</td>
+                            <td>${m.responsable}</td>
+                            <td class="font-bold">${m.costo}</td>
+                            <td><button class="bg-slate-100 border border-slate-300 text-slate-600 px-3 py-1 rounded text-[10px] font-bold hover:bg-slate-200 transition">VER DETALLE</button></td>
+                        </tr>
+                    `;
+                }
+            });
+            document.getElementById('tabla-historial-gral').innerHTML = histGralHtml || '<tr><td colspan="9" class="text-center text-slate-400 py-4">Sin historial</td></tr>';
+            document.getElementById('tabla-historial-prev').innerHTML = histPrevHtml || '<tr><td colspan="8" class="text-center text-slate-400 py-4">Sin historial preventivo</td></tr>';
+
+            // 6. HISTORIAL CORRECTIVO
+            const correctivos = BD.correctivos.filter(c => c.equipo_id === eq.id);
+            let histCorrHtml = '';
+            
+            correctivos.forEach(c => {
+                const statusColor = c.estado === 'CERRADO' ? 'text-demogreen' : 'text-demoorange';
+                const dotColor = c.estado === 'CERRADO' ? 'bg-demogreen' : 'bg-demoorange';
+                
+                histCorrHtml += `
+                    <tr>
+                        <td class="font-semibold">${c.fecha}</td>
+                        <td class="font-bold text-demoblue-800 underline cursor-pointer">${c.ot}</td>
+                        <td class="text-demored font-bold">${c.falla}</td>
+                        <td>${c.trabajo_realizado}</td>
+                        <td>-</td>
+                        <td>${c.responsable}</td>
+                        <td>${c.tiempo_reparacion}</td>
+                        <td class="font-bold">${c.costo}</td>
+                        <td><div class="flex items-center gap-1.5 ${statusColor} font-bold text-[10px]"><span class="w-2 h-2 rounded-full ${dotColor}"></span>${c.estado}</div></td>
+                    </tr>
+                `;
+            });
+            document.getElementById('tabla-historial-corr').innerHTML = histCorrHtml || '<tr><td colspan="9" class="text-center text-slate-400 py-4">Sin historial correctivo</td></tr>';
+        }
+    </script>
+</body>
+</html>
