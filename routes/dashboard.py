@@ -7,6 +7,9 @@ from flask_login import login_required, current_user
 from sqlalchemy import func, case, text
 from extensions import db
 
+# ==========================================
+# IMPORTACIONES CMMS MANTENIMIENTO
+# ==========================================
 from models.equipo import Equipo, DocumentoEquipo, FiltroEquipo, HistorialUbicacion
 from models.orden_trabajo import OrdenTrabajo
 from models.historial import HistorialLectura, CompraRepuesto
@@ -348,7 +351,6 @@ def detalle_equipo(codigo):
         equipo = Equipo.query.filter_by(codigo=codigo).first()
         if not equipo: return "Equipo no encontrado en la base de datos.", 404
         
-        # OBTENEMOS TODOS LOS EQUIPOS PARA EL SELECTOR HTML
         todos_equipos = Equipo.query.order_by(Equipo.codigo).all()
         
         e_cod = str(equipo.codigo).strip().upper()
@@ -572,21 +574,17 @@ def imprimir_ot(id):
 @login_required
 def logistica_flota():
     try:
-        # Detectar qué empresa eligió el usuario en el Login
         empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
         
-        # 1. Traer vehículos motrices (Reutilizando tabla Equipo del CMMS)
         equipos_motrices = Equipo.query.filter(
             (Equipo.tipo_equipo.ilike('%camion%')) | 
             (Equipo.tipo_equipo.ilike('%tracto%')) |
             (Equipo.tipo_equipo.ilike('%remolcador%'))
         ).order_by(Equipo.codigo).all()
         
-        # 2. Traer Conductores y Ramplas reales de la BD
         conductores = Conductor.query.order_by(Conductor.nombre_completo).all()
         ramplas = Rampla.query.order_by(Rampla.codigo_interno).all()
         
-        # 3. KPIs Calculados en vivo (Sin números falsos)
         kpis = {
             'total_tractos': len(equipos_motrices),
             'tractos_operativos': len([e for e in equipos_motrices if e.estado_base == 'Operativo']),
@@ -627,7 +625,7 @@ def add_conductor():
         return redirect('/logistica/flota')
     except Exception as e:
         db.session.rollback()
-        return f"Error al guardar conductor. Posible RUT duplicado. Detalle: {str(e)}"
+        return f"Error al guardar conductor: {str(e)}"
 
 @dashboard_bp.route('/api/tms/add_rampla', methods=['POST'])
 @login_required
@@ -656,15 +654,12 @@ def logistica_operaciones():
     try:
         empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
         
-        # 1. Traer Solicitudes de Transporte
         solicitudes = SolicitudTransporte.query.order_by(SolicitudTransporte.fecha_solicitud.desc()).all()
         sol_pendientes = [s for s in solicitudes if s.estado == 'SOLICITADA']
         
-        # 2. Traer Viajes (Órdenes de Transporte generadas)
         viajes = Viaje.query.order_by(Viaje.id.desc()).all()
         viajes_activos = [v for v in viajes if v.estado in ['PROGRAMADO', 'EN RUTA', 'EN PUERTO']]
         
-        # 3. KPIs del día
         kpis = {
             'solicitudes_pendientes': len(sol_pendientes),
             'viajes_activos': len(viajes_activos),
@@ -712,7 +707,6 @@ def aprobar_solicitud(id):
         if solicitud.estado == 'SOLICITADA':
             solicitud.estado = 'APROBADA'
             
-            # MAGIA: Al aprobar, creamos automáticamente la OT de Transporte (Viaje)
             folio = f"OT-{obtener_hora_chile().strftime('%Y%m%d')}-{solicitud.id}"
             nuevo_viaje = Viaje(
                 folio_viaje=folio,
@@ -726,3 +720,62 @@ def aprobar_solicitud(id):
     except Exception as e:
         db.session.rollback()
         return f"Error al aprobar solicitud: {str(e)}"
+
+# ==========================================
+# MÓDULO LOGÍSTICA TMS - FASE 4: PLANIFICADOR DE VIAJES
+# ==========================================
+@dashboard_bp.route('/logistica/planificador', strict_slashes=False)
+@login_required
+def logistica_planificador():
+    try:
+        empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
+        
+        viajes_pendientes = Viaje.query.filter_by(estado='PROGRAMADO').order_by(Viaje.fecha_programada.asc()).all()
+        viajes_asignados = Viaje.query.filter_by(estado='ASIGNADA').order_by(Viaje.fecha_programada.asc()).all()
+        
+        solicitudes = SolicitudTransporte.query.all()
+        
+        camiones_disp = Equipo.query.filter(
+            (Equipo.tipo_equipo.ilike('%camion%')) | (Equipo.tipo_equipo.ilike('%tracto%')) | (Equipo.tipo_equipo.ilike('%remolcador%'))
+        ).filter_by(estado_base='Operativo').all()
+        
+        conductores_disp = Conductor.query.filter_by(estado='DISPONIBLE').all()
+        ramplas_disp = Rampla.query.filter_by(estado='DISPONIBLE').all()
+        
+        return render_template('logistica_planificador.html', 
+                               viajes_pendientes=viajes_pendientes,
+                               viajes_asignados=viajes_asignados,
+                               solicitudes=solicitudes,
+                               camiones_disp=camiones_disp,
+                               conductores_disp=conductores_disp,
+                               ramplas_disp=ramplas_disp,
+                               empresa_actual=empresa_actual)
+    except Exception as e:
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error en Planificador:</b> {str(e)}</div>"
+
+@dashboard_bp.route('/api/tms/asignar_viaje/<int:id>', methods=['POST'])
+@login_required
+def asignar_viaje(id):
+    try:
+        viaje = Viaje.query.get_or_404(id)
+        
+        conductor_id = request.form.get('conductor_id')
+        rampla_id = request.form.get('rampla_id')
+        codigo_equipo = request.form.get('codigo_equipo')
+        
+        viaje.conductor_id = conductor_id
+        viaje.rampla_id = rampla_id
+        viaje.codigo_equipo = codigo_equipo
+        viaje.estado = 'ASIGNADA'
+        
+        conductor = Conductor.query.get(conductor_id)
+        if conductor: conductor.estado = 'EN VIAJE'
+        
+        rampla = Rampla.query.get(rampla_id)
+        if rampla: rampla.estado = 'EN VIAJE'
+        
+        db.session.commit()
+        return redirect('/logistica/planificador')
+    except Exception as e:
+        db.session.rollback()
+        return f"Error al asignar el viaje: {str(e)}"
