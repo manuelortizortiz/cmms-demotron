@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planificador - ManTyre ERP</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 900: '#0F172A', 800: '#1E3A8A', 500: '#3B82F6' },
+                        status: { ok: '#16A34A', warn: '#F59E0B', danger: '#DC2626' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #F8FAFC; color: #1E293B; }
+        .sidebar-bg { background-color: #0F172A; border-right: 1px solid #1E293B; }
+        .nav-link { color: #94A3B8; display: block; padding: 10px 24px; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s;}
+        .nav-link:hover { color: #FFFFFF; background-color: rgba(255,255,255,0.05); }
+        .nav-link.active { color: #FFFFFF; background-color: #1E3A8A; font-weight: 700; border-left: 4px solid #60A5FA; }
+        .card { background: white; border: 1px solid #E2E8F0; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- SIDEBAR MANTYRE -->
+    <aside class="w-64 sidebar-bg flex flex-col z-40 shrink-0">
+        <div class="h-20 flex items-center px-6 border-b border-slate-800">
+            <h1 class="text-xl font-black tracking-widest uppercase text-white">ManTyre<span class="text-brand-500">ERP</span></h1>
+        </div>
+        <nav class="flex-1 py-6 overflow-y-auto space-y-1">
+            <p class="px-6 text-[10px] font-bold text-brand-500 uppercase tracking-widest mb-2 mt-2">TMS & Logística</p>
+            <a href="/logistica/flota" class="nav-link">Gestión de Flota y RRHH</a>
+            <a href="/logistica/operaciones" class="nav-link">Órdenes de Transporte</a>
+            <a href="/logistica/planificador" class="nav-link active">Planificador de Viajes</a>
+            <a href="#" class="nav-link opacity-50 cursor-not-allowed">Tracking GPS</a>
+            
+            <p class="px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-8">CMMS Mantenimiento</p>
+            <a href="/" class="nav-link">Dashboard Mantenimiento</a>
+            <a href="/bodega_kpi" class="nav-link">Bodega e Inventario</a>
+        </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col min-w-0">
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm">
+            <h2 class="text-lg font-bold text-slate-800 uppercase tracking-wide">Planificador Maestro de Transportes</h2>
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Unidad de Negocio:</span>
+                <span class="bg-brand-50 text-brand-800 border border-brand-200 px-3 py-1 rounded text-xs font-black uppercase tracking-widest">{{ empresa_actual }}</span>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6 md:p-8 flex gap-6 items-start">
+            
+            <!-- COLUMNA 1: PENDIENTES DE ASIGNACIÓN -->
+            <div class="w-1/2 flex flex-col gap-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-slate-700 uppercase tracking-wider text-sm">Esperando Asignación</h3>
+                    <span class="bg-status-warn text-white font-bold px-2 py-0.5 rounded text-xs">{{ viajes_pendientes|length }}</span>
+                </div>
+                
+                {% for v in viajes_pendientes %}
+                {% set sol = solicitudes | selectattr("id", "equalto", v.solicitud_id) | list | first %}
+                <div class="card p-5 border-l-4 border-status-warn flex flex-col gap-3">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase">OT: {{ v.folio_viaje }}</p>
+                            <h4 class="font-bold text-brand-900 text-sm mt-1">{{ sol.cliente if sol else 'S/I' }}</h4>
+                        </div>
+                        <span class="text-status-warn font-black text-[10px] uppercase border border-current px-2 py-0.5 rounded bg-amber-50">PROGRAMADO</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="bg-slate-50 p-2 rounded border border-slate-100"><span class="block text-[9px] text-slate-400 font-bold uppercase mb-0.5">Ruta</span><span class="font-semibold text-slate-700">{{ sol.origen if sol else '' }} ➜ {{ sol.destino if sol else '' }}</span></div>
+                        <div class="bg-slate-50 p-2 rounded border border-slate-100"><span class="block text-[9px] text-slate-400 font-bold uppercase mb-0.5">Carga</span><span class="font-semibold text-slate-700">{{ sol.tipo_carga if sol else '' }} ({{ sol.peso_kg if sol else 0 }} KG)</span></div>
+                    </div>
+                    <button onclick="abrirModalPlan('{{ v.id }}', '{{ v.folio_viaje }}', '{{ sol.origen if sol else '' }} ➜ {{ sol.destino if sol else '' }}')" class="mt-2 w-full bg-brand-800 hover:bg-brand-900 text-white font-bold py-2 rounded text-[11px] uppercase tracking-wider transition-colors">Asignar Equipo y Conductor</button>
+                </div>
+                {% else %}
+                <div class="card p-8 text-center text-slate-400 border-dashed">No hay viajes esperando asignación.</div>
+                {% endfor %}
+            </div>
+
+            <!-- COLUMNA 2: VIAJES ASIGNADOS LISTOS -->
+            <div class="w-1/2 flex flex-col gap-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-slate-700 uppercase tracking-wider text-sm">Viajes Asignados (Listos para salir)</h3>
+                    <span class="bg-status-ok text-white font-bold px-2 py-0.5 rounded text-xs">{{ viajes_asignados|length }}</span>
+                </div>
+
+                {% for v in viajes_asignados %}
+                {% set sol = solicitudes | selectattr("id", "equalto", v.solicitud_id) | list | first %}
+                <div class="card p-5 border-l-4 border-status-ok flex flex-col gap-3">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase">OT: {{ v.folio_viaje }}</p>
+                            <h4 class="font-bold text-brand-900 text-sm mt-1">{{ sol.origen if sol else '' }} ➜ {{ sol.destino if sol else '' }}</h4>
+                        </div>
+                        <span class="text-status-ok font-black text-[10px] uppercase border border-current px-2 py-0.5 rounded bg-green-50">ASIGNADO</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-[10px] mt-2 border-t border-slate-100 pt-3">
+                        <div><span class="text-slate-400 font-bold block uppercase mb-1">Tracto</span><span class="font-bold text-brand-800">{{ v.codigo_equipo }}</span></div>
+                        <div><span class="text-slate-400 font-bold block uppercase mb-1">Rampla</span><span class="font-bold text-brand-800">RP-{{ v.rampla_id }}</span></div>
+                        <div><span class="text-slate-400 font-bold block uppercase mb-1">Conductor ID</span><span class="font-bold text-brand-800">ID-{{ v.conductor_id }}</span></div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card p-8 text-center text-slate-400 border-dashed">No hay viajes asignados recientemente.</div>
+                {% endfor %}
+            </div>
+
+        </div>
+    </main>
+
+    <!-- MODAL DE ASIGNACIÓN -->
+    <div id="modal-plan" class="fixed inset-0 bg-slate-900/80 z-[600] hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-lg shadow-xl overflow-hidden">
+            <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800 uppercase text-xs">Asignar Recursos al Viaje</h3>
+                <button onclick="document.getElementById('modal-plan').classList.add('hidden')" class="text-xl text-slate-400 hover:text-slate-800">&times;</button>
+            </div>
+            
+            <form id="form-asignacion" method="POST" class="p-6 space-y-5">
+                <div class="bg-brand-50 p-3 rounded border border-brand-100 mb-2">
+                    <p class="text-[10px] font-bold text-brand-800 uppercase" id="lbl-folio">OT-XXXX</p>
+                    <p class="text-sm font-bold text-slate-700" id="lbl-ruta">Ruta</p>
+                </div>
+
+                <!-- SELECT TRACTO (Desde CMMS) -->
+                <div>
+                    <label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">1. Vehículo / Tracto (Solo Operativos)</label>
+                    <select name="codigo_equipo" required class="w-full border border-slate-300 rounded p-2 text-sm uppercase">
+                        <option value="" disabled selected>Seleccione Vehículo...</option>
+                        {% for c in camiones_disp %}
+                        <option value="{{ c.codigo }}">{{ c.codigo }} - {{ c.marca }} {{ c.modelo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- SELECT RAMPLA -->
+                <div>
+                    <label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">2. Rampla / Equipo de Arrastre</label>
+                    <select name="rampla_id" required class="w-full border border-slate-300 rounded p-2 text-sm uppercase">
+                        <option value="" disabled selected>Seleccione Rampla...</option>
+                        {% for r in ramplas_disp %}
+                        <option value="{{ r.id }}">{{ r.codigo_interno }} - {{ r.tipo_rampla }} (Cap: {{ r.capacidad_kg }} KG)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- SELECT CONDUCTOR -->
+                <div>
+                    <label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">3. Conductor Asignado</label>
+                    <select name="conductor_id" required class="w-full border border-slate-300 rounded p-2 text-sm uppercase">
+                        <option value="" disabled selected>Seleccione Conductor...</option>
+                        {% for cond in conductores_disp %}
+                        <option value="{{ cond.id }}">{{ cond.nombre_completo }} (Licencia: {{ cond.clase_licencia }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="w-full bg-brand-800 hover:bg-brand-900 text-white font-bold py-3 rounded text-xs uppercase tracking-wider mt-4">Confirmar Asignación</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function abrirModalPlan(idViaje, folio, ruta) {
+            document.getElementById('lbl-folio').innerText = folio;
+            document.getElementById('lbl-ruta').innerText = ruta;
+            document.getElementById('form-asignacion').action = '/api/tms/asignar_viaje/' + idViaje;
+            document.getElementById('modal-plan').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
