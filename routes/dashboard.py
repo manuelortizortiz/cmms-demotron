@@ -15,7 +15,9 @@ from models.bodega import InventarioBodega, Repuesto, MovimientoBodega, RecetaMo
 from utils.formatters import format_num, format_clp, buscar_foto_por_tipo
 from models.chatter import RegistroChatter
 
-# Importaciones del Nuevo Módulo Logístico TMS
+# ==========================================
+# IMPORTACIONES DEL NUEVO MÓDULO LOGÍSTICO TMS
+# ==========================================
 from models.logistica import Empresa, Conductor, Rampla, RutaMaestra, SolicitudTransporte, Viaje, CargaViaje, OperacionPortuaria, IncidenciaTransporte
 
 # ==========================================
@@ -644,3 +646,83 @@ def add_rampla():
     except Exception as e:
         db.session.rollback()
         return f"Error al guardar rampla: {str(e)}"
+
+# ==========================================
+# MÓDULO LOGÍSTICA TMS - FASE 3: OPERACIONES Y OTs
+# ==========================================
+@dashboard_bp.route('/logistica/operaciones', strict_slashes=False)
+@login_required
+def logistica_operaciones():
+    try:
+        empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
+        
+        # 1. Traer Solicitudes de Transporte
+        solicitudes = SolicitudTransporte.query.order_by(SolicitudTransporte.fecha_solicitud.desc()).all()
+        sol_pendientes = [s for s in solicitudes if s.estado == 'SOLICITADA']
+        
+        # 2. Traer Viajes (Órdenes de Transporte generadas)
+        viajes = Viaje.query.order_by(Viaje.id.desc()).all()
+        viajes_activos = [v for v in viajes if v.estado in ['PROGRAMADO', 'EN RUTA', 'EN PUERTO']]
+        
+        # 3. KPIs del día
+        kpis = {
+            'solicitudes_pendientes': len(sol_pendientes),
+            'viajes_activos': len(viajes_activos),
+            'viajes_completados': len([v for v in viajes if v.estado == 'ENTREGADO'])
+        }
+        
+        return render_template('logistica_operaciones.html', 
+                               solicitudes=solicitudes, 
+                               sol_pendientes=sol_pendientes,
+                               viajes=viajes,
+                               viajes_activos=viajes_activos,
+                               kpis=kpis, 
+                               empresa_actual=empresa_actual)
+    except Exception as e:
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error Crítico en Operaciones:</b> {str(e)}</div>"
+
+@dashboard_bp.route('/api/tms/add_solicitud', methods=['POST'])
+@login_required
+def add_solicitud():
+    try:
+        fecha_req = request.form.get('fecha_requerida')
+        fecha_requerida = datetime.strptime(fecha_req, '%Y-%m-%d').date() if fecha_req else None
+        
+        nueva = SolicitudTransporte(
+            cliente=request.form.get('cliente').upper().strip(),
+            origen=request.form.get('origen').upper().strip(),
+            destino=request.form.get('destino').upper().strip(),
+            tipo_carga=request.form.get('tipo_carga').upper().strip(),
+            peso_kg=float(request.form.get('peso') or 0.0),
+            fecha_requerida=fecha_requerida,
+            estado='SOLICITADA'
+        )
+        db.session.add(nueva)
+        db.session.commit()
+        return redirect('/logistica/operaciones')
+    except Exception as e:
+        db.session.rollback()
+        return f"Error al guardar solicitud: {str(e)}"
+
+@dashboard_bp.route('/api/tms/aprobar_solicitud/<int:id>', methods=['POST'])
+@login_required
+def aprobar_solicitud(id):
+    try:
+        solicitud = SolicitudTransporte.query.get_or_404(id)
+        if solicitud.estado == 'SOLICITADA':
+            solicitud.estado = 'APROBADA'
+            
+            # MAGIA: Al aprobar, creamos automáticamente la OT de Transporte (Viaje)
+            folio = f"OT-{obtener_hora_chile().strftime('%Y%m%d')}-{solicitud.id}"
+            nuevo_viaje = Viaje(
+                folio_viaje=folio,
+                solicitud_id=solicitud.id,
+                fecha_programada=solicitud.fecha_requerida,
+                estado='PROGRAMADO'
+            )
+            db.session.add(nuevo_viaje)
+            db.session.commit()
+        return redirect('/logistica/operaciones')
+    except Exception as e:
+        db.session.rollback()
+        return f"Error al aprobar solicitud: {str(e)}"
