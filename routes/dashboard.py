@@ -15,6 +15,9 @@ from models.bodega import InventarioBodega, Repuesto, MovimientoBodega, RecetaMo
 from utils.formatters import format_num, format_clp, buscar_foto_por_tipo
 from models.chatter import RegistroChatter
 
+# Importaciones del Nuevo Módulo Logístico TMS
+from models.logistica import Empresa, Conductor, Rampla, RutaMaestra, SolicitudTransporte, Viaje, CargaViaje, OperacionPortuaria, IncidenciaTransporte
+
 # ==========================================
 # MOTOR DE TIEMPO CHILENO
 # ==========================================
@@ -31,6 +34,9 @@ def obtener_hora_chile():
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
+# ==========================================
+# MÓDULO 1: DASHBOARD GENERAL CMMS
+# ==========================================
 @dashboard_bp.route('/', strict_slashes=False)
 @login_required
 def dashboard():
@@ -556,3 +562,85 @@ def imprimir_ot(id):
         return render_template('imprimir_ot.html', ot=ot, equipo=equipo, filtros=filtros, hoy=obtener_hora_chile())
     except Exception as e:
         return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error al cargar la Orden de Trabajo:</b> {str(e)}</div>"
+
+# ==========================================
+# MÓDULO LOGÍSTICA TMS - FASE 2: FLOTA Y CONDUCTORES
+# ==========================================
+@dashboard_bp.route('/logistica/flota', strict_slashes=False)
+@login_required
+def logistica_flota():
+    try:
+        # Detectar qué empresa eligió el usuario en el Login
+        empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
+        
+        # 1. Traer vehículos motrices (Reutilizando tabla Equipo del CMMS)
+        equipos_motrices = Equipo.query.filter(
+            (Equipo.tipo_equipo.ilike('%camion%')) | 
+            (Equipo.tipo_equipo.ilike('%tracto%')) |
+            (Equipo.tipo_equipo.ilike('%remolcador%'))
+        ).order_by(Equipo.codigo).all()
+        
+        # 2. Traer Conductores y Ramplas reales de la BD
+        conductores = Conductor.query.order_by(Conductor.nombre_completo).all()
+        ramplas = Rampla.query.order_by(Rampla.codigo_interno).all()
+        
+        # 3. KPIs Calculados en vivo (Sin números falsos)
+        kpis = {
+            'total_tractos': len(equipos_motrices),
+            'tractos_operativos': len([e for e in equipos_motrices if e.estado_base == 'Operativo']),
+            'total_conductores': len(conductores),
+            'conductores_disponibles': len([c for c in conductores if c.estado == 'DISPONIBLE']),
+            'total_ramplas': len(ramplas),
+            'ramplas_disponibles': len([r for r in ramplas if r.estado == 'DISPONIBLE'])
+        }
+        
+        hoy_fecha = obtener_hora_chile().date()
+        
+        return render_template('logistica_flota.html', 
+                               equipos=equipos_motrices, 
+                               conductores=conductores, 
+                               ramplas=ramplas, 
+                               kpis=kpis, 
+                               empresa_actual=empresa_actual,
+                               hoy=hoy_fecha)
+    except Exception as e:
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error Crítico en TMS Flota:</b> {str(e)}</div>"
+
+@dashboard_bp.route('/api/tms/add_conductor', methods=['POST'])
+@login_required
+def add_conductor():
+    try:
+        fecha_venc = request.form.get('vencimiento')
+        vencimiento = datetime.strptime(fecha_venc, '%Y-%m-%d').date() if fecha_venc else None
+        
+        nuevo = Conductor(
+            rut=request.form.get('rut').strip(),
+            nombre_completo=request.form.get('nombre').upper().strip(),
+            clase_licencia=request.form.get('licencia').upper().strip(),
+            vencimiento_licencia=vencimiento,
+            estado='DISPONIBLE'
+        )
+        db.session.add(nuevo)
+        db.session.commit()
+        return redirect('/logistica/flota')
+    except Exception as e:
+        db.session.rollback()
+        return f"Error al guardar conductor. Posible RUT duplicado. Detalle: {str(e)}"
+
+@dashboard_bp.route('/api/tms/add_rampla', methods=['POST'])
+@login_required
+def add_rampla():
+    try:
+        nueva = Rampla(
+            codigo_interno=request.form.get('codigo').upper().strip(),
+            patente=request.form.get('patente').upper().strip(),
+            tipo_rampla=request.form.get('tipo').upper().strip(),
+            capacidad_kg=float(request.form.get('capacidad') or 0.0),
+            estado='DISPONIBLE'
+        )
+        db.session.add(nueva)
+        db.session.commit()
+        return redirect('/logistica/flota')
+    except Exception as e:
+        db.session.rollback()
+        return f"Error al guardar rampla: {str(e)}"
