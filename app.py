@@ -45,20 +45,28 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # ==========================================
-# AUTO-MIGRACIÓN MULTI-EMPRESA SEGURA
+# AUTO-MIGRACIÓN SILENCIOSA SEGURO
 # ==========================================
 with app.app_context():
     db.create_all()
     
-    # Este script le inyecta a las tablas antiguas la columna 'empresa' sin borrar historial
+    # 1. Migrar Empresas
     tablas_a_migrar = ['equipo', 'orden_trabajo', 'conductores', 'ramplas', 'solicitudes_transporte', 'viajes_transporte']
     for tabla in tablas_a_migrar:
         try:
             db.session.execute(text(f"ALTER TABLE {tabla} ADD COLUMN empresa VARCHAR(100) DEFAULT 'DEMOTRON'"))
             db.session.commit()
         except Exception:
-            db.session.rollback() # Si la columna ya existe, la ignora
+            db.session.rollback()
 
+    # 2. SOLUCIÓN AL ERROR: Inyectar la columna "observacion" en PostgreSQL
+    try:
+        db.session.execute(text("ALTER TABLE orden_trabajo ADD COLUMN observacion TEXT"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+    # Crear usuario Admin Salvavidas
     if not User.query.filter_by(username='admin').first():
         admin = User(username='admin', password_hash=generate_password_hash('admin123'), role='admin')
         db.session.add(admin)
