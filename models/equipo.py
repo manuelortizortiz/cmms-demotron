@@ -4,68 +4,51 @@ from datetime import datetime
 class Equipo(db.Model):
     __tablename__ = 'equipo'
     
-    id = db.Column(db.Integer, primary_key=True)
-    codigo = db.Column(db.String(50), unique=True, nullable=False)
-    tipo_equipo = db.Column(db.String(100))
+    codigo = db.Column(db.String(50), primary_key=True)
+    # ===== NUEVO CAMPO MULTI-EMPRESA =====
+    empresa = db.Column(db.String(100), default='DEMOTRON') 
+    
     marca = db.Column(db.String(100))
     modelo = db.Column(db.String(100))
+    tipo_equipo = db.Column(db.String(100))
     patente = db.Column(db.String(50))
     vin = db.Column(db.String(100))
-    numero_motor = db.Column(db.String(100)) # CAMPO RECUPERADO
-    ubicacion = db.Column(db.String(100), default="CASA MATRIZ")
-    estado_base = db.Column(db.String(50), default="Operativo") 
-    control_base = db.Column(db.String(20), default="HORAS") 
-    frecuencia_base = db.Column(db.Float, default=250.0) 
+    
+    estado_base = db.Column(db.String(50), default='Operativo') # Operativo, Taller, Fuera de Servicio
+    control_base = db.Column(db.String(50), default='HORAS') # HORAS o KILOMETROS
+    
     lectura_actual = db.Column(db.Float, default=0.0)
     proxima_pm = db.Column(db.Float, default=0.0)
+    ubicacion = db.Column(db.String(150), default='SIN ASIGNAR')
 
-    @property
-    def margen(self):
-        return (self.proxima_pm or 0.0) - (self.lectura_actual or 0.0)
-
-    def __repr__(self):
-        return f"<Equipo {self.codigo}>"
 
 class FiltroEquipo(db.Model):
     __tablename__ = 'filtro_equipo'
-    
     id = db.Column(db.Integer, primary_key=True)
-    codigo_equipo = db.Column(db.String(50), nullable=False)
+    codigo_equipo = db.Column(db.String(50), db.ForeignKey('equipo.codigo'))
     sistema = db.Column(db.String(100))
-    cant = db.Column(db.String(50))
-    fleetguard = db.Column(db.String(100))
-    baldwind = db.Column(db.String(100))
+    cant = db.Column(db.String(20), default='1')
     originales = db.Column(db.String(100))
+    fleetguard = db.Column(db.String(100))
     donaldson = db.Column(db.String(100))
-    otra_alternativa = db.Column(db.String(150))
+    baldwind = db.Column(db.String(100))
+    otra_alternativa = db.Column(db.String(100))
 
-    @property
-    def filtro(self): return self.sistema
-    @property
-    def cantidad(self): return self.cant
-    @property
-    def codigo(self): return self.originales
-    @property
-    def codigo_parte(self): return self.originales
-    @property
-    def nombre_filtro(self): return self.sistema
-
-    def __repr__(self):
-        return f"<Filtro {self.sistema} - {self.codigo_equipo}>"
 
 class DocumentoEquipo(db.Model):
     __tablename__ = 'documento_equipo'
     id = db.Column(db.Integer, primary_key=True)
-    codigo_equipo = db.Column(db.String(50), nullable=False)
-    tipo_documento = db.Column(db.String(100), nullable=False)
-    fecha_vencimiento = db.Column(db.Date, nullable=True)
-    archivo_url = db.Column(db.String(255), nullable=True)
+    codigo_equipo = db.Column(db.String(50), db.ForeignKey('equipo.codigo'))
+    tipo_documento = db.Column(db.String(100))
+    fecha_vencimiento = db.Column(db.Date)
+    archivo_url = db.Column(db.String(255))
     fecha_subida = db.Column(db.DateTime, default=datetime.now)
+
 
 class HistorialUbicacion(db.Model):
     __tablename__ = 'historial_ubicacion'
     id = db.Column(db.Integer, primary_key=True)
-    codigo_equipo = db.Column(db.String(50), nullable=False)
-    ubicacion_anterior = db.Column(db.String(100))
-    ubicacion_nueva = db.Column(db.String(100), nullable=False)
+    codigo_equipo = db.Column(db.String(50), db.ForeignKey('equipo.codigo'))
+    ubicacion_anterior = db.Column(db.String(150))
+    ubicacion_nueva = db.Column(db.String(150))
     fecha = db.Column(db.DateTime, default=datetime.now)
