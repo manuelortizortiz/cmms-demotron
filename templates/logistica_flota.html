@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Flota - ManTyre ERP</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 900: '#0F172A', 800: '#1E3A8A', 500: '#3B82F6' },
+                        status: { ok: '#16A34A', warn: '#F59E0B', danger: '#DC2626' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #F8FAFC; color: #1E293B; }
+        .sidebar-bg { background-color: #0F172A; border-right: 1px solid #1E293B; }
+        .nav-link { color: #94A3B8; display: block; padding: 10px 24px; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s;}
+        .nav-link:hover { color: #FFFFFF; background-color: rgba(255,255,255,0.05); }
+        .nav-link.active { color: #FFFFFF; background-color: #1E3A8A; font-weight: 700; border-left: 4px solid #60A5FA; }
+        
+        .card { background: white; border: 1px solid #E2E8F0; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); overflow: hidden;}
+        .table-custom { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
+        .table-custom th { background-color: #F8FAFC; color: #475569; font-weight: 700; text-transform: uppercase; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; }
+        .table-custom td { padding: 12px 16px; border-bottom: 1px solid #F1F5F9; font-weight: 500; }
+        .table-custom tr:hover { background-color: #F8FAFC; }
+        
+        .tab-btn { padding: 12px 24px; font-size: 12px; font-weight: 600; text-transform: uppercase; color: #64748B; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-btn.active { color: #1E3A8A; border-bottom-color: #1E3A8A; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- SIDEBAR MANTYRE -->
+    <aside class="w-64 sidebar-bg flex flex-col z-40 shrink-0">
+        <div class="h-20 flex items-center px-6 border-b border-slate-800">
+            <h1 class="text-xl font-black tracking-widest uppercase text-white">ManTyre<span class="text-brand-500">ERP</span></h1>
+        </div>
+        <nav class="flex-1 py-6 overflow-y-auto space-y-1">
+            <p class="px-6 text-[10px] font-bold text-brand-500 uppercase tracking-widest mb-2 mt-2">TMS & Logística</p>
+            <a href="/logistica/flota" class="nav-link active">Gestión de Flota y RRHH</a>
+            <a href="/logistica/operaciones" class="nav-link">Órdenes de Transporte</a>
+            <a href="/logistica/planificador" class="nav-link">Planificador de Viajes</a>
+            <a href="/logistica/puertos" class="nav-link">Control Portuario</a>
+            
+            <p class="px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-8">CMMS Mantenimiento</p>
+            <a href="/" class="nav-link">Dashboard Mantenimiento</a>
+            <a href="/bodega_kpi" class="nav-link">Bodega e Inventario</a>
+        </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col min-w-0">
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm">
+            <h2 class="text-lg font-bold text-slate-800 uppercase tracking-wide">Módulo de Flota y Conductores</h2>
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Unidad de Negocio:</span>
+                <span class="bg-brand-50 text-brand-800 border border-brand-200 px-3 py-1 rounded text-xs font-black uppercase tracking-widest">{{ empresa_actual }}</span>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6 md:p-8">
+            
+            <!-- KPIs DINÁMICOS REALES -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="card p-6 border-l-4 border-brand-800">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Tractocamiones / Vehículos</p>
+                    <div class="flex items-end gap-3">
+                        <span class="text-3xl font-black text-brand-900">{{ kpis.total_tractos }}</span>
+                        <span class="text-xs font-semibold text-status-ok mb-1">{{ kpis.tractos_operativos }} Operativos</span>
+                    </div>
+                </div>
+                <div class="card p-6 border-l-4 border-slate-700">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Ramplas / Arrastre</p>
+                    <div class="flex items-end gap-3">
+                        <span class="text-3xl font-black text-brand-900">{{ kpis.total_ramplas }}</span>
+                        <span class="text-xs font-semibold text-status-ok mb-1">{{ kpis.ramplas_disponibles }} Disponibles</span>
+                    </div>
+                </div>
+                <div class="card p-6 border-l-4 border-brand-500">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Conductores Activos</p>
+                    <div class="flex items-end gap-3">
+                        <span class="text-3xl font-black text-brand-900">{{ kpis.total_conductores }}</span>
+                        <span class="text-xs font-semibold text-status-ok mb-1">{{ kpis.conductores_disponibles }} Disponibles</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABS NAVEGACIÓN -->
+            <div class="border-b border-slate-200 mb-6 flex gap-2">
+                <button onclick="switchTab('tab-conductores')" id="btn-tab-conductores" class="tab-btn active">Conductores</button>
+                <button onclick="switchTab('tab-ramplas')" id="btn-tab-ramplas" class="tab-btn">Ramplas y Equipos</button>
+                <button onclick="switchTab('tab-tractos')" id="btn-tab-tractos" class="tab-btn">Tractocamiones (CMMS)</button>
+            </div>
+
+            <!-- TAB 1: CONDUCTORES -->
+            <div id="tab-conductores" class="tab-content active">
+                <div class="card">
+                    <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-700 text-xs uppercase">Maestro de Conductores</h3>
+                        <button onclick="document.getElementById('modal-conductor').classList.remove('hidden')" class="bg-brand-800 hover:bg-brand-900 text-white text-[11px] font-bold px-4 py-2 rounded uppercase tracking-wider transition-colors">+ Registrar Conductor</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="table-custom">
+                            <thead><tr><th>RUT</th><th>Nombre Completo</th><th>Licencia</th><th>Vencimiento</th><th>Disponibilidad</th></tr></thead>
+                            <tbody>
+                                {% for c in conductores %}
+                                <tr>
+                                    <td class="font-mono text-brand-800 font-bold">{{ c.rut }}</td>
+                                    <td class="font-bold">{{ c.nombre_completo }}</td>
+                                    <td>Clase {{ c.clase_licencia }}</td>
+                                    <td>
+                                        {% if c.vencimiento_licencia %}
+                                            {% if c.vencimiento_licencia < hoy %}
+                                                <span class="text-status-danger font-black border border-status-danger bg-red-50 px-2 py-0.5 rounded text-[10px]">{{ c.vencimiento_licencia.strftime('%d/%m/%Y') }} (VENCIDA)</span>
+                                            {% elif (c.vencimiento_licencia - hoy).days <= 30 %}
+                                                <span class="text-status-warn font-bold">{{ c.vencimiento_licencia.strftime('%d/%m/%Y') }} (Próxima)</span>
+                                            {% else %}
+                                                <span class="text-slate-600">{{ c.vencimiento_licencia.strftime('%d/%m/%Y') }}</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-slate-400">No registrada</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><span class="{% if c.estado == 'DISPONIBLE' %}text-status-ok{% else %}text-slate-500{% endif %} font-bold text-[10px] uppercase border border-current px-2 py-0.5 rounded">{{ c.estado }}</span></td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" class="text-center py-8 text-slate-400">No hay conductores registrados.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: RAMPLAS -->
+            <div id="tab-ramplas" class="tab-content">
+                <div class="card">
+                    <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-700 text-xs uppercase">Equipos de Arrastre</h3>
+                        <button onclick="document.getElementById('modal-rampla').classList.remove('hidden')" class="bg-brand-800 hover:bg-brand-900 text-white text-[11px] font-bold px-4 py-2 rounded uppercase tracking-wider transition-colors">+ Registrar Rampla</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="table-custom">
+                            <thead><tr><th>Código</th><th>Patente</th><th>Tipo</th><th>Capacidad Carga</th><th>Estado Logístico</th></tr></thead>
+                            <tbody>
+                                {% for r in ramplas %}
+                                <tr>
+                                    <td class="font-bold text-brand-900">{{ r.codigo_interno }}</td>
+                                    <td class="font-mono text-slate-600">{{ r.patente }}</td>
+                                    <td>{{ r.tipo_rampla }}</td>
+                                    <td class="font-bold">{{ "{:,.0f}".format(r.capacidad_kg).replace(',', '.') }} KG</td>
+                                    <td><span class="{% if r.estado == 'DISPONIBLE' %}text-status-ok{% elif r.estado == 'EN MANTENIMIENTO' %}text-status-danger{% else %}text-status-warn{% endif %} font-bold text-[10px] uppercase border border-current px-2 py-0.5 rounded">{{ r.estado }}</span></td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" class="text-center py-8 text-slate-400">No hay ramplas registradas.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: TRACTOCAMIONES (Conectado a CMMS) -->
+            <div id="tab-tractos" class="tab-content">
+                <div class="card border-brand-500">
+                    <div class="bg-brand-50 p-4 border-b border-brand-100 flex justify-between items-center">
+                        <div>
+                            <h3 class="font-bold text-brand-900 text-xs uppercase">Tractocamiones Disponibles</h3>
+                            <p class="text-[10px] text-brand-800 mt-1">Estos vehículos son extraídos automáticamente del módulo de mantenimiento (CMMS).</p>
+                        </div>
+                        <a href="/" class="bg-white border border-brand-300 text-brand-800 hover:bg-brand-100 text-[11px] font-bold px-4 py-2 rounded uppercase tracking-wider transition-colors">Ver CMMS Flota</a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="table-custom">
+                            <thead><tr><th>Código CMMS</th><th>Marca / Modelo</th><th>Patente</th><th>Lectura</th><th>Disponibilidad Mantenimiento</th></tr></thead>
+                            <tbody>
+                                {% for e in equipos %}
+                                <tr>
+                                    <td class="font-bold text-brand-900 cursor-pointer hover:underline" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
+                                    <td>{{ e.marca }} {{ e.modelo }}</td>
+                                    <td class="font-mono text-slate-600">{{ e.patente }}</td>
+                                    <td>{{ "{:,.0f}".format(e.lectura_actual or 0).replace(',', '.') }} {{ e.control_base }}</td>
+                                    <td>
+                                        {% if e.estado_base == 'Operativo' %}
+                                            <span class="text-status-ok font-bold text-[10px] uppercase border border-current px-2 py-0.5 rounded">LIBERADO PARA VIAJE</span>
+                                        {% else %}
+                                            <span class="text-status-danger font-bold text-[10px] uppercase border border-current px-2 py-0.5 rounded bg-red-50">BLOQUEADO POR TALLER</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" class="text-center py-8 text-slate-400">No hay camiones registrados en el CMMS.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- MODAL NUEVO CONDUCTOR -->
+    <div id="modal-conductor" class="fixed inset-0 bg-slate-900/80 z-[600] hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-lg shadow-xl overflow-hidden">
+            <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800 uppercase text-xs">Registrar Conductor</h3>
+                <button onclick="document.getElementById('modal-conductor').classList.add('hidden')" class="text-xl text-slate-400 hover:text-slate-800">&times;</button>
+            </div>
+            <form action="/api/tms/add_conductor" method="POST" class="p-6 space-y-4">
+                <div><label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">RUT</label><input type="text" name="rut" placeholder="Ej: 12.345.678-9" required class="w-full border border-slate-300 rounded p-2 text-sm uppercase"></div>
+                <div><label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">Nombre Completo</label><input type="text" name="nombre" required class="w-full border border-slate-300 rounded p-2 text-sm uppercase"></div>
+                <div><label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">Clase Licencia</label><input type="text" name="licencia" placeholder="Ej: A5" required class="w-full border border-slate-300 rounded p-2 text-sm uppercase"></div>
+                <div><label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">Vencimiento Licencia</label><input type="date" name="vencimiento" required class="w-full border border-slate-300 rounded p-2 text-sm text-slate-700"></div>
+                <button type="submit" class="w-full bg-brand-800 hover:bg-brand-900 text-white font-bold py-3 rounded text-xs uppercase tracking-wider mt-4">Guardar Conductor</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL NUEVA RAMPLA -->
+    <div id="modal-rampla" class="fixed inset-0 bg-slate-900/80 z-[600] hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-lg shadow-xl overflow-hidden">
+            <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800 uppercase text-xs">Registrar Rampla</h3>
+                <button onclick="document.getElementById('modal-rampla').classList.add('hidden')" class="text-xl text-slate-400 hover:text-slate-800">&times;</button>
+            </div>
+            <form action="/api/tms/add_rampla" method="POST" class="p-6 space-y-4">
+                <div><label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">Código Interno</label><input type="text" name="codigo" placeholder="Ej: RP-18" required class="w-full border border-slate-300 rounded p-2 text-sm uppercase"></div>
+                <div><label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">Patente</label><input type="text" name="patente" required class="w-full border border-slate-300 rounded p-2 text-sm uppercase"></div>
+                <div><label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">Tipo de Rampla</label><select name="tipo" class="w-full border border-slate-300 rounded p-2 text-sm uppercase"><option value="CAMA BAJA">Cama Baja</option><option value="PLANA">Plana</option><option value="FURGON">Furgón</option><option value="TOLVA">Tolva</option></select></div>
+                <div><label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">Capacidad Carga (KG)</label><input type="number" name="capacidad" placeholder="Ej: 30000" class="w-full border border-slate-300 rounded p-2 text-sm"></div>
+                <button type="submit" class="w-full bg-brand-800 hover:bg-brand-900 text-white font-bold py-3 rounded text-xs uppercase tracking-wider mt-4">Guardar Rampla</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.getElementById('btn-' + tabId).classList.add('active');
+        }
+    </script>
+</body>
+</html>
