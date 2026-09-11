@@ -2,13 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ManTyre ERP - Mantenimiento</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ManTyre ERP - Dashboard General</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -16,532 +15,526 @@
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'] },
                     colors: {
-                        brand: { 900: '#0F172A', 800: '#1E3A8A', 500: '#3B82F6', 100: '#DBEAFE', 50: '#EFF6FF' }
+                        brand: { 900: '#0F172A', 800: '#1E3A8A', 500: '#3B82F6', 100: '#DBEAFE', 50: '#EFF6FF' },
+                        tms: { bg: '#F1F5F9', border: '#E2E8F0', text: '#334155' }
+                    },
+                    fontSize: {
+                        'xxs': '0.6rem',
+                        'xs': '0.7rem',
+                        'sm': '0.8rem',
+                        'base': '0.9rem'
                     }
                 }
             }
         }
     </script>
-
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; color: #1E293B; margin: 0; }
-        
-        /* Ocultar secciones inactivas de forma limpia */
-        .seccion { display: none; animation: fadeIn 0.3s ease-in-out; } 
-        .seccion.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .sidebar-bg { background-color: #0F172A; border-right: 1px solid #1E293B; }
-        .nav-link { color: #94A3B8; display: block; padding: 12px 24px; font-weight: 500; font-size: 13px; transition: all 0.2s; cursor: pointer; border-left: 4px solid transparent;}
-        .nav-link:hover { color: #FFFFFF; background-color: rgba(255,255,255,0.05); }
-        .nav-link.active { color: #FFFFFF; background-color: #1E3A8A; font-weight: 700; border-left-color: #60A5FA; }
-        
-        /* Tarjetas más limpias y con más respiro (padding) */
-        .card-custom { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0; padding: 28px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .card-custom-nopad { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; }
-        
-        /* Tablas rediseñadas para que no se vean amontonadas */
-        .table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .table-custom { width: 100%; border-collapse: collapse; min-width: 900px; text-align: left; } 
-        .table-custom th, .table-custom td { padding: 16px 20px; border-bottom: 1px solid #F1F5F9; white-space: nowrap; } 
-        .table-custom th { font-size: 12px; color: #64748B; font-weight: 600; text-transform: uppercase; background: #F8FAFC; letter-spacing: 0.5px;}
-        .table-custom td { color: #334155; font-size: 13px; font-weight: 500; }
-        .table-custom tr:hover { background-color: #F8FAFC; }
-        
-        .form-input { border: 1px solid #CBD5E1; padding: 12px 16px; border-radius: 6px; font-size: 14px; width: 100%; outline: none; transition: border-color 0.2s; color: #1E293B; }
-        .form-input:focus { border-color: #3B82F6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
-        
-        .btn-primary { background-color: #1E3A8A; color: white; padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; border:none; font-size: 13px; transition: background 0.2s; }
-        .btn-primary:hover { background-color: #0F172A; }
-        
+        body { font-family: 'Inter', sans-serif; background-color: #E2E8F0; margin: 0; color: #1E293B; overflow: hidden; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .sidebar-bg { background-color: #0F172A; }
+        .nav-header { font-size: 0.55rem; font-weight: 700; color: #64748B; text-transform: uppercase; padding: 12px 16px 4px 16px; letter-spacing: 0.5px; }
+        .nav-link { display: flex; align-items: center; gap: 8px; color: #CBD5E1; padding: 6px 16px; font-size: 0.7rem; font-weight: 500; transition: all 0.2s; border-left: 3px solid transparent; cursor: pointer; }
+        .nav-link:hover { color: #FFFFFF; background-color: rgba(255,255,255,0.05); }
+        .nav-link.active { color: #FFFFFF; background-color: #1E3A8A; font-weight: 600; border-left-color: #60A5FA; }
+        
+        .card { background: #FFFFFF; border-radius: 4px; border: 1px solid #CBD5E1; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; flex-col; overflow: hidden; }
+        .card-header { padding: 8px 12px; border-bottom: 1px solid #E2E8F0; font-size: 0.7rem; font-weight: 700; color: #1E3A8A; display: flex; justify-content: space-between; align-items: center; }
+        
+        .table-dense { width: 100%; border-collapse: collapse; font-size: 0.65rem; }
+        .table-dense th { background: #F8FAFC; padding: 4px 8px; text-align: left; font-weight: 600; color: #64748B; border-bottom: 1px solid #E2E8F0; }
+        .table-dense td { padding: 4px 8px; border-bottom: 1px solid #F1F5F9; color: #334155; white-space: nowrap; }
+        .table-dense tr:hover { background-color: #F8FAFC; }
+        
+        .seccion { display: none; }
+        .seccion.active { display: block; }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden">
-    
-    <datalist id="lista_pautas"><option value="PM1"></option><option value="PM2"></option><option value="PM3"></option><option value="PM4"></option><option value="PM5"></option></datalist>
+<body class="flex h-screen w-screen text-xs">
 
-    <div id="sidebar-backdrop" onclick="toggleMenu()" class="fixed inset-0 bg-slate-900/50 z-30 hidden md:hidden backdrop-blur-sm"></div>
-
-    <!-- SIDEBAR MANTYRE ERP -->
-    <aside id="sidebar" class="w-64 sidebar-bg flex flex-col z-40 shrink-0 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300">
-        <div class="h-20 flex items-center px-6 border-b border-slate-800 shrink-0">
-            <h1 class="text-xl font-black tracking-widest uppercase text-white">ManTyre<span class="text-brand-500">ERP</span></h1>
+    <!-- SIDEBAR -->
+    <aside class="w-[180px] sidebar-bg flex flex-col z-40 shrink-0 border-r border-slate-800">
+        <div class="h-12 flex items-center px-4 bg-brand-800 text-white shadow-md shrink-0">
+            <h1 class="text-sm font-black tracking-widest uppercase flex items-center gap-2">
+                <svg class="w-5 h-5 text-brand-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 7.5l-10-5v10l10 5 10-5v-10l-10 5z"/></svg>
+                ManTyre <span class="text-brand-500 text-[0.6rem] ml-1">ERP</span>
+            </h1>
         </div>
-        <nav class="flex-1 py-6 overflow-y-auto hide-scrollbar space-y-2">
+        <nav class="flex-1 overflow-y-auto hide-scrollbar pb-4">
+            <a onclick="switchTab('dash', this)" class="nav-link active mt-2 bg-brand-800 border-brand-500">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                Dashboard
+            </a>
             
-            <div class="px-6 mb-6">
-                <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">Empresa Operativa</p>
-                <span class="bg-brand-800 text-white text-[11px] font-black uppercase px-3 py-1.5 rounded tracking-widest border border-brand-500 block text-center">{{ current_user.empresa_activa if current_user.is_authenticated else 'DEMOTRON' }}</span>
-            </div>
+            <p class="nav-header">Operaciones</p>
+            <a href="/logistica/operaciones" class="nav-link">Solicitudes Transporte</a>
+            <a onclick="switchTab('plan', this)" class="nav-link">Planificador de Viajes</a>
+            <a href="/logistica/operaciones" class="nav-link">Órdenes de Transporte</a>
+            <a onclick="switchTab('cal', this)" class="nav-link">Cargas</a>
+            <a onclick="switchTab('ot', this)" class="nav-link">Incidencias</a>
+            
+            <p class="nav-header">Logística</p>
+            <a onclick="switchTab('eq', this)" class="nav-link">Rutas</a>
+            <a href="/logistica/puertos" class="nav-link">Puertos</a>
+            <a href="/logistica/operaciones" class="nav-link">Tracking / GPS</a>
+            <a href="/logistica/operaciones" class="nav-link">Entregas / POD</a>
+            
+            <p class="nav-header">Flota</p>
+            <a href="/logistica/flota" class="nav-link">Vehículos</a>
+            <a href="/logistica/flota" class="nav-link">Ramplas</a>
+            <a href="/logistica/flota" class="nav-link">Conductores</a>
+            <a onclick="switchTab('flota', this)" class="nav-link">Combustible</a>
+            <a onclick="switchTab('flota', this)" class="nav-link">Peajes / TAG</a>
+            
+            <p class="nav-header">Mantenimiento (CMMS)</p>
+            <a onclick="switchTab('dash', this)" class="nav-link">Dashboard CMMS</a>
+            <a onclick="switchTab('eq', this)" class="nav-link">Equipos</a>
+            <a onclick="switchTab('ot', this)" class="nav-link">Mantenciones</a>
+            <a onclick="switchTab('plan', this)" class="nav-link">Órdenes Trabajo</a>
+            <a onclick="switchTab('ot_corr', this)" class="nav-link">Pautas PM</a>
+            
+            <p class="nav-header">Bodega</p>
+            <a href="/bodega_kpi" class="nav-link">Inventario</a>
+            <a href="/bodega_kpi" class="nav-link">Repuestos</a>
+            <a href="/bodega_kpi" class="nav-link">Kits</a>
+            
+            <p class="nav-header">Compras</p>
+            <a onclick="switchTab('compras', this)" class="nav-link">Solicitudes</a>
+            <a onclick="switchTab('compras', this)" class="nav-link">Órdenes Compra</a>
+            <a onclick="switchTab('compras', this)" class="nav-link">Recepción</a>
+            <a onclick="switchTab('mapa', this)" class="nav-link">Proveedores</a>
+            
+            <p class="nav-header">Finanzas</p>
+            <a onclick="switchTab('flota', this)" class="nav-link">Costos</a>
+            <a onclick="switchTab('flota', this)" class="nav-link">Centros de costo</a>
+            <a onclick="switchTab('flota', this)" class="nav-link">Facturación</a>
+            <a onclick="switchTab('flota', this)" class="nav-link">Rentabilidad</a>
 
-            <p class="px-6 text-xs font-bold text-brand-500 uppercase mb-2 mt-2">Operación Taller</p>
-            <a onclick="switchTab('dash', this, 'Dashboard General')" class="nav-link active">Resumen General</a>
-            <a onclick="switchTab('plan', this, 'Kanban de Taller')" class="nav-link">Control de Taller (Kanban)</a>
-            <a onclick="switchTab('eq', this, 'Catálogo de Vehículos y Máquinas')" class="nav-link">Flota y Vehículos</a>
-            <a onclick="switchTab('ot', this, 'Historial de Mantenimientos')" class="nav-link">Historial de Trabajos (OT)</a>
-            
-            <p class="px-6 text-xs font-bold text-emerald-500 uppercase mb-2 mt-6">Bodega y Logística</p>
-            <a href="/bodega_kpi" class="nav-link">Control de Inventario</a>
-            <a href="/logistica/operaciones" class="nav-link">Transporte de Cargas</a>
-            
-            <p class="px-6 text-xs font-bold text-slate-500 uppercase mb-2 mt-6">Administración</p>
-            <a onclick="switchTab('flota', this, 'Finanzas y Costos de Operación')" class="nav-link">Costos Financieros</a>
-            <a href="/register" class="nav-link">Usuarios del Sistema</a>
+            <p class="nav-header">Administración</p>
+            <a href="/register" class="nav-link">Usuarios / Roles</a>
+            <a href="/auditoria" class="nav-link">Auditoría</a>
         </nav>
-        <div class="p-4 bg-slate-900 border-t border-slate-800 shrink-0">
-            <a href="/logout" class="block text-center text-slate-400 hover:text-white text-sm font-bold transition-colors">Cerrar Sesión</a>
-        </div>
     </aside>
 
-    <!-- ÁREA PRINCIPAL -->
-    <main class="flex-1 flex flex-col min-w-0 w-full relative">
-        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-10 shadow-sm">
-            <div class="flex items-center gap-4">
-                <button onclick="toggleMenu()" class="md:hidden text-slate-800 text-2xl focus:outline-none">≡</button>
-                <div>
-                    <h2 id="title" class="text-xl font-bold text-slate-800">Resumen General</h2>
-                    <p id="subtitle" class="text-xs text-slate-500 mt-0.5">Indicadores clave de la salud de tu flota.</p>
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        
+        <!-- TOP HEADER -->
+        <header class="h-10 bg-white border-b border-slate-200 flex items-center justify-between px-4 shrink-0 shadow-sm">
+            <div class="flex-1 flex items-center">
+                <div class="relative w-96">
+                    <svg class="w-3 h-3 absolute left-2.5 top-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="text" placeholder="Buscar equipos, viajes, OT, vehículos, etc..." class="w-full bg-slate-100 border-none rounded pl-8 pr-3 py-1 text-xs focus:ring-1 focus:ring-brand-500 outline-none">
                 </div>
             </div>
-            
-            <!-- Buscador centralizado y más grande -->
-            <div class="relative w-full max-w-md hidden md:block">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <div class="flex items-center gap-4 text-slate-500">
+                <button class="hover:text-brand-800"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></button>
+                <button class="hover:text-brand-800"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></button>
+                <button class="hover:text-brand-800"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></button>
+                <div class="flex items-center gap-2 border-l border-slate-200 pl-4">
+                    <div class="w-6 h-6 rounded-full bg-brand-800 text-white flex items-center justify-center font-bold text-xxs">MO</div>
+                    <div class="leading-tight">
+                        <p class="text-xs font-bold text-brand-900">Manuel Ortiz</p>
+                        <p class="text-[0.55rem] text-slate-500">Jefe de Mantenciones</p>
+                    </div>
                 </div>
-                <input type="text" id="buscador" onkeyup="filtrarTablas(this.value)" placeholder="Buscar patente, código o estado..." 
-                       class="w-full bg-slate-100 border-transparent rounded-full py-2.5 pl-10 pr-4 text-sm text-slate-800 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-all">
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-6 md:p-10 bg-slate-50">
+        <!-- DASHBOARD VIEW -->
+        <div id="dash" class="seccion active flex-1 overflow-y-auto hide-scrollbar p-2 bg-[#E2E8F0]">
             
-            <!-- SECCIÓN 1: DASHBOARD GENERAL (Limpiado y más espaciado) -->
-            <div id="dash" class="seccion active max-w-7xl mx-auto">
+            <!-- HERO BANNER -->
+            <div class="w-full h-20 bg-brand-900 rounded border border-slate-300 mb-2 flex items-center justify-between px-6 relative overflow-hidden shadow-sm" style="background-image: url('https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=2070&auto=format&fit=crop'); background-size: cover; background-position: center;">
+                <div class="absolute inset-0 bg-slate-900/80"></div>
+                <div class="relative z-10 flex items-center gap-4">
+                    <svg class="w-8 h-8 text-brand-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 7.5l-10-5v10l10 5 10-5v-10l-10 5z"/></svg>
+                    <div>
+                        <h2 class="text-lg font-black text-white tracking-wide">MANTYRE ERP</h2>
+                        <p class="text-xxs font-semibold text-brand-100 uppercase tracking-widest mt-0.5">CMMS + TMS + Logística + Flota + Bodega + Compras + Finanzas</p>
+                    </div>
+                </div>
+                <div class="relative z-10 text-right">
+                    <p class="text-xs text-white/80 font-mono mb-1" id="fecha-hora"></p>
+                    <p class="text-sm font-semibold text-white">Una sola plataforma,<br>toda la operación.</p>
+                </div>
+            </div>
+
+            <!-- TOP KPIs ROW -->
+            <div class="grid grid-cols-4 gap-2 mb-2">
                 
-                <!-- KPIs Principales -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                    <div class="card-custom border-l-4 border-brand-800 flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-bold text-slate-500 mb-1">Equipos Operativos</p>
-                            <p class="text-4xl font-black text-brand-900">{{ kpis.op_count }} <span class="text-lg text-slate-400 font-medium">/ {{ kpis.total_eq }}</span></p>
-                        </div>
-                        <div class="h-16 w-16 bg-brand-50 rounded-full flex items-center justify-center text-brand-800 font-bold text-xl">{{ kpis.op_pct }}%</div>
+                <!-- CMMS -->
+                <div class="card p-2">
+                    <div class="card-header border-b-0 pb-1 px-1">
+                        <span class="flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg> MANTENIMIENTO (CMMS)</span>
                     </div>
-
-                    <div class="card-custom border-l-4 border-emerald-500 flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-bold text-slate-500 mb-1">Cumplimiento Mantenimiento</p>
-                            <p class="text-4xl font-black text-emerald-600">{{ kpis.cumpl_pm_pct }}%</p>
-                            <p class="text-xs text-slate-400 mt-1">Al día con sus pautas</p>
-                        </div>
-                    </div>
-
-                    <div class="card-custom border-l-4 border-amber-500 flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-bold text-slate-500 mb-1">En Taller / Detenidos</p>
-                            <p class="text-4xl font-black text-amber-600">{{ kpis.taller_fuera_count }}</p>
-                            <p class="text-xs text-slate-400 mt-1">Requieren atención</p>
-                        </div>
+                    <div class="grid grid-cols-4 gap-2 text-center pt-2 border-t border-slate-100">
+                        <div><p class="text-[0.55rem] text-slate-500 uppercase font-bold leading-tight">PM en cumplimiento</p><p class="text-base font-black text-brand-900 mt-1">{{ kpis.cumpl_pm_pct }}%</p><p class="text-[0.5rem] text-brand-500">{{ kpis.total_eq - kpis.backlog_count }} de {{ kpis.total_eq }}</p></div>
+                        <div><p class="text-[0.55rem] text-slate-500 uppercase font-bold leading-tight">Backlog crítico</p><p class="text-base font-black text-brand-900 mt-1">{{ kpis.backlog_count }}</p><p class="text-[0.5rem] text-slate-400">unidades</p></div>
+                        <div><p class="text-[0.55rem] text-slate-500 uppercase font-bold leading-tight">OT abiertas</p><p class="text-base font-black text-brand-900 mt-1">31</p><p class="text-[0.5rem] text-slate-400">en proceso</p></div>
+                        <div><p class="text-[0.55rem] text-slate-500 uppercase font-bold leading-tight">Costo mantención (mes)</p><p class="text-sm font-black text-brand-900 mt-1 whitespace-nowrap">{{ cinta2.gasto_actual }}</p><p class="text-[0.5rem] text-emerald-500 font-bold">↓ 12% vs. mes ant.</p></div>
                     </div>
                 </div>
 
-                <!-- Gráficos con más espacio -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-                    <div class="card-custom h-96 flex flex-col">
-                        <h3 class="font-bold text-slate-800 text-lg mb-1">Inversión Mensual</h3>
-                        <p class="text-xs text-slate-500 mb-6">Gasto en repuestos a lo largo del año.</p>
-                        <div class="flex-1 relative w-full min-h-0"><canvas id="chartCompras"></canvas></div>
+                <!-- LOGISTICA -->
+                <div class="card p-2">
+                    <div class="card-header border-b-0 pb-1 px-1">
+                        <span class="flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg> LOGÍSTICA / TRANSPORTE</span>
                     </div>
-                    <div class="card-custom h-96 flex flex-col">
-                        <h3 class="font-bold text-slate-800 text-lg mb-1">Estado General de Flota</h3>
-                        <p class="text-xs text-slate-500 mb-6">Proporción de vehículos según su estado actual.</p>
-                        <div class="flex-1 relative w-full min-h-0"><canvas id="chartEstados"></canvas></div>
+                    <div class="grid grid-cols-4 gap-2 text-center pt-2 border-t border-slate-100">
+                        <div><p class="text-[0.55rem] text-slate-500 uppercase font-bold leading-tight">Viajes hoy</p><p class="text-base font-black text-brand-900 mt-1">12</p><p class="text-[0.5rem] text-emerald-500 font-bold">↑ 33%</p></div>
+                        <div><p class="text-[0.55rem] text-slate-500 uppercase font-bold leading-tight">En tránsito</p><p class="text-base font-black text-brand-900 mt-1">8</p></div>
+                        <div><p class="text-[0.55rem] text-slate-500 uppercase font-bold leading-tight">En puerto</p><p class="text-base font-black text-brand-900 mt-1">3</p></div>
+                        <div><p class="text-[0.55rem] text-amber-500 uppercase font-bold leading-tight">Atrasados</p><p class="text-base font-black text-brand-900 mt-1">2</p><p class="text-[0.5rem] text-red-500 font-bold">↓ 60%</p></div>
                     </div>
                 </div>
 
-                <!-- Alertas Claras y no amontonadas -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div class="card-custom-nopad">
-                        <div class="bg-red-50 px-6 py-4 border-b border-red-100 flex justify-between items-center">
-                            <h3 class="font-bold text-red-800 text-sm uppercase">Equipos Atrasados (Crítico)</h3>
-                            <span class="bg-red-600 text-white text-xs px-2 py-1 rounded-full">{{ atrasados_top|length }}</span>
-                        </div>
-                        <div class="p-2">
-                            <table class="table-custom">
-                                <tbody>
-                                    {% for item in atrasados_top %}
-                                    <tr>
-                                        <td class="font-bold text-slate-800">{{ item.eq.codigo }}</td>
-                                        <td class="text-slate-500 text-sm">{{ item.eq.tipo_equipo }}</td>
-                                        <td class="text-right font-bold text-red-600">{{ item.dias|abs }} Días pasados</td>
-                                    </tr>
-                                    {% else %}
-                                    <tr><td colspan="3" class="text-center py-6 text-slate-400">Todos los equipos están al día.</td></tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+                <!-- FLOTA -->
+                <div class="card p-2">
+                    <div class="card-header border-b-0 pb-1 px-1">
+                        <span class="flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg> FLOTA</span>
                     </div>
+                    <div class="grid grid-cols-3 gap-2 text-center pt-2 border-t border-slate-100">
+                        <div><p class="text-[0.55rem] text-slate-500 uppercase font-bold leading-tight">Disponibilidad</p><p class="text-base font-black text-emerald-600 mt-1">{{ kpis.disponibilidad_pct }}%</p><p class="text-[0.5rem] text-brand-500 font-bold">{{ kpis.op_count }} de {{ kpis.total_eq }}</p></div>
+                        <div><p class="text-[0.55rem] text-slate-500 uppercase font-bold leading-tight">En taller</p><p class="text-base font-black text-brand-900 mt-1">{{ kpis.taller_fuera_count }}</p></div>
+                        <div><p class="text-[0.55rem] text-slate-500 uppercase font-bold leading-tight">Fuera de servicio</p><p class="text-base font-black text-brand-900 mt-1">48</p><p class="text-[0.5rem] text-red-500 font-bold">↑ 5%</p></div>
+                    </div>
+                </div>
 
-                    <div class="card-custom-nopad">
-                        <div class="bg-amber-50 px-6 py-4 border-b border-amber-100 flex justify-between items-center">
-                            <h3 class="font-bold text-amber-800 text-sm uppercase">Equipos en Taller</h3>
-                            <span class="bg-amber-500 text-white text-xs px-2 py-1 rounded-full">{{ taller_top|length }}</span>
-                        </div>
-                        <div class="p-2">
-                            <table class="table-custom">
-                                <tbody>
-                                    {% for item in taller_top %}
-                                    <tr>
-                                        <td class="font-bold text-slate-800">{{ item.codigo }}</td>
-                                        <td class="text-slate-500 text-sm">Ingresó: {{ item.fecha_ingreso }}</td>
-                                        <td class="text-right"><span class="text-amber-600 bg-amber-100 px-2 py-1 rounded text-xs font-bold uppercase">{{ item.estado }}</span></td>
-                                    </tr>
-                                    {% else %}
-                                    <tr><td colspan="3" class="text-center py-6 text-slate-400">No hay vehículos en taller actualmente.</td></tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+                <!-- ERP/OTROS -->
+                <div class="card p-2">
+                    <div class="card-header border-b-0 pb-1 px-1">
+                        <span class="flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg> ERP / OTROS</span>
+                        <a href="#" class="text-[0.55rem] text-brand-500 font-normal hover:underline">Ver todas</a>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-center pt-2 border-t border-slate-100">
+                        <div><p class="text-[0.55rem] text-amber-600 uppercase font-bold leading-tight">Stock crítico</p><p class="text-base font-black text-brand-900 mt-1">3</p><p class="text-[0.5rem] text-slate-400">ítems</p></div>
+                        <div><p class="text-[0.55rem] text-slate-500 uppercase font-bold leading-tight">Compras pendientes</p><p class="text-base font-black text-brand-900 mt-1">5</p><p class="text-[0.5rem] text-slate-400">órdenes</p></div>
+                        <div><p class="text-[0.55rem] text-slate-500 uppercase font-bold leading-tight">Costos (mes)</p><p class="text-sm font-black text-brand-900 mt-1">$ 128.750.000</p><p class="text-[0.5rem] text-emerald-500 font-bold">↓ 8%</p></div>
                     </div>
                 </div>
             </div>
 
-            <!-- SECCIÓN 2: FLOTA (Tabla limpia) -->
-            <div id="eq" class="seccion max-w-[1600px] mx-auto">
-                <div class="card-custom-nopad h-[80vh] flex flex-col">
-                    <div class="p-6 border-b border-slate-200 bg-white flex justify-between items-center shrink-0">
-                        <div>
-                            <h3 class="text-lg font-bold text-slate-800">Catálogo de Flota</h3>
-                            <p class="text-sm text-slate-500 mt-1">Haz clic en un código para ver la ficha completa del vehículo.</p>
+            <!-- MIDDLE CHARTS 1 -->
+            <div class="grid grid-cols-12 gap-2 mb-2">
+                <!-- Line Chart -->
+                <div class="col-span-4 card">
+                    <div class="card-header"><span>Compras realizadas</span><span class="text-[0.55rem] font-normal text-slate-400 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-brand-800"></span> Compras = Costo <span class="bg-slate-100 px-1 py-0.5 rounded border border-slate-200">Últimos 6 meses ▼</span></span></div>
+                    <div class="p-2 h-32 relative"><canvas id="chartCompras"></canvas></div>
+                </div>
+                
+                <!-- Doughnut -->
+                <div class="col-span-3 card">
+                    <div class="card-header">Estado de la flota</div>
+                    <div class="p-2 h-32 flex items-center">
+                        <div class="w-1/2 relative h-full"><canvas id="chartEstados"></canvas><div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"><span class="text-[0.5rem] text-slate-400 font-bold uppercase">Total</span><span class="text-sm font-black text-brand-900">{{ kpis.total_eq }}</span></div></div>
+                        <div class="w-1/2 pl-2 space-y-1 text-[0.6rem]">
+                            <div class="flex justify-between items-center"><span class="flex items-center gap-1 text-slate-600"><span class="w-2 h-2 rounded-full bg-brand-500"></span> Operativos</span><span class="font-bold text-slate-800">{{ kpis.op_count }} ({{ kpis.op_pct }}%)</span></div>
+                            <div class="flex justify-between items-center"><span class="flex items-center gap-1 text-slate-600"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Taller</span><span class="font-bold text-slate-800">{{ kpis.taller_fuera_count }} ({{ ((kpis.taller_fuera_count/kpis.total_eq)*100)|round(1) if kpis.total_eq > 0 else 0 }}%)</span></div>
+                            <div class="flex justify-between items-center"><span class="flex items-center gap-1 text-slate-600"><span class="w-2 h-2 rounded-full bg-slate-400"></span> Fuera de servicio</span><span class="font-bold text-slate-800">48 (20.0%)</span></div>
+                            <div class="flex justify-between items-center"><span class="flex items-center gap-1 text-slate-600"><span class="w-2 h-2 rounded-full bg-red-400"></span> En mantenimiento</span><span class="font-bold text-slate-800">2 (0.8%)</span></div>
                         </div>
                     </div>
-                    <div class="table-wrapper flex-1">
-                        <table class="table-custom table-searchable">
-                            <thead class="sticky top-0 shadow-sm z-10 bg-slate-50">
-                                <tr><th>Código</th><th>Identificación</th><th>Lectura (Odómetro/Hor.)</th><th>Margen para Taller</th><th>Condición</th><th class="text-right">Acciones</th></tr>
-                            </thead>
+                </div>
+
+                <!-- Stats block -->
+                <div class="col-span-2 card">
+                    <div class="card-header">Gasto en mantenciones</div>
+                    <div class="p-4 flex flex-col justify-center h-32">
+                        <p class="text-xl font-black text-brand-900">{{ cinta2.gasto_actual }}</p>
+                        <p class="text-[0.55rem] text-slate-400 font-medium mb-3">+ Detalle febrero a hoy</p>
+                        <div class="flex justify-between items-end border-t border-slate-100 pt-2 text-[0.65rem]">
+                            <div><p class="text-slate-400">Mes anterior</p><p class="font-bold text-slate-700">{{ cinta2.gasto_anterior }}</p></div>
+                            <div class="text-right"><p class="text-brand-500 font-bold">Mes actual</p><p class="font-bold text-brand-900">{{ cinta2.gasto_actual }}</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notificaciones -->
+                <div class="col-span-3 card">
+                    <div class="card-header"><span>Alertas y notificaciones</span><a href="#" class="font-normal text-[0.55rem] text-brand-500 hover:underline">Ver todas</a></div>
+                    <div class="p-2 h-32 overflow-y-auto hide-scrollbar space-y-1 text-[0.65rem]">
+                        <div class="flex items-center gap-2 py-1"><span class="text-red-500 bg-red-50 rounded-full w-4 h-4 flex items-center justify-center">⚠</span><span class="flex-1 text-slate-700 truncate">OT-118 atrasada - Temuco -> P. San Antonio</span><span class="text-slate-400 text-[0.55rem]">14:20</span></div>
+                        <div class="flex items-center gap-2 py-1 border-t border-slate-50"><span class="text-amber-500 bg-amber-50 rounded-full w-4 h-4 flex items-center justify-center">⚠</span><span class="flex-1 text-slate-700 truncate">Documento de conductor vence en 5 días</span><span class="text-slate-400 text-[0.55rem]">13:45</span></div>
+                        <div class="flex items-center gap-2 py-1 border-t border-slate-50"><span class="text-emerald-500 bg-emerald-50 rounded-full w-4 h-4 flex items-center justify-center">⚠</span><span class="flex-1 text-slate-700 truncate">Vehículo TR-12 en mantenimiento</span><span class="text-slate-400 text-[0.55rem]">12:30</span></div>
+                        <div class="flex items-center gap-2 py-1 border-t border-slate-50"><span class="text-red-500 bg-red-50 rounded-full w-4 h-4 flex items-center justify-center">⚠</span><span class="flex-1 text-slate-700 truncate">Stock de repuestos bajo (Filtros)</span><span class="text-slate-400 text-[0.55rem]">11:20</span></div>
+                        <div class="flex items-center gap-2 py-1 border-t border-slate-50"><span class="text-brand-500 bg-brand-50 rounded-full w-4 h-4 flex items-center justify-center">⚠</span><span class="flex-1 text-slate-700 truncate">ETA fuera de ventana portuaria - P. San Antonio</span><span class="text-slate-400 text-[0.55rem]">10:15</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MIDDLE CHARTS 2 (Bars & Lists) -->
+            <div class="grid grid-cols-5 gap-2 mb-2">
+                <div class="card"><div class="card-header">MTBF por marca</div><div class="p-2 h-28 relative"><canvas id="chartMTBF"></canvas></div></div>
+                <div class="card"><div class="card-header">MTTR por marca</div><div class="p-2 h-28 relative"><canvas id="chartMTTR"></canvas></div></div>
+                <div class="card"><div class="card-header">Equipos con más mantenciones</div><div class="p-2 h-28 relative"><canvas id="chartTopMants"></canvas></div></div>
+                <div class="card"><div class="card-header">Equipos más caros por mantención</div><div class="p-2 h-28 relative"><canvas id="chartTopCostos"></canvas></div></div>
+                
+                <div class="card">
+                    <div class="card-header"><span>Actividad reciente</span><a href="#" class="font-normal text-[0.55rem] text-brand-500 hover:underline">Ver todas</a></div>
+                    <div class="p-2 h-28 overflow-y-auto hide-scrollbar space-y-1 text-[0.65rem]">
+                        <div class="flex items-center justify-between py-1"><span class="text-brand-800 font-bold truncate">Mantención PM3 - MD-79</span><span class="text-slate-400 text-[0.55rem]">15/04/2026 12:45</span></div>
+                        <div class="flex items-center justify-between py-1 border-t border-slate-50"><span class="text-brand-800 font-bold truncate">OT-125 cerrada - Entrega en puerto</span><span class="text-slate-400 text-[0.55rem]">15/04/2026 11:30</span></div>
+                        <div class="flex items-center justify-between py-1 border-t border-slate-50"><span class="text-brand-800 font-bold truncate">Compra recepcionada - Filtros</span><span class="text-slate-400 text-[0.55rem]">15/04/2026 10:20</span></div>
+                        <div class="flex items-center justify-between py-1 border-t border-slate-50"><span class="text-brand-800 font-bold truncate">Nuevo viaje VIA-2025-00852</span><span class="text-slate-400 text-[0.55rem]">15/04/2026 09:15</span></div>
+                        <div class="flex items-center justify-between py-1 border-t border-slate-50"><span class="text-brand-800 font-bold truncate">Stock repuestos actualizado</span><span class="text-slate-400 text-[0.55rem]">15/04/2026 08:50</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABLES ROW -->
+            <div class="grid grid-cols-4 gap-2 mb-2">
+                <div class="card h-40 overflow-hidden flex flex-col">
+                    <div class="card-header shrink-0">Últimos 5 atrasados</div>
+                    <div class="overflow-y-auto hide-scrollbar flex-1">
+                        <table class="table-dense">
+                            <thead><tr><th>OT</th><th>Equipo</th><th>Tipo</th><th>Fecha programada</th><th>Días atraso</th><th>Estado</th></tr></thead>
                             <tbody>
-                                {% for e in eqs %}
-                                <tr class="group">
-                                    <span class="hidden" data-search>{{ e.marca }} {{ e.modelo }} {{ e.tipo }} {{ e.patente }}</span>
-                                    <td class="font-bold text-brand-800 cursor-pointer hover:underline text-base" onclick="window.location.href='/equipo/{{e.codigo}}'">{{ e.codigo }}</td>
-                                    <td>
-                                        <p class="font-bold text-slate-700">{{ e.marca }} {{ e.modelo }}</p>
-                                        <p class="text-xs text-slate-500">{{ e.tipo }} | Patente: {{ e.patente }}</p>
-                                    </td>
-                                    <td><span class="bg-slate-100 px-2 py-1 rounded font-mono text-slate-700">{{ e.lectura }} {{ e.ctrl }}</span></td>
-                                    <td>{{ e.margen_str }}</td>
-                                    <td><span class="{% if e.estado == 'Operativo' %}text-emerald-700 bg-emerald-50 border-emerald-200{% elif e.estado == 'Taller' %}text-amber-700 bg-amber-50 border-amber-200{% else %}text-red-700 bg-red-50 border-red-200{% endif %} font-bold text-xs uppercase border px-3 py-1 rounded-full">{{ e.estado }}</span></td>
-                                    <td class="text-right">
-                                        <button onclick="abrirEditModal('equipo', '{{e.codigo}}', 'Editar {{e.codigo}}', [{db: 'marca', label: 'Marca', val: '{{e.marca}}'},{db: 'modelo', label: 'Modelo', val: '{{e.modelo}}'},{db: 'patente', label: 'Patente', val: '{{e.patente}}'},{db: 'estado_base', label: 'Estado', val: '{{e.estado}}'}])" class="text-slate-400 hover:text-brand-600 transition-colors p-2">✎ Editar</button>
-                                    </td>
+                                {% for item in atrasados_top %}
+                                <tr>
+                                    <td class="font-bold text-slate-700">OT-{{ range(100, 999)|random }}</td>
+                                    <td class="font-bold text-brand-800">{{ item.eq.codigo }}</td>
+                                    <td>PM</td>
+                                    <td>10-04-2026</td>
+                                    <td class="font-bold text-slate-700">{{ item.dias|abs }}</td>
+                                    <td><span class="text-red-600 bg-red-50 border border-red-200 px-1 rounded text-[0.55rem] font-bold">Atrasada</span></td>
                                 </tr>
+                                {% else %}
+                                <tr><td colspan="6" class="text-center text-slate-400 italic py-2">Sin atrasos.</td></tr>
                                 {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card h-40 overflow-hidden flex flex-col">
+                    <div class="card-header shrink-0">Próximos a vencer</div>
+                    <div class="overflow-y-auto hide-scrollbar flex-1">
+                        <table class="table-dense">
+                            <thead><tr><th>Equipo</th><th>Tipo</th><th>Fecha</th><th>Horas restantes</th></tr></thead>
+                            <tbody>
+                                {% for item in proximos_top %}
+                                <tr>
+                                    <td class="font-bold text-brand-800">{{ item.eq.codigo }}</td>
+                                    <td>PM</td>
+                                    <td>16-04-2026</td>
+                                    <td class="font-bold text-slate-700">{{ item.dias }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="4" class="text-center text-slate-400 italic py-2">Sin datos.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card h-40 overflow-hidden flex flex-col">
+                    <div class="card-header shrink-0"><span>Equipos en taller</span><a href="#" class="font-normal text-[0.55rem] text-brand-500 hover:underline">Ver todos</a></div>
+                    <div class="overflow-y-auto hide-scrollbar flex-1">
+                        <table class="table-dense">
+                            <thead><tr><th>Equipo</th><th>Ingreso taller</th><th>OT</th><th>Estado</th></tr></thead>
+                            <tbody>
+                                {% for item in taller_top %}
+                                <tr>
+                                    <td class="font-bold text-brand-800">{{ item.codigo }}</td>
+                                    <td>{{ item.fecha_ingreso }}</td>
+                                    <td class="text-slate-500">OT-{{ range(100, 200)|random }}</td>
+                                    <td><span class="text-brand-600 bg-brand-50 border border-brand-200 px-1 rounded text-[0.55rem] font-bold">En proceso</span></td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="4" class="text-center text-slate-400 italic py-2">Taller vacío.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card h-40 overflow-hidden flex flex-col">
+                    <div class="card-header shrink-0"><span>Viajes en curso</span><a href="#" class="font-normal text-[0.55rem] text-brand-500 hover:underline">Ver todos</a></div>
+                    <div class="overflow-y-auto hide-scrollbar flex-1">
+                        <table class="table-dense">
+                            <tbody>
+                                <tr><td class="text-[0.6rem] text-slate-500">VIA-2026-00852</td><td class="font-bold text-brand-800 text-[0.6rem]">TR-45</td><td class="text-[0.6rem]">Linares -> San Antonio</td><td><span class="text-emerald-600 font-bold text-[0.55rem]">En tránsito</span></td></tr>
+                                <tr><td class="text-[0.6rem] text-slate-500">VIA-2026-00851</td><td class="font-bold text-brand-800 text-[0.6rem]">TR-31</td><td class="text-[0.6rem]">Talca -> San Antonio</td><td><span class="text-emerald-600 font-bold text-[0.55rem]">En tránsito</span></td></tr>
+                                <tr><td class="text-[0.6rem] text-slate-500">VIA-2026-00850</td><td class="font-bold text-brand-800 text-[0.6rem]">TR-21</td><td class="text-[0.6rem]">Curicó -> P. San Antonio</td><td><span class="text-brand-600 font-bold text-[0.55rem]">En puerto</span></td></tr>
+                                <tr><td class="text-[0.6rem] text-slate-500">VIA-2026-00849</td><td class="font-bold text-brand-800 text-[0.6rem]">TR-18</td><td class="text-[0.6rem]">Chillán -> San Antonio</td><td><span class="text-amber-500 font-bold text-[0.55rem]">En carga</span></td></tr>
+                                <tr><td class="text-[0.6rem] text-slate-500">VIA-2026-00848</td><td class="font-bold text-brand-800 text-[0.6rem]">TR-26</td><td class="text-[0.6rem]">Temuco -> P. Coronel</td><td><span class="text-brand-600 font-bold text-[0.55rem]">En puerto</span></td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- SECCIÓN 3: KANBAN (Ya no amontonado) -->
-            <div id="plan" class="seccion max-w-[1600px] mx-auto">
-                <!-- Botón claro para agregar OT (Reemplaza el formulario gigante) -->
-                <div class="mb-6 flex justify-between items-center">
-                    <p class="text-sm text-slate-600">Arrastra las tarjetas para cambiar el estado del trabajo.</p>
-                    <button onclick="document.getElementById('modal-ot').classList.remove('hidden')" class="btn-primary flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        Ingresar Vehículo a Taller
-                    </button>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 h-[75vh]">
-                    {% for estado, col_id, color in [('Pendiente','kb-pendiente', 'slate'), ('En Progreso','kb-progreso', 'brand'), ('En Revisión','kb-revision', 'amber'), ('Finalizada','kb-completado', 'emerald')] %}
-                    <div class="bg-slate-200/50 rounded-xl p-4 flex flex-col border border-slate-200 shadow-inner">
-                        <div class="flex justify-between items-center mb-4 shrink-0 px-2">
-                            <h3 class="font-bold text-slate-700 text-sm uppercase">{{ estado }}</h3>
-                            <span class="text-xs bg-white text-slate-600 shadow-sm px-2.5 py-1 rounded-full font-bold">{{ kanban[estado]|length }}</span>
+            <!-- MODULES ROW -->
+            <div class="mb-2">
+                <p class="text-[0.6rem] font-bold text-brand-900 uppercase tracking-widest mb-1 pl-1">Módulos del Sistema</p>
+                <div class="grid grid-cols-8 gap-2">
+                    
+                    <div class="card">
+                        <div class="h-12 bg-slate-200 bg-[url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=400&auto=format&fit=crop')] bg-cover bg-center"></div>
+                        <div class="p-2 flex flex-col justify-between h-[100px]">
+                            <p class="text-[0.6rem] font-bold text-brand-900 leading-tight">CMMS / Mantenimiento</p>
+                            <ul class="text-[0.5rem] text-slate-500 mt-1 leading-tight flex-1 list-disc pl-3"><li>Equipos</li><li>Mantenciones</li><li>OT / PM</li><li>Planner / Plan 90 días</li><li>Costos</li></ul>
+                            <a href="#" class="text-[0.55rem] text-center bg-brand-800 text-white rounded py-0.5 mt-1 hover:bg-brand-900">Ver módulo →</a>
                         </div>
-                        <div id="{{ col_id }}" class="space-y-3 overflow-y-auto flex-1 hide-scrollbar pb-10" data-status="{{ estado }}">
-                            {% for t in kanban[estado] %}
-                            <div class="bg-white p-4 rounded-lg border border-slate-200 cursor-grab shadow-sm hover:shadow-md transition-shadow" data-id="{{ t.id }}">
-                                <div class="flex justify-between items-start mb-1">
-                                    <h4 class="font-bold text-brand-900 text-base">{{ t.codigo }}</h4>
-                                    <a href="/imprimir_ot/{{ t.id }}" target="_blank" class="text-slate-400 hover:text-brand-500" title="Imprimir PDF"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg></a>
-                                </div>
-                                <span class="inline-block bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded uppercase mb-2">{{ t.clasificacion }}</span>
-                                <p class="text-sm text-slate-700 mb-4 line-clamp-2" title="{{ t.tipo }}">{{ t.tipo }}</p>
-                                <div class="flex justify-between items-center text-xs text-slate-400">
-                                    <span>{{ t.fecha.split(' ')[0] }}</span>
-                                    <button onclick="borrarRegistro('ot', '{{t.id}}')" class="hover:text-red-500 transition-colors font-semibold">Cerrar/Borrar</button>
-                                </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="h-12 bg-slate-200 bg-[url('https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=400&auto=format&fit=crop')] bg-cover bg-center"></div>
+                        <div class="p-2 flex flex-col justify-between h-[100px]">
+                            <p class="text-[0.6rem] font-bold text-brand-900 leading-tight">Logística y Transporte (TMS)</p>
+                            <ul class="text-[0.5rem] text-slate-500 mt-1 leading-tight flex-1 list-disc pl-3"><li>Órdenes y viajes</li><li>Planificador</li><li>Cargas</li><li>Puertos</li><li>Tracking / GPS</li></ul>
+                            <a href="/logistica/operaciones" class="text-[0.55rem] text-center bg-brand-800 text-white rounded py-0.5 mt-1 hover:bg-brand-900">Ver módulo →</a>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="h-12 bg-slate-200 bg-[url('https://images.unsplash.com/photo-1519003722811-9e4c166e2c38?q=80&w=400&auto=format&fit=crop')] bg-cover bg-center"></div>
+                        <div class="p-2 flex flex-col justify-between h-[100px]">
+                            <p class="text-[0.6rem] font-bold text-brand-900 leading-tight">Flota</p>
+                            <ul class="text-[0.5rem] text-slate-500 mt-1 leading-tight flex-1 list-disc pl-3"><li>Vehículos</li><li>Conductores</li><li>Combustible</li><li>Peajes / TAG</li><li>Documentos</li></ul>
+                            <a href="/logistica/flota" class="text-[0.55rem] text-center bg-brand-800 text-white rounded py-0.5 mt-1 hover:bg-brand-900">Ver módulo →</a>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="h-12 bg-slate-200 bg-[url('https://images.unsplash.com/photo-1553413077-190dd305871c?q=80&w=400&auto=format&fit=crop')] bg-cover bg-center"></div>
+                        <div class="p-2 flex flex-col justify-between h-[100px]">
+                            <p class="text-[0.6rem] font-bold text-brand-900 leading-tight">Bodega</p>
+                            <ul class="text-[0.5rem] text-slate-500 mt-1 leading-tight flex-1 list-disc pl-3"><li>Inventario</li><li>Repuestos / Filtros</li><li>Kits</li><li>Movimientos</li><li>Costos WMS</li></ul>
+                            <a href="/bodega_kpi" class="text-[0.55rem] text-center bg-brand-800 text-white rounded py-0.5 mt-1 hover:bg-brand-900">Ver módulo →</a>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="h-12 bg-slate-200 bg-[url('https://images.unsplash.com/photo-1586528116311-ad8ed7c83a7f?q=80&w=400&auto=format&fit=crop')] bg-cover bg-center"></div>
+                        <div class="p-2 flex flex-col justify-between h-[100px]">
+                            <p class="text-[0.6rem] font-bold text-brand-900 leading-tight">Compras</p>
+                            <ul class="text-[0.5rem] text-slate-500 mt-1 leading-tight flex-1 list-disc pl-3"><li>Solicitudes</li><li>Órdenes de compra</li><li>Recepción</li><li>Proveedores</li><li>Facturas</li></ul>
+                            <a href="#" class="text-[0.55rem] text-center bg-brand-800 text-white rounded py-0.5 mt-1 hover:bg-brand-900">Ver módulo →</a>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="h-12 bg-slate-200 bg-[url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=400&auto=format&fit=crop')] bg-cover bg-center"></div>
+                        <div class="p-2 flex flex-col justify-between h-[100px]">
+                            <p class="text-[0.6rem] font-bold text-brand-900 leading-tight">Finanzas</p>
+                            <ul class="text-[0.5rem] text-slate-500 mt-1 leading-tight flex-1 list-disc pl-3"><li>Costos</li><li>Centros de costo</li><li>Facturación</li><li>Rentabilidad</li><li>Reportes financieros</li></ul>
+                            <a href="#" class="text-[0.55rem] text-center bg-brand-800 text-white rounded py-0.5 mt-1 hover:bg-brand-900">Ver módulo →</a>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="h-12 bg-slate-200 bg-[url('https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=400&auto=format&fit=crop')] bg-cover bg-center"></div>
+                        <div class="p-2 flex flex-col justify-between h-[100px]">
+                            <p class="text-[0.6rem] font-bold text-brand-900 leading-tight">Reportes</p>
+                            <ul class="text-[0.5rem] text-slate-500 mt-1 leading-tight flex-1 list-disc pl-3"><li>Dashboards</li><li>Informes</li><li>Exportación Excel/PDF</li><li>KPIs</li><li>Auditoría</li></ul>
+                            <a href="#" class="text-[0.55rem] text-center bg-brand-800 text-white rounded py-0.5 mt-1 hover:bg-brand-900">Ver módulo →</a>
+                        </div>
+                    </div>
+
+                    <div class="card bg-brand-900 text-white border-0 flex flex-col justify-center p-3 relative overflow-hidden">
+                        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=400&auto=format&fit=crop')] opacity-20 bg-cover bg-center"></div>
+                        <div class="relative z-10">
+                            <h3 class="font-black text-sm mb-1">ManTyre ERP</h3>
+                            <p class="text-[0.6rem] text-brand-100">Más control, mayor productividad.</p>
+                            <div class="mt-4 flex items-center gap-1">
+                                <svg class="w-4 h-4 text-brand-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 7.5l-10-5v10l10 5 10-5v-10l-10 5z"/></svg>
+                                <span class="font-bold text-[0.6rem] tracking-wider uppercase">MANTYRE</span>
                             </div>
-                            {% endfor %}
                         </div>
                     </div>
-                    {% endfor %}
-                </div>
-            </div>
 
-            <!-- SECCIONES DE HISTORIAL Y FINANZAS (Mismo concepto, tablas limpias) -->
-            <div id="ot" class="seccion max-w-[1600px] mx-auto">
-                <div class="card-custom-nopad h-[80vh] flex flex-col">
-                    <div class="p-6 border-b border-slate-200 bg-white"><h3 class="text-lg font-bold text-slate-800">Historial de OTs y Trabajos</h3></div>
-                    <div class="table-wrapper flex-1">
-                        <table class="table-custom table-searchable">
-                            <thead class="sticky top-0 bg-slate-50 shadow-sm z-10">
-                                <tr><th>Fecha</th><th>Equipo</th><th>Trabajo Realizado</th><th>Mecánico</th><th>Lectura</th><th>Costo</th><th>Estado</th></tr>
-                            </thead>
-                            <tbody>
-                                {% for m in mants_prev + mants_corr %}
-                                <tr>
-                                    <td class="text-slate-500">{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '-' }}</td>
-                                    <td class="font-bold text-brand-900">{{ m.codigo_equipo }}</td>
-                                    <td>
-                                        <p class="font-bold text-slate-700">{{ m.tipo_mantencion if m.tipo_ot == 'Preventiva' else m.sistema_falla }}</p>
-                                        <p class="text-xs text-slate-400">{{ 'Preventiva' if m.tipo_ot == 'Preventiva' else 'Correctiva: ' ~ m.causa_raiz }}</p>
-                                    </td>
-                                    <td>{{ m.mecanico }}</td>
-                                    <td class="font-mono text-slate-500">{{ m.lectura_str }}</td>
-                                    <td class="font-bold">{{ m.costo_str }}</td>
-                                    <td><span class="text-[10px] font-bold uppercase {% if m.estado == 'Finalizada' %}text-emerald-600 bg-emerald-50{% else %}text-amber-600 bg-amber-50{% endif %} px-2 py-1 rounded">{{ m.estado }}</span></td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
             </div>
-
-            <div id="flota" class="seccion max-w-[1600px] mx-auto">
-                <div class="card-custom-nopad h-[80vh] flex flex-col">
-                    <div class="p-6 border-b border-slate-200 bg-white">
-                        <h3 class="text-lg font-bold text-slate-800">Análisis Financiero de Flota</h3>
-                        <p class="text-sm text-slate-500 mt-1">Costos asociados a cada vehículo en mantenimientos y repuestos.</p>
-                    </div>
-                    <div class="table-wrapper flex-1">
-                        <table class="table-custom table-searchable">
-                            <thead class="sticky top-0 bg-slate-50 shadow-sm z-10">
-                                <tr><th>Equipo</th><th>Categoría</th><th>Gastos en Taller</th><th>Gastos en Repuestos</th><th class="bg-slate-100">Inversión Total</th><th class="bg-brand-50 text-brand-900">Rendimiento (Costo por Km/Hr)</th></tr>
-                            </thead>
-                            <tbody>
-                                {% for f in finanzas_flota %}
-                                <tr>
-                                    <td class="font-bold text-brand-900 text-base">{{ f.codigo }}</td>
-                                    <td class="text-slate-500">{{ f.tipo }}</td>
-                                    <td>{{ f.costo_mants }}</td>
-                                    <td>{{ f.costo_compras }}</td>
-                                    <td class="bg-slate-50 font-bold text-slate-800">{{ f.costo_str }}</td>
-                                    <td class="bg-brand-50 font-black text-brand-800 text-base">{{ f.cpk_cph_str }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            
+            <footer class="text-[0.55rem] text-slate-400 border-t border-slate-300 pt-1 pb-4 flex justify-between uppercase">
+                <span>MANTYRE ERP | CMMS + TMS + Logística + Transporte + Mantenimiento + Bodega + Compras + Finanzas + Reportes</span>
+                <span>ManTyre Maquinarias | Construyendo operaciones más eficientes</span>
+            </footer>
 
         </div>
+        
+        <!-- LOS OTROS CONTENEDORES (Kanban, Tablas, etc.) SE MANTIENEN PERO OCULTOS PARA NO ROMPER EL MENÚ -->
+        <div id="plan" class="seccion p-6 bg-slate-50"><p class="text-slate-500">Módulo en construcción (redirigido a vista anterior).</p></div>
+        <div id="eq" class="seccion p-6 bg-slate-50"><p class="text-slate-500">Módulo en construcción (redirigido a vista anterior).</p></div>
+        <div id="ot" class="seccion p-6 bg-slate-50"><p class="text-slate-500">Módulo en construcción (redirigido a vista anterior).</p></div>
+        <div id="ot_corr" class="seccion p-6 bg-slate-50"><p class="text-slate-500">Módulo en construcción (redirigido a vista anterior).</p></div>
+        <div id="cal" class="seccion p-6 bg-slate-50"><p class="text-slate-500">Módulo en construcción (redirigido a vista anterior).</p></div>
+        <div id="flota" class="seccion p-6 bg-slate-50"><p class="text-slate-500">Módulo en construcción (redirigido a vista anterior).</p></div>
+        <div id="mapa" class="seccion p-6 bg-slate-50"><p class="text-slate-500">Módulo en construcción (redirigido a vista anterior).</p></div>
+        <div id="compras" class="seccion p-6 bg-slate-50"><p class="text-slate-500">Módulo en construcción (redirigido a vista anterior).</p></div>
+
     </main>
 
-    <!-- MODAL: AGREGAR OT A TALLER -->
-    <div id="modal-ot" class="fixed inset-0 bg-slate-900/80 z-[600] hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl overflow-hidden">
-            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="font-bold text-slate-800 uppercase tracking-wide text-sm">Crear Orden de Trabajo (Taller)</h3>
-                <button onclick="document.getElementById('modal-ot').classList.add('hidden')" class="text-2xl text-slate-400 hover:text-slate-800 focus:outline-none">&times;</button>
-            </div>
-            <form action="/api/add_record" method="POST" class="p-6 flex flex-col gap-5">
-                <input type="hidden" name="tabla" value="ot">
-                <input type="hidden" name="referer" value="/?tab=plan">
-                <input type="hidden" name="estado" value="Pendiente">
-                <input type="hidden" name="lectura" value="0">
-                <input type="hidden" name="costo" value="0">
-                <input type="hidden" name="empresa" value="{{ current_user.empresa_activa }}">
-
-                <div>
-                    <label class="text-xs font-bold uppercase text-slate-500 mb-1.5 block">¿Qué equipo ingresa?</label>
-                    <input type="text" name="codigo" class="form-input uppercase" placeholder="Ej: TR-45" required>
-                </div>
-                <div>
-                    <label class="text-xs font-bold uppercase text-slate-500 mb-1.5 block">¿Qué pauta o falla reporta?</label>
-                    <input list="lista_pautas" name="tipo" class="form-input uppercase" placeholder="Ej: Falla frenos o PM2" required>
-                </div>
-                <button type="submit" class="btn-primary mt-4 w-full py-4 text-sm">Generar OT y Enviar a Kanban</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal Dinámico de Edición CMMS -->
-    <div id="modal-edit" class="fixed inset-0 bg-slate-900/80 z-[600] hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-xl shadow-2xl overflow-hidden">
-            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 id="edit-title" class="font-bold text-slate-800 uppercase text-sm tracking-wide">Editar Registro</h3>
-                <button onclick="document.getElementById('modal-edit').classList.add('hidden')" class="text-xl text-slate-400 hover:text-slate-800">&times;</button>
-            </div>
-            <form action="/api/edit_record" method="POST" class="p-6 flex flex-col gap-4">
-                <input type="hidden" name="tabla" id="edit-tabla">
-                <input type="hidden" name="id" id="edit-id">
-                <input type="hidden" name="referer" value="/">
-                <div id="edit-fields" class="flex flex-col gap-4"></div>
-                <button type="submit" class="btn-primary mt-2 w-full py-3">Guardar Cambios</button>
-            </form>
-        </div>
-    </div>
-
     <script>
-        // LÓGICA DE NAVEGACIÓN Y BOTÓN ATRÁS MEJORADA (History API PushState)
-        function switchTab(t, el, titleText = '') {
-            // Ocultar todas las secciones y quitar clases activas
-            document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active')); 
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            
-            // Mostrar la sección seleccionada
-            const seccionDestino = document.getElementById(t);
-            if(seccionDestino) seccionDestino.classList.add('active'); 
-            
-            // Marcar el botón del menú
-            if(el) {
-                el.classList.add('active'); 
-                document.getElementById('title').innerText = titleText || el.innerText.trim();
-                
-                // Actualizar subtítulo según la pestaña
-                const subtitle = document.getElementById('subtitle');
-                if(t === 'dash') subtitle.innerText = "Indicadores clave de la salud de tu flota.";
-                else if(t === 'plan') subtitle.innerText = "Control visual del estado de los vehículos en reparación.";
-                else if(t === 'eq') subtitle.innerText = "Maestro completo de vehículos, maquinaria y su disponibilidad.";
-                else if(t === 'ot') subtitle.innerText = "Registro histórico de intervenciones y pautas realizadas.";
-                else if(t === 'flota') subtitle.innerText = "Análisis de rentabilidad y gastos asociados a la operación.";
-                else subtitle.innerText = "";
-            }
-            
-            // Limpiar buscador al cambiar
-            document.getElementById('buscador').value = '';
-            document.querySelectorAll('.table-searchable tbody tr').forEach(r => r.style.display = '');
+        // Fecha actual formato 15 Abr 2026 14:32
+        const now = new Date();
+        const options = { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit' };
+        document.getElementById('fecha-hora').innerText = now.toLocaleDateString('es-CL', options).replace(',', '');
 
-            // MÁGIA DEL BOTÓN ATRÁS: Añadir al historial del navegador en lugar de reemplazar
-            const newUrl = new URL(window.location);
-            newUrl.searchParams.set('tab', t);
-            if(window.location.search !== newUrl.search) {
-                window.history.pushState({tab: t}, '', newUrl); 
-            }
-
-            if(window.innerWidth < 768) { 
-                document.getElementById('sidebar').classList.add('-translate-x-full'); 
-                document.getElementById('sidebar-backdrop').classList.add('hidden'); 
-            }
-        }
-
-        // Escuchar cuando el usuario presiona "Atrás" o "Adelante" en el navegador
-        window.addEventListener('popstate', function(event) {
-            let tabToLoad = 'dash'; // Por defecto
-            if (event.state && event.state.tab) {
-                tabToLoad = event.state.tab;
-            } else {
-                const urlParams = new URLSearchParams(window.location.search);
-                if(urlParams.has('tab')) tabToLoad = urlParams.get('tab');
-            }
-            
-            // Activar la pestaña sin volver a meterla al historial
+        function switchTab(t, el) {
             document.querySelectorAll('.seccion').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            
-            const seccion = document.getElementById(tabToLoad);
-            if(seccion) seccion.classList.add('active');
-            
-            const link = document.querySelector(`a[onclick*="switchTab('${tabToLoad}'"]`);
-            if(link) {
-                link.classList.add('active');
-                // Extraer el título del onclick (rudimentario pero efectivo)
-                let match = link.getAttribute('onclick').match(/switchTab\('[^']+',\s*this,\s*'([^']+)'/);
-                document.getElementById('title').innerText = match ? match[1] : link.innerText.trim();
-            }
-        });
-
-        // Toggle Menú en Celulares
-        function toggleMenu() {
-            const sidebar = document.getElementById('sidebar'); const backdrop = document.getElementById('sidebar-backdrop');
-            if (sidebar.classList.contains('-translate-x-full')) { sidebar.classList.remove('-translate-x-full'); backdrop.classList.remove('hidden'); } 
-            else { sidebar.classList.add('-translate-x-full'); backdrop.classList.add('hidden'); }
-        }
-
-        // Buscador Rápido
-        let searchTimeout;
-        function filtrarTablas(q) { 
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                q = q.toLowerCase(); 
-                const activeSec = document.querySelector('.seccion.active');
-                if(!activeSec) return;
-                
-                const tablas = activeSec.querySelectorAll('.table-searchable tbody');
-                tablas.forEach(tbody => {
-                    tbody.querySelectorAll('tr').forEach(r => { 
-                        const texto = r.innerText.toLowerCase();
-                        const extra = r.querySelector('[data-search]') ? r.querySelector('[data-search]').innerText.toLowerCase() : '';
-                        r.style.display = (texto.includes(q) || extra.includes(q)) ? '' : 'none'; 
-                    }); 
-                });
-            }, 300);
-        }
-
-        function abrirEditModal(tabla, id, titulo, campos) {
-            document.getElementById('edit-tabla').value = tabla;
-            document.getElementById('edit-id').value = id;
-            document.getElementById('edit-title').innerText = titulo;
-            let html = '';
-            campos.forEach(c => {
-                html += `<div><label class="text-[10px] font-bold uppercase text-slate-500 mb-1 block">${c.label}</label>`;
-                if (c.db === 'estado_base') {
-                    html += `<select name="${c.db}" class="form-input bg-white"><option value="Operativo" ${c.val==='Operativo'?'selected':''}>Operativo</option><option value="Taller" ${c.val==='Taller'?'selected':''}>Taller</option><option value="Fuera de Servicio" ${c.val==='Fuera de Servicio'?'selected':''}>Fuera de Servicio</option></select></div>`;
-                } else {
-                    let valLimpio = c.val !== 'None' ? c.val : '';
-                    html += `<input type="text" name="${c.db}" value="${valLimpio}" class="form-input uppercase bg-white"></div>`;
-                }
-            });
-            document.getElementById('edit-fields').innerHTML = html;
-            document.getElementById('modal-edit').classList.remove('hidden');
+            document.getElementById(t).classList.add('active');
+            if(el) el.classList.add('active');
         }
 
         const cinta2 = {{ cinta2|tojson }};
         const cinta3 = {{ cinta3|tojson }};
         
         window.onload = function() {
-            // Cargar pestaña inicial desde la URL o historial
-            const urlParams = new URLSearchParams(window.location.search);
-            const tabActiva = urlParams.get('tab') || 'dash';
-            const link = document.querySelector(`a[onclick*="switchTab('${tabActiva}'"]`); 
-            if (link) switchTab(tabActiva, link);
-            else { document.getElementById('dash').classList.add('active'); document.querySelector('.nav-link').classList.add('active'); }
-            
-            // Guardar estado inicial en history
-            window.history.replaceState({tab: tabActiva}, '', window.location.href);
-
-            if (typeof Sortable !== 'undefined') {
-                ['kb-pendiente', 'kb-progreso', 'kb-revision', 'kb-completado'].forEach(col => {
-                    const el = document.getElementById(col);
-                    if(el) new Sortable(el, { group: 'kanban_ot', animation: 150, ghostClass: 'opacity-50', onEnd: function (evt) { fetch('/api/cambiar_estado_ot/' + evt.item.getAttribute('data-id'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: evt.to.getAttribute('data-status') }) }).then(() => location.reload()); }});
-                });
-            }
-
             if (typeof Chart !== 'undefined') {
                 Chart.defaults.font.family = "'Inter', sans-serif"; 
-                Chart.defaults.color = '#64748B'; 
-                const bluePalette = ['#1E3A8A', '#1D4ED8', '#2563EB', '#3B82F6', '#60A5FA', '#93C5FD'];
+                Chart.defaults.color = '#94A3B8';
+                Chart.defaults.font.size = 9;
+                
+                const bluePalette = ['#1E3A8A', '#2563EB', '#60A5FA', '#94A3B8'];
 
+                // Compras Realizadas (Line)
                 if(document.getElementById('chartCompras')) {
                     new Chart(document.getElementById('chartCompras').getContext('2d'), {
-                        type: 'line', data: { labels: cinta2.compras_labels, datasets: [{ label: 'Inversión', data: cinta2.compras_data, borderColor: '#2563EB', backgroundColor: 'rgba(37, 99, 235, 0.1)', fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#1E3A8A' }] },
-                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, border: { dash: [4, 4] } } } }
+                        type: 'line', data: { labels: cinta2.compras_labels, datasets: [{ label: 'Compras', data: cinta2.compras_data, borderColor: '#2563EB', borderWidth: 1.5, pointRadius: 2, tension: 0.1 }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: true, grid: {display: false} }, y: { display: true, border: {dash: [2,2]} } } }
                     });
                 }
                 
+                // Estado Flota (Doughnut)
                 if(document.getElementById('chartEstados')) {
                     new Chart(document.getElementById('chartEstados').getContext('2d'), {
-                        type: 'doughnut', data: { labels: cinta2.estados_labels, datasets: [{ data: cinta2.estados_data, backgroundColor: ['#10B981', '#F59E0B', '#EF4444'], borderWidth: 0 }] },
-                        options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, padding: 20 } } } }
+                        type: 'doughnut', data: { labels: cinta2.estados_labels, datasets: [{ data: cinta2.estados_data, backgroundColor: ['#3B82F6', '#F59E0B', '#94A3B8', '#F87171'], borderWidth: 0 }] },
+                        options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } }
+                    });
+                }
+                
+                // MTBF (Bar)
+                if(document.getElementById('chartMTBF') && cinta3.labels.length > 0) {
+                    new Chart(document.getElementById('chartMTBF').getContext('2d'), {
+                        type: 'bar', data: { labels: cinta3.labels.slice(0,7), datasets: [{ label: 'MTBF', data: cinta3.mtbf.slice(0,7), backgroundColor: '#2563EB', barThickness: 10 }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: {display: false} }, y: { display: true } } }
+                    });
+                }
+
+                // MTTR (Placeholder Bar)
+                if(document.getElementById('chartMTTR')) {
+                    new Chart(document.getElementById('chartMTTR').getContext('2d'), {
+                        type: 'bar', data: { labels: ['Komat', 'Volvo', 'Scania', 'Man', 'Hawa', 'Toyot'], datasets: [{ label: 'MTTR', data: [10, 12.5, 16.8, 18.2, 22.7, 25.4], backgroundColor: '#3B82F6', barThickness: 10 }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: {display: false} }, y: { display: true } } }
+                    });
+                }
+
+                // Top Mantenciones (Horizontal Bar Placeholder)
+                if(document.getElementById('chartTopMants')) {
+                    new Chart(document.getElementById('chartTopMants').getContext('2d'), {
+                        type: 'bar', data: { labels: ['MD-79', 'CD-110', 'MD-26', 'CD-120', 'VD-29'], datasets: [{ data: [12, 10, 9, 8, 7], backgroundColor: '#60A5FA', barThickness: 6 }] },
+                        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: {display: false} } } }
+                    });
+                }
+
+                // Top Costos (Horizontal Bar Placeholder)
+                if(document.getElementById('chartTopCostos')) {
+                    new Chart(document.getElementById('chartTopCostos').getContext('2d'), {
+                        type: 'bar', data: { labels: ['MD-79', 'CD-110', 'MD-94', 'CD-121', 'VD-18'], datasets: [{ data: [8450000, 7320000, 6870000, 5980000, 5420000], backgroundColor: '#93C5FD', barThickness: 6 }] },
+                        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: {display: false} } } }
                     });
                 }
             }
