@@ -31,10 +31,9 @@ try:
     ZONA_CHILE = zoneinfo.ZoneInfo("America/Santiago")
 except ImportError:
     from datetime import timezone
-    ZONA_CHILE = timezone(timedelta(hours=-4)) # Fallback
+    ZONA_CHILE = timezone(timedelta(hours=-4))
 
 def obtener_hora_chile():
-    """ Devuelve siempre la hora exacta de Chile, ignorando el servidor """
     return datetime.now(ZONA_CHILE).replace(tzinfo=None)
 
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -64,7 +63,6 @@ def dashboard():
         en_taller = [e for e in eqs_db if e.estado_base == 'Taller']
         fuera_servicio = [e for e in eqs_db if e.estado_base == 'Fuera de Servicio']
         
-        # CÁLCULO TRADICIONAL EXACTO (Sin proyecciones fantasmas)
         eqs_margen = []
         for e in eqs_db:
             margen_bruto = (e.proxima_pm or 0) - (e.lectura_actual or 0)
@@ -259,19 +257,6 @@ def mover_ubicacion_kanban():
             if ant.upper() != nueva_ub:
                 eq.ubicacion = nueva_ub
                 db.session.add(HistorialUbicacion(codigo_equipo=codigo, ubicacion_anterior=ant, ubicacion_nueva=nueva_ub))
-                
-                try:
-                    autor_nombre = getattr(current_user, 'username', getattr(current_user, 'nombre', 'Usuario'))
-                    db.session.add(RegistroChatter(
-                        fecha=obtener_hora_chile(),
-                        modelo_ref='equipos',
-                        registro_id=str(codigo),
-                        autor=str(autor_nombre),
-                        accion='cambio_ubicacion',
-                        mensaje=f"Movió el equipo {codigo} desde '{ant}' hacia '{nueva_ub}'."
-                    ))
-                except: pass
-
                 db.session.commit()
             return {"status": "success"}
         return {"status": "error"}
@@ -292,19 +277,6 @@ def guardar_ubicaciones_masivo():
                 if ant.upper() != nue:
                     eq.ubicacion = nue
                     db.session.add(HistorialUbicacion(codigo_equipo=eq.codigo, ubicacion_anterior=ant, ubicacion_nueva=nue))
-        
-        try:
-            autor_nombre = getattr(current_user, 'username', getattr(current_user, 'nombre', 'Usuario'))
-            db.session.add(RegistroChatter(
-                fecha=obtener_hora_chile(),
-                modelo_ref='equipos',
-                registro_id='masivo',
-                autor=str(autor_nombre),
-                accion='cambio_ubicacion_masivo',
-                mensaje=f"Actualizó ubicaciones de manera masiva para {len(cambios)} equipos."
-            ))
-        except: pass
-
         db.session.commit()
         return {"status": "success"}
     except Exception as e:
@@ -318,27 +290,11 @@ def cambiar_estado_ot(ot_id):
         nuevo_estado = data.get('estado')
         
         ot = OrdenTrabajo.query.get_or_404(ot_id)
-        estado_anterior = ot.estado
-        
-        if estado_anterior != nuevo_estado:
+        if ot.estado != nuevo_estado:
             ot.estado = nuevo_estado
             if nuevo_estado == 'Finalizada' and not ot.fecha_cierre:
                 ot.fecha_cierre = obtener_hora_chile()
-                
-            try:
-                autor_nombre = getattr(current_user, 'username', getattr(current_user, 'nombre', 'Usuario'))
-                db.session.add(RegistroChatter(
-                    fecha=obtener_hora_chile(),
-                    modelo_ref='orden_trabajo',
-                    registro_id=str(ot.id),
-                    autor=str(autor_nombre),
-                    accion='cambio_estado_ot',
-                    mensaje=f"Cambió la Orden de Trabajo #{ot.id} (Equipo: {ot.codigo_equipo}) de '{estado_anterior}' a '{nuevo_estado}'."
-                ))
-            except: pass
-                
             db.session.commit()
-            
         return jsonify({"status": "success"})
     except Exception as e:
         db.session.rollback()
@@ -350,9 +306,7 @@ def detalle_equipo(codigo):
     try:
         equipo = Equipo.query.filter_by(codigo=codigo).first()
         if not equipo: return "Equipo no encontrado en la base de datos.", 404
-        
         todos_equipos = Equipo.query.order_by(Equipo.codigo).all()
-        
         e_cod = str(equipo.codigo).strip().upper()
         e_mod = str(equipo.modelo).strip().upper() if equipo.modelo else ""
         
@@ -376,18 +330,10 @@ def detalle_equipo(codigo):
         foto_url = buscar_foto_por_tipo(equipo.tipo_equipo, equipo.marca)
         
         return render_template('equipo.html', 
-                               equipo=equipo, 
-                               todos_equipos=todos_equipos,
-                               filtros=filtros, 
-                               mants_prev=mants_prev, 
-                               mants_corr=mants_corr, 
-                               lecturas=lecturas, 
-                               compras=compras, 
-                               documentos=documentos, 
-                               historial_ub=historial_ub, 
-                               operador=operador, 
-                               foto_url=foto_url, 
-                               hoy=obtener_hora_chile())
+                               equipo=equipo, todos_equipos=todos_equipos, filtros=filtros, 
+                               mants_prev=mants_prev, mants_corr=mants_corr, lecturas=lecturas, 
+                               compras=compras, documentos=documentos, historial_ub=historial_ub, 
+                               operador=operador, foto_url=foto_url, hoy=obtener_hora_chile())
     except Exception as e:
         return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error al cargar Ficha:</b> {str(e)}</div>"
 
@@ -418,17 +364,13 @@ def subir_documento(codigo):
 @login_required
 def bodega_kpi():
     try:
-        from models.bodega import Repuesto, MovimientoBodega, RecetaModelo
-        from utils.formatters import format_clp
         hoy = obtener_hora_chile()
-        
         eqs_db = Equipo.query.all()
         repuestos = Repuesto.query.all()
         recetas_db = RecetaModelo.query.all()
         movimientos = MovimientoBodega.query.order_by(MovimientoBodega.fecha.desc()).limit(150).all()
         
         rep_dict = {r.id: r for r in repuestos}
-
         valor_total = sum((r.stock_actual or 0) * (r.precio_promedio or 0) for r in repuestos)
         bajo_minimo = [r for r in repuestos if 0 < (r.stock_actual or 0) <= (r.stock_minimo or 2)]
         quiebre_stock = [r for r in repuestos if (r.stock_actual or 0) <= 0]
@@ -439,10 +381,7 @@ def bodega_kpi():
             if cat not in cat_stats: cat_stats[cat] = 0
             cat_stats[cat] += (r.stock_actual or 0) * (r.precio_promedio or 0)
             
-        grafico_categorias = {
-            'labels': list(cat_stats.keys()),
-            'data': list(cat_stats.values())
-        }
+        grafico_categorias = {'labels': list(cat_stats.keys()), 'data': list(cat_stats.values())}
 
         repuestos_dict_sku = {r.codigo_oem: r for r in repuestos}
         recetas_por_modelo = {}
@@ -453,7 +392,6 @@ def bodega_kpi():
             
         kits_por_equipo = {}
         repuesto_compatibilidad = {} 
-        
         eqs_sorted = sorted(eqs_db, key=lambda x: str(x.codigo))
         
         for e in eqs_sorted:
@@ -461,26 +399,18 @@ def bodega_kpi():
             if modelo_eq in recetas_por_modelo:
                 cod_eq = str(e.codigo).strip().upper()
                 marca_modelo = f"{e.marca} {e.modelo}".strip()
-                
-                kits_por_equipo[cod_eq] = {
-                    'componentes': [], 'armable': True, 'marca_modelo': marca_modelo, 'modelo': modelo_eq
-                }
+                kits_por_equipo[cod_eq] = {'componentes': [], 'armable': True, 'marca_modelo': marca_modelo, 'modelo': modelo_eq}
                 
                 for rec in recetas_por_modelo[modelo_eq]:
                     sku = str(rec.sku_repuesto).strip().upper()
                     if sku not in repuesto_compatibilidad: repuesto_compatibilidad[sku] = set()
                     repuesto_compatibilidad[sku].add(cod_eq)
-                    
                     rep_obj = repuestos_dict_sku.get(sku)
                     stock_actual = rep_obj.stock_actual if rep_obj else 0
                     nombre_rep = rep_obj.nombre if rep_obj else 'Repuesto No Registrado'
-                    
                     ok = stock_actual >= rec.cantidad
                     if not ok: kits_por_equipo[cod_eq]['armable'] = False
-                    
-                    kits_por_equipo[cod_eq]['componentes'].append({
-                        'sku': sku, 'nombre': nombre_rep, 'cant_req': rec.cantidad, 'stock': stock_actual, 'ok': ok
-                    })
+                    kits_por_equipo[cod_eq]['componentes'].append({'sku': sku, 'nombre': nombre_rep, 'cant_req': rec.cantidad, 'stock': stock_actual, 'ok': ok})
                     
         for sku in repuesto_compatibilidad:
             repuesto_compatibilidad[sku] = ", ".join(sorted(list(repuesto_compatibilidad[sku])))
@@ -502,55 +432,7 @@ def bodega_kpi():
                                bajo_minimo_count=len(bajo_minimo), quiebre_stock_count=len(quiebre_stock),
                                grafico_categorias=grafico_categorias, eqs_db=eqs_db, hoy=hoy)
     except Exception as e:
-        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error Crítico en Bodega WMS:</b> {str(e)}</div>"
-
-@dashboard_bp.route('/api/wms/descontar_kit', methods=['POST'])
-@login_required
-def wms_descontar_kit():
-    try:
-        from models.bodega import Repuesto, RecetaModelo, MovimientoBodega
-        data = request.get_json()
-        modelo = data.get('modelo')
-        equipo = data.get('equipo')
-        referencia = data.get('referencia') or 'Uso Interno'
-        
-        try: usuario = current_user.username
-        except: 
-            try: usuario = current_user.nombre
-            except: usuario = 'Sistema'
-            
-        recetas = RecetaModelo.query.filter_by(modelo_equipo=modelo).all()
-        if not recetas:
-            return jsonify({"status": "error", "message": "No se encontraron componentes para este modelo."})
-            
-        for rec in recetas:
-            rep = Repuesto.query.filter_by(codigo_oem=rec.sku_repuesto).first()
-            if not rep or (rep.stock_actual or 0) < rec.cantidad:
-                return jsonify({"status": "error", "message": f"Quiebre de stock en: {rec.sku_repuesto}. Despacho cancelado."})
-                
-        for rec in recetas:
-            rep = Repuesto.query.filter_by(codigo_oem=rec.sku_repuesto).first()
-            rep.stock_actual -= rec.cantidad
-            
-            mov = MovimientoBodega(
-                fecha=obtener_hora_chile(),
-                tipo_movimiento='SALIDA KIT PM',
-                motivo='Mantenimiento Flota',
-                repuesto_id=rep.id,
-                cantidad=rec.cantidad,
-                costo_unitario=rep.precio_promedio,
-                documento_ref=referencia,
-                codigo_equipo=equipo,
-                usuario=usuario,
-                observaciones=f"Despacho automatizado (Equipo: {equipo})"
-            )
-            db.session.add(mov)
-            
-        db.session.commit()
-        return jsonify({"status": "success"})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"status": "error", "message": str(e)})
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error Bodega WMS:</b> {str(e)}</div>"
 
 @dashboard_bp.route('/imprimir_ot/<int:id>', strict_slashes=False)
 @login_required
@@ -558,14 +440,10 @@ def imprimir_ot(id):
     try:
         ot = OrdenTrabajo.query.get_or_404(id)
         equipo = Equipo.query.filter_by(codigo=ot.codigo_equipo).first()
-        
-        filtros = []
-        if equipo:
-            filtros = FiltroEquipo.query.filter_by(codigo_equipo=equipo.codigo).all()
-            
+        filtros = FiltroEquipo.query.filter_by(codigo_equipo=equipo.codigo).all() if equipo else []
         return render_template('imprimir_ot.html', ot=ot, equipo=equipo, filtros=filtros, hoy=obtener_hora_chile())
     except Exception as e:
-        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error al cargar la Orden de Trabajo:</b> {str(e)}</div>"
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error al cargar OT:</b> {str(e)}</div>"
 
 # ==========================================
 # MÓDULO LOGÍSTICA TMS - FASE 2: FLOTA Y CONDUCTORES
@@ -575,13 +453,7 @@ def imprimir_ot(id):
 def logistica_flota():
     try:
         empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
-        
-        equipos_motrices = Equipo.query.filter(
-            (Equipo.tipo_equipo.ilike('%camion%')) | 
-            (Equipo.tipo_equipo.ilike('%tracto%')) |
-            (Equipo.tipo_equipo.ilike('%remolcador%'))
-        ).order_by(Equipo.codigo).all()
-        
+        equipos_motrices = Equipo.query.filter((Equipo.tipo_equipo.ilike('%camion%')) | (Equipo.tipo_equipo.ilike('%tracto%')) | (Equipo.tipo_equipo.ilike('%remolcador%'))).order_by(Equipo.codigo).all()
         conductores = Conductor.query.order_by(Conductor.nombre_completo).all()
         ramplas = Rampla.query.order_by(Rampla.codigo_interno).all()
         
@@ -593,18 +465,9 @@ def logistica_flota():
             'total_ramplas': len(ramplas),
             'ramplas_disponibles': len([r for r in ramplas if r.estado == 'DISPONIBLE'])
         }
-        
-        hoy_fecha = obtener_hora_chile().date()
-        
-        return render_template('logistica_flota.html', 
-                               equipos=equipos_motrices, 
-                               conductores=conductores, 
-                               ramplas=ramplas, 
-                               kpis=kpis, 
-                               empresa_actual=empresa_actual,
-                               hoy=hoy_fecha)
+        return render_template('logistica_flota.html', equipos=equipos_motrices, conductores=conductores, ramplas=ramplas, kpis=kpis, empresa_actual=empresa_actual, hoy=obtener_hora_chile().date())
     except Exception as e:
-        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error Crítico en TMS Flota:</b> {str(e)}</div>"
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error TMS Flota:</b> {str(e)}</div>"
 
 @dashboard_bp.route('/api/tms/add_conductor', methods=['POST'])
 @login_required
@@ -612,14 +475,7 @@ def add_conductor():
     try:
         fecha_venc = request.form.get('vencimiento')
         vencimiento = datetime.strptime(fecha_venc, '%Y-%m-%d').date() if fecha_venc else None
-        
-        nuevo = Conductor(
-            rut=request.form.get('rut').strip(),
-            nombre_completo=request.form.get('nombre').upper().strip(),
-            clase_licencia=request.form.get('licencia').upper().strip(),
-            vencimiento_licencia=vencimiento,
-            estado='DISPONIBLE'
-        )
+        nuevo = Conductor(rut=request.form.get('rut').strip(), nombre_completo=request.form.get('nombre').upper().strip(), clase_licencia=request.form.get('licencia').upper().strip(), vencimiento_licencia=vencimiento, estado='DISPONIBLE')
         db.session.add(nuevo)
         db.session.commit()
         return redirect('/logistica/flota')
@@ -631,13 +487,7 @@ def add_conductor():
 @login_required
 def add_rampla():
     try:
-        nueva = Rampla(
-            codigo_interno=request.form.get('codigo').upper().strip(),
-            patente=request.form.get('patente').upper().strip(),
-            tipo_rampla=request.form.get('tipo').upper().strip(),
-            capacidad_kg=float(request.form.get('capacidad') or 0.0),
-            estado='DISPONIBLE'
-        )
+        nueva = Rampla(codigo_interno=request.form.get('codigo').upper().strip(), patente=request.form.get('patente').upper().strip(), tipo_rampla=request.form.get('tipo').upper().strip(), capacidad_kg=float(request.form.get('capacidad') or 0.0), estado='DISPONIBLE')
         db.session.add(nueva)
         db.session.commit()
         return redirect('/logistica/flota')
@@ -653,26 +503,13 @@ def add_rampla():
 def logistica_operaciones():
     try:
         empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
-        
         solicitudes = SolicitudTransporte.query.order_by(SolicitudTransporte.fecha_solicitud.desc()).all()
         sol_pendientes = [s for s in solicitudes if s.estado == 'SOLICITADA']
-        
         viajes = Viaje.query.order_by(Viaje.id.desc()).all()
-        viajes_activos = [v for v in viajes if v.estado in ['PROGRAMADO', 'EN RUTA', 'EN PUERTO']]
+        viajes_activos = [v for v in viajes if v.estado in ['PROGRAMADO', 'ASIGNADA', 'EN CARGA', 'EN RUTA', 'EN PUERTO']]
         
-        kpis = {
-            'solicitudes_pendientes': len(sol_pendientes),
-            'viajes_activos': len(viajes_activos),
-            'viajes_completados': len([v for v in viajes if v.estado == 'ENTREGADO'])
-        }
-        
-        return render_template('logistica_operaciones.html', 
-                               solicitudes=solicitudes, 
-                               sol_pendientes=sol_pendientes,
-                               viajes=viajes,
-                               viajes_activos=viajes_activos,
-                               kpis=kpis, 
-                               empresa_actual=empresa_actual)
+        kpis = {'solicitudes_pendientes': len(sol_pendientes), 'viajes_activos': len(viajes_activos), 'viajes_completados': len([v for v in viajes if v.estado == 'ENTREGADO'])}
+        return render_template('logistica_operaciones.html', solicitudes=solicitudes, sol_pendientes=sol_pendientes, viajes=viajes, viajes_activos=viajes_activos, kpis=kpis, empresa_actual=empresa_actual)
     except Exception as e:
         return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error Crítico en Operaciones:</b> {str(e)}</div>"
 
@@ -682,16 +519,7 @@ def add_solicitud():
     try:
         fecha_req = request.form.get('fecha_requerida')
         fecha_requerida = datetime.strptime(fecha_req, '%Y-%m-%d').date() if fecha_req else None
-        
-        nueva = SolicitudTransporte(
-            cliente=request.form.get('cliente').upper().strip(),
-            origen=request.form.get('origen').upper().strip(),
-            destino=request.form.get('destino').upper().strip(),
-            tipo_carga=request.form.get('tipo_carga').upper().strip(),
-            peso_kg=float(request.form.get('peso') or 0.0),
-            fecha_requerida=fecha_requerida,
-            estado='SOLICITADA'
-        )
+        nueva = SolicitudTransporte(cliente=request.form.get('cliente').upper().strip(), origen=request.form.get('origen').upper().strip(), destino=request.form.get('destino').upper().strip(), tipo_carga=request.form.get('tipo_carga').upper().strip(), peso_kg=float(request.form.get('peso') or 0.0), fecha_requerida=fecha_requerida, estado='SOLICITADA')
         db.session.add(nueva)
         db.session.commit()
         return redirect('/logistica/operaciones')
@@ -706,14 +534,8 @@ def aprobar_solicitud(id):
         solicitud = SolicitudTransporte.query.get_or_404(id)
         if solicitud.estado == 'SOLICITADA':
             solicitud.estado = 'APROBADA'
-            
             folio = f"OT-{obtener_hora_chile().strftime('%Y%m%d')}-{solicitud.id}"
-            nuevo_viaje = Viaje(
-                folio_viaje=folio,
-                solicitud_id=solicitud.id,
-                fecha_programada=solicitud.fecha_requerida,
-                estado='PROGRAMADO'
-            )
+            nuevo_viaje = Viaje(folio_viaje=folio, solicitud_id=solicitud.id, fecha_programada=solicitud.fecha_requerida, estado='PROGRAMADO')
             db.session.add(nuevo_viaje)
             db.session.commit()
         return redirect('/logistica/operaciones')
@@ -729,27 +551,13 @@ def aprobar_solicitud(id):
 def logistica_planificador():
     try:
         empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
-        
         viajes_pendientes = Viaje.query.filter_by(estado='PROGRAMADO').order_by(Viaje.fecha_programada.asc()).all()
         viajes_asignados = Viaje.query.filter_by(estado='ASIGNADA').order_by(Viaje.fecha_programada.asc()).all()
-        
         solicitudes = SolicitudTransporte.query.all()
-        
-        camiones_disp = Equipo.query.filter(
-            (Equipo.tipo_equipo.ilike('%camion%')) | (Equipo.tipo_equipo.ilike('%tracto%')) | (Equipo.tipo_equipo.ilike('%remolcador%'))
-        ).filter_by(estado_base='Operativo').all()
-        
+        camiones_disp = Equipo.query.filter((Equipo.tipo_equipo.ilike('%camion%')) | (Equipo.tipo_equipo.ilike('%tracto%')) | (Equipo.tipo_equipo.ilike('%remolcador%'))).filter_by(estado_base='Operativo').all()
         conductores_disp = Conductor.query.filter_by(estado='DISPONIBLE').all()
         ramplas_disp = Rampla.query.filter_by(estado='DISPONIBLE').all()
-        
-        return render_template('logistica_planificador.html', 
-                               viajes_pendientes=viajes_pendientes,
-                               viajes_asignados=viajes_asignados,
-                               solicitudes=solicitudes,
-                               camiones_disp=camiones_disp,
-                               conductores_disp=conductores_disp,
-                               ramplas_disp=ramplas_disp,
-                               empresa_actual=empresa_actual)
+        return render_template('logistica_planificador.html', viajes_pendientes=viajes_pendientes, viajes_asignados=viajes_asignados, solicitudes=solicitudes, camiones_disp=camiones_disp, conductores_disp=conductores_disp, ramplas_disp=ramplas_disp, empresa_actual=empresa_actual)
     except Exception as e:
         return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error en Planificador:</b> {str(e)}</div>"
 
@@ -758,20 +566,14 @@ def logistica_planificador():
 def asignar_viaje(id):
     try:
         viaje = Viaje.query.get_or_404(id)
-        
-        conductor_id = request.form.get('conductor_id')
-        rampla_id = request.form.get('rampla_id')
-        codigo_equipo = request.form.get('codigo_equipo')
-        
-        viaje.conductor_id = conductor_id
-        viaje.rampla_id = rampla_id
-        viaje.codigo_equipo = codigo_equipo
+        viaje.conductor_id = request.form.get('conductor_id')
+        viaje.rampla_id = request.form.get('rampla_id')
+        viaje.codigo_equipo = request.form.get('codigo_equipo')
         viaje.estado = 'ASIGNADA'
         
-        conductor = Conductor.query.get(conductor_id)
+        conductor = Conductor.query.get(viaje.conductor_id)
         if conductor: conductor.estado = 'EN VIAJE'
-        
-        rampla = Rampla.query.get(rampla_id)
+        rampla = Rampla.query.get(viaje.rampla_id)
         if rampla: rampla.estado = 'EN VIAJE'
         
         db.session.commit()
@@ -779,3 +581,143 @@ def asignar_viaje(id):
     except Exception as e:
         db.session.rollback()
         return f"Error al asignar el viaje: {str(e)}"
+
+# ==========================================
+# MÓDULO LOGÍSTICA TMS - FASE 5: CARPETA DEL VIAJE Y DOCUMENTOS
+# ==========================================
+@dashboard_bp.route('/logistica/viaje/<int:id>', strict_slashes=False)
+@login_required
+def logistica_detalle_viaje(id):
+    try:
+        empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
+        viaje = Viaje.query.get_or_404(id)
+        solicitud = SolicitudTransporte.query.get(viaje.solicitud_id) if viaje.solicitud_id else None
+        equipo = Equipo.query.filter_by(codigo=viaje.codigo_equipo).first() if viaje.codigo_equipo else None
+        conductor = Conductor.query.get(viaje.conductor_id) if viaje.conductor_id else None
+        rampla = Rampla.query.get(viaje.rampla_id) if viaje.rampla_id else None
+        
+        upload_folder = os.path.join('static', 'uploads', 'viajes', str(viaje.id))
+        documentos = os.listdir(upload_folder) if os.path.exists(upload_folder) else []
+        
+        return render_template('logistica_detalle_viaje.html', viaje=viaje, solicitud=solicitud, equipo=equipo, conductor=conductor, rampla=rampla, documentos=documentos, empresa_actual=empresa_actual)
+    except Exception as e:
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error al cargar Ficha del Viaje:</b> {str(e)}</div>"
+
+@dashboard_bp.route('/api/tms/cambiar_estado_viaje/<int:id>', methods=['POST'])
+@login_required
+def cambiar_estado_viaje(id):
+    try:
+        nuevo_estado = request.form.get('estado')
+        viaje = Viaje.query.get_or_404(id)
+        viaje.estado = nuevo_estado
+        
+        if nuevo_estado == 'ENTREGADO':
+            viaje.fecha_llegada_real = obtener_hora_chile()
+            if viaje.conductor_id:
+                cond = Conductor.query.get(viaje.conductor_id)
+                if cond: cond.estado = 'DISPONIBLE'
+            if viaje.rampla_id:
+                ramp = Rampla.query.get(viaje.rampla_id)
+                if ramp: ramp.estado = 'DISPONIBLE'
+                
+        db.session.commit()
+        return redirect(f'/logistica/viaje/{id}')
+    except Exception as e:
+        db.session.rollback()
+        return f"Error al cambiar el estado del viaje: {str(e)}"
+
+@dashboard_bp.route('/api/tms/subir_doc_viaje/<int:id>', methods=['POST'])
+@login_required
+def subir_doc_viaje(id):
+    try:
+        archivo = request.files.get('archivo')
+        if archivo and archivo.filename:
+            upload_folder = os.path.join('static', 'uploads', 'viajes', str(id))
+            os.makedirs(upload_folder, exist_ok=True)
+            filename = secure_filename(archivo.filename)
+            filepath = os.path.join(upload_folder, filename)
+            archivo.save(filepath)
+        return redirect(f'/logistica/viaje/{id}')
+    except Exception as e:
+        return f"Error al subir documento: {str(e)}"
+
+# ==========================================
+# MÓDULO LOGÍSTICA TMS - FASE 6: CONTROL PORTUARIO (NUEVO)
+# ==========================================
+@dashboard_bp.route('/logistica/puertos', strict_slashes=False)
+@login_required
+def logistica_puertos():
+    try:
+        empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
+
+        # Filtrar viajes activos (En Ruta o En Puerto)
+        viajes_activos = Viaje.query.filter(Viaje.estado.in_(['EN RUTA', 'EN PUERTO'])).all()
+        
+        # Generar automáticamente la Operación Portuaria (si no existe) para los camiones en ruta
+        for v in viajes_activos:
+            op = OperacionPortuaria.query.filter_by(viaje_id=v.id).first()
+            if not op:
+                nueva_op = OperacionPortuaria(viaje_id=v.id, estado='ESPERANDO INGRESO')
+                db.session.add(nueva_op)
+        db.session.commit()
+        
+        operaciones_todas = OperacionPortuaria.query.all()
+        
+        datos_puerto = []
+        for op in operaciones_todas:
+            v = Viaje.query.get(op.viaje_id)
+            if v and v.estado in ['EN RUTA', 'EN PUERTO', 'ENTREGADO']:
+                sol = SolicitudTransporte.query.get(v.solicitud_id)
+                eq = Equipo.query.filter_by(codigo=v.codigo_equipo).first()
+                cond = Conductor.query.get(v.conductor_id)
+                datos_puerto.append({'op': op, 'viaje': v, 'solicitud': sol, 'equipo': eq, 'conductor': cond})
+                
+        # Clasificar por columnas de Kanban Portuario
+        esperando = [d for d in datos_puerto if d['op'].estado in ['PROGRAMADO', 'ESPERANDO INGRESO']]
+        dentro = [d for d in datos_puerto if d['op'].estado == 'DENTRO DEL PUERTO']
+        despachados = [d for d in datos_puerto if d['op'].estado == 'DESPACHADO']
+
+        return render_template('logistica_puertos.html',
+                               esperando=esperando, dentro=dentro, despachados=despachados,
+                               empresa_actual=empresa_actual, hoy=obtener_hora_chile())
+    except Exception as e:
+        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error Control Portuario:</b> {str(e)}</div>"
+
+@dashboard_bp.route('/api/tms/update_puerto/<int:op_id>', methods=['POST'])
+@login_required
+def update_puerto(op_id):
+    try:
+        op = OperacionPortuaria.query.get_or_404(op_id)
+        viaje = Viaje.query.get(op.viaje_id)
+        accion = request.form.get('accion')
+        
+        if accion == 'guardar_docs':
+            op.puerto = request.form.get('puerto').upper().strip()
+            op.booking_bl = request.form.get('booking_bl').upper().strip()
+            op.contenedor = request.form.get('contenedor').upper().strip()
+            op.estado = 'ESPERANDO INGRESO'
+        
+        elif accion == 'gate_in':
+            op.hora_ingreso_gate = obtener_hora_chile()
+            op.estado = 'DENTRO DEL PUERTO'
+            if viaje.estado != 'EN PUERTO':
+                viaje.estado = 'EN PUERTO'
+                
+        elif accion == 'gate_out':
+            op.hora_salida_gate = obtener_hora_chile()
+            op.estado = 'DESPACHADO'
+            viaje.estado = 'ENTREGADO' # Se asume la entrega al salir del puerto
+            
+            # Liberar conductor y rampla al terminar operación
+            if viaje.conductor_id:
+                cond = Conductor.query.get(viaje.conductor_id)
+                if cond: cond.estado = 'DISPONIBLE'
+            if viaje.rampla_id:
+                ramp = Rampla.query.get(viaje.rampla_id)
+                if ramp: ramp.estado = 'DISPONIBLE'
+                
+        db.session.commit()
+        return redirect('/logistica/puertos')
+    except Exception as e:
+        db.session.rollback()
+        return f"Error en operacion portuaria: {str(e)}"
