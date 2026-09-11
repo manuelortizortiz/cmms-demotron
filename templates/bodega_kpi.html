@@ -3,419 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demotron WMS | Gestión de Inventario</title>
-    <link rel="icon" href="{{ url_for('static', filename='ISOTIPO DEMOTRON.png') }}" type="image/png">
+    <title>Bodega WMS - ManTyre ERP</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] }, colors: { brand: { 900: '#0F172A', 800: '#1E3A8A', 500: '#3B82F6', 100: '#DBEAFE', 50: '#EFF6FF' }, status: { ok: '#10B981', warn: '#F59E0B', danger: '#EF4444' } } } } }
+    </script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; color: #1E293B; overflow: hidden; }
-        .sidebar-bg { background-color: #0F172A; }
-        .nav-link { color: #94A3B8; display: block; padding: 12px 24px; font-weight: 600; font-size: 12px; transition: 0.2s; text-transform: uppercase; letter-spacing: 0.05em;}
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; color: #1E293B; margin: 0; }
+        .sidebar-bg { background-color: #0F172A; border-right: 1px solid #1E293B; }
+        .nav-header { font-size: 0.75rem; font-weight: 700; color: #64748B; text-transform: uppercase; padding: 16px 16px 8px 16px; letter-spacing: 0.5px; }
+        .nav-link { display: flex; align-items: center; gap: 8px; color: #CBD5E1; padding: 10px 16px; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; border-left: 4px solid transparent; cursor: pointer; }
         .nav-link:hover { color: #FFFFFF; background-color: rgba(255,255,255,0.05); }
-        .nav-link.active { color: #10B981; background-color: rgba(16, 185, 129, 0.1); border-left: 4px solid #10B981; padding-left: 20px;}
-        
-        .card-wms { background: #FFFFFF; border-radius: 12px; border: 1px solid #E2E8F0; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .card-wms-nopad { background: #FFFFFF; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; }
-        
-        .wms-tab { display: none; }
-        .wms-tab.active { display: block; animation: fadeIn 0.3s ease; }
+        .nav-link.active { color: #FFFFFF; background-color: #1E3A8A; font-weight: 700; border-left-color: #3B82F6; }
+        .card { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; }
+        .card-header { padding: 16px 20px; border-bottom: 1px solid #F1F5F9; font-size: 1rem; font-weight: 700; color: #0F172A; background-color: #FFFFFF; }
+        .table-custom { width: 100%; border-collapse: collapse; text-align: left; }
+        .table-custom th { background-color: #F8FAFC; color: #64748B; font-weight: 600; text-transform: uppercase; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; font-size: 0.8rem; }
+        .table-custom td { padding: 16px; border-bottom: 1px solid #F1F5F9; font-weight: 500; font-size: 0.9rem; color: #334155; }
+        .tab-btn { padding: 14px 24px; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; color: #64748B; border-bottom: 3px solid transparent; transition: all 0.2s; cursor: pointer; white-space: nowrap;}
+        .tab-btn.active { color: #1E3A8A; border-bottom-color: #1E3A8A; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; } .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .tab-btn { padding: 14px 20px; font-weight: 700; font-size: 12px; color: #64748B; border-bottom: 2px solid transparent; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 0.05em; }
-        .tab-btn:hover { color: #047857; }
-        .tab-btn.active { color: #047857; border-bottom-color: #047857; }
-
-        .table-wms { width: 100%; border-collapse: collapse; }
-        .table-wms th { background-color: #F8FAFC; color: #475569; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; text-align: left; white-space: nowrap; position: sticky; top: 0; z-index: 10;}
-        .table-wms td { padding: 12px 16px; border-bottom: 1px solid #F1F5F9; font-size: 12px; font-weight: 500; color: #1E293B; }
-        .table-wms tr:hover { background-color: #F8FAFC; }
-
-        .badge-stock { display: inline-flex; align-items: center; justify-content: center; padding: 4px 8px; border-radius: 999px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;}
-        .stock-normal { background-color: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; }
-        .stock-bajo { background-color: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; }
-        .stock-critico { background-color: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
-
         .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="flex h-screen">
-    
-    <aside class="w-64 sidebar-bg flex flex-col shrink-0 z-20">
-        <div class="h-20 flex items-center px-6 border-b border-slate-800">
-            <span class='text-xl font-black text-emerald-500 tracking-wider'>WMS<span class="text-white font-light"> DEMOTRON</span></span>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- SIDEBAR MANTYRE ERP -->
+    <aside class="w-64 sidebar-bg flex flex-col z-40 shrink-0 hidden md:flex">
+        <div class="h-16 flex items-center px-6 bg-brand-800 text-white shadow-md shrink-0">
+            <h1 class="text-lg font-black tracking-widest uppercase flex items-center gap-2">
+                <svg class="w-6 h-6 text-brand-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 7.5l-10-5v10l10 5 10-5v-10l-10 5z"/></svg>
+                ManTyre <span class="text-brand-500 text-xs ml-1">ERP</span>
+            </h1>
         </div>
-        <nav class="flex-1 py-6 overflow-y-auto hide-scrollbar space-y-1">
-            <a href="/" class="block px-6 py-3 text-slate-400 hover:text-white transition-colors text-xs font-semibold uppercase mb-4">← Volver al ERP</a>
-            <p class="px-6 text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2 mt-4">Bodega y Logística</p>
-            <a href="/bodega_kpi" class="nav-link active">Control Inventario WMS</a>
-            <a href="/?tab=compras" class="nav-link">Gestión de Compras (OC)</a>
-            <a href="/?tab=proveedores" class="nav-link">Directorio Proveedores</a>
+        <nav class="flex-1 overflow-y-auto hide-scrollbar pb-6">
+            <p class="nav-header">Operaciones</p>
+            <a href="/" class="nav-link">Dashboard General</a>
+            <a href="/logistica/operaciones" class="nav-link">Órdenes de Transporte</a>
             
-            <p class="px-6 text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2 mt-8">Reportes de Almacén</p>
-            <a href="#" class="nav-link">Rotación ABC / XYZ</a>
-            <a href="#" class="nav-link">Inventario Valorizado</a>
-            <a href="#" class="nav-link">Consumo por Equipo</a>
+            <p class="nav-header">Logística</p>
+            <a href="/logistica/puertos" class="nav-link">Control Portuario</a>
+            <a href="/logistica/flota" class="nav-link">Vehículos y Conductores</a>
+            
+            <p class="nav-header">Inventario</p>
+            <a href="/bodega_kpi" class="nav-link active">Bodega WMS</a>
         </nav>
     </aside>
 
-    <main class="flex-1 flex flex-col min-w-0 bg-slate-50 relative h-screen">
+    <main class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto bg-slate-50">
         
-        <header class="bg-white border-b border-slate-200 shrink-0 shadow-sm z-10 pt-6 px-8">
-            <div class="flex justify-between items-center mb-6">
-                <div>
-                    <h1 class="text-2xl font-black text-slate-800 tracking-tight">Bodega de Repuestos y Logística</h1>
-                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-1">Warehouse Management System</p>
-                </div>
-                <div class="flex gap-3">
-                    <button class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded font-bold text-xs uppercase tracking-wider transition">Exportar Maestro</button>
-                    <button class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-emerald-600/30">+ Nuevo Repuesto</button>
-                </div>
-            </div>
-            
-            <div class="flex gap-2 overflow-x-auto hide-scrollbar">
-                <button onclick="switchTabWMS('wms-dash', this)" class="tab-btn active">Dashboard</button>
-                <button onclick="switchTabWMS('wms-cat', this)" class="tab-btn">Catálogo Global</button>
-                <button onclick="switchTabWMS('wms-kits', this)" class="tab-btn">Ensamblador Kits PM</button>
-                <button onclick="switchTabWMS('wms-movs', this)" class="tab-btn">Libro Mayor (Trazabilidad)</button>
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 shadow-sm sticky top-0 z-20">
+            <div class="flex items-center gap-4"><h2 class="text-xl font-bold text-slate-800 md:hidden">ManTyre ERP</h2></div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider hidden md:inline">Unidad Operativa:</span>
+                <span class="bg-brand-50 text-brand-800 border border-brand-200 px-3 py-1.5 rounded text-xs font-black uppercase tracking-widest">ACTIVA</span>
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-8 hide-scrollbar relative">
-
-            <!-- TAB 1: DASHBOARD -->
-            <div id="wms-dash" class="wms-tab active">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                    <div class="card-wms">
-                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Valorización de Inventario</p>
-                        <p class="text-3xl font-black text-emerald-600">{{ valor_total_str }}</p>
-                        <p class="text-xs font-semibold text-emerald-500 mt-2">Capital inmovilizado</p>
+        <div class="p-4 md:p-8 max-w-7xl mx-auto w-full">
+            
+            <!-- BANNER CORPORATIVO MANTYRE ERP -->
+            <div class="w-full bg-slate-900 rounded-lg border border-slate-800 mb-8 flex flex-col md:flex-row items-start md:items-center justify-between p-6 md:p-8 shadow-lg relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-brand-500 opacity-10 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+                
+                <div class="flex items-center gap-4 md:gap-6 z-10">
+                    <div class="text-brand-500 bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                        <svg class="w-10 h-10 md:w-12 md:h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 7.5l-10-5v10l10 5 10-5v-10l-10 5z"/></svg>
                     </div>
-                    <div class="card-wms border-l-4 border-l-amber-400">
-                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Repuestos Bajo Mínimo</p>
-                        <p class="text-3xl font-black text-amber-600">{{ bajo_minimo_count }}</p>
-                        <p class="text-xs font-semibold text-amber-600 mt-2">Requieren reposición sugerida</p>
-                    </div>
-                    <div class="card-wms border-l-4 border-l-red-500">
-                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Quiebre de Stock (Crítico)</p>
-                        <p class="text-3xl font-black text-red-600">{{ quiebre_stock_count }}</p>
-                        <p class="text-xs font-semibold text-red-600 mt-2">Afecta OTs en progreso</p>
-                    </div>
-                    <div class="card-wms bg-slate-800 text-white border-none">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Movimientos Mensuales</p>
-                        <p class="text-3xl font-black text-white">{{ movimientos|length }}</p>
-                        <p class="text-xs font-semibold text-blue-300 mt-2">Transacciones Registradas</p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                    <div class="card-wms lg:col-span-2 h-80 flex flex-col">
-                        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-widest mb-4">Evolución de Consumo vs Compras</h3>
-                        <div class="flex-1 w-full relative"><canvas id="chartConsumo"></canvas></div>
-                    </div>
-                    <div class="card-wms h-80 flex flex-col">
-                        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-widest mb-4">Capital por Categoría</h3>
-                        <div class="flex-1 w-full relative"><canvas id="chartCategorias"></canvas></div>
+                    <div>
+                        <h2 class="text-2xl md:text-3xl font-black text-white tracking-wide">MANTYRE ERP</h2>
+                        <p class="text-xs md:text-sm font-bold text-brand-400 uppercase tracking-widest mt-1">SISTEMA DE GESTIÓN DE BODEGAS (WMS)</p>
                     </div>
                 </div>
             </div>
 
-            <!-- TAB 2: CATÁLOGO DE REPUESTOS -->
-            <div id="wms-cat" class="wms-tab">
-                <div class="card-wms-nopad h-[75vh] flex flex-col">
-                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                        <input type="text" placeholder="🔍 Buscar repuesto o escribir código del camión (Ej: CD-100)..." class="w-[450px] border border-slate-300 rounded px-4 py-2 text-xs font-semibold outline-none focus:border-emerald-500" onkeyup="buscarRepuesto(this.value)">
-                    </div>
-                    <div class="overflow-y-auto flex-1">
-                        <table class="table-wms" id="tabla-catalogo">
-                            <thead>
-                                <tr>
-                                    <th>Código OEM</th>
-                                    <th>Descripción de Repuesto / Compatibilidad</th>
-                                    <th>Categoría / Familia</th>
-                                    <th>Ubicación Fís.</th>
-                                    <th class="text-center">Stock Actual</th>
-                                    <th class="text-right">Precio Prom.</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for r in repuestos %}
-                                <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                                    <td class="font-black text-emerald-700">{{ r.codigo_oem }}</td>
-                                    <td class="font-bold text-slate-800">
-                                        {{ r.nombre }}
-                                        {% if r.codigo_oem in repuesto_compatibilidad %}
-                                        <br><span class="text-[9px] font-bold text-slate-400 uppercase mt-1 block tracking-wider">Aplica a: {{ repuesto_compatibilidad[r.codigo_oem] }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td><span class="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">{{ r.categoria }}</span></td>
-                                    <td class="font-mono text-xs">{{ r.bodega }}</td>
-                                    <td class="text-center">
-                                        {% if r.stock_actual <= 0 %}
-                                            <span class="badge-stock stock-critico">{{ "{:,.0f}".format(r.stock_actual).replace(',','.') }} {{ r.unidad_medida }}</span>
-                                        {% elif r.stock_actual <= r.stock_minimo %}
-                                            <span class="badge-stock stock-bajo">{{ "{:,.0f}".format(r.stock_actual).replace(',','.') }} {{ r.unidad_medida }}</span>
-                                        {% else %}
-                                            <span class="badge-stock stock-normal">{{ "{:,.0f}".format(r.stock_actual).replace(',','.') }} {{ r.unidad_medida }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-right font-bold text-slate-700">${{ "{:,.0f}".format(r.precio_promedio).replace(',', '.') }}</td>
-                                </tr>
-                                {% else %}
-                                <tr><td colspan="6" class="px-6 py-8 text-center text-slate-400 text-xs font-bold">AÚN NO HAY REPUESTOS REGISTRADOS.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+            <div class="mb-6 flex justify-between items-end">
+                <div>
+                    <h3 class="text-2xl font-bold text-slate-800">Control de Inventario</h3>
+                    <p class="text-sm text-slate-500 mt-1">Supervisa repuestos, filtros, kits y el capital inmovilizado.</p>
                 </div>
             </div>
 
-            <!-- TAB 3: ENSAMBLADOR DE KITS BOM POR EQUIPO -->
-            <div id="wms-kits" class="wms-tab">
-                <!-- Buscador Rápido de Equipos -->
-                <div class="mb-6 flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-                    <div class="flex items-center gap-4 w-full">
-                        <span class="text-xl">🔍</span>
-                        <input type="text" id="buscador-kits" placeholder="Busca tu camión o máquina aquí (Ej: CD-100, VD-90)..." class="w-full max-w-lg border-b-2 border-slate-200 px-2 py-2 text-sm font-bold text-slate-700 outline-none focus:border-emerald-500 transition-colors" onkeyup="buscarKit(this.value)">
-                    </div>
+            <!-- KPIs RESPONSIVOS -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="card p-6 border-l-4 border-brand-800 flex flex-col justify-center">
+                    <p class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Valor Total en Bodega</p>
+                    <span class="text-4xl font-black text-slate-800">{{ valor_total_str }}</span>
                 </div>
+                <div class="card p-6 border-l-4 border-status-warn flex flex-col justify-center">
+                    <p class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Repuestos Bajo Mínimo</p>
+                    <div class="flex items-end gap-3"><span class="text-4xl font-black text-status-warn">{{ bajo_minimo_count }}</span><span class="text-sm font-bold text-slate-600 mb-1">Ítems</span></div>
+                </div>
+                <div class="card p-6 border-l-4 border-status-danger flex flex-col justify-center">
+                    <p class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Quiebres de Stock</p>
+                    <div class="flex items-end gap-3"><span class="text-4xl font-black text-status-danger">{{ quiebre_stock_count }}</span><span class="text-sm font-bold text-slate-600 mb-1">Agotados</span></div>
+                </div>
+            </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="contenedor-kits">
-                    {% for codigo, kit in kits_por_equipo.items() %}
-                    <div class="card-wms flex flex-col h-full border-t-4 {% if kit.armable %}border-t-emerald-500{% else %}border-t-red-500{% endif %} kit-card">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 class="font-black text-slate-800 text-xl uppercase kit-codigo">{{ codigo }}</h3>
-                                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">
-                                    APLICA A: {{ kit.marca_modelo }}
-                                </p>
-                            </div>
-                            {% if kit.armable %}
-                            <span class="badge-stock stock-normal">ARMABLE</span>
-                            {% else %}
-                            <span class="badge-stock stock-critico">FALTANTES</span>
-                            {% endif %}
-                        </div>
-                        <div class="bg-slate-50 rounded p-3 mb-4 flex-1 border border-slate-200">
-                            <p class="text-[9px] font-bold text-slate-600 uppercase border-b border-slate-200 pb-1 mb-2">Repuestos del Kit</p>
-                            <ul class="text-xs font-medium text-slate-700 space-y-2">
-                                {% for comp in kit.componentes %}
-                                <li class="flex justify-between items-center">
-                                    <span class="truncate pr-2" title="{{ comp.nombre }}">{{ comp.cant_req|int }}x {{ comp.sku }}</span>
-                                    {% if comp.ok %}
-                                    <span class="text-emerald-600 font-black text-[10px]">OK ({{ comp.stock|int }})</span>
+            <!-- TABS -->
+            <div class="border-b border-slate-200 mb-6 flex overflow-x-auto hide-scrollbar">
+                <button onclick="switchTab('tab-inv', this)" class="tab-btn active">Maestro de Repuestos</button>
+                <button onclick="switchTab('tab-mov', this)" class="tab-btn">Últimos Movimientos</button>
+            </div>
+
+            <!-- TAB 1: INVENTARIO -->
+            <div id="tab-inv" class="tab-content active">
+                <div class="card overflow-x-auto">
+                    <table class="table-custom">
+                        <thead><tr><th>SKU / OEM</th><th>Nombre y Categoría</th><th>Stock Actual</th><th>Mínimo</th><th>Valor Unitario</th></tr></thead>
+                        <tbody>
+                            {% for r in repuestos %}
+                            <tr>
+                                <td class="font-black text-brand-800 text-base">{{ r.codigo_oem }}</td>
+                                <td>
+                                    <p class="font-bold text-slate-800 text-base">{{ r.nombre }}</p>
+                                    <p class="text-sm text-slate-500">{{ r.categoria }}</p>
+                                </td>
+                                <td>
+                                    {% if (r.stock_actual or 0) <= 0 %}
+                                        <span class="text-status-danger bg-red-50 border border-status-danger px-3 py-1 rounded font-bold">0 AGOTADO</span>
+                                    {% elif (r.stock_actual or 0) <= (r.stock_minimo or 2) %}
+                                        <span class="text-status-warn font-bold text-lg">{{ r.stock_actual }}</span>
                                     {% else %}
-                                    <span class="text-red-600 font-black text-[10px]">FALTA ({{ comp.stock|int }})</span>
+                                        <span class="text-status-ok font-bold text-lg">{{ r.stock_actual }}</span>
                                     {% endif %}
-                                </li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                        {% if kit.armable %}
-                        <button onclick='abrirModalDespacho("{{ codigo }}", "{{ kit.modelo }}")' class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded text-[10px] uppercase tracking-widest transition shadow-md">Descontar Piezas</button>
-                        {% else %}
-                        <button class="w-full bg-white border border-slate-300 text-slate-400 font-bold py-2 rounded text-[10px] uppercase tracking-widest cursor-not-allowed" disabled>Comprar Faltantes</button>
-                        {% endif %}
-                    </div>
-                    {% else %}
-                    <div class="col-span-3 xl:col-span-4 text-center py-16 bg-white rounded-lg border border-slate-200">
-                        <p class="text-slate-500 font-medium text-sm">Aún no has sincronizado la pestaña <b>Recetas_Kits</b> en tu archivo Excel.</p>
-                    </div>
-                    {% endfor %}
+                                </td>
+                                <td class="font-mono text-slate-500">{{ r.stock_minimo or 2 }}</td>
+                                <td class="font-bold text-slate-700">${{ "{:,.0f}".format(r.precio_promedio or 0).replace(',', '.') }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center py-12 text-slate-400 text-base">Bodega vacía.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- TAB 4: LIBRO MAYOR DE MOVIMIENTOS REAL -->
-            <div id="wms-movs" class="wms-tab">
-                <div class="card-wms-nopad h-[75vh] flex flex-col">
-                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                        <h3 class="font-black text-slate-700 uppercase tracking-widest text-xs">Libro de Auditoría y Trazabilidad</h3>
-                    </div>
-                    <div class="overflow-y-auto flex-1">
-                        <table class="table-wms">
-                            <thead>
-                                <tr>
-                                    <th>Fecha y Hora</th>
-                                    <th>Tipo Transacción</th>
-                                    <th>Componente Físico</th>
-                                    <th class="text-center">Cant.</th>
-                                    <th>Documento / Destino</th>
-                                    <th>Auditor / Rsp.</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for mov in movimientos %}
-                                <tr class="hover:bg-slate-50">
-                                    <td class="font-mono text-slate-500">{{ mov.fecha.strftime('%d/%m/%Y %H:%M') if mov.fecha else '-' }}</td>
-                                    <td>
-                                        {% if 'SALIDA' in mov.tipo_movimiento %}
-                                            <span class="bg-red-50 text-red-700 border border-red-200 px-2 py-1 rounded text-[10px] font-black uppercase">{{ mov.tipo_movimiento }}</span>
-                                        {% else %}
-                                            <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1 rounded text-[10px] font-black uppercase">{{ mov.tipo_movimiento }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="font-bold text-slate-700">
-                                        {% if mov.repuesto_id in rep_dict %}
-                                            <span class="truncate block max-w-xs">{{ rep_dict[mov.repuesto_id].nombre }}</span>
-                                            <span class="text-[9px] font-mono text-slate-400">{{ rep_dict[mov.repuesto_id].codigo_oem }}</span>
-                                        {% else %}
-                                            <span class="text-slate-400 italic">Repuesto Descatalogado</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-center font-bold text-slate-800 text-sm">{{ "{:,.0f}".format(mov.cantidad).replace(',','.') }}</td>
-                                    <td class="font-mono font-bold text-[#1E3A8A]">
-                                        {{ mov.documento_ref or 'USO INTERNO' }} <br>
-                                        <span class="text-[9px] text-slate-500 font-sans uppercase">{{ mov.codigo_equipo or '-' }}</span>
-                                    </td>
-                                    <td class="text-[10px] uppercase text-slate-600 font-bold">{{ mov.usuario or 'Sistema' }}</td>
-                                </tr>
-                                {% else %}
-                                <tr><td colspan="6" class="px-6 py-8 text-center text-slate-400 text-xs font-bold">LA CAJA REGISTRADORA ESTÁ EN CERO. REALIZA TU PRIMER DESPACHO.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+            <!-- TAB 2: MOVIMIENTOS -->
+            <div id="tab-mov" class="tab-content">
+                <div class="card overflow-x-auto">
+                    <table class="table-custom">
+                        <thead><tr><th>Fecha</th><th>Tipo Movimiento</th><th>Repuesto (SKU)</th><th>Cant.</th><th>Doc/Referencia</th><th>Usuario</th></tr></thead>
+                        <tbody>
+                            {% for m in movimientos %}
+                            <tr>
+                                <td class="font-medium text-slate-500">{{ m.fecha.strftime('%d/%m/%y %H:%M') if m.fecha else '-' }}</td>
+                                <td>
+                                    {% if 'ENTRADA' in m.tipo_movimiento %}
+                                        <span class="text-status-ok bg-emerald-50 border border-status-ok px-2 py-0.5 rounded text-xs font-bold uppercase">{{ m.tipo_movimiento }}</span>
+                                    {% else %}
+                                        <span class="text-status-danger bg-red-50 border border-status-danger px-2 py-0.5 rounded text-xs font-bold uppercase">{{ m.tipo_movimiento }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="font-bold text-slate-800">{{ rep_dict[m.repuesto_id].codigo_oem if m.repuesto_id in rep_dict else 'S/I' }}</td>
+                                <td class="font-black text-brand-800 text-base">{{ m.cantidad }}</td>
+                                <td class="font-mono text-slate-600">{{ m.documento_ref }}</td>
+                                <td class="text-slate-500 uppercase text-sm font-bold">{{ m.usuario }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="6" class="text-center py-12 text-slate-400 text-base">Sin movimientos recientes.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
         </div>
     </main>
 
-    <!-- MODAL DE DESPACHO DE KITS (LA CAJA REGISTRADORA) -->
-    <div id="modal-despacho" class="fixed inset-0 bg-slate-900/80 z-[500] hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-md rounded-lg shadow-2xl overflow-hidden border border-slate-200">
-            <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-                <h3 class="font-black text-slate-800 uppercase text-xs tracking-wider">Despachar Inventario Físico</h3>
-                <button onclick="document.getElementById('modal-despacho').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 font-bold text-lg">&times;</button>
-            </div>
-            <div class="p-6 flex flex-col gap-4">
-                <div class="bg-emerald-50 border border-emerald-200 p-4 rounded text-emerald-800 text-sm font-bold text-center">
-                    📦 Rebajar Stock para el Equipo:<br>
-                    <span id="mdl-nombre-kit" class="font-black text-xl tracking-wide uppercase mt-1 block"></span>
-                </div>
-                
-                <input type="hidden" id="mdl-modelo-val">
-                <input type="hidden" id="mdl-equipo-val">
-                
-                <div>
-                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Mecánico Retira / Número de OT</label>
-                    <input type="text" id="mdl-referencia" class="w-full border-2 border-slate-300 p-3 rounded text-sm font-bold outline-none focus:border-emerald-500 transition-colors" placeholder="Ej: Juan Pérez / OT-4589">
-                </div>
-            </div>
-            <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
-                <button onclick="document.getElementById('modal-despacho').classList.add('hidden')" class="px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-100">Cancelar</button>
-                <button onclick="ejecutarDespacho()" id="btn-confirmar-despacho" class="px-6 py-2 text-xs font-bold text-white bg-emerald-600 rounded hover:bg-emerald-700 shadow-md">CONFIRMAR DESPACHO</button>
-            </div>
-        </div>
-    </div>
-
     <script>
-        function switchTabWMS(tabId, btn) {
-            document.querySelectorAll('.wms-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
-            btn.classList.add('active');
-            
-            // Foco automático en el buscador si abres la pestaña
-            if (tabId === 'wms-kits') {
-                setTimeout(() => document.getElementById('buscador-kits').focus(), 100);
-            }
+            if(el) el.classList.add('active');
         }
-        
-        function buscarRepuesto(q) {
-            q = q.toLowerCase();
-            const filas = document.querySelectorAll('#tabla-catalogo tbody tr');
-            filas.forEach(fila => {
-                const texto = fila.innerText.toLowerCase();
-                fila.style.display = texto.includes(q) ? '' : 'none';
-            });
-        }
-        
-        function buscarKit(q) {
-            q = q.toLowerCase();
-            document.querySelectorAll('.kit-card').forEach(card => {
-                const codigo = card.querySelector('.kit-codigo').innerText.toLowerCase();
-                card.style.display = codigo.includes(q) ? '' : 'none';
-            });
-        }
-
-        // --- FUNCIONES DEL MODAL DE DESPACHO ---
-        function abrirModalDespacho(codigo_equipo, modelo) {
-            document.getElementById('mdl-nombre-kit').innerText = codigo_equipo;
-            document.getElementById('mdl-equipo-val').value = codigo_equipo;
-            document.getElementById('mdl-modelo-val').value = modelo;
-            
-            // Limpia el input de referencia para la próxima OT
-            document.getElementById('mdl-referencia').value = "";
-            
-            document.getElementById('modal-despacho').classList.remove('hidden');
-            setTimeout(() => document.getElementById('mdl-referencia').focus(), 100);
-        }
-
-        function ejecutarDespacho() {
-            let modelo = document.getElementById('mdl-modelo-val').value;
-            let equipo = document.getElementById('mdl-equipo-val').value;
-            let ref = document.getElementById('mdl-referencia').value;
-            
-            if (!ref.trim()) {
-                alert("⚠️ Por favor, ingrese un número de OT o el nombre de quien retira.");
-                document.getElementById('mdl-referencia').focus();
-                return;
-            }
-
-            let btn = document.getElementById('btn-confirmar-despacho');
-            btn.innerText = "Procesando...";
-            btn.disabled = true;
-            btn.classList.replace('bg-emerald-600', 'bg-emerald-400');
-
-            fetch('/api/wms/descontar_kit', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ modelo: modelo, equipo: equipo, referencia: ref })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Recargar pantalla suavemente para actualizar los contadores
-                    location.reload(); 
-                } else {
-                    alert("❌ ERROR: " + data.message);
-                    document.getElementById('modal-despacho').classList.add('hidden');
-                    btn.innerText = "CONFIRMAR DESPACHO";
-                    btn.disabled = false;
-                    btn.classList.replace('bg-emerald-400', 'bg-emerald-600');
-                }
-            })
-            .catch(err => {
-                alert("Error de conexión con el servidor.");
-                location.reload();
-            });
-        }
-
-        window.onload = function() {
-            Chart.defaults.font.family = "'Inter', sans-serif";
-            
-            new Chart(document.getElementById('chartConsumo').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May'],
-                    datasets: [
-                        { label: 'Consumo Taller (Salidas)', data: [12.5, 15.2, 11.8, 18.5, 14.2], backgroundColor: '#EF4444', borderRadius: 4 },
-                        { label: 'Compras (Ingresos)', data: [10.0, 18.0, 8.5, 22.0, 10.5], backgroundColor: '#10B981', borderRadius: 4 }
-                    ]
-                },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-            });
-
-            new Chart(document.getElementById('chartCategorias').getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: {{ grafico_categorias.labels | tojson }},
-                    datasets: [{ data: {{ grafico_categorias.data | tojson }}, backgroundColor: ['#1E3A8A', '#3B82F6', '#10B981', '#F59E0B', '#64748B', '#DC2626'], borderWidth: 0 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom' } } }
-            });
-        };
     </script>
 </body>
 </html>
