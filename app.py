@@ -45,12 +45,12 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # ==========================================
-# AUTO-MIGRACIÓN SILENCIOSA SEGURO
+# AUTO-MIGRACIÓN SILENCIOSA BLINDADA
 # ==========================================
 with app.app_context():
     db.create_all()
     
-    # 1. Migrar Empresas
+    # 1. Migrar Empresas a todas las tablas
     tablas_a_migrar = ['equipo', 'orden_trabajo', 'conductores', 'ramplas', 'solicitudes_transporte', 'viajes_transporte']
     for tabla in tablas_a_migrar:
         try:
@@ -59,12 +59,19 @@ with app.app_context():
         except Exception:
             db.session.rollback()
 
-    # 2. SOLUCIÓN AL ERROR: Inyectar la columna "observacion" en PostgreSQL
-    try:
-        db.session.execute(text("ALTER TABLE orden_trabajo ADD COLUMN observacion TEXT"))
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
+    # 2. SOLUCIÓN DEFINITIVA: Inyectar TODAS las columnas nuevas de Orden de Trabajo
+    columnas_nuevas_ot = [
+        "observacion TEXT",
+        "lectura_str VARCHAR(50)",
+        "costo_mantencion_clp FLOAT DEFAULT 0.0"
+    ]
+    
+    for col in columnas_nuevas_ot:
+        try:
+            db.session.execute(text(f"ALTER TABLE orden_trabajo ADD COLUMN {col}"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback() # Si la columna ya existe, simplemente sigue de largo sin romper la app
 
     # Crear usuario Admin Salvavidas
     if not User.query.filter_by(username='admin').first():
