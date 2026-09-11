@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Portuario - ManTyre ERP</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 900: '#0F172A', 800: '#1E3A8A', 500: '#3B82F6', 50: '#EFF6FF' },
+                        status: { ok: '#16A34A', warn: '#F59E0B', danger: '#DC2626', info: '#0284C7', purple: '#8B5CF6' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #F8FAFC; color: #1E293B; }
+        .sidebar-bg { background-color: #0F172A; border-right: 1px solid #1E293B; }
+        .nav-link { color: #94A3B8; display: block; padding: 10px 24px; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s;}
+        .nav-link:hover { color: #FFFFFF; background-color: rgba(255,255,255,0.05); }
+        .nav-link.active { color: #FFFFFF; background-color: #1E3A8A; font-weight: 700; border-left: 4px solid #60A5FA; }
+        .card { background: white; border: 1px solid #E2E8F0; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); overflow: hidden;}
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- SIDEBAR MANTYRE -->
+    <aside class="w-64 sidebar-bg flex flex-col z-40 shrink-0">
+        <div class="h-20 flex items-center px-6 border-b border-slate-800">
+            <h1 class="text-xl font-black tracking-widest uppercase text-white">ManTyre<span class="text-brand-500">ERP</span></h1>
+        </div>
+        <nav class="flex-1 py-6 overflow-y-auto space-y-1">
+            <p class="px-6 text-[10px] font-bold text-brand-500 uppercase tracking-widest mb-2 mt-2">TMS & Logística</p>
+            <a href="/logistica/flota" class="nav-link">Gestión de Flota y RRHH</a>
+            <a href="/logistica/operaciones" class="nav-link">Órdenes de Transporte</a>
+            <a href="/logistica/planificador" class="nav-link">Planificador de Viajes</a>
+            <a href="/logistica/puertos" class="nav-link active">Control Portuario</a>
+            <a href="#" class="nav-link opacity-50 cursor-not-allowed">Tracking GPS</a>
+            
+            <p class="px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-8">CMMS Mantenimiento</p>
+            <a href="/" class="nav-link">Dashboard Mantenimiento</a>
+            <a href="/bodega_kpi" class="nav-link">Bodega e Inventario</a>
+        </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col min-w-0">
+        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm shrink-0">
+            <h2 class="text-lg font-bold text-slate-800 uppercase tracking-wide">Monitor Portuario (Staking & Gates)</h2>
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Unidad de Negocio:</span>
+                <span class="bg-brand-50 text-brand-800 border border-brand-200 px-3 py-1 rounded text-xs font-black uppercase tracking-widest">{{ empresa_actual }}</span>
+            </div>
+        </header>
+
+        <!-- KANBAN PORTUARIO -->
+        <div class="flex-1 overflow-x-auto p-6 md:p-8 flex gap-6 items-start hide-scrollbar bg-slate-100">
+            
+            <!-- COLUMNA 1: ESPERANDO INGRESO -->
+            <div class="w-80 shrink-0 flex flex-col gap-4">
+                <div class="flex justify-between items-center border-b-2 border-status-warn pb-2">
+                    <h3 class="font-bold text-slate-700 uppercase tracking-wider text-xs">Esperando Ingreso / Doc.</h3>
+                    <span class="bg-status-warn text-white font-bold px-2 py-0.5 rounded text-xs">{{ esperando|length }}</span>
+                </div>
+                
+                {% for d in esperando %}
+                <div class="card p-4 border-l-4 border-status-warn flex flex-col gap-3 relative">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <a href="/logistica/viaje/{{ d.viaje.id }}" class="text-[10px] font-bold text-brand-500 hover:underline uppercase">{{ d.viaje.folio_viaje }}</a>
+                            <h4 class="font-black text-brand-900 text-sm leading-tight mt-0.5">{{ d.solicitud.cliente }}</h4>
+                        </div>
+                        <span class="bg-amber-100 text-status-warn font-black text-[9px] uppercase px-1.5 py-0.5 rounded border border-status-warn">En Ruta</span>
+                    </div>
+                    
+                    <div class="text-[10px] text-slate-600 bg-slate-50 p-2 rounded">
+                        <span class="font-bold text-brand-800 block mb-1">Tracto: {{ d.equipo.codigo }} | Cond: {{ d.conductor.nombre_completo.split(' ')[0] }}</span>
+                        Destino: {{ d.solicitud.destino }}
+                    </div>
+
+                    <form action="/api/tms/update_puerto/{{ d.op.id }}" method="POST" class="space-y-2 mt-1">
+                        <input type="hidden" name="accion" value="guardar_docs">
+                        <input type="text" name="puerto" value="{{ d.op.puerto or '' }}" placeholder="Terminal / Puerto" class="w-full border border-slate-300 rounded p-1.5 text-[10px] uppercase">
+                        <input type="text" name="booking_bl" value="{{ d.op.booking_bl or '' }}" placeholder="N° Booking / BL" class="w-full border border-slate-300 rounded p-1.5 text-[10px] uppercase font-mono">
+                        <input type="text" name="contenedor" value="{{ d.op.contenedor or '' }}" placeholder="N° Contenedor" class="w-full border border-slate-300 rounded p-1.5 text-[10px] uppercase font-mono">
+                        <div class="flex gap-2 pt-2">
+                            <button type="submit" class="w-1/2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-1.5 rounded text-[9px] uppercase transition-colors">Guardar Datos</button>
+                            <button type="submit" onclick="this.form.accion.value='gate_in'" class="w-1/2 bg-brand-800 hover:bg-brand-900 text-white font-bold py-1.5 rounded text-[9px] uppercase transition-colors">Registrar GATE IN</button>
+                        </div>
+                    </form>
+                </div>
+                {% else %}
+                <div class="card p-6 text-center text-slate-400 border-dashed text-xs">Sin camiones en ruta a puerto.</div>
+                {% endfor %}
+            </div>
+
+            <!-- COLUMNA 2: DENTRO DEL PUERTO (GATE IN) -->
+            <div class="w-80 shrink-0 flex flex-col gap-4">
+                <div class="flex justify-between items-center border-b-2 border-status-purple pb-2">
+                    <h3 class="font-bold text-slate-700 uppercase tracking-wider text-xs">Dentro del Puerto (Gate IN)</h3>
+                    <span class="bg-status-purple text-white font-bold px-2 py-0.5 rounded text-xs">{{ dentro|length }}</span>
+                </div>
+
+                {% for d in dentro %}
+                <div class="card p-4 border-l-4 border-status-purple flex flex-col gap-3">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <a href="/logistica/viaje/{{ d.viaje.id }}" class="text-[10px] font-bold text-brand-500 hover:underline uppercase">{{ d.viaje.folio_viaje }}</a>
+                            <h4 class="font-black text-brand-900 text-sm leading-tight mt-0.5">{{ d.op.puerto or 'TERMINAL NO REG.' }}</h4>
+                        </div>
+                        <span class="bg-purple-100 text-status-purple font-black text-[9px] uppercase px-1.5 py-0.5 rounded border border-status-purple">En Proceso</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 text-[10px]">
+                        <div class="bg-slate-50 p-1.5 rounded border border-slate-100"><span class="block text-slate-400 font-bold">BOOKING/BL</span><span class="font-mono font-bold text-slate-700">{{ d.op.booking_bl or 'S/I' }}</span></div>
+                        <div class="bg-slate-50 p-1.5 rounded border border-slate-100"><span class="block text-slate-400 font-bold">CONTENEDOR</span><span class="font-mono font-bold text-slate-700">{{ d.op.contenedor or 'S/I' }}</span></div>
+                    </div>
+
+                    <div class="text-[10px] bg-brand-50 text-brand-800 p-2 rounded font-bold flex items-center justify-between border border-brand-100">
+                        <span>Ingresó: {{ d.op.hora_ingreso_gate.strftime('%H:%M') if d.op.hora_ingreso_gate else 'S/I' }}</span>
+                        <span class="animate-pulse flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Contando</span>
+                    </div>
+
+                    <form action="/api/tms/update_puerto/{{ d.op.id }}" method="POST" class="mt-1">
+                        <input type="hidden" name="accion" value="gate_out">
+                        <button type="submit" class="w-full bg-status-purple hover:bg-purple-700 text-white font-bold py-2 rounded text-[10px] uppercase tracking-wider transition-colors shadow-sm">Registrar GATE OUT</button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="card p-6 text-center text-slate-400 border-dashed text-xs">No hay camiones dentro del terminal.</div>
+                {% endfor %}
+            </div>
+
+            <!-- COLUMNA 3: DESPACHADOS (GATE OUT) -->
+            <div class="w-80 shrink-0 flex flex-col gap-4">
+                <div class="flex justify-between items-center border-b-2 border-status-ok pb-2">
+                    <h3 class="font-bold text-slate-700 uppercase tracking-wider text-xs">Despachados (Gate OUT)</h3>
+                    <span class="bg-status-ok text-white font-bold px-2 py-0.5 rounded text-xs">{{ despachados|length }}</span>
+                </div>
+
+                {% for d in despachados %}
+                <div class="card p-4 border-l-4 border-status-ok bg-slate-50 opacity-80">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">{{ d.viaje.folio_viaje }}</span>
+                            <h4 class="font-black text-slate-700 text-xs mt-0.5">{{ d.op.puerto or 'TERMINAL' }}</h4>
+                        </div>
+                        <span class="bg-green-100 text-status-ok font-black text-[9px] uppercase px-1.5 py-0.5 rounded border border-status-ok">LISTO</span>
+                    </div>
+                    
+                    <div class="text-[9px] text-slate-500 flex flex-col gap-1 border-t border-slate-200 pt-2">
+                        <div class="flex justify-between"><span>Tracto:</span> <span class="font-bold">{{ d.equipo.codigo }}</span></div>
+                        <div class="flex justify-between"><span>Ingreso:</span> <span class="font-bold text-slate-700">{{ d.op.hora_ingreso_gate.strftime('%H:%M') if d.op.hora_ingreso_gate else '-' }}</span></div>
+                        <div class="flex justify-between"><span>Salida:</span> <span class="font-bold text-status-ok">{{ d.op.hora_salida_gate.strftime('%H:%M') if d.op.hora_salida_gate else '-' }}</span></div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card p-6 text-center text-slate-400 border-dashed text-xs">No hay despachos recientes.</div>
+                {% endfor %}
+            </div>
+
+        </div>
+    </main>
+
+</body>
+</html>
