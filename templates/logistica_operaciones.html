@@ -12,132 +12,182 @@
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'] },
                     colors: {
-                        brand: { 900: '#0F172A', 800: '#1E3A8A', 500: '#3B82F6' },
-                        status: { ok: '#16A34A', warn: '#F59E0B', danger: '#DC2626', info: '#0284C7' }
+                        brand: { 900: '#0F172A', 800: '#1E3A8A', 500: '#3B82F6', 100: '#DBEAFE', 50: '#EFF6FF' },
+                        status: { ok: '#10B981', warn: '#F59E0B', danger: '#EF4444', info: '#3B82F6' }
                     }
                 }
             }
         }
     </script>
     <style>
-        body { background-color: #F8FAFC; color: #1E293B; }
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; color: #1E293B; margin: 0; }
         .sidebar-bg { background-color: #0F172A; border-right: 1px solid #1E293B; }
-        .nav-link { color: #94A3B8; display: block; padding: 10px 24px; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s;}
+        .nav-header { font-size: 0.7rem; font-weight: 700; color: #64748B; text-transform: uppercase; padding: 16px 16px 8px 16px; letter-spacing: 0.5px; }
+        .nav-link { display: flex; align-items: center; gap: 8px; color: #CBD5E1; padding: 10px 16px; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; border-left: 4px solid transparent; cursor: pointer; }
         .nav-link:hover { color: #FFFFFF; background-color: rgba(255,255,255,0.05); }
-        .nav-link.active { color: #FFFFFF; background-color: #1E3A8A; font-weight: 700; border-left: 4px solid #60A5FA; }
+        .nav-link.active { color: #FFFFFF; background-color: #1E3A8A; font-weight: 700; border-left-color: #3B82F6; }
         
-        .card { background: white; border: 1px solid #E2E8F0; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); overflow: hidden;}
-        .table-custom { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
-        .table-custom th { background-color: #F8FAFC; color: #475569; font-weight: 700; text-transform: uppercase; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; }
-        .table-custom td { padding: 12px 16px; border-bottom: 1px solid #F1F5F9; font-weight: 500; }
+        .card { background: #FFFFFF; border-radius: 8px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; }
+        .card-header { padding: 16px 20px; border-bottom: 1px solid #F1F5F9; font-size: 1rem; font-weight: 700; color: #0F172A; background-color: #FFFFFF; }
+        
+        .table-custom { width: 100%; border-collapse: collapse; text-align: left; }
+        .table-custom th { background-color: #F8FAFC; color: #64748B; font-weight: 600; text-transform: uppercase; padding: 12px 16px; border-bottom: 1px solid #E2E8F0; font-size: 0.8rem; }
+        .table-custom td { padding: 16px; border-bottom: 1px solid #F1F5F9; font-weight: 500; font-size: 0.9rem; color: #334155; }
         .table-custom tr:hover { background-color: #F8FAFC; }
         
-        .tab-btn { padding: 12px 24px; font-size: 12px; font-weight: 600; text-transform: uppercase; color: #64748B; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-btn { padding: 14px 24px; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; color: #64748B; border-bottom: 3px solid transparent; transition: all 0.2s; cursor: pointer; }
         .tab-btn.active { color: #1E3A8A; border-bottom-color: #1E3A8A; }
-        .tab-content { display: none; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <!-- SIDEBAR MANTYRE -->
-    <aside class="w-64 sidebar-bg flex flex-col z-40 shrink-0">
-        <div class="h-20 flex items-center px-6 border-b border-slate-800">
-            <h1 class="text-xl font-black tracking-widest uppercase text-white">ManTyre<span class="text-brand-500">ERP</span></h1>
+    <!-- SIDEBAR MANTYRE ERP -->
+    <aside class="w-64 sidebar-bg flex flex-col z-40 shrink-0 hidden md:flex">
+        <div class="h-16 flex items-center px-6 bg-brand-800 text-white shadow-md shrink-0">
+            <h1 class="text-lg font-black tracking-widest uppercase flex items-center gap-2">
+                <svg class="w-6 h-6 text-brand-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 7.5l-10-5v10l10 5 10-5v-10l-10 5z"/></svg>
+                ManTyre <span class="text-brand-500 text-xs ml-1">ERP</span>
+            </h1>
         </div>
-        <nav class="flex-1 py-6 overflow-y-auto space-y-1">
-            <p class="px-6 text-[10px] font-bold text-brand-500 uppercase tracking-widest mb-2 mt-2">TMS & Logística</p>
-            <a href="/logistica/flota" class="nav-link">Gestión de Flota y RRHH</a>
+        <nav class="flex-1 overflow-y-auto hide-scrollbar pb-6">
+            <p class="nav-header">Operaciones</p>
+            <a href="/" class="nav-link">Dashboard General</a>
             <a href="/logistica/operaciones" class="nav-link active">Órdenes de Transporte</a>
-            <a href="#" class="nav-link opacity-50 cursor-not-allowed">Planificador de Viajes</a>
-            <a href="#" class="nav-link opacity-50 cursor-not-allowed">Tracking GPS</a>
+            <a href="/logistica/planificador" class="nav-link">Planificador de Viajes</a>
             
-            <p class="px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-8">CMMS Mantenimiento</p>
-            <a href="/" class="nav-link">Dashboard Mantenimiento</a>
-            <a href="/bodega_kpi" class="nav-link">Bodega e Inventario</a>
+            <p class="nav-header">Logística</p>
+            <a href="/logistica/puertos" class="nav-link">Control Portuario</a>
+            
+            <p class="nav-header">Flota y Mantenimiento</p>
+            <a href="/logistica/flota" class="nav-link">Vehículos y Conductores</a>
+            <a href="/?tab=plan" class="nav-link">Kanban Taller</a>
+            
+            <p class="nav-header">Inventario</p>
+            <a href="/bodega_kpi" class="nav-link">Bodega WMS</a>
         </nav>
     </aside>
 
     <!-- MAIN CONTENT -->
-    <main class="flex-1 flex flex-col min-w-0">
-        <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm">
-            <h2 class="text-lg font-bold text-slate-800 uppercase tracking-wide">Operaciones y OTs de Transporte</h2>
+    <main class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto bg-slate-50">
+        
+        <!-- HEADER MÓVIL Y PERFIL -->
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 shadow-sm sticky top-0 z-20">
+            <div class="flex items-center gap-4">
+                <h2 class="text-xl font-bold text-slate-800 md:hidden">ManTyre ERP</h2>
+            </div>
             <div class="flex items-center gap-3">
-                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Unidad de Negocio:</span>
-                <span class="bg-brand-50 text-brand-800 border border-brand-200 px-3 py-1 rounded text-xs font-black uppercase tracking-widest">{{ empresa_actual }}</span>
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider hidden md:inline">Unidad:</span>
+                <span class="bg-brand-50 text-brand-800 border border-brand-200 px-3 py-1.5 rounded text-xs font-black uppercase tracking-widest">{{ empresa_actual }}</span>
             </div>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-6 md:p-8">
+        <div class="p-4 md:p-8 max-w-7xl mx-auto w-full">
             
-            <!-- KPIs DINÁMICOS -->
+            <!-- BANNER CORPORATIVO MANTYRE ERP -->
+            <div class="w-full bg-slate-900 rounded-lg border border-slate-800 mb-8 flex flex-col md:flex-row items-start md:items-center justify-between p-6 md:p-8 shadow-lg relative overflow-hidden">
+                <!-- Efecto de brillo sutil de fondo -->
+                <div class="absolute top-0 right-0 w-64 h-64 bg-brand-500 opacity-10 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+                
+                <div class="flex items-center gap-4 md:gap-6 z-10">
+                    <div class="text-brand-500 bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                        <svg class="w-10 h-10 md:w-12 md:h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 7.5l-10-5v10l10 5 10-5v-10l-10 5z"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl md:text-3xl font-black text-white tracking-wide">MANTYRE ERP</h2>
+                        <p class="text-xs md:text-sm font-bold text-brand-400 uppercase tracking-widest mt-1">CMMS + TMS + LOGÍSTICA + FLOTA + BODEGA + FINANZAS</p>
+                    </div>
+                </div>
+                <div class="mt-6 md:mt-0 text-left md:text-right z-10 w-full md:w-auto border-t border-slate-700 md:border-t-0 pt-4 md:pt-0">
+                    <p class="text-sm text-slate-400 font-mono font-medium mb-1" id="fecha-hora"></p>
+                    <p class="text-lg font-bold text-white leading-tight">Una sola plataforma,<br>toda la operación.</p>
+                </div>
+            </div>
+
+            <!-- TÍTULO DE SECCIÓN -->
+            <div class="mb-6 flex justify-between items-end">
+                <div>
+                    <h3 class="text-2xl font-bold text-slate-800">Órdenes de Transporte</h3>
+                    <p class="text-sm text-slate-500 mt-1">Gestión de solicitudes de clientes y despachos en curso.</p>
+                </div>
+            </div>
+
+            <!-- KPIs RESPONSIVOS -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div class="card p-6 border-l-4 border-status-warn">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Solicitudes Entrantes</p>
+                <div class="card p-6 border-l-4 border-status-warn flex flex-col justify-center">
+                    <p class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Solicitudes Entrantes</p>
                     <div class="flex items-end gap-3">
-                        <span class="text-3xl font-black text-brand-900">{{ kpis.solicitudes_pendientes }}</span>
-                        <span class="text-xs font-semibold text-status-warn mb-1">Pendientes de Aprobar</span>
+                        <span class="text-4xl font-black text-slate-800">{{ kpis.solicitudes_pendientes }}</span>
+                        <span class="text-sm font-bold text-status-warn mb-1">Pendientes</span>
                     </div>
                 </div>
-                <div class="card p-6 border-l-4 border-brand-500">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Órdenes de Transporte Activas</p>
+                <div class="card p-6 border-l-4 border-status-info flex flex-col justify-center">
+                    <p class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Viajes Activos (OT)</p>
                     <div class="flex items-end gap-3">
-                        <span class="text-3xl font-black text-brand-900">{{ kpis.viajes_activos }}</span>
-                        <span class="text-xs font-semibold text-status-info mb-1">Viajes en Progreso</span>
+                        <span class="text-4xl font-black text-slate-800">{{ kpis.viajes_activos }}</span>
+                        <span class="text-sm font-bold text-status-info mb-1">En Progreso</span>
                     </div>
                 </div>
-                <div class="card p-6 border-l-4 border-status-ok">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Transportes Completados</p>
+                <div class="card p-6 border-l-4 border-status-ok flex flex-col justify-center">
+                    <p class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Cargas Entregadas</p>
                     <div class="flex items-end gap-3">
-                        <span class="text-3xl font-black text-brand-900">{{ kpis.viajes_completados }}</span>
-                        <span class="text-xs font-semibold text-status-ok mb-1">Cargas Entregadas</span>
+                        <span class="text-4xl font-black text-slate-800">{{ kpis.viajes_completados }}</span>
+                        <span class="text-sm font-bold text-status-ok mb-1">Histórico</span>
                     </div>
                 </div>
             </div>
 
-            <!-- TABS NAVEGACIÓN -->
-            <div class="border-b border-slate-200 mb-6 flex gap-2">
-                <button onclick="switchTab('tab-solicitudes')" id="btn-tab-solicitudes" class="tab-btn active">Solicitudes de Carga</button>
-                <button onclick="switchTab('tab-viajes')" id="btn-tab-viajes" class="tab-btn">Órdenes de Transporte (OT)</button>
+            <!-- TABS -->
+            <div class="border-b border-slate-200 mb-6 flex overflow-x-auto hide-scrollbar">
+                <button onclick="switchTab('tab-solicitudes', this)" class="tab-btn active whitespace-nowrap">Bandeja de Solicitudes</button>
+                <button onclick="switchTab('tab-viajes', this)" class="tab-btn whitespace-nowrap">Órdenes de Transporte (Activas)</button>
             </div>
 
             <!-- TAB 1: SOLICITUDES -->
             <div id="tab-solicitudes" class="tab-content active">
                 <div class="card">
-                    <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
-                        <h3 class="font-bold text-slate-700 text-xs uppercase">Bandeja de Entrada (Solicitudes)</h3>
-                        <button onclick="document.getElementById('modal-solicitud').classList.remove('hidden')" class="bg-brand-800 hover:bg-brand-900 text-white text-[11px] font-bold px-4 py-2 rounded uppercase tracking-wider transition-colors">+ Nueva Solicitud</button>
+                    <div class="card-header flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <span>Solicitudes de Carga</span>
+                        <button onclick="document.getElementById('modal-solicitud').classList.remove('hidden')" class="bg-brand-800 hover:bg-brand-900 text-white text-sm font-bold px-5 py-2.5 rounded shadow-sm transition-colors w-full sm:w-auto">+ Nueva Solicitud</button>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="table-custom">
-                            <thead><tr><th>ID</th><th>Cliente / Solicitante</th><th>Ruta Solicitada</th><th>Carga y Peso</th><th>Fecha Requerida</th><th>Estado</th><th>Acción</th></tr></thead>
+                            <thead><tr><th>ID</th><th>Cliente</th><th>Ruta Solicitada</th><th>Carga y Peso</th><th>Fecha Req.</th><th>Estado</th><th>Acción</th></tr></thead>
                             <tbody>
                                 {% for s in solicitudes %}
                                 <tr>
                                     <td class="font-mono text-slate-500 font-bold">#{{ s.id }}</td>
-                                    <td class="font-bold text-brand-900">{{ s.cliente }}</td>
-                                    <td><span class="text-brand-800">{{ s.origen }}</span> <br><span class="text-[9px] text-slate-400">HACIA</span><br> <span class="text-brand-800">{{ s.destino }}</span></td>
-                                    <td>{{ s.tipo_carga }}<br><span class="text-[10px] text-slate-500 font-mono">{{ "{:,.0f}".format(s.peso_kg).replace(',', '.') }} KG</span></td>
+                                    <td class="font-bold text-brand-900 text-base">{{ s.cliente }}</td>
+                                    <td>
+                                        <span class="font-bold text-slate-700 block">{{ s.origen }}</span>
+                                        <span class="text-xs text-slate-400 font-bold">HACIA</span>
+                                        <span class="font-bold text-slate-700 block">{{ s.destino }}</span>
+                                    </td>
+                                    <td>{{ s.tipo_carga }}<br><span class="text-sm font-bold text-brand-800 bg-brand-50 px-2 py-0.5 rounded mt-1 inline-block">{{ "{:,.0f}".format(s.peso_kg).replace(',', '.') }} KG</span></td>
                                     <td class="font-bold text-slate-700">{{ s.fecha_requerida.strftime('%d/%m/%Y') if s.fecha_requerida else 'A convenir' }}</td>
                                     <td>
                                         {% if s.estado == 'SOLICITADA' %}
-                                            <span class="text-status-warn font-bold text-[10px] uppercase border border-current px-2 py-0.5 rounded">{{ s.estado }}</span>
+                                            <span class="text-status-warn bg-amber-50 font-bold text-xs uppercase border border-status-warn px-2 py-1 rounded">{{ s.estado }}</span>
                                         {% else %}
-                                            <span class="text-status-ok font-bold text-[10px] uppercase border border-current px-2 py-0.5 rounded">{{ s.estado }}</span>
+                                            <span class="text-status-ok bg-emerald-50 font-bold text-xs uppercase border border-status-ok px-2 py-1 rounded">{{ s.estado }}</span>
                                         {% endif %}
                                     </td>
                                     <td>
                                         {% if s.estado == 'SOLICITADA' %}
                                         <form action="/api/tms/aprobar_solicitud/{{ s.id }}" method="POST">
-                                            <button type="submit" class="bg-status-ok hover:bg-green-700 text-white px-3 py-1 rounded text-[10px] font-bold uppercase shadow-sm transition">Aprobar y Crear OT</button>
+                                            <button type="submit" class="bg-status-ok hover:bg-emerald-600 text-white px-4 py-2 rounded text-xs font-bold uppercase shadow-sm transition">Aprobar OT</button>
                                         </form>
                                         {% else %}
-                                        <span class="text-[10px] text-slate-400 font-bold uppercase">Procesada</span>
+                                        <span class="text-xs text-slate-400 font-bold uppercase">Procesada</span>
                                         {% endif %}
                                     </td>
                                 </tr>
                                 {% else %}
-                                <tr><td colspan="7" class="text-center py-8 text-slate-400">No hay solicitudes de transporte registradas.</td></tr>
+                                <tr><td colspan="7" class="text-center py-12 text-slate-400 text-base">No hay solicitudes de transporte.</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -145,40 +195,36 @@
                 </div>
             </div>
 
-            <!-- TAB 2: ÓRDENES DE TRANSPORTE (VIAJES) -->
+            <!-- TAB 2: VIAJES -->
             <div id="tab-viajes" class="tab-content">
-                <div class="card border-brand-500">
-                    <div class="bg-brand-50 p-4 border-b border-brand-100 flex justify-between items-center">
+                <div class="card">
+                    <div class="card-header">
                         <div>
-                            <h3 class="font-bold text-brand-900 text-xs uppercase">Órdenes de Transporte Generadas (Viajes)</h3>
-                            <p class="text-[10px] text-brand-800 mt-1">Estas OTs esperan ser asignadas a un camión en el Planificador (Próxima Fase).</p>
+                            <span>Órdenes de Transporte (OT)</span>
+                            <p class="text-xs text-slate-500 font-normal mt-1">Viajes aprobados esperando recursos o en tránsito.</p>
                         </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="table-custom">
-                            <thead><tr><th>Folio OT / Viaje</th><th>Origen y Destino</th><th>Fecha Prog.</th><th>Conductor / Vehículo</th><th>Estado Logístico</th></tr></thead>
+                            <thead><tr><th>Folio OT</th><th>Ruta</th><th>Fecha Prog.</th><th>Asignación Logística</th><th>Estado</th></tr></thead>
                             <tbody>
                                 {% for v in viajes %}
                                 <tr>
-                                    <td class="font-bold text-brand-900 underline cursor-pointer">{{ v.folio_viaje }}</td>
-                                    <!-- Aquí buscamos la solicitud asociada para mostrar la ruta -->
+                                    <td><a href="/logistica/viaje/{{ v.id }}" class="font-black text-brand-800 hover:text-brand-600 underline text-base">{{ v.folio_viaje }}</a></td>
                                     {% set sol = solicitudes | selectattr("id", "equalto", v.solicitud_id) | list | first %}
-                                    <td><span class="text-slate-700">{{ sol.origen if sol else 'N/A' }}</span> ➜ <span class="text-slate-700">{{ sol.destino if sol else 'N/A' }}</span></td>
-                                    
+                                    <td class="font-bold text-slate-700">{{ sol.origen if sol else 'N/A' }} ➜ {{ sol.destino if sol else 'N/A' }}</td>
                                     <td class="font-bold text-slate-700">{{ v.fecha_programada.strftime('%d/%m/%Y') if v.fecha_programada else 'A convenir' }}</td>
                                     <td>
                                         {% if v.conductor_id and v.codigo_equipo %}
-                                            <span class="text-brand-800 font-bold">ASIGNADO</span>
+                                            <span class="text-brand-800 font-bold bg-brand-50 px-2 py-1 rounded text-xs border border-brand-200">ASIGNADO: {{ v.codigo_equipo }}</span>
                                         {% else %}
-                                            <span class="text-status-warn font-bold text-[10px] uppercase border border-current px-2 py-0.5 rounded bg-amber-50">ESPERANDO PLANIFICACIÓN</span>
+                                            <span class="text-status-warn font-bold text-xs uppercase border border-status-warn px-2 py-1 rounded bg-amber-50">ESPERANDO PLANIFICACIÓN</span>
                                         {% endif %}
                                     </td>
-                                    <td>
-                                        <span class="text-brand-800 font-black text-[10px] uppercase border border-current px-2 py-0.5 rounded bg-brand-50">{{ v.estado }}</span>
-                                    </td>
+                                    <td><span class="text-slate-700 font-black text-xs uppercase border border-slate-300 px-3 py-1.5 rounded bg-slate-100">{{ v.estado }}</span></td>
                                 </tr>
                                 {% else %}
-                                <tr><td colspan="5" class="text-center py-8 text-slate-400">Aún no se han generado Órdenes de Transporte.</td></tr>
+                                <tr><td colspan="5" class="text-center py-12 text-slate-400 text-base">Aún no se han generado Órdenes.</td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -191,37 +237,42 @@
 
     <!-- MODAL NUEVA SOLICITUD -->
     <div id="modal-solicitud" class="fixed inset-0 bg-slate-900/80 z-[600] hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-lg rounded-lg shadow-xl overflow-hidden">
-            <div class="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
-                <h3 class="font-bold text-slate-800 uppercase text-xs">Nueva Solicitud de Carga</h3>
-                <button onclick="document.getElementById('modal-solicitud').classList.add('hidden')" class="text-xl text-slate-400 hover:text-slate-800">&times;</button>
+        <div class="bg-white w-full max-w-lg rounded-xl shadow-2xl overflow-hidden">
+            <div class="bg-slate-50 p-6 border-b border-slate-200 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800 text-lg">Nueva Solicitud de Carga</h3>
+                <button onclick="document.getElementById('modal-solicitud').classList.add('hidden')" class="text-2xl text-slate-400 hover:text-slate-800">&times;</button>
             </div>
-            <form action="/api/tms/add_solicitud" method="POST" class="p-6 space-y-4">
-                <div><label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">Cliente / Mandante</label><input type="text" name="cliente" required class="w-full border border-slate-300 rounded p-2 text-sm uppercase"></div>
+            <form action="/api/tms/add_solicitud" method="POST" class="p-6 space-y-5">
+                <div><label class="text-xs font-bold uppercase text-slate-500 block mb-2">Cliente / Mandante</label><input type="text" name="cliente" required class="w-full border border-slate-300 rounded-lg p-3 text-sm font-bold uppercase focus:ring-2 focus:ring-brand-500 outline-none"></div>
                 
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">Origen / Carga</label><input type="text" name="origen" placeholder="Ej: Linares" required class="w-full border border-slate-300 rounded p-2 text-sm uppercase"></div>
-                    <div><label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">Destino / Puerto</label><input type="text" name="destino" placeholder="Ej: P. San Antonio" required class="w-full border border-slate-300 rounded p-2 text-sm uppercase"></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div><label class="text-xs font-bold uppercase text-slate-500 block mb-2">Origen</label><input type="text" name="origen" required class="w-full border border-slate-300 rounded-lg p-3 text-sm uppercase"></div>
+                    <div><label class="text-xs font-bold uppercase text-slate-500 block mb-2">Destino / Puerto</label><input type="text" name="destino" required class="w-full border border-slate-300 rounded-lg p-3 text-sm uppercase"></div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">Tipo de Carga / Equipo</label><input type="text" name="tipo_carga" placeholder="Ej: Maquinaria MD-79" required class="w-full border border-slate-300 rounded p-2 text-sm uppercase"></div>
-                    <div><label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">Peso Estimado (KG)</label><input type="number" name="peso" placeholder="Ej: 24000" class="w-full border border-slate-300 rounded p-2 text-sm"></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div><label class="text-xs font-bold uppercase text-slate-500 block mb-2">Tipo de Carga</label><input type="text" name="tipo_carga" required class="w-full border border-slate-300 rounded-lg p-3 text-sm uppercase"></div>
+                    <div><label class="text-xs font-bold uppercase text-slate-500 block mb-2">Peso Estimado (KG)</label><input type="number" name="peso" class="w-full border border-slate-300 rounded-lg p-3 text-sm"></div>
                 </div>
 
-                <div><label class="text-[10px] font-bold uppercase text-slate-500 block mb-1">Fecha Requerida de Presentación</label><input type="date" name="fecha_requerida" required class="w-full border border-slate-300 rounded p-2 text-sm text-slate-700"></div>
+                <div><label class="text-xs font-bold uppercase text-slate-500 block mb-2">Fecha Requerida</label><input type="date" name="fecha_requerida" required class="w-full border border-slate-300 rounded-lg p-3 text-sm font-bold text-slate-700"></div>
                 
-                <button type="submit" class="w-full bg-brand-800 hover:bg-brand-900 text-white font-bold py-3 rounded text-xs uppercase tracking-wider mt-4">Generar Solicitud</button>
+                <button type="submit" class="w-full bg-brand-800 hover:bg-brand-900 text-white font-bold py-4 rounded-lg text-sm uppercase tracking-wider mt-6 transition-colors shadow-md">Generar Solicitud</button>
             </form>
         </div>
     </div>
 
     <script>
-        function switchTab(tabId) {
+        // Fecha actual formato 10 sept 2026 11:52 p. m.
+        const now = new Date();
+        const options = { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit' };
+        document.getElementById('fecha-hora').innerText = now.toLocaleDateString('es-CL', options).replace(',', '');
+
+        function switchTab(tabId, el) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
-            document.getElementById('btn-' + tabId).classList.add('active');
+            if(el) el.classList.add('active');
         }
     </script>
 </body>
