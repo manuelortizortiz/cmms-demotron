@@ -8,7 +8,7 @@ from sqlalchemy import func, case, text
 from extensions import db
 
 # ==========================================
-# IMPORTACIONES CMMS MANTENIMIENTO
+# IMPORTACIONES
 # ==========================================
 from models.equipo import Equipo, DocumentoEquipo, FiltroEquipo, HistorialUbicacion
 from models.orden_trabajo import OrdenTrabajo
@@ -17,15 +17,8 @@ from models.personal import Personal, Mecanico
 from models.bodega import InventarioBodega, Repuesto, MovimientoBodega, RecetaModelo
 from utils.formatters import format_num, format_clp, buscar_foto_por_tipo
 from models.chatter import RegistroChatter
-
-# ==========================================
-# IMPORTACIONES DEL NUEVO MÓDULO LOGÍSTICO TMS
-# ==========================================
 from models.logistica import Empresa, Conductor, Rampla, RutaMaestra, SolicitudTransporte, Viaje, CargaViaje, OperacionPortuaria, IncidenciaTransporte
 
-# ==========================================
-# MOTOR DE TIEMPO CHILENO
-# ==========================================
 try:
     import zoneinfo
     ZONA_CHILE = zoneinfo.ZoneInfo("America/Santiago")
@@ -39,6 +32,18 @@ def obtener_hora_chile():
 dashboard_bp = Blueprint('dashboard', __name__)
 
 # ==========================================
+# MOTOR DE FILTRADO MULTI-EMPRESA ESTRICTO
+# ==========================================
+def base_query(model):
+    empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
+    if hasattr(model, 'empresa'):
+        if empresa_actual == 'DEMOTRON':
+            return model.query.filter((model.empresa == 'DEMOTRON') | (model.empresa == None) | (model.empresa == ''))
+        else:
+            return model.query.filter(model.empresa == empresa_actual)
+    return model.query
+
+# ==========================================
 # MÓDULO 1: DASHBOARD GENERAL CMMS
 # ==========================================
 @dashboard_bp.route('/', strict_slashes=False)
@@ -47,13 +52,24 @@ def dashboard():
     try:
         hoy = obtener_hora_chile()
         
-        eqs_db = Equipo.query.all()
-        ots_db = OrdenTrabajo.query.all()
-        compras_db = CompraRepuesto.query.all()
+        # 1. Traer solo equipos de la empresa activa
+        eqs_db = base_query(Equipo).all()
+        codigos_validos = [e.codigo for e in eqs_db]
+        
+        # 2. Traer OTs de la empresa activa
+        ots_db = base_query(OrdenTrabajo).all()
+        
+        # 3. FILTRO ESTRICTO PARA HISTORIALES (La clave para no cruzar stats)
+        if codigos_validos:
+            compras_db = CompraRepuesto.query.filter(CompraRepuesto.codigo_equipo.in_(codigos_validos)).all()
+            lecturas_db = HistorialLectura.query.filter(HistorialLectura.codigo_equipo.in_(codigos_validos)).order_by(HistorialLectura.fecha.desc()).limit(100).all()
+        else:
+            compras_db = []
+            lecturas_db = []
+
         personal_db = Personal.query.all()
         mecanicos_db = Mecanico.query.all()
         bodega_db = InventarioBodega.query.all()
-        lecturas_db = HistorialLectura.query.order_by(HistorialLectura.fecha.desc()).limit(100).all()
 
         correctivas = [o for o in ots_db if o.tipo_ot == 'Correctiva']
         preventivas = [o for o in ots_db if o.tipo_ot == 'Preventiva']
@@ -306,7 +322,7 @@ def detalle_equipo(codigo):
     try:
         equipo = Equipo.query.filter_by(codigo=codigo).first()
         if not equipo: return "Equipo no encontrado en la base de datos.", 404
-        todos_equipos = Equipo.query.order_by(Equipo.codigo).all()
+        todos_equipos = base_query(Equipo).order_by(Equipo.codigo).all()
         e_cod = str(equipo.codigo).strip().upper()
         e_mod = str(equipo.modelo).strip().upper() if equipo.modelo else ""
         
@@ -365,7 +381,7 @@ def subir_documento(codigo):
 def bodega_kpi():
     try:
         hoy = obtener_hora_chile()
-        eqs_db = Equipo.query.all()
+        eqs_db = base_query(Equipo).all()
         repuestos = Repuesto.query.all()
         recetas_db = RecetaModelo.query.all()
         movimientos = MovimientoBodega.query.order_by(MovimientoBodega.fecha.desc()).limit(150).all()
@@ -446,25 +462,18 @@ def imprimir_ot(id):
         return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error al cargar OT:</b> {str(e)}</div>"
 
 # ==========================================
-# MÓDULO LOGÍSTICA TMS - FASE 2: FLOTA Y CONDUCTORES
+# MÓDULOS TMS LOGÍSTICOS
 # ==========================================
 @dashboard_bp.route('/logistica/flota', strict_slashes=False)
 @login_required
 def logistica_flota():
     try:
         empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
-        equipos_motrices = Equipo.query.filter((Equipo.tipo_equipo.ilike('%camion%')) | (Equipo.tipo_equipo.ilike('%tracto%')) | (Equipo.tipo_equipo.ilike('%remolcador%'))).order_by(Equipo.codigo).all()
-        conductores = Conductor.query.order_by(Conductor.nombre_completo).all()
-        ramplas = Rampla.query.order_by(Rampla.codigo_interno).all()
+        equipos_motrices = base_query(Equipo).filter((Equipo.tipo_equipo.ilike('%camion%')) | (Equipo.tipo_equipo.ilike('%tracto%')) | (Equipo.tipo_equipo.ilike('%remolcador%'))).order_by(Equipo.codigo).all()
+        conductores = base_query(Conductor).order_by(Conductor.nombre_completo).all()
+        ramplas = base_query(Rampla).order_by(Rampla.codigo_interno).all()
         
-        kpis = {
-            'total_tractos': len(equipos_motrices),
-            'tractos_operativos': len([e for e in equipos_motrices if e.estado_base == 'Operativo']),
-            'total_conductores': len(conductores),
-            'conductores_disponibles': len([c for c in conductores if c.estado == 'DISPONIBLE']),
-            'total_ramplas': len(ramplas),
-            'ramplas_disponibles': len([r for r in ramplas if r.estado == 'DISPONIBLE'])
-        }
+        kpis = {'total_tractos': len(equipos_motrices), 'tractos_operativos': len([e for e in equipos_motrices if e.estado_base == 'Operativo']), 'total_conductores': len(conductores), 'conductores_disponibles': len([c for c in conductores if c.estado == 'DISPONIBLE']), 'total_ramplas': len(ramplas), 'ramplas_disponibles': len([r for r in ramplas if r.estado == 'DISPONIBLE'])}
         return render_template('logistica_flota.html', equipos=equipos_motrices, conductores=conductores, ramplas=ramplas, kpis=kpis, empresa_actual=empresa_actual, hoy=obtener_hora_chile().date())
     except Exception as e:
         return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error TMS Flota:</b> {str(e)}</div>"
@@ -472,252 +481,137 @@ def logistica_flota():
 @dashboard_bp.route('/api/tms/add_conductor', methods=['POST'])
 @login_required
 def add_conductor():
-    try:
-        fecha_venc = request.form.get('vencimiento')
-        vencimiento = datetime.strptime(fecha_venc, '%Y-%m-%d').date() if fecha_venc else None
-        nuevo = Conductor(rut=request.form.get('rut').strip(), nombre_completo=request.form.get('nombre').upper().strip(), clase_licencia=request.form.get('licencia').upper().strip(), vencimiento_licencia=vencimiento, estado='DISPONIBLE')
-        db.session.add(nuevo)
-        db.session.commit()
-        return redirect('/logistica/flota')
-    except Exception as e:
-        db.session.rollback()
-        return f"Error al guardar conductor: {str(e)}"
+    empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
+    fecha_venc = request.form.get('vencimiento')
+    nuevo = Conductor(rut=request.form.get('rut').strip(), nombre_completo=request.form.get('nombre').upper().strip(), clase_licencia=request.form.get('licencia').upper().strip(), vencimiento_licencia=datetime.strptime(fecha_venc, '%Y-%m-%d').date() if fecha_venc else None, estado='DISPONIBLE', empresa=empresa_actual)
+    db.session.add(nuevo); db.session.commit()
+    return redirect('/logistica/flota')
 
 @dashboard_bp.route('/api/tms/add_rampla', methods=['POST'])
 @login_required
 def add_rampla():
-    try:
-        nueva = Rampla(codigo_interno=request.form.get('codigo').upper().strip(), patente=request.form.get('patente').upper().strip(), tipo_rampla=request.form.get('tipo').upper().strip(), capacidad_kg=float(request.form.get('capacidad') or 0.0), estado='DISPONIBLE')
-        db.session.add(nueva)
-        db.session.commit()
-        return redirect('/logistica/flota')
-    except Exception as e:
-        db.session.rollback()
-        return f"Error al guardar rampla: {str(e)}"
+    empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
+    nueva = Rampla(codigo_interno=request.form.get('codigo').upper().strip(), patente=request.form.get('patente').upper().strip(), tipo_rampla=request.form.get('tipo').upper().strip(), capacidad_kg=float(request.form.get('capacidad') or 0.0), estado='DISPONIBLE', empresa=empresa_actual)
+    db.session.add(nueva); db.session.commit()
+    return redirect('/logistica/flota')
 
-# ==========================================
-# MÓDULO LOGÍSTICA TMS - FASE 3: OPERACIONES Y OTs
-# ==========================================
 @dashboard_bp.route('/logistica/operaciones', strict_slashes=False)
 @login_required
 def logistica_operaciones():
-    try:
-        empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
-        solicitudes = SolicitudTransporte.query.order_by(SolicitudTransporte.fecha_solicitud.desc()).all()
-        sol_pendientes = [s for s in solicitudes if s.estado == 'SOLICITADA']
-        viajes = Viaje.query.order_by(Viaje.id.desc()).all()
-        viajes_activos = [v for v in viajes if v.estado in ['PROGRAMADO', 'ASIGNADA', 'EN CARGA', 'EN RUTA', 'EN PUERTO']]
-        
-        kpis = {'solicitudes_pendientes': len(sol_pendientes), 'viajes_activos': len(viajes_activos), 'viajes_completados': len([v for v in viajes if v.estado == 'ENTREGADO'])}
-        return render_template('logistica_operaciones.html', solicitudes=solicitudes, sol_pendientes=sol_pendientes, viajes=viajes, viajes_activos=viajes_activos, kpis=kpis, empresa_actual=empresa_actual)
-    except Exception as e:
-        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error Crítico en Operaciones:</b> {str(e)}</div>"
+    empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
+    solicitudes = base_query(SolicitudTransporte).order_by(SolicitudTransporte.fecha_solicitud.desc()).all()
+    viajes = base_query(Viaje).order_by(Viaje.id.desc()).all()
+    kpis = {'solicitudes_pendientes': len([s for s in solicitudes if s.estado == 'SOLICITADA']), 'viajes_activos': len([v for v in viajes if v.estado in ['PROGRAMADO', 'ASIGNADA', 'EN CARGA', 'EN RUTA', 'EN PUERTO']]), 'viajes_completados': len([v for v in viajes if v.estado == 'ENTREGADO'])}
+    return render_template('logistica_operaciones.html', solicitudes=solicitudes, sol_pendientes=[s for s in solicitudes if s.estado == 'SOLICITADA'], viajes=viajes, viajes_activos=[v for v in viajes if v.estado in ['PROGRAMADO', 'ASIGNADA', 'EN CARGA', 'EN RUTA', 'EN PUERTO']], kpis=kpis, empresa_actual=empresa_actual)
 
 @dashboard_bp.route('/api/tms/add_solicitud', methods=['POST'])
 @login_required
 def add_solicitud():
-    try:
-        fecha_req = request.form.get('fecha_requerida')
-        fecha_requerida = datetime.strptime(fecha_req, '%Y-%m-%d').date() if fecha_req else None
-        nueva = SolicitudTransporte(cliente=request.form.get('cliente').upper().strip(), origen=request.form.get('origen').upper().strip(), destino=request.form.get('destino').upper().strip(), tipo_carga=request.form.get('tipo_carga').upper().strip(), peso_kg=float(request.form.get('peso') or 0.0), fecha_requerida=fecha_requerida, estado='SOLICITADA')
-        db.session.add(nueva)
-        db.session.commit()
-        return redirect('/logistica/operaciones')
-    except Exception as e:
-        db.session.rollback()
-        return f"Error al guardar solicitud: {str(e)}"
+    empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
+    fecha_req = request.form.get('fecha_requerida')
+    nueva = SolicitudTransporte(cliente=request.form.get('cliente').upper().strip(), origen=request.form.get('origen').upper().strip(), destino=request.form.get('destino').upper().strip(), tipo_carga=request.form.get('tipo_carga').upper().strip(), peso_kg=float(request.form.get('peso') or 0.0), fecha_requerida=datetime.strptime(fecha_req, '%Y-%m-%d').date() if fecha_req else None, estado='SOLICITADA', empresa=empresa_actual)
+    db.session.add(nueva); db.session.commit()
+    return redirect('/logistica/operaciones')
 
 @dashboard_bp.route('/api/tms/aprobar_solicitud/<int:id>', methods=['POST'])
 @login_required
 def aprobar_solicitud(id):
-    try:
-        solicitud = SolicitudTransporte.query.get_or_404(id)
-        if solicitud.estado == 'SOLICITADA':
-            solicitud.estado = 'APROBADA'
-            folio = f"OT-{obtener_hora_chile().strftime('%Y%m%d')}-{solicitud.id}"
-            nuevo_viaje = Viaje(folio_viaje=folio, solicitud_id=solicitud.id, fecha_programada=solicitud.fecha_requerida, estado='PROGRAMADO')
-            db.session.add(nuevo_viaje)
-            db.session.commit()
-        return redirect('/logistica/operaciones')
-    except Exception as e:
-        db.session.rollback()
-        return f"Error al aprobar solicitud: {str(e)}"
+    empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
+    solicitud = SolicitudTransporte.query.get_or_404(id)
+    if solicitud.estado == 'SOLICITADA':
+        solicitud.estado = 'APROBADA'
+        db.session.add(Viaje(folio_viaje=f"OT-{obtener_hora_chile().strftime('%Y%m%d')}-{solicitud.id}", solicitud_id=solicitud.id, fecha_programada=solicitud.fecha_requerida, estado='PROGRAMADO', empresa=empresa_actual))
+        db.session.commit()
+    return redirect('/logistica/operaciones')
 
-# ==========================================
-# MÓDULO LOGÍSTICA TMS - FASE 4: PLANIFICADOR DE VIAJES
-# ==========================================
 @dashboard_bp.route('/logistica/planificador', strict_slashes=False)
 @login_required
 def logistica_planificador():
-    try:
-        empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
-        viajes_pendientes = Viaje.query.filter_by(estado='PROGRAMADO').order_by(Viaje.fecha_programada.asc()).all()
-        viajes_asignados = Viaje.query.filter_by(estado='ASIGNADA').order_by(Viaje.fecha_programada.asc()).all()
-        solicitudes = SolicitudTransporte.query.all()
-        camiones_disp = Equipo.query.filter((Equipo.tipo_equipo.ilike('%camion%')) | (Equipo.tipo_equipo.ilike('%tracto%')) | (Equipo.tipo_equipo.ilike('%remolcador%'))).filter_by(estado_base='Operativo').all()
-        conductores_disp = Conductor.query.filter_by(estado='DISPONIBLE').all()
-        ramplas_disp = Rampla.query.filter_by(estado='DISPONIBLE').all()
-        return render_template('logistica_planificador.html', viajes_pendientes=viajes_pendientes, viajes_asignados=viajes_asignados, solicitudes=solicitudes, camiones_disp=camiones_disp, conductores_disp=conductores_disp, ramplas_disp=ramplas_disp, empresa_actual=empresa_actual)
-    except Exception as e:
-        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error en Planificador:</b> {str(e)}</div>"
+    empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
+    return render_template('logistica_planificador.html', viajes_pendientes=base_query(Viaje).filter_by(estado='PROGRAMADO').all(), viajes_asignados=base_query(Viaje).filter_by(estado='ASIGNADA').all(), solicitudes=base_query(SolicitudTransporte).all(), camiones_disp=base_query(Equipo).filter((Equipo.tipo_equipo.ilike('%camion%')) | (Equipo.tipo_equipo.ilike('%tracto%'))).filter_by(estado_base='Operativo').all(), conductores_disp=base_query(Conductor).filter_by(estado='DISPONIBLE').all(), ramplas_disp=base_query(Rampla).filter_by(estado='DISPONIBLE').all(), empresa_actual=empresa_actual)
 
 @dashboard_bp.route('/api/tms/asignar_viaje/<int:id>', methods=['POST'])
 @login_required
 def asignar_viaje(id):
-    try:
-        viaje = Viaje.query.get_or_404(id)
-        viaje.conductor_id = request.form.get('conductor_id')
-        viaje.rampla_id = request.form.get('rampla_id')
-        viaje.codigo_equipo = request.form.get('codigo_equipo')
-        viaje.estado = 'ASIGNADA'
-        
-        conductor = Conductor.query.get(viaje.conductor_id)
-        if conductor: conductor.estado = 'EN VIAJE'
-        rampla = Rampla.query.get(viaje.rampla_id)
-        if rampla: rampla.estado = 'EN VIAJE'
-        
-        db.session.commit()
-        return redirect('/logistica/planificador')
-    except Exception as e:
-        db.session.rollback()
-        return f"Error al asignar el viaje: {str(e)}"
+    viaje = Viaje.query.get_or_404(id)
+    viaje.conductor_id = request.form.get('conductor_id')
+    viaje.rampla_id = request.form.get('rampla_id')
+    viaje.codigo_equipo = request.form.get('codigo_equipo')
+    viaje.estado = 'ASIGNADA'
+    if viaje.conductor_id: Conductor.query.get(viaje.conductor_id).estado = 'EN VIAJE'
+    if viaje.rampla_id: Rampla.query.get(viaje.rampla_id).estado = 'EN VIAJE'
+    db.session.commit()
+    return redirect('/logistica/planificador')
 
-# ==========================================
-# MÓDULO LOGÍSTICA TMS - FASE 5: CARPETA DEL VIAJE Y DOCUMENTOS
-# ==========================================
 @dashboard_bp.route('/logistica/viaje/<int:id>', strict_slashes=False)
 @login_required
 def logistica_detalle_viaje(id):
-    try:
-        empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
-        viaje = Viaje.query.get_or_404(id)
-        solicitud = SolicitudTransporte.query.get(viaje.solicitud_id) if viaje.solicitud_id else None
-        equipo = Equipo.query.filter_by(codigo=viaje.codigo_equipo).first() if viaje.codigo_equipo else None
-        conductor = Conductor.query.get(viaje.conductor_id) if viaje.conductor_id else None
-        rampla = Rampla.query.get(viaje.rampla_id) if viaje.rampla_id else None
-        
-        upload_folder = os.path.join('static', 'uploads', 'viajes', str(viaje.id))
-        documentos = os.listdir(upload_folder) if os.path.exists(upload_folder) else []
-        
-        return render_template('logistica_detalle_viaje.html', viaje=viaje, solicitud=solicitud, equipo=equipo, conductor=conductor, rampla=rampla, documentos=documentos, empresa_actual=empresa_actual)
-    except Exception as e:
-        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error al cargar Ficha del Viaje:</b> {str(e)}</div>"
+    empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
+    viaje = Viaje.query.get_or_404(id)
+    upload_folder = os.path.join('static', 'uploads', 'viajes', str(viaje.id))
+    return render_template('logistica_detalle_viaje.html', viaje=viaje, solicitud=SolicitudTransporte.query.get(viaje.solicitud_id) if viaje.solicitud_id else None, equipo=Equipo.query.filter_by(codigo=viaje.codigo_equipo).first() if viaje.codigo_equipo else None, conductor=Conductor.query.get(viaje.conductor_id) if viaje.conductor_id else None, rampla=Rampla.query.get(viaje.rampla_id) if viaje.rampla_id else None, documentos=os.listdir(upload_folder) if os.path.exists(upload_folder) else [], empresa_actual=empresa_actual)
 
 @dashboard_bp.route('/api/tms/cambiar_estado_viaje/<int:id>', methods=['POST'])
 @login_required
 def cambiar_estado_viaje(id):
-    try:
-        nuevo_estado = request.form.get('estado')
-        viaje = Viaje.query.get_or_404(id)
-        viaje.estado = nuevo_estado
-        
-        if nuevo_estado == 'ENTREGADO':
-            viaje.fecha_llegada_real = obtener_hora_chile()
-            if viaje.conductor_id:
-                cond = Conductor.query.get(viaje.conductor_id)
-                if cond: cond.estado = 'DISPONIBLE'
-            if viaje.rampla_id:
-                ramp = Rampla.query.get(viaje.rampla_id)
-                if ramp: ramp.estado = 'DISPONIBLE'
-                
-        db.session.commit()
-        return redirect(f'/logistica/viaje/{id}')
-    except Exception as e:
-        db.session.rollback()
-        return f"Error al cambiar el estado del viaje: {str(e)}"
+    nuevo_estado = request.form.get('estado')
+    viaje = Viaje.query.get_or_404(id)
+    viaje.estado = nuevo_estado
+    if nuevo_estado == 'ENTREGADO':
+        viaje.fecha_llegada_real = obtener_hora_chile()
+        if viaje.conductor_id: Conductor.query.get(viaje.conductor_id).estado = 'DISPONIBLE'
+        if viaje.rampla_id: Rampla.query.get(viaje.rampla_id).estado = 'DISPONIBLE'
+    db.session.commit()
+    return redirect(f'/logistica/viaje/{id}')
 
 @dashboard_bp.route('/api/tms/subir_doc_viaje/<int:id>', methods=['POST'])
 @login_required
 def subir_doc_viaje(id):
-    try:
-        archivo = request.files.get('archivo')
-        if archivo and archivo.filename:
-            upload_folder = os.path.join('static', 'uploads', 'viajes', str(id))
-            os.makedirs(upload_folder, exist_ok=True)
-            filename = secure_filename(archivo.filename)
-            filepath = os.path.join(upload_folder, filename)
-            archivo.save(filepath)
-        return redirect(f'/logistica/viaje/{id}')
-    except Exception as e:
-        return f"Error al subir documento: {str(e)}"
+    archivo = request.files.get('archivo')
+    if archivo and archivo.filename:
+        upload_folder = os.path.join('static', 'uploads', 'viajes', str(id))
+        os.makedirs(upload_folder, exist_ok=True)
+        archivo.save(os.path.join(upload_folder, secure_filename(archivo.filename)))
+    return redirect(f'/logistica/viaje/{id}')
 
-# ==========================================
-# MÓDULO LOGÍSTICA TMS - FASE 6: CONTROL PORTUARIO (NUEVO)
-# ==========================================
 @dashboard_bp.route('/logistica/puertos', strict_slashes=False)
 @login_required
 def logistica_puertos():
-    try:
-        empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
-
-        # Filtrar viajes activos (En Ruta o En Puerto)
-        viajes_activos = Viaje.query.filter(Viaje.estado.in_(['EN RUTA', 'EN PUERTO'])).all()
-        
-        # Generar automáticamente la Operación Portuaria (si no existe) para los camiones en ruta
-        for v in viajes_activos:
-            op = OperacionPortuaria.query.filter_by(viaje_id=v.id).first()
-            if not op:
-                nueva_op = OperacionPortuaria(viaje_id=v.id, estado='ESPERANDO INGRESO')
-                db.session.add(nueva_op)
-        db.session.commit()
-        
-        operaciones_todas = OperacionPortuaria.query.all()
-        
-        datos_puerto = []
-        for op in operaciones_todas:
-            v = Viaje.query.get(op.viaje_id)
-            if v and v.estado in ['EN RUTA', 'EN PUERTO', 'ENTREGADO']:
-                sol = SolicitudTransporte.query.get(v.solicitud_id)
-                eq = Equipo.query.filter_by(codigo=v.codigo_equipo).first()
-                cond = Conductor.query.get(v.conductor_id)
-                datos_puerto.append({'op': op, 'viaje': v, 'solicitud': sol, 'equipo': eq, 'conductor': cond})
-                
-        # Clasificar por columnas de Kanban Portuario
-        esperando = [d for d in datos_puerto if d['op'].estado in ['PROGRAMADO', 'ESPERANDO INGRESO']]
-        dentro = [d for d in datos_puerto if d['op'].estado == 'DENTRO DEL PUERTO']
-        despachados = [d for d in datos_puerto if d['op'].estado == 'DESPACHADO']
-
-        return render_template('logistica_puertos.html',
-                               esperando=esperando, dentro=dentro, despachados=despachados,
-                               empresa_actual=empresa_actual, hoy=obtener_hora_chile())
-    except Exception as e:
-        return f"<div style='font-family: Arial; padding: 40px; color: red;'><b>Error Control Portuario:</b> {str(e)}</div>"
+    empresa_actual = getattr(current_user, 'empresa_activa', 'DEMOTRON').upper()
+    viajes_activos = base_query(Viaje).filter(Viaje.estado.in_(['EN RUTA', 'EN PUERTO'])).all()
+    for v in viajes_activos:
+        if not OperacionPortuaria.query.filter_by(viaje_id=v.id).first():
+            db.session.add(OperacionPortuaria(viaje_id=v.id, estado='ESPERANDO INGRESO'))
+    db.session.commit()
+    
+    datos_puerto = []
+    for op in OperacionPortuaria.query.all():
+        v = Viaje.query.get(op.viaje_id)
+        if v and v.estado in ['EN RUTA', 'EN PUERTO', 'ENTREGADO'] and getattr(v, 'empresa', 'DEMOTRON') == empresa_actual:
+            datos_puerto.append({'op': op, 'viaje': v, 'solicitud': SolicitudTransporte.query.get(v.solicitud_id), 'equipo': Equipo.query.filter_by(codigo=v.codigo_equipo).first(), 'conductor': Conductor.query.get(v.conductor_id)})
+    
+    return render_template('logistica_puertos.html', esperando=[d for d in datos_puerto if d['op'].estado in ['PROGRAMADO', 'ESPERANDO INGRESO']], dentro=[d for d in datos_puerto if d['op'].estado == 'DENTRO DEL PUERTO'], despachados=[d for d in datos_puerto if d['op'].estado == 'DESPACHADO'], empresa_actual=empresa_actual, hoy=obtener_hora_chile())
 
 @dashboard_bp.route('/api/tms/update_puerto/<int:op_id>', methods=['POST'])
 @login_required
 def update_puerto(op_id):
-    try:
-        op = OperacionPortuaria.query.get_or_404(op_id)
-        viaje = Viaje.query.get(op.viaje_id)
-        accion = request.form.get('accion')
-        
-        if accion == 'guardar_docs':
-            op.puerto = request.form.get('puerto').upper().strip()
-            op.booking_bl = request.form.get('booking_bl').upper().strip()
-            op.contenedor = request.form.get('contenedor').upper().strip()
-            op.estado = 'ESPERANDO INGRESO'
-        
-        elif accion == 'gate_in':
-            op.hora_ingreso_gate = obtener_hora_chile()
-            op.estado = 'DENTRO DEL PUERTO'
-            if viaje.estado != 'EN PUERTO':
-                viaje.estado = 'EN PUERTO'
-                
-        elif accion == 'gate_out':
-            op.hora_salida_gate = obtener_hora_chile()
-            op.estado = 'DESPACHADO'
-            viaje.estado = 'ENTREGADO' # Se asume la entrega al salir del puerto
-            
-            # Liberar conductor y rampla al terminar operación
-            if viaje.conductor_id:
-                cond = Conductor.query.get(viaje.conductor_id)
-                if cond: cond.estado = 'DISPONIBLE'
-            if viaje.rampla_id:
-                ramp = Rampla.query.get(viaje.rampla_id)
-                if ramp: ramp.estado = 'DISPONIBLE'
-                
-        db.session.commit()
-        return redirect('/logistica/puertos')
-    except Exception as e:
-        db.session.rollback()
-        return f"Error en operacion portuaria: {str(e)}"
+    op = OperacionPortuaria.query.get_or_404(op_id)
+    viaje = Viaje.query.get(op.viaje_id)
+    accion = request.form.get('accion')
+    if accion == 'guardar_docs':
+        op.puerto = request.form.get('puerto').upper().strip()
+        op.booking_bl = request.form.get('booking_bl').upper().strip()
+        op.contenedor = request.form.get('contenedor').upper().strip()
+        op.estado = 'ESPERANDO INGRESO'
+    elif accion == 'gate_in':
+        op.hora_ingreso_gate = obtener_hora_chile()
+        op.estado = 'DENTRO DEL PUERTO'
+        if viaje.estado != 'EN PUERTO': viaje.estado = 'EN PUERTO'
+    elif accion == 'gate_out':
+        op.hora_salida_gate = obtener_hora_chile()
+        op.estado = 'DESPACHADO'
+        viaje.estado = 'ENTREGADO' 
+        if viaje.conductor_id: Conductor.query.get(viaje.conductor_id).estado = 'DISPONIBLE'
+        if viaje.rampla_id: Rampla.query.get(viaje.rampla_id).estado = 'DISPONIBLE'
+    db.session.commit()
+    return redirect('/logistica/puertos')
